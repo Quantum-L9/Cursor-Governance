@@ -63,11 +63,15 @@ treated as live — the authority evidence says what was actually read.
 ## Per-effect authorization and decision coverage
 
 `ProgramBoundEffectAuthorizer` is the single PE-to-root authorizer for one
-worker effect, composed into the live Claude `PreToolUse` wrapper
+worker effect. It runs inside `worker_effect_hook.py`, the `PreToolUse` hook
+the Claude provider registers (`--settings`) in every worker window it
+launches. Program Execution carries its own enforcement into its own windows:
+the host-wide wrapper
 (`environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py`)
-ahead of the existing `ops/autonomy/local_execution_gate.py`, which remains the
-downstream owner of publish-path, L4, and worktree-isolation policy and
-receives byte-identical hook stdin. For each effect, in order:
+does not reach Program Execution. After an allowed decision the hook hands the
+byte-identical event to `ops/autonomy/local_execution_gate.py`, which remains
+the downstream owner of publish-path, L4, and worktree-isolation policy. For
+each effect, in order:
 
 1. re-read the live Program parent and refuse any drift from the sidecar;
 2. resolve the capability — a shell tool reaches `test.run` only through the
@@ -101,7 +105,7 @@ issued beneath an unbound parent (`PROGRAM_PARENT_UNBOUND`): with no canonical
 Program state, expiry, revocation and drift are unobservable.
 
 The worker environment the provider exports is a **lookup key** for that
-receipt, never authority itself: the PreToolUse wrapper resolves
+receipt, never authority itself: the worker effect hook resolves
 `L9_PROGRAM_ATTEMPT_NUMBER` and `L9_AUTONOMY_AUTHORITY_DIGEST` to the persisted
 grant receipt, verifies the sidecar digest and every bound field, and runs the
 authorizer on the receipt's sidecar. A forged digest, a missing receipt, or an
@@ -137,5 +141,8 @@ contract digest the lease was issued for.
 - `requested_actions` is the ceiling: `local_write` never implies `commit`,
   Program Execution retains `commit`, and the provider receives only delegated
   actions.
-- Push, pull request, and merge stay forbidden on this autonomous path.
-- Program Execution remains local-commit-only.
+- Push, pull request, and merge stay forbidden on this autonomous path:
+  worker windows never publish.
+- The campaign's one publication is the runner's own `pr` stage through the
+  governance SSOT `make pr` (`PROGRAM_EXECUTION_MAKE_PR_FINISH_V1`); it is not
+  a worker effect and no worker grant authorizes it.

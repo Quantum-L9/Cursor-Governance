@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""Write l9.agents.runtime-readiness.v1 — UNKNOWN never omitted."""
+"""Write l9.agents.runtime-readiness.v1 — UNKNOWN never omitted.
+
+``surface`` is the governance-profile selector the bootstrap passes (claude-code,
+cursor, codex, ...): it keys the receipt path and every existing reader treats it
+that way, so it is kept. Because that value is an actor id, not a canonical
+surface (Quantum-L9/.github identity_model: a governance profile is not
+identity), the receipt also states ``governance_profile`` explicitly and records
+the canonical ``actor_ref`` / ``surface_ref`` derived from host markers by
+ops/memory/agent_identity.py. An unproven coordinate is ``unknown``; it is never
+filled from the selector.
+"""
 
 from __future__ import annotations
 
@@ -25,6 +35,8 @@ READY = "READY"
 DEGRADED = "DEGRADED"
 NOT_READY = "NOT_READY"
 REVISION_MISMATCH = "REVISION_MISMATCH"
+#: Canonical identity's own spelling of an unresolved coordinate.
+UNKNOWN_IDENTITY = "unknown"
 
 
 def _unknown(value: str | None) -> str:
@@ -97,6 +109,40 @@ def _known_shas(*values: str) -> list[str]:
     return [value for value in values if value and value != UNKNOWN]
 
 
+def identity_refs(env: dict[str, str] | None = None, repo: Path = REPO) -> tuple[str, str]:
+    """``(actor_ref, surface_ref)`` from host markers, ``unknown`` when unproven.
+
+    Uses the same derivation and binding the memory assertion uses. Any failure
+    to prove a coordinate yields ``unknown``; nothing is guessed, and the
+    governance-profile selector is never substituted for an identity.
+    """
+    try:
+        import yaml
+
+        from ops.memory.agent_identity import (
+            IdentityResolutionError,
+            actor_ref_from_binding,
+            resolve_agent_id,
+            resolve_surface_id,
+            surface_ref_from_binding,
+        )
+    except ImportError:
+        return UNKNOWN_IDENTITY, UNKNOWN_IDENTITY
+    source = dict(os.environ) if env is None else env
+    actor_id = resolve_agent_id(source)
+    if not actor_id:
+        return UNKNOWN_IDENTITY, UNKNOWN_IDENTITY
+    try:
+        registry = yaml.safe_load(
+            (repo / "environment" / "agents" / "agent_registry.yaml").read_text(encoding="utf-8")
+        )
+        binding = registry["agents"][actor_id]
+        actor_ref = actor_ref_from_binding(actor_id, binding)
+    except (OSError, KeyError, TypeError, yaml.YAMLError, IdentityResolutionError):
+        return UNKNOWN_IDENTITY, UNKNOWN_IDENTITY
+    return actor_ref, surface_ref_from_binding(resolve_surface_id(source), binding)
+
+
 def classify_status(
     *,
     governance_revision: str,
@@ -126,6 +172,8 @@ def build_receipt(
     components: list[dict[str, str]],
     degraded_count: int,
     bound_sha: str = UNKNOWN,
+    actor_ref: str = UNKNOWN_IDENTITY,
+    surface_ref: str = UNKNOWN_IDENTITY,
 ) -> dict[str, Any]:
     gov = _unknown(governance_revision)
     runtime = _unknown(runtime_script_revision)
@@ -139,6 +187,9 @@ def build_receipt(
     body: dict[str, Any] = {
         "schema": SCHEMA,
         "surface": _unknown(surface),
+        "governance_profile": _unknown(surface),
+        "actor_ref": actor_ref or UNKNOWN_IDENTITY,
+        "surface_ref": surface_ref or UNKNOWN_IDENTITY,
         "workspace": {
             "id": workspace_id_for(workspace),
             "path": str(workspace.expanduser().resolve()),
@@ -217,6 +268,7 @@ def main(argv: list[str] | None = None) -> int:
     session_id = _unknown(args.session_id or _default_session_id())
     memory_root = args.memory_state_root or _default_memory_root(workspace)
     graphiti = args.graphiti_state_file or _default_graphiti_state(session_id)
+    actor_ref, surface_ref = identity_refs()
     receipt = build_receipt(
         surface=args.surface,
         workspace=workspace,
@@ -228,6 +280,8 @@ def main(argv: list[str] | None = None) -> int:
         components=[],
         degraded_count=args.degraded_count,
         bound_sha=args.bound_sha,
+        actor_ref=actor_ref,
+        surface_ref=surface_ref,
     )
     path = write_receipt(receipt, surface=args.surface, workspace=workspace)
     print(

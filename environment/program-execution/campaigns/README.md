@@ -10,12 +10,12 @@ SSOT: `CAMPAIGN_EXECUTION_POLICY.yaml` + `ops/autonomy/surface_profile.yaml`
 
 | Rule | Value |
 |---|---|
-| Publish path | `PR_REMEDIATE=0 make pr` (Makefile checkers, then push + PR) |
+| Publish path | the campaign's `pr` stage runs the SSOT `make pr` (`PR_REMEDIATE=0`; Makefile checkers, then push + PR) — never by hand |
 | Remediation | campaign may converge to green + merge-ready; `/l9-pr-remediation` merges |
 | Merge | campaign forbidden; `/l9-pr-remediation` authorized after green + mergeable |
-| PR base | the campaign integration branch — **not** `main` |
+| PR base | the target's remote default (`main` here); head `campaign/<campaign_id>` (`PROGRAM_EXECUTION_MAKE_PR_FINISH_V1`, 2026-11-13) |
 | Mixing | do not land campaign commits on unrelated feature branches |
-| PR title | `[{campaign_id}] {metadata.title}` via `scripts/campaign_pr_copy.py` |
+| PR title | `[{campaign_id}] {program name}`, written to `.l9/pr/pr-intent.json` by `scripts/campaign_publish.py` |
 | PR body | campaign id, title, objective, integration branch, execute order |
 | Runtime status | pec writes `$HOME/.l9/programs/<id>/runtime/campaign-status.json`; running flips `runtime_status` to `active`. Source `metadata.status` stays `operator_intake`. |
 | Live closeout | **Required last step.** `pec close` (or a CONVERGED/NOT_CONVERGED `export-handoff`) sets `runtime_status=completed`. Mirror that in `CAMPAIGN_STATUS.yaml` via `campaigns/scripts/close_campaign.py`. Next campaign is the first execute_order that is not `complete`. Leaving a finished campaign `active` / `in_progress` is a defect. |
@@ -41,8 +41,5 @@ campaign inputs are preserved only under
 `environment/program-execution/archive/campaign-input-v1/`; they are evidence,
 never campaign ingress.
 
-Stacked work inside a campaign:
-
-```bash
-PR_BASE=origin/campaign/<campaign_id> PR_REMEDIATE=0 make pr
-```
+A campaign publishes itself at its `pr` stage; there is no hand publication
+step (`PROGRAM_EXECUTION_MAKE_PR_FINISH_V1`).

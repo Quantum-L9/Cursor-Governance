@@ -1,0 +1,105 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/projection-bindings/strategic-planning-context.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-11-17
+# Same shape as governance/projection-bindings/technical-coordination.yaml and verified by the
+# same binding-parameterized adapter over the one shared consumer verifier.
+integration:
+  integration_id: L9.CG.PLANNER_MODE.STRATEGIC_PLANNING_CONTEXT.001
+  version: 1.0.0
+  artifact_class: runtime_integration_binding
+  status: active
+  semantic_owner: governance/projection-bindings/strategic-planning-context.yaml
+purpose:
+  assertion: >-
+    Bind the Plan Keeper strategic-planning context role projection from Quantum-L9/.github into
+    planner mode as a separate, explicitly loaded, read-only input: a bundle the canonical
+    compiler produced and this repository only verifies. Its declared consumer is plan_keeper;
+    reading it confers no Strategic Authority and no Plan mutation right. It executes no
+    selector, composes no payload, authors no schema, and never substitutes another input when
+    this one is unavailable.
+input:
+  name: strategic_planning_context
+  authority:
+    repository: Quantum-L9/.github
+    projection_profile_ref: l9.projection/strategic-planning-context@2
+    # Admitted in Quantum-L9/.github v3.35.0 (ADR-032, merged as #232, 1f034a9).
+    projection_profile_digest: sha256:2940f0e2ae41676d262365c594b901f4e1de27be5249affbae9480f48633e173
+    projection_profile_class: consumer
+    projection_profile_consumer: plan_keeper
+    composition_profile_ref: l9.compose/strategic-planning-context@2
+    composition_profile_digest: sha256:933c3c33724ddeacd97bd7abe1c2a5444b4635a4656cd91c0901cf6cf430cf43
+    projection_payload_schema: l9.projection.strategic-planning-context/v2
+    composed_payload_schema: l9.composed-projection.strategic-planning-context/v2
+    expected_source_classes:
+      - invariants
+      - contracts
+      - authority_model
+      - strategic_cognition_model
+      - strategic_plan_model
+      - strategic_plan_graph_schema
+      - affected_strategic_closure_schema
+      - strategic_planning_episode_schema
+      - strategic_plan_revision_candidate_schema
+  bundle:
+    path: generated/governance/strategic_planning_context
+    lock: bundle.lock.json
+    composed_view: composed.json
+  producer:
+    compiler: l9-semantic-compiler
+    driver: tools/authority/produce_projection_bundle.py
+    ci: .github/workflows/l9-projection-bundle-verify.yml
+    trusted_replay: .github/workflows/l9-projection-bundle-trusted-replay.yml
+    cg_produces: false
+  verifier: skills/l9-global-architect/scripts/verify_architecture_intelligence.py
+  shared_verifier: skills/l9-coding-agent/scripts/verify_canonical_binding.py
+admission:
+  resolved_independently_of: bundle.lock.json
+  resolver: skills/l9-coding-agent/scripts/verify_canonical_binding.py#resolve_admission
+  authority_main_ref: refs/remotes/origin/main
+  effect_when_absent: ADMISSION_UNRESOLVED (ADMISSION_DECISION_RECORD_ABSENT); integration is never admission.
+  decisions:
+    - candidate_ref: l9.projection/strategic-planning-context@2
+      candidate_digest: sha256:2940f0e2ae41676d262365c594b901f4e1de27be5249affbae9480f48633e173
+      decision: admit
+      admitted_revision: 1f034a9e0aa89c718fed306e96090ee7d51051ac
+      decided_at: "2026-11-08"
+      authority_ref: >-
+        Quantum-L9/.github ADR-032, Semantic Foundation v3.35.0 ("ADMITTED ADDITIVE SUCCESSOR",
+        2026-11-08), merged to .github main as Quantum-L9/.github#232 (1f034a9); bound read-only
+        into planner mode on the owner's instruction of 2026-11-17 in governed session
+        session_017xwbxxA1nzCHwuu6XjrXPT: "approve creating plan mode like architect and cto mode no new repo!!!"
+    - candidate_ref: l9.compose/strategic-planning-context@2
+      candidate_digest: sha256:933c3c33724ddeacd97bd7abe1c2a5444b4635a4656cd91c0901cf6cf430cf43
+      decision: admit
+      admitted_revision: 1f034a9e0aa89c718fed306e96090ee7d51051ac
+      decided_at: "2026-11-08"
+      authority_ref: >-
+        Quantum-L9/.github ADR-032, Semantic Foundation v3.35.0 ("ADMITTED ADDITIVE SUCCESSOR",
+        2026-11-08), merged to .github main as Quantum-L9/.github#232 (1f034a9); bound read-only
+        into planner mode on the owner's instruction of 2026-11-17 in governed session
+        session_017xwbxxA1nzCHwuu6XjrXPT: "approve creating plan mode like architect and cto mode no new repo!!!"
+load_condition:
+  when:
+    - planner_mode_active
+  requires_all:
+    - verifier.status == ADMITTED_AND_CURRENT (mode admitted)
+  repository_presence_alone_loads: false
+  loads: the composed view only; each namespace is one source projection exactly as produced
+failure_behavior:
+  BUNDLE_VERIFIED: not admitted law; admitted mode reads nothing.
+  BLOCKED: proceed without this domain; a claim that depends on it is a typed Unknown.
+  REJECTED: no part of the bundle may be read; report the refusal reason.
+  STALE: the bundle must not be treated as current; regeneration belongs to the producer.
+  fallback:
+    partial_bundle: forbidden
+    model_reconstruction_from_memory_or_repository_reads: forbidden
+forbidden_duplication:
+  - selector_execution
+  - projection_or_composition_by_cursor_governance
+  - payload_schema_authoring_or_reinterpretation

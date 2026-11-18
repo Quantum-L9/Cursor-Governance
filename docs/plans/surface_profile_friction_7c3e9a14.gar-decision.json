@@ -1,0 +1,17 @@
+{
+  "governing_cause": "The Autonomy Surface Profile and its Claude adapter disagree with the surfaces they govern. (1) The review-thread helper ops/scripts/pr_threads.py proves PR ownership only from .l9/pr/pr-summary.json, which only ops/scripts/open_pr_after_gate.sh writes; a native publish route (ops/config/publish-authority.json, e.g. cryptoxdog/ib-odoo_19) is delegated by run_native_publish.sh to the consumer's own make pr, so the receipt never exists there and the helper fails closed. (2) The only allow rule for the helper is the cwd-relative command `python3 ops/scripts/pr_threads.py`, which does not exist in a consumer checkout, so the helper is unreachable without a permission prompt or classifier denial outside the governance clone. (3) Profile text drifted from rule 62 and the REST-only surface rule: pr_stacking.github_rest still names the legacy openclaw PAT ref and bare `gh`; post_push.required_command omits native routes; review approval is denied only in prose and in review_activity.denied, not in top-level forbid; the PR-watch policy (no Send Later) lives only as a hardcoded hook line; updated is stale.",
+  "intervention": "Architecture is settled; repair in place, no new framework. Fix the owner, not the symptom: (a) pr_thread_routes.require_own_pr falls back, only when the receipt is absent, to a live REST ownership proof - PR open, head repo equals origin, head ref equals the checkout's branch, and the PR head SHA is an ancestor of or equal to local HEAD - failing closed on any unreadable fact; the receipt path is unchanged. (b) Add one home-relative allow rule `Bash(python3 ~/.cursor-governance/ops/scripts/pr_threads.py:*)` to the adapter template and the profile's review_activity.allow_prefixes; arguments pass straight to argparse, no make-variable expansion, no protected root file edit. (c) Profile hygiene: add pull_request_review_approval to forbid, post_push.pr_watch naming the existing Send Later ban with the hook citing it, github_rest pat_ref to the Infisical GITHUB_TOKEN name with bare gh removed, required_command naming publish-authority native routes, updated bumped. Tests pin each change.",
+  "evidence_paths": [
+    "ops/autonomy/surface_profile.yaml",
+    "ops/scripts/pr_threads.py",
+    "ops/scripts/lib/pr_thread_routes.py",
+    "ops/scripts/tests/test_pr_threads.py",
+    "ops/scripts/open_pr_after_gate.sh",
+    "ops/scripts/run_native_publish.sh",
+    "ops/config/publish-authority.json",
+    "environment/agents/adapters/claude-code/settings.template.json",
+    "environment/agents/adapters/claude-code/hooks/bootstrap_capability_preflight.sh",
+    "tests/adapters/claude_code/test_capability_friction_contract.py",
+    "skills/l9-pr-remediation/references/review-replies.md"
+  ]
+}

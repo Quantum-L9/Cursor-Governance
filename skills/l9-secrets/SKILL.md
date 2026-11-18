@@ -145,6 +145,7 @@ See [references/infisical-protocol.md](references/infisical-protocol.md).
 - Infisical inventory + name gate (IDs/keys only): `ops/secrets/infisical-cursor-governance.yaml`
 - Legacy AWS inventory (operator): `ops/secrets/openclaw-igorbot.registry.yaml`
 - Overlays: `ops/secrets/registry.overlays.yaml`
+- Actions secret mirror (**operator-only**; hosted sessions get 403 on Actions secrets): `ops/secrets/sync_actions_secrets.py` + plan `ops/secrets/actions-secret-sync.json` — binds vault names in-process, `gh secret set` via stdin, `--dry-run` writes nothing
 - Child-env exec for tools that read their own credential (Semgrep Pro):
   `ops/secrets/capability_exec.py` + `capability-exec.json` — registered entries
   only, secret in that child's environment only, output scrubbed

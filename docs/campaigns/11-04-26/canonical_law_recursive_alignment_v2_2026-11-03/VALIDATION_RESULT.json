@@ -1,0 +1,33 @@
+{
+  "verdict": "STATIC_PASS_WITH_EXECUTION_BLOCKERS",
+  "revision": "2.0.0",
+  "law_payload_start_line": 1849,
+  "law_payload_final_line": 1955,
+  "law_heading_coordinates": {
+    "marker": 1850,
+    "section_6_2_17": 1851,
+    "section_6_2_18": 1891,
+    "section_6_2_19": 1920,
+    "result_last_content_line": 1955
+  },
+  "law_line_dispositions": 30,
+  "findings": 23,
+  "downstream_actions": 45,
+  "validation_cases": 35,
+  "host_runtime_tests": "NOT_RUN",
+  "global_authority_projection": "NOT_REPLAYED",
+  "repo_mutation": "NONE",
+  "negative_fixtures": {
+    "negative_fixture_count": 8,
+    "caught": [
+      "law rewrite guard",
+      "duplicate edit path",
+      "unknown finding",
+      "wrong law coordinate",
+      "unauthorized root rewrite",
+      "pr-check false current",
+      "delete scope unknown",
+      "generated worker conflation"
+    ]
+  }
+}

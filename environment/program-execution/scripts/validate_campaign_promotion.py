@@ -6,6 +6,8 @@ Checked conditions:
 
 1. ``ops/autonomy/surface_profile.yaml`` parses as YAML.
 2. Campaign registrations are well formed (mapping id -> {integration_branch}).
+   A profile with no ``campaign_execution`` block promotes nothing: that is
+   reported as a warning, and the policy and ledger are still validated.
 3. Campaign ids do not collide (duplicate YAML keys, duplicate list entries).
 4. ``integration_branch`` (and policy ``pr_base``) equals ``campaign/<campaign-id>``.
 5. Committed shared campaign ledgers carry no absolute machine-local paths.
@@ -109,6 +111,17 @@ def check_registrations(root: Path, profile: dict | None) -> tuple[list[str], se
     """Conditions 2-4 — well formed, collision free, branch matches id."""
     errors: list[str] = []
     if profile is None:
+        return errors, set()
+
+    if "campaign_execution" not in profile:
+        # Nothing is promoted in the surface profile. That is a complete,
+        # valid answer -- the profile carries campaign registrations only
+        # while Program Execution holds promoted campaign authority -- and it
+        # is different from a block that is present and malformed, which still
+        # fails below. The Program-Execution-owned policy and status ledger are
+        # validated on their own; `validate` reports the absence.
+        errors.extend(_check_policy(root, set()))
+        errors.extend(_check_status_ledger(root))
         return errors, set()
 
     execution = profile.get("campaign_execution")
@@ -258,6 +271,13 @@ def validate(root: Path) -> dict:
     registration_errors, _ = check_registrations(root, profile)
     ledger_hits = scan_machine_local_paths(root, SHARED_LEDGERS)
     warnings = scan_archive_paths(root)
+    notices: list[str] = []
+    if isinstance(profile, dict) and "campaign_execution" not in profile:
+        notices.append(
+            f"{SURFACE_PROFILE}: no campaign_execution block; no campaign is promoted in the "
+            "surface profile, and policy registrations were validated without a profile "
+            "cross-check"
+        )
 
     errors = [
         *profile_errors,
@@ -274,7 +294,8 @@ def validate(root: Path) -> dict:
         },
         "errors": errors,
         "warnings": [
-            f"machine-local path in immutable campaign evidence -> {hit}" for hit in warnings
+            *notices,
+            *(f"machine-local path in immutable campaign evidence -> {hit}" for hit in warnings),
         ],
     }
 

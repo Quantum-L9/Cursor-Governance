@@ -1846,3 +1846,290 @@ new secrets are added there. Where §12 or §14 says AWS Secrets Manager or
 `l9-aws-secrets`, read Infisical and `l9-secrets`: §14's PAT is Infisical
 `GITHUB_TOKEN`. AWS Secrets Manager remains Cursor's bootstrap credential
 source (in place of a `.env`), unchanged. ADR-0053.
+
+<!-- PROGRAM_EXECUTION_MANUAL_STAGE_V1 -->
+## Program Execution manual stage (2026-11-12) — supersedes PROGRAM_EXECUTION_EVICTION_REACHABILITY_V1 and item 5 of PUBLISH_ASSURANCE_DECOUPLING_V1 where they make Program Execution an inert eviction target
+
+Append-only. Operator decision, 2026-11-12. The eviction sections stay on disk
+as the record of the retirement. Every other item of
+PUBLISH_ASSURANCE_DECOUPLING_V1 is unchanged: L4 authorizes and does not
+validate, the tree-kernel latch stays retired, preparation and validation stay
+separate, repair stays outside validation, and `make pr` remains the single
+publication ceremony.
+
+Program Execution moves along one ladder: `retired` → `manual` → `registered`.
+This section puts it at `manual`.
+
+1. **Connected, one way.** Program Execution consumes root autonomy. It reads
+   its standing authority from the `campaign_execution` block of
+   `ops/autonomy/surface_profile.yaml`, takes one subordinate root lease per
+   task that never outlives the Program lease, authorizes every worker effect
+   through the root gateway, and stays inside the lanes the autonomy execution
+   profile grants. Root autonomy, L4 and publication never require, import or
+   resolve through `environment/program-execution/`. That direction is not
+   relaxed by this section.
+2. **Explicit operator invocation only.** A campaign runs only when the
+   operator asks for it in their own words, for that run, fresh or resumed.
+   The runner refuses without that statement and records it beside the
+   campaign. An agent never starts, resumes or proposes-and-runs a campaign on
+   its own initiative, and never supplies the statement for itself.
+3. **Not ambient.** No skill routes to Program Execution, no SessionStart text
+   advertises or probes it, and its skills stay archived. The host-wide
+   PreToolUse wrapper does not reach it: Program Execution registers its own
+   effect hook in the worker windows it launches.
+4. **No make target.** The root Make graph does not compose
+   `ops/make/program-execution.mk`. Registering `make campaign` is the
+   `registered` stage and needs its own decision.
+5. **Local commits only.** A campaign prepares, executes, validates, verifies
+   and commits locally, then stops. It never pushes, opens or updates a pull
+   request, or merges. Publication stays `make pr`; merge stays
+   `/l9-pr-remediation`.
+6. **Bound at bootstrap.** Before a campaign is bootstrapped or resumed the
+   pipeline is bound to `l9.projection/coding-agent-execution@1` through
+   `governance/authority-bindings/coding-agent-execution.yaml`, judged by that
+   binding's own status reader. A bundle that is not verified at main and
+   admitted executes nothing, and a campaign is not resumed across a rebind.
+7. **Absence is retirement.** With the `campaign_execution` block removed, or
+   its stage one the runner does not know, Program Execution executes nothing.
+   Returning it to `retired` is deleting the block.
+
+SSOT: `ops/autonomy/surface_profile.yaml` (`campaign_execution`),
+`environment/contracts/autonomy/MANIFEST.yaml`
+(`program-execution-autonomy-consumer`),
+`environment/program-execution/scripts/campaign_authority.py`.
+
+<!-- PROGRAM_EXECUTION_MAKE_PR_FINISH_V1 -->
+## Program Execution finishes with the SSOT make pr (2026-11-13) — supersedes item 5 of PROGRAM_EXECUTION_MANUAL_STAGE_V1, and §6.2.2 item 3 / §6.2.3 where they bind Program Execution campaigns to a `campaign/<campaign_id>` PR base
+
+Append-only. Operator decision, 2026-11-13: when a campaign is finished,
+Program Execution publishes it through the governance SSOT `make pr`, which
+fires the org PR template and its composer. Agents and operators do not
+hand-publish a campaign. Every other item of PROGRAM_EXECUTION_MANUAL_STAGE_V1
+is unchanged: explicit operator invocation, no ambient routing, no make
+target, the projection binding at bootstrap, and absence as retirement.
+
+1. **One finish, one route.** After every task is COMPLETED (executed in its
+   worker window, verified by the Controller, integrated into
+   `campaign/<campaign_id>`), the runner's `pr` stage runs exactly
+   `make -C <SSOT> pr WS=<campaign integration worktree>` with
+   `PR_REMEDIATE=0`, `PR_BASE=<target remote default>` and an empty
+   `PR_STACK`. The SSOT is `L9_GOVERNANCE_DIR`, else
+   `$HOME/.cursor-governance`. That `make pr` owns the gate, the push, the org
+   template and the composer; Program Execution owns none of them.
+2. **Head and base.** The head is the campaign integration branch
+   `campaign/<campaign_id>`, built from the target's remote default and
+   carrying only verified task fan-in. The base is that remote default
+   (`origin/main` for Cursor-Governance). One campaign, one pull request. A
+   remote `origin/campaign/<campaign_id>` is not created.
+3. **What the runner does before the ceremony.** It refuses a dirty or empty
+   integration tree, runs `l4_local.py begin` and `authorize-release` on that
+   exact verified tree, and writes `.l9/pr/pr-intent.json` from the accepted
+   Blueprint (program name, objective, task cards) bound to the head. It
+   records the result in `runtime/PUBLICATION.json` and the ceremony's output
+   in `runtime/publication.log`. A failed `make pr` is the campaign's failure;
+   it is not retried by another route.
+4. **Nothing else publishes.** Raw `git push`, `gh pr create`, REST pull
+   request writes, `make pr` from any other checkout or argv, task pull
+   requests, and every merge transport stay refused at the runner's `run_cmd`
+   choke point. Worker windows never publish. Merge stays
+   `/l9-pr-remediation`, under that path's own authority.
+5. **Stopping early stays possible.** `until=execute` ends at verified local
+   commits and publishes nothing.
+
+SSOT: `ops/autonomy/surface_profile.yaml` (`campaign_execution.publication`),
+`environment/program-execution/scripts/campaign_publish.py`,
+`environment/program-execution/scripts/campaign_authority.py`.
+
+<!-- PROGRAM_EXECUTION_REGISTERED_STAGE_V1 -->
+## Program Execution registered stage, gated by /coding-agent (2026-11-13) — supersedes item 4 of PROGRAM_EXECUTION_MANUAL_STAGE_V1 and moves Program Execution from `manual` to `registered`
+
+Append-only. Operator decision, 2026-11-13. Items 1–3 and 5–7 of
+PROGRAM_EXECUTION_MANUAL_STAGE_V1 and all of PROGRAM_EXECUTION_MAKE_PR_FINISH_V1
+are unchanged.
+
+1. **`make campaign` is registered.** The root Make graph composes
+   `ops/make/campaign.mk`, which carries exactly `campaign` and
+   `campaign-check-input`. `ops/make/program-execution.mk` stays uncomposed,
+   and root autonomy, L4 and publication still never require Program
+   Execution.
+2. **Still explicit.** Registration adds a front door, not a trigger. A
+   campaign runs only on the operator's own words for that run
+   (`L9_PE_OPERATOR_INVOCATION`), no skill routes to it, SessionStart does not
+   advertise it, and an agent never starts one on its own initiative.
+3. **`/coding-agent` is the switch.** At bootstrap and at every resume the
+   runner reads the operator's `/coding-agent` session mode for the invoking
+   workspace (`.l9/coding-agent-mode/session.json`, bound to the host session
+   that turned it on) through the SSOT's own mode command. Anything but
+   `ACTIVE` refuses with `CODING_AGENT_MODE_OFF`. The runner then binds the
+   coding-agent execution projection itself and refuses with
+   `CODING_AGENT_MODE_MISMATCH` unless the mode's bundle revision and view
+   digests equal its own. Both are recorded with the campaign.
+4. **Declared, not assumed.** `campaign_execution.projection_binding` declares
+   `required_mode: coding-agent` and the mode runner; the runner's authority
+   check refuses a profile that drops either (`PROJECTION_MODE_UNDECLARED`).
+
+SSOT: `ops/autonomy/surface_profile.yaml` (`campaign_execution`),
+`ops/make/campaign.mk`, `environment/program-execution/scripts/campaign_authority.py`.
+
+<!-- PROGRAM_EXECUTION_PLANNER_V1 -->
+## l9-plan is the Program Execution campaign planner (2026-11-13) — supersedes PROGRAM_EXECUTION_MANUAL_STAGE_V1 item 3 and PROGRAM_EXECUTION_EVICTION_REACHABILITY_V1 where they leave Program Execution planning with no live owner
+
+Append-only. Operator decision, 2026-11-13.
+
+1. **Owner.** `skills/l9-plan` is the Program Execution campaign planner. It
+   stays `explicit_only` (`disable-model-invocation: true`): it acts only when
+   the operator invokes `/l9-plan`, no route selects it, and it never runs
+   `make campaign` or supplies `L9_PE_OPERATOR_INVOCATION`.
+2. **Deliverable.** A campaign plan is a validated PLAN_DOCUMENT rendered by
+   `skills/l9-plan/scripts/render_campaign_source.py` as an
+   `l9.program-execution.campaign-source.v2`. The renderer refuses a writing
+   todo without a terminal validation command, an unknown or cyclic
+   dependency, and an unresolved `ask`/`block` unknown, and synthesizes
+   nothing. The plan's own dependencies become dependency edges and waves.
+3. **Judged by Program Execution.** A render is a deliverable only when
+   Program Execution's own front door (`campaign_input.classify` +
+   `preflight`), compiler (`compile_campaign_source`, with the stack proof the
+   runner primes) and launchability (inference off) admit it. Such a source is
+   fed to `make campaign` unchanged.
+4. **Separation kept.** `l9-plan-simple` remains ordinary planning and hands
+   campaign requests to `/l9-plan`. The archived `l9-pe-campaign-activate` and
+   `l9-pe-nuggets` packs stay out of skill discovery; their scripts remain the
+   runner's compile library, read by path.
+
+SSOT: `skills/l9-plan/SKILL.md`, `skills/l9-plan/scripts/render_campaign_source.py`,
+`skills/AUTONOMY_MANIFEST.yaml` (`explicit_only` reason).
+
+<!-- PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1 -->
+## Program Execution eviction withdrawn (2026-11-13) — supersedes PUBLISH_ASSURANCE_DECOUPLING_V1 item 5 and PROGRAM_EXECUTION_EVICTION_REACHABILITY_V1 wherever they schedule, plan or assume Program Execution's removal
+
+Append-only. Operator decision, 2026-11-13. Program Execution is reinstated:
+connected to root autonomy, registered as `make campaign`, finishing through
+the SSOT `make pr`, and planned by `l9-plan`.
+
+1. **No eviction is planned.** Program Execution, its tests and its
+   compile-library packs stay in this repository. No eviction slice, move to
+   another repository, or physical removal remains in force. Plans that
+   scheduled one (`docs/campaigns/skills/cursor_governance_cleanup_tracker/`,
+   `docs/campaigns/11-03-26/canonical_law_recursive_alignment_v2_2026-11-03/`)
+   are revised in place with their items marked withdrawn.
+2. **The one-way dependency stands.** Root autonomy, L4, publication,
+   readiness and the host hook wrapper still never require, import or resolve
+   through `environment/program-execution/`. Guards and tests that enforce
+   that direction are correct and stay.
+3. **Containment is ownership, not quarantine.** Root `conftest.py`
+   `collect_ignore` keeps root pytest off Program Execution's tests because
+   their own python-contract suites own them, not because they await removal.
+   `ops/make/program-execution.mk` stays uncomposed; only `ops/make/campaign.mk`
+   is in the root Make graph.
+
+SSOT: this section; `ops/config/python-contract.json` (`claude-code-autonomy`,
+`program-execution-controller`); `ops/make/campaign.mk`.
+
+<!-- MEMORY_HOOK_RELAY_V1 -->
+## 8.11 Relay hook carrier for the shared Memory 3.0 store (2026-11-16) — amends §8.6 (hook lane transport) and §8.10 item 7
+
+Append-only. Operator decision, 2026-11-16: hook and memory writes go to the
+shared Memory 3.0 store on the Hetzner host as designed — first through the agent
+(relay), then through a hook principal on the memory service, which retires the
+relay.
+
+1. **Why.** The hosted service (`l9-graphiti-memory` 3.0) admits only an OAuth
+   principal that is a person with an operator-bound actor; client-credentials
+   tokens are refused (memory ADR-100, ADR-103). The hook lane's transport A
+   spawns the bound local runtime, whose store on a Claude Code cloud container
+   is container scratch. Hook records written there were reported `OK` and lost
+   with the container.
+2. **One carrier decision.** `ops/memory/hook_carrier.py` resolves `relay` or
+   `local`: `L9_MEMORY_HOOK_CARRIER` when set (an unknown value is refused, never
+   guessed), otherwise `relay` when `CLAUDE_CODE_REMOTE=true` and `local`
+   elsewhere.
+3. **Relay.** On `relay`, `MemoryControlPlaneClient` admits a hook record against
+   its envelope exactly as before, then queues it in
+   `<repo>/.l9/memory/relay/outbox.jsonl` with the arguments for the account
+   connector's `memory.write_agent` (hook `write`),
+   `memory.ingest_governed_candidate` (`ingest_candidate`) or `memory.close`
+   (`close`). It opens no local store, not even for a dry run, and reports
+   `RELAYED`, which is not `OK`: no obligation is discharged by a queue entry.
+   Distill is not run on a relay surface (§8.10 item 7).
+4. **The agent carries it.** The Claude Stop hook (`memory_writeback.py`) blocks
+   while an entry is unacknowledged and lists each connector call. The agent
+   makes the call and records the returned receipt id with
+   `python -m ops.memory.relay ack <id> --receipt <uuid>`; the hosted receipt is
+   the authority, the acknowledgement is the agent's record of it. The gate asks
+   at most three times per entry, then only announces it (rule 42
+   satisfiability). A connector refusal is the verdict: never rerouted through
+   `memory.ingest` or the operator CLI.
+5. **Attribution.** Relayed records are written by the agent's bound actor and
+   carry `carrier:relay` and `hook-surface:<surface>` tags. Hook provenance stays
+   visible; the principal is the agent's until a hook principal exists.
+6. **Exit.** This carrier is interim. It is retired when the memory service ships
+   an envelope-bound hook principal and Cursor-Governance binds 3.0 with the
+   CLI's remote mode against the hosted service; that cutover is its own dated
+   section.
+
+SSOT: this section; `ops/memory/hook_carrier.py`, `ops/memory/relay.py`;
+`docs/decisions/ADR-0054-relay-hook-carrier.md`.
+
+<!-- MEMORY_HOOK_HOSTED_V1 -->
+## 8.12 Hosted hook carrier; relay becomes the fallback (2026-11-17) — amends §8.11
+
+Append-only. Operator decisions, 2026-11-17: "memory reads and writes must be
+frictionless and 90% + of the time triggered with a hook not manually written
+although there is the 10% which i don't want to manually approve either", and
+"stop with the memories i'm tired of approving things just fix it up stream so i
+don't ever have to again".
+
+1. **Why.** Under §8.11 every hook record on a cloud surface waited for the
+   agent to carry it through the account connector, whose tools are
+   permissioned per tool in claude.ai: each relayed call could raise an
+   operator approval prompt no local allow rule suppresses. The memory service
+   now admits a machine hook principal (Auth0 client credentials of the
+   `l9-memory-hooks` application, bound server-side in
+   `L9_MEMORY_HOOK_PRINCIPALS_JSON`) — the exit §8.11 item 6 named.
+2. **One carrier decision** (supersedes §8.11 item 2).
+   `ops/memory/hook_carrier.py` resolves `hosted`, `relay` or `local`:
+   `L9_MEMORY_HOOK_CARRIER` when set (an unknown value is refused, never
+   guessed); otherwise `hosted` when both `L9_MEMORY_HOOK_CLIENT_ID` and
+   `L9_MEMORY_HOOK_CLIENT_SECRET` bind through `ops/secrets/capability_bind.py`
+   (Infisical `cursor-governance`, `/`; root keys, not operator-only); otherwise
+   `relay` when `CLAUDE_CODE_REMOTE=true`; otherwise `local`.
+3. **Hosted.** `MemoryControlPlaneClient` admits each hook record against its
+   envelope exactly as before, then `ops/memory/hosted_hook_transport.py` sends
+   it to the Memory MCP endpoint (`resource.identifier` of
+   `ops/config/memory-auth0-onboarding.yaml`, also the token audience) with one
+   `initialize` and one `tools/call` naming the relay's connector tool. HTTPS
+   only, through `ops/lib/safe_https.py`; the token endpoint comes from the
+   onboarding issuer, else RFC 9728 metadata then OIDC discovery, and must sit
+   on the issuer's host; the token is cached in-process only. `OK` only for a
+   UUID hosted receipt that proves the commit (transport `hosted-mcp`). A
+   refusal — tool error, JSON-RPC error on the call, HTTP 403, receipt status
+   `rejected` / `quarantined` / `failed` — is `REJECTED` and is never rerouted.
+   A transport failure is not a verdict: the record goes to the relay outbox
+   with its reason and the outcome is `RELAYED`.
+4. **Nobody is asked** (supersedes §8.11 item 4, "The agent carries it"). The
+   Claude Stop hook never blocks a turn and never asks the agent to make a
+   connector call. On `hosted` it drains owed outbox entries through the hosted
+   transport, acknowledging each with the hosted receipt or recording the
+   refusal. On `relay` the entries stay in the outbox, one non-blocking line per
+   session reports how many are owed, and `python -m ops.memory.relay status`
+   keeps them visible. Carrying an entry by hand remains possible
+   (`python -m ops.memory.relay instructions`) and is never required.
+5. **Attribution.** Hosted records carry `carrier:hosted` and
+   `hook-surface:<surface>` and are written by the hook principal; relayed
+   records keep `carrier:relay`.
+6. **One store, one supersession chain.** `relay` and `hosted` both land in the
+   hosted `MemoryService`, so a continuation admitted by either supersedes the
+   other's; neither supersedes a `local` reference, nor the reverse.
+7. **Boundary.** `ops/memory/hosted_hook_transport.py` is the single memory-path
+   module allowed a network transport (`urllib` request/error types through
+   `safe_https`, to hosts read from configuration). The hosted `MemoryService`
+   is the canonical authority, not a provider; INV-03 holds.
+8. **Provisioning.** The `l9-memory-hooks` application, its server-side binding,
+   the two Infisical values and its onboarding client row are the operator
+   provisioning runbook's job. Until both values bind, `relay` applies and
+   nothing is asked.
+
+SSOT: this section; `ops/memory/hook_carrier.py`,
+`ops/memory/hosted_hook_transport.py`, `ops/memory/relay.py`,
+`environment/agents/adapters/claude-code/hooks/memory_writeback.py`;
+`docs/decisions/ADR-0055-hosted-hook-carrier.md`.

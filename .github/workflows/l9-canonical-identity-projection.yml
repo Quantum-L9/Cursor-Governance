@@ -73,6 +73,11 @@ jobs:
           # main and replaying the committed bytes from it. A shallow checkout
           # cannot prove provenance and fails closed.
           fetch-depth: 0
+          # Quantum-L9/.github is private: a pull-request workflow may hold exactly one
+          # secret, this read-only token scoped to that repository, never persisted
+          # (docs/DEGRADED_MODE_CONTRACT.md, 2026-11-16; the bundle contract tests pin it).
+          token: ${{ secrets.L9_GITHUB_READ_TOKEN }}
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
@@ -144,6 +149,10 @@ jobs:
           ref: ${{ steps.authority.outputs.ref }}
           path: org-authority
           fetch-depth: 1
+          # Quantum-L9/.github is private (2026-11-16): this repo's GITHUB_TOKEN cannot
+          # read it. Trusted triggers only (schedule / dispatch), never persisted.
+          token: ${{ secrets.GH_TOKEN }}
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:

@@ -2,8 +2,8 @@
 """Read a file from the organization's ``<owner>/.github`` repository at one exact commit.
 
 This is the only module allowed to read ``<owner>/.github`` (enforced by
-``tests/ops/scripts/test_org_dotgithub_single_reader.py``). Every caller gets the
-same two transports in the same order:
+``SingleReaderTests`` in ``ops/scripts/tests/test_org_dotgithub.py``). Every caller
+gets the same two transports in the same order:
 
 1. REST (``gh api repos/<owner>/.github/...``): default branch -> commit -> contents.
 2. git (``git ls-remote`` + a shallow fetch of that commit into a throwaway bare
@@ -14,6 +14,12 @@ transport swap, not another source. It exists because some session gateways scop
 the REST API to the session's own repositories (HTTP 403 for ``<owner>/.github``)
 while still serving git for it. Both transports failing is an error: there is no
 stale fallback here, and callers decide what an unreachable org file means.
+
+``Quantum-L9/.github`` is private (2026-11-16), so neither transport is anonymous:
+REST is ``gh``'s own credential, and git asks ``gh auth git-credential`` after any
+helper the user already configured. On a Claude Code cloud session both reach the
+repository only when it was selected when the session started; ``add_repo`` cannot
+attach a dot-named repository later. The final error says so.
 """
 
 from __future__ import annotations
@@ -22,6 +28,7 @@ import base64
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -85,15 +92,45 @@ def rest_read(owner: str, path: str, gh: GhApi = gh_api) -> tuple[str, str]:
     return sha, base64.b64decode(doc.get("content", "")).decode("utf-8")
 
 
+#: Appended after any credential helper the user configured, never in place of one:
+#: git asks each helper in turn, so a working keychain entry still wins.
+GH_CREDENTIAL_HELPER = "!gh auth git-credential"
+
+#: The gateway's refusal for a repository the cloud session was not started with.
+SESSION_SCOPE_MARKER = "not enabled for this session"
+SESSION_SCOPE_HINT = (
+    "this Claude Code cloud session was not started with {owner}/.github; it is private, "
+    "and add_repo cannot attach a dot-named repository mid-session: start a new session "
+    "with {owner}/.github selected (docs/DEGRADED_MODE_CONTRACT.md, 2026-11-16)"
+)
+
+
+def git_credential_args(which: Callable[[str], str | None] | None = None) -> list[str]:
+    """``-c`` options that let git authenticate with gh's credential, when gh exists.
+
+    ``shutil.which`` is looked up per call, not bound as a default, so the lookup
+    follows the PATH (and any test patch) in force when git actually runs.
+    """
+    if (which or shutil.which)("gh") is None:
+        return []
+    return ["-c", f"credential.helper={GH_CREDENTIAL_HELPER}"]
+
+
 def git_read(owner: str, path: str) -> tuple[str, str]:
-    """(commit, text) of ``path`` at the default-branch head, over git."""
+    """(commit, text) of ``path`` at the default-branch head, over authenticated git."""
     url = f"https://github.com/{owner}/.github"
     env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    auth = git_credential_args()
 
     def git(*args: str) -> str:
         try:
             proc = subprocess.run(
-                ["git", *args], capture_output=True, text=True, check=False, timeout=60, env=env
+                ["git", *auth, *args],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=60,
+                env=env,
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
             msg = f"git {args[0]} {url} failed: {exc}"
@@ -124,6 +161,8 @@ def read_org_file(owner: str, path: str, *, gh: GhApi = gh_api, git: GitRead = g
             sha, text = git(owner, path)
         except OrgFileError as git_error:
             msg = f"{rest_error}; git transport also failed: {git_error}"
+            if SESSION_SCOPE_MARKER in str(rest_error):
+                msg = f"{msg}; {SESSION_SCOPE_HINT.format(owner=owner)}"
             raise OrgFileError(msg) from git_error
         return OrgFile(sha=sha, text=text, transport="git")
 

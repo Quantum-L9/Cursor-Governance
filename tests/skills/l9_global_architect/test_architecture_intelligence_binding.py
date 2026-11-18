@@ -15,6 +15,9 @@ from pathlib import Path
 import pytest
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from dotgithub_read_secret import assert_only_dotgithub_read_secret  # noqa: E402
+
 REPO = Path(__file__).resolve().parents[3]
 PACK = REPO / "skills/l9-global-architect"
 VERIFIER = PACK / "scripts/verify_architecture_intelligence.py"
@@ -1038,8 +1041,9 @@ def test_generation_holds_no_repository_publication_authority() -> None:
     assert workflow["permissions"] == {"contents": "read"}
     for job in workflow["jobs"].values():
         assert job["permissions"] == {"contents": "read"}
+    assert_only_dotgithub_read_secret(workflow, workflow_path.read_text())
+    assert "secrets." not in PRODUCER.read_text()
     for text in (workflow_path.read_text(), PRODUCER.read_text()):
-        assert "secrets." not in text
         for forbidden in ("git push", '"push"', "git commit", '"commit"', "gh pr", '"gh"'):
             assert forbidden not in text, forbidden
     # The binding names the SSOT publication owner; restating one of its routes as the only

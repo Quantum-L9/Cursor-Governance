@@ -12,8 +12,9 @@ source "$HOOK_DIR/graphiti_common.sh"
 
 REPO="${CURSOR_PROJECT_DIR:-}"
 
-export L9_MEMORY_AGENT_ID="${L9_MEMORY_AGENT_ID:-cursor}"
-export USER_ID="${USER_ID:-cursor_agent}"
+# Memory identity is DERIVED from host markers (ops/memory/agent_identity.py:
+# CURSOR_AGENT -> cursor), never configured; a default exported here would only be
+# reported as static drift (rules/03, rules/64).
 # SessionStart owns session_id (once per session). conversation_id is a later
 # chat key and must not become the session id — that lets every agent share one
 # write-gate pass.
@@ -160,6 +161,23 @@ else
   HYDRATE_MD="Graphiti disabled — no resume memory"
 fi
 
+# Close-gap visibility (local receipts only; no memory call, so SessionStart
+# stays health-only under CANONICAL_LAW §8.9). The open latch above rotated the
+# prior session into previous_opened.json; a prior session with no successful
+# close receipt is a lifecycle CLOSE_GAP (ADR-0032), repaired by /end-session.
+# classify_hydrate_state.py types the leading CLOSE_GAP marker for the runtime
+# report. Without this line a failed sessionEnd close was invisible.
+if [ -n "$REPO" ] && [ -f "$GOV_ROOT/ops/graphiti/hydration/session_latches.py" ]; then
+  CLOSE_GAP_TEXT="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+    "$PY" -c 'import sys
+from pathlib import Path
+from ops.graphiti.hydration.session_latches import close_gap_reason
+print(close_gap_reason(Path(sys.argv[1]), sys.argv[2]))' "$REPO" "$CURSOR_SESSION_ID" 2>/dev/null || true)"
+  if [ -n "$CLOSE_GAP_TEXT" ]; then
+    HYDRATE_MD="$(printf '%s\nCLOSE_GAP %s\nREPAIR: /end-session' "$HYDRATE_MD" "$CLOSE_GAP_TEXT")"
+  fi
+fi
+
 # Never emit memory-bank as a resume path
 HYDRATE_MD="$(printf '%s' "$HYDRATE_MD" | sed 's/memory-bank/Graphiti/g')"
 COMBINED="$(printf '%s\n---\n%s' "$HYDRATE_MD" "$CODEGRAPH_MD")"
@@ -170,8 +188,6 @@ print(json.dumps({
     "env": {
         "GRAPHITI_MEMORY_ENABLED": os.environ.get("GRAPHITI_MEMORY_ENABLED", "1"),
         "GRAPHITI_WRITE_GATES": os.environ.get("GRAPHITI_WRITE_GATES", "0"),
-        "L9_MEMORY_AGENT_ID": os.environ.get("L9_MEMORY_AGENT_ID", "cursor"),
-        "USER_ID": os.environ.get("USER_ID", "cursor_agent"),
     },
     "hydrate_markdown": os.environ.get("HYDRATE_MD", ""),
     "codegraph_markdown": os.environ.get("CODEGRAPH_MD", "skipped"),

@@ -1,0 +1,59 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/host-bindings/claude-code.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-11-12
+# The Claude Code host's default projection binding: what every Claude Code session reads
+# without opting in. SessionStart binds it automatically; no skill or command is involved.
+# It selects meaning; it grants no permission and admits nothing.
+schema: l9.cursor-governance.host-binding/v1
+artifact_id: l9.cursor-governance/host-binding-claude-code@1
+canonical: true
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: claude_code_host_default_binding
+  authority_class: local_canonical_binding
+host:
+  identity: claude-code
+  actor_ref: l9.actor-registry/global@1#claude-code
+  surface_refs:
+    - l9.surface-registry/global@1#claude-code-desktop
+    - l9.surface-registry/global@1#claude-code-cli
+    - l9.surface-registry/global@1#claude-code-ide
+    - l9.surface-registry/global@1#claude-code-web
+    - l9.surface-registry/global@1#claude-code-mobile
+# Not a mirror of Quantum-L9/.github l9.domain-consumer-binding/claude-code@1. That binding
+# declares no predecessor and a different domain set; this contract binds only the admitted
+# operating plane, by the owner's decision below. Its domains are reachable through the
+# manual bindings, never by default.
+canonical_binding_ref: null
+decided: >-
+  2026-11-12, governed session session_017xwbxw3RduoWFP29VkobHR: the repository owner directed
+  that Cursor and Claude Code bootstrap both autobind l9.projection/cursor-governance-operating-plane@2
+  as the session default, with /coding-agent, /lcto and /architect as the manual bindings, and
+  that the default binding depend on no skill.
+# Bound by SessionStart
+# (environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh) through
+# the control below.
+session_start:
+  autobind: true
+  depends_on_skill: false
+  manual_bindings: [/coding-agent, /lcto, /architect]
+base:
+  ref: l9.projection/cursor-governance-operating-plane@2
+  binding: governance/authority-bindings/operating-plane-v2.yaml
+  adapter: ops/scripts/operating_plane_v2_projection.py
+  required: true
+activations:
+  always: loaded in every Claude Code session once verified
+domains: []
+control: ops/autonomy/host_binding.py
+constraints:
+  - Binding changes what a session reads, never what it may do. Publication, merge, push and
+    deploy authority stay with CANONICAL_LAW.md and ops/autonomy/surface_profile.yaml.
+  - The base is read only after its adapter reports CURRENT; otherwise the session is not
+    bound and cites no operating-plane semantics.

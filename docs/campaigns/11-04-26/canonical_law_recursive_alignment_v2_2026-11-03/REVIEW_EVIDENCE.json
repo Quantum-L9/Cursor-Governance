@@ -1,0 +1,38 @@
+{
+  "schema": "l9.local-artifact-alignment-evidence/v1",
+  "subject": {
+    "artifact": "canonical_law_revision_runbook_v2.yaml",
+    "revision": "2.0.0",
+    "parent_sha256": "b6b2c11a806ada566786fefb65ddbda0cec31855fd1ce350213479109c35dc8a"
+  },
+  "source_bindings": {
+    "Cursor-Governance": "b6b33e8e3877348e305cce30f9e37a56537a7ad6",
+    ".github": "bc6a4a1c1f61c20528abcb46c25173c41315bd41"
+  },
+  "review_mode": "single_session_read_only_static",
+  "independent_cognition_proven": false,
+  "live_runtime_tests_run": false,
+  "law_mutated": false,
+  "status": "STATIC_CONTRACT_ALIGNED_WITH_IMPLEMENTATION_BLOCKERS",
+  "confirmed_findings": [
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "CI01",
+    "CI03",
+    "RA01",
+    "RA05"
+  ],
+  "material_unknowns": [
+    "original_PR_immutable_footprint_source",
+    "protected_root_owner_authorization",
+    "live_host_hook_interception",
+    "independent_global_projection_replay",
+    "complete_current_ci"
+  ],
+  "note": "This is NOT a producer-validated evidence.assessment/v1 or an L9 GARReceipt and must not be passed as one."
+}

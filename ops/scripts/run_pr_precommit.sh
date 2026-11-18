@@ -252,8 +252,12 @@ _run_locked_ruff_writer() {
   if [[ ${#RUFF_CMD[@]} -eq 0 ]]; then
     _resolve_ruff || return $?
   fi
-  xargs "${RUFF_CMD[@]}" check --fix <"$py_list"
-  xargs "${RUFF_CMD[@]}" format <"$py_list"
+  # --force-exclude (#904): ruff ignores exclude/extend-exclude for paths named
+  # on the command line unless told otherwise, so the gate rewrote consumer
+  # fixtures their own ruff config protects.
+  # Null-delimit so a path with spaces (campaign folders) is one ruff argument.
+  tr '\n' '\0' <"$py_list" | xargs -0 "${RUFF_CMD[@]}" check --fix --force-exclude
+  tr '\n' '\0' <"$py_list" | xargs -0 "${RUFF_CMD[@]}" format --force-exclude
 }
 
 # The ruff that formats a workspace is the one that workspace pins. Governance's

@@ -1,0 +1,16 @@
+{
+  "governing_cause": "Two owners route their output to the wrong place. (1) ops/reports/publish.py makes the post-publish Stop hooks commit and push both end-session handoffs onto the publication PR's head branch in whatever repository was published, so every publication moves the PR head (79 report files pushed onto PR heads in 5 repos, 2026-11-05..08), and the governance handoff - whose declared owner is Cursor-Governance (HANDOFF_CONTRACT.md) - lands in consumer repos where no owner reads it (39 of 41 briefs outside Cursor-Governance; 0 memory hits). (2) ops/ci_parity/tools.yaml hand-pins l9-ci while its source of truth is l9-ci-core org-ci.yml; validate_manifest --remote detects drift but run_pr_gate.sh only warns and runs the stale pin, so drift recurs whenever Core moves (10 of 13 sessions).",
+  "intervention": "Re-route, do not add frameworks. Fix 1: keep ops/reports/publish.py as the single handoff owner; replace commit+push of handoffs with delivery that never touches the git tree of the PR - session handoff upserted as one marker-keyed PR comment over GitHub REST (gh api), governance handoff delivered per friction id to a deduplicated Cursor-Governance intake issue (marker-keyed, one comment per session), falling back to the PR comment when the intake is unreachable; a local copy is kept under the git dir. GMP reports keep their existing commit path. Fix 3: l9-ci declares track: ci_ref with an extract regex; install.py resolves the exact 40-hex sdk-revision default from Core's org-ci.yml through the existing docker_sandbox Core reader, installs it and records source in state.json; manifest.load overlays the tracked version so run.py, receipts and resolve() agree with no further changes; the hand pin stays as the reviewed offline fallback with a WARN; validate_manifest treats a tracked tool as healthy when the extract matches and FAILs only when the extract no longer matches Core.",
+  "evidence_paths": [
+    "ops/reports/publish.py",
+    "ops/memory/HANDOFF_CONTRACT.md",
+    "environment/agents/adapters/claude-code/hooks/governance_handoff_writeback.py",
+    "environment/agents/adapters/claude-code/memory/post_publish.py",
+    "ops/ci_parity/tools.yaml",
+    "ops/ci_parity/manifest.py",
+    "ops/ci_parity/install.py",
+    "ops/ci_parity/validate_manifest.py",
+    "ops/scripts/run_pr_gate.sh",
+    "ops/autonomy/session_debt.py"
+  ]
+}

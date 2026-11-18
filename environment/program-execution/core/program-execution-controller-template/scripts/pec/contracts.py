@@ -96,7 +96,7 @@ def validate_source_contract(contract: dict[str, Any], task: dict[str, Any]) -> 
         "stop_conditions",
         "rollback",
     }
-    allowed = required | {"kernel_profile", "consumers", "entrypoints"}
+    allowed = required | {"kernel_profile", "consumers", "entrypoints", "projection_context"}
     missing = sorted(required - set(contract))
     unknown = sorted(set(contract) - allowed)
     if missing:
@@ -237,6 +237,8 @@ def draft_source_contract(
             source.get("kernel_profile") or task.get("kernel_profile") or "BUILD"
         ),
     }
+    if source.get("projection_context") is True or task.get("projection_context") is True:
+        payload["projection_context"] = True
     payload = validate_source_contract(payload, task)
     write_json(output, payload)
     return output
@@ -385,19 +387,10 @@ def render_contract(
         + "\n",
         encoding="utf-8",
     )
-    forbidden = (
-        "AUDIT.md",
-        "PLAN.md",
-        "BUILD.md",
-        "CHANGE.md",
-        "VALIDATION.md",
-        "DEFINITION_OF_DONE.md",
-        "RELEASE.md",
-    )
-    brief_text = brief.read_text(encoding="utf-8")
-    hit = [name for name in forbidden if name in brief_text]
-    if hit:
-        raise ContractError(f"worker brief names kernel files {hit}; ADR-0024 forbids that")
+    # The brief is built only from the typed Rendered Contract fields above, so
+    # it never carries kernel markdown. A filename substring lint used to run
+    # here; it matched target-repository paths such as RELEASE_VALIDATION.md
+    # and cited a decision that was never recorded, so it was removed.
     db.update_task(
         task_id,
         rendered_contract_path=str(target),

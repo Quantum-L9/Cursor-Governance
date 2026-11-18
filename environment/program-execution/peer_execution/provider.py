@@ -300,7 +300,10 @@ class CanonicalExecutionRequest(BaseModel):
             raise ValueError("permission profile reference does not match resolved profile")
         inference = _require_mapping("inference_budget", self.inference_budget)
         timeout = _require_mapping("timeout_budget", self.timeout_budget)
-        _bounded_int(inference, "max_turns", minimum=1, maximum=64)
+        # No turn ceiling: Program Execution exists to run long campaigns. A
+        # profile may still set max_turns for a deliberately short worker.
+        if "max_turns" in inference:
+            _bounded_int(inference, "max_turns", minimum=1, maximum=2**31 - 1)
         _bounded_int(timeout, "dispatch_seconds", minimum=1, maximum=7200)
         _bounded_int(timeout, "poll_seconds", minimum=1, maximum=600)
         requested = _require_string_tuple(

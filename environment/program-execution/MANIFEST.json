@@ -19,7 +19,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "29f58e93992ca11ca9ece8a66a88718b5daebadb2c11f11da39b5c621aaeb849"
+      "sha256": "b49d14b085c801ba79831ce41a643c43b54295f0f669e678b531d41b8bc079fd"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -35,7 +35,7 @@
     },
     {
       "path": "adapters/ai-control-plane.project-policy.yaml",
-      "sha256": "6a28e7e6e5b99e90f4819a9cb06f7ad278efecdc7637b6698908e19a39add302"
+      "sha256": "e666294cf996288a061a06c87a8efb1bbbb42fa95405503537c90e75f4e25861"
     },
     {
       "path": "adapters/chatgpt/ADAPTER.yaml",
@@ -131,11 +131,11 @@
     },
     {
       "path": "adapters/claude-code/permission_renderer.py",
-      "sha256": "cd401a416d4da5e0fae33dbd8bb119ca8f208a2f3bd55700567e3c245a0cdbd7"
+      "sha256": "c10ce5eb541bf467b3d04f6afd3d91634b0adab48ae467002620a50fcf6e5465"
     },
     {
       "path": "adapters/claude-code/provider.py",
-      "sha256": "3b91f1e3f90a4ce62b454818a68251e6a2019d1ee8564d11700a922f9d0c29ab"
+      "sha256": "80eb63de30bf8766ecc871904c6da392b964d5d6fe4a98f306b9c60889c140f5"
     },
     {
       "path": "adapters/claude-code/stream_parser.py",
@@ -147,7 +147,7 @@
     },
     {
       "path": "adapters/claude-code/tests/test_turn_budget.py",
-      "sha256": "4c2ae47a4808af993f795a1ae0a7ac0dba960e029e9121af7860da5b899555ae"
+      "sha256": "60472f99adc550a5355c4b93d7d97aedceaf064eeb8ba0d6c3d3d66a86227bad"
     },
     {
       "path": "adapters/codex/ADAPTER.yaml",
@@ -459,7 +459,7 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "100a7e12b6c5a40eea558daf6b47edc53d80d10f60fc2d957d4a264cb09f4bc6"
+      "sha256": "63f43c56fb04b1e582d4804264a0f12bbf1b4fda42f1c69a9c4b82f156a4882b"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
@@ -495,7 +495,7 @@
     },
     {
       "path": "campaigns/README.md",
-      "sha256": "26434fa8d579b13ce0aaf5aa6d88923ecf3527b6523ccbc62f43ef8afccaff48"
+      "sha256": "183037af2f7fb89538a817e80ede8396bf4c109ff9eb8b4065ecf59431ac1ccd"
     },
     {
       "path": "campaigns/adr-identity-integrity-v1/CAMPAIGN_SOURCE.yaml",
@@ -1375,7 +1375,7 @@
     },
     {
       "path": "conformance/schemas/canonical-execution-request.schema.json",
-      "sha256": "1280e7d70d95a7558f4f2843f749e1a29f3041a27afc52207df548c1f70c76f5"
+      "sha256": "757afe5e14934fad2e09d69a75cb5062473d9da836434c7f924f42ef2c7481b5"
     },
     {
       "path": "conformance/schemas/canonical-provider-result.schema.json",
@@ -1387,7 +1387,7 @@
     },
     {
       "path": "conformance/schemas/context-manifest.schema.json",
-      "sha256": "c6f98fe50066e68ed368b3bc18e3e47e79d252fed0ade01172a4f207dce76b4a"
+      "sha256": "177412625c63f602bba29cee2dea7168a2a255dd5172fbaecb0350c0f68f21c7"
     },
     {
       "path": "conformance/schemas/deployment-receipt.schema.json",
@@ -1403,7 +1403,7 @@
     },
     {
       "path": "conformance/schemas/execution-profile.schema.json",
-      "sha256": "f4c89230b66b3499c50c0ed6f3e4a8d8f479e182c58552fa53aad78992b276b4"
+      "sha256": "a2e3060dabd6d6c6fd169bea27788bf353ccb2ecccffc40e429d6a026bee8b6f"
     },
     {
       "path": "conformance/schemas/host-envelope.schema.json",
@@ -1531,7 +1531,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/README.md",
-      "sha256": "424b2afd040fe7da9f1d0653a7f6432b2f4ffcc6b6da8d7f498845a7bf217f33"
+      "sha256": "11fad4ed4c05e43448d7e3edcc5efa8502eb97aa43d32226542e46605e345e84"
     },
     {
       "path": "integrations/autonomy-control-plane/bridge.py",
@@ -1552,6 +1552,10 @@
     {
       "path": "integrations/autonomy-control-plane/tests/test_bridge.py",
       "sha256": "c8c55f3e606df5546cd5b0fdf7ad5004ad5073eebe290b32ba27c48ea659343d"
+    },
+    {
+      "path": "integrations/autonomy-control-plane/worker_effect_hook.py",
+      "sha256": "aaec9ccd775ed3652b859d19fe2dac59ced1b60821f40fa6a336057a882fcc7a"
     },
     {
       "path": "integrations/bootstrap/README.md",
@@ -1831,7 +1835,7 @@
     },
     {
       "path": "peer_execution/context.py",
-      "sha256": "a303273dc45e097b6dc918d53f63be165180faa447f394a63f9de5b7e40d6c49"
+      "sha256": "c5aa8ee1c455f97e5d5f4643cd98c03dea2e485fce3fcb18e0e4436d6b821997"
     },
     {
       "path": "peer_execution/contracts.py",
@@ -1855,11 +1859,11 @@
     },
     {
       "path": "peer_execution/execution.py",
-      "sha256": "803433e2a08b37365e0d1376a446265d5befa5eaaddc6b75220cf7437a147d67"
+      "sha256": "cdedc6a29c65216cd3298aa56d14d492638d0684d2ce1b5fcf677eeb897daaa8"
     },
     {
       "path": "peer_execution/front_door.py",
-      "sha256": "f4a4837f820e3cefaaf586ef5200c859ac3452584932ae488424bfcde3f2a5a9"
+      "sha256": "60eb72a118286ffcba66f08155085c1a95eff34dc568bf64f57aa90ae8f9a403"
     },
     {
       "path": "peer_execution/golden_vectors.py",
@@ -1887,7 +1891,7 @@
     },
     {
       "path": "peer_execution/provider.py",
-      "sha256": "225702954a0779f33e8c5327db3db3a20389c2a819088159b6ce2eb047f4f27a"
+      "sha256": "8943bc8e8bfb147ebeb3d841dbf41af1bd3e02fe8d3a770f4ec7a0bc3ec6d051"
     },
     {
       "path": "peer_execution/pytest.ini",
@@ -1995,7 +1999,7 @@
     },
     {
       "path": "registry/EXECUTION_PROFILE_REGISTRY.yaml",
-      "sha256": "6d8acc6d8f598ea64dc6f38010f4c2c07c4c6c398d7ada0c0cfc4dcce94117e2"
+      "sha256": "2854ac201f72ca54874d7532cd933636f27cdfe530555bea4f4bf641f4f08b26"
     },
     {
       "path": "registry/EXECUTION_ROUTING_POLICY.yaml",
@@ -2022,6 +2026,10 @@
       "sha256": "df594c6fa619e35a0c1e502e052e909af546f72eba77eb380527b48ba5dbb51b"
     },
     {
+      "path": "scripts/campaign_authority.py",
+      "sha256": "c5fdb95b9a81a744c0feff02f64a2ef2420aacf0262beafd2c2cfb20e4eebbf6"
+    },
+    {
       "path": "scripts/campaign_exec.py",
       "sha256": "c449b34630df393441c70d990c91004cee3e17f5d88760ddbf607f6e21fa0148"
     },
@@ -2034,6 +2042,10 @@
       "sha256": "7796af1594d284f7cb646a0ce0dcb3abe330c4136042096d26cb15508af738c8"
     },
     {
+      "path": "scripts/campaign_publish.py",
+      "sha256": "1fb7461da4365d7c5c2ca844ea147520fd0a2394166fde149b6b5582783d5b83"
+    },
+    {
       "path": "scripts/collect_evidence.py",
       "sha256": "82bb9848f1410c826113386b770d3a01439d16e3aeeffedef7952f78bb38a0a9"
     },
@@ -2043,7 +2055,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "13c935a0643ac1ca77db9e045624752e0f81e6d657fbade923f982863e9ed2af"
+      "sha256": "bb3f152c5f60413cd72a176f8cf0ee5dd85e807abaedfd7607c9f374191408ad"
     },
     {
       "path": "scripts/context7_stack_proof.py",
@@ -2111,7 +2123,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "ea77c3b78753d294f90562ec47cb625bfa5a584befc404c5eb957dd815f966ef"
+      "sha256": "23638006e35fee76914a9ed9fa5359e3f40ac023f98ae9ac1fc410110adc03c8"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2131,15 +2143,19 @@
     },
     {
       "path": "scripts/tests/pe_prepare_bench.py",
-      "sha256": "95a9f4c319fe3ed9c1e693794af1a7e84d4a0eceddfbb3e19a9cd8454989c18f"
+      "sha256": "8168c60f751ab950034ccbdc7a5e3dba903f6b5bde38ebe0c2b59f6353fc4685"
     },
     {
       "path": "scripts/tests/test_activation_receipt.py",
-      "sha256": "f5ffcc55b321b74a291226aac3cc63cd789b7785d2e23829734edac67958991e"
+      "sha256": "a3a3ef54ae25518829f57ec42e8f52c59a4de223f3a9b06674248dc984838ea6"
     },
     {
       "path": "scripts/tests/test_blueprint_ops.py",
       "sha256": "4276b617a1ad3471e430b1dfdd3036d0d0d04caf494366af85c5d41eb18211ec"
+    },
+    {
+      "path": "scripts/tests/test_campaign_authority.py",
+      "sha256": "6061860551b64145f50784b1debebf15a71ab62b4861f16b51f1ed1df9d67c73"
     },
     {
       "path": "scripts/tests/test_campaign_input_front_door.py",
@@ -2150,8 +2166,12 @@
       "sha256": "ead6054e3c6332980b8083cedc4cf296355d1ef681248d3b247035fd650c8144"
     },
     {
+      "path": "scripts/tests/test_campaign_publish.py",
+      "sha256": "84679d1bedacd4f7edb1be89e05dd635e33f6b7462368993ff480795f0ed18d3"
+    },
+    {
       "path": "scripts/tests/test_campaign_tunnel_airtight.py",
-      "sha256": "6184990effc1287d3b53c6da38a198288f3314b816e64d1099ccb48d2fe74d02"
+      "sha256": "59fdff64d01605e7c39797983a062362812272129eee5fc75f10f9cb28aadad2"
     },
     {
       "path": "scripts/tests/test_collect_evidence_memory_lookup.py",
@@ -2163,7 +2183,7 @@
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "1e9ead40302156d6e7dbc8cdb44fd775d67eaab3ee369bf1dfffe453fb89c964"
+      "sha256": "1f6a6d7372679e17e0d7d779c314a98bd834606448ebefd28c86c179b6df880f"
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
@@ -2175,7 +2195,7 @@
     },
     {
       "path": "scripts/tests/test_failed_result_harvest.py",
-      "sha256": "24202da21c6e120818fae4af2563e9e9b6ea0601ee9c831dc599cf359c952300"
+      "sha256": "58ac3afc42d60b4482e3cba47e651946cf055f2f269c1598739697f176d05756"
     },
     {
       "path": "scripts/tests/test_gate_s0_baseline.py",
@@ -2191,7 +2211,7 @@
     },
     {
       "path": "scripts/tests/test_pe_local_commit_only.py",
-      "sha256": "48967df3c91170944c8d47a0105974d24f14809e6994d3a95bfc153ce6353371"
+      "sha256": "4d4c1e6e45982e561b5a3f111e76d34f3f75522d158fc3cc0e77f1270be73c06"
     },
     {
       "path": "scripts/tests/test_pe_prepare_state.py",
@@ -2203,7 +2223,7 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "8b28da9096d1f45453d5a47fd2e19dc3c688d3f5d8f7e8ca1229d97c658bdaf1"
+      "sha256": "c255e1e36d5dbdff55e70771059d33451d2e21da9f660ba598a12d51a051eaed"
     },
     {
       "path": "scripts/tests/test_pe_trace.py",
@@ -2223,7 +2243,7 @@
     },
     {
       "path": "scripts/tests/test_prepare_resumable.py",
-      "sha256": "7701a32ea046d298cb186f1c3ae2f3ca82131b82ef296138d917a6af279e4e15"
+      "sha256": "29164d913fc0e43f10e1bce513c0661c58e0bf57c4395cbb3bf8a615b2ed5b2f"
     },
     {
       "path": "scripts/tests/test_probe_lock_binding.py",
@@ -2234,12 +2254,16 @@
       "sha256": "b2b2144a1ba7feb93f2cd31b71d3c309efb524441eb59985ee76850c435159b1"
     },
     {
+      "path": "scripts/tests/test_projection_opt_in.py",
+      "sha256": "126eba8c7ffb8de8ee2cd3601dc6d75b6b60204357bb6762e6d1916ef37e4e43"
+    },
+    {
       "path": "scripts/tests/test_replay_campaign.py",
       "sha256": "f2a78c2866d85fc81462463b78c28c89fb0da231816490dc0fbeeb52f16a96ec"
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "9c85c55fbb14f4cc9272063bd749a37febdd69ee30f092a21fc5e3c480ef8d5f"
+      "sha256": "e7dda71cc8a52e6ecb5e749a4c845ae92ca58ac254c4505994a9c4d14fe7a3d0"
     },
     {
       "path": "scripts/tests/test_run_campaign_repairs.py",
@@ -2259,11 +2283,11 @@
     },
     {
       "path": "scripts/tests/test_validate_campaign_promotion.py",
-      "sha256": "66370314563cea2b5f8c3ea90d6f2405f66597c8f02eb79751f05b3c1740a61f"
+      "sha256": "c5c1a3e7261d7b117047ee94d61a0654300fc394d51c3c6527155ea755df43fc"
     },
     {
       "path": "scripts/validate_campaign_promotion.py",
-      "sha256": "af97f62fedf96f213e93d11220df3dc8c0bb7f76647af9fd3add737e61d7f3c7"
+      "sha256": "01b5b999623a8f179dff7a07b28aa9443e76dee23fcc7bd7f2503d9332cc637c"
     },
     {
       "path": "scripts/validate_execution_adapters.py",
@@ -2291,7 +2315,7 @@
     },
     {
       "path": "tests/hardening/test_autonomy_enforcement_e2e.py",
-      "sha256": "f094a41c8fdde42286773894c26f3276513f2b91e1730f42f485e5a475603ed9"
+      "sha256": "a0236e236a9b36b25305d4c077ef512bdd044603debd15c068f16e783cfc8ba0"
     },
     {
       "path": "tests/hardening/test_concurrent_worktree_isolation.py",
@@ -2334,8 +2358,12 @@
       "sha256": "344a8ab678dd46f02bcd0ca10c7e428463348920afd270fa5195cc260c3f2ad3"
     },
     {
+      "path": "tests/hardening/test_live_provider_seams.py",
+      "sha256": "bde8d58f8f61ea8327a356062b4eb6bdd5e9e9f6f0437583467fcde35e6bfca1"
+    },
+    {
       "path": "tests/hardening/test_real_campaign_e2e.py",
-      "sha256": "99b9aacbaff0ec80b0d1cdbf878bd093488af3f9e42591e6146a8b6f980e8f94"
+      "sha256": "5de456b9b572cccfba076fdec2bff8076217dd99cec1d37f1a3c9377b5f39123"
     },
     {
       "path": "tests/test_adapter_cli.py",

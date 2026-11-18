@@ -268,6 +268,19 @@
               "external_system"
             ],
             "description": "Architecture layer this todo touches; projected to the Architecture impact table."
+          },
+          "validation": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Terminal validation for this todo: single admissible shell commands (no pipes, chaining, redirection, -c/-e, or mutating git). Required for every todo that writes files when the plan is rendered as a Program Execution campaign-source.v2."
+          },
+          "acceptance": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Observable acceptance statement for this todo; projected to the campaign task's acceptance."
           }
         }
       }
@@ -680,6 +693,25 @@
         },
         "migration_required": {
           "type": "boolean"
+        }
+      }
+    },
+    "campaign": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Program Execution campaign binding, read by scripts/render_campaign_source.py when the plan is rendered as l9.program-execution.campaign-source.v2 for make campaign.",
+      "properties": {
+        "campaign_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{2,62}$"
+        },
+        "target_repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+        },
+        "source_of_truth": {
+          "type": "string",
+          "minLength": 1
         }
       }
     }

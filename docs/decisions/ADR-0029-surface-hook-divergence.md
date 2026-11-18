@@ -98,6 +98,22 @@ canonical `close_session`, and `graphiti-session-end.sh` uses
 `hydration.cli close`. Wrapper budget / `skipped_no_prefetch` policy does not
 justify a second close implementation. No `session_close.py` is introduced.
 
+## Options Considered
+
+Recorded 2026-11-15 from the alternatives this record's Context and Decision
+already name; the decision itself is unchanged.
+
+1. **Keep a Claude predicate in each consumer** (`memory_prefetch.py`,
+   `session_start_claude_governance.sh`, `execution_profile.classify()`). The
+   status quo, and the defect: a projected `L9_GOVERNANCE_SURFACE=claude-code`
+   made Cursor look like Claude in some consumers and not others. Rejected.
+2. **No-op every gate-class hook outside Claude.** Simple, but false for the live
+   launcher: shared gates such as the merge gate must keep enforcing on every
+   surface, and an `unknown` surface must fail toward closed. Rejected (Decision §2).
+3. **One upstream detector plus a named Claude-only gate table in the launcher.**
+   Identity has one SSOT (`surface_detect`), observers skip off Claude, and only
+   the named gates skip on a known non-Claude surface. Chosen.
+
 ## Consequences
 
 - Cursor sessions cannot be hijacked by the projected Claude surface id.
@@ -126,3 +142,18 @@ surface's *memory front door* is the same door (`ops/memory`), so "memory front
 door" in item 3 names where a surface wires it, not a surface-local transport.
 The receipt-unification seam in item 4 is unchanged. Nothing in this ADR
 authorizes a provider call or a second memory stack.
+
+## Amendment (2026-11-15) — the gate table follows `l9_hook_exec.sh`
+
+Decision item 2's lists drifted from the launcher. As executed:
+
+- **Claude-only gates** (skip on a known non-Claude surface):
+  `local_execution_gate_wrap.py`, `memory_gate.py` and
+  `coding_agent_binding_gate_wrap.py`.
+- **Shared gates:** `merge_gate_wrap.py`, `swarm_role_gate_wrap.py` (registered only on
+  `mcp__claude-code-remote__.*`) and `context7_stack_pretool.py`.
+  `session_debt_wrap.py` is gate-classified but not registered: `session_debt.py`
+  runs on demand, not as a Stop gate (`rules/42-no-abandoned-work`).
+
+`environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md` carries the same table; the
+launcher's `l9_required_class` and Claude-only `case` are the authority for both.

@@ -476,7 +476,7 @@ class SessionStartPlansStoreTests(BootstrapFixture):
         # and the hook reports the links-only heal, not the full-setup fallback
         # (setup_workspace_symlinks.sh migrates unconditionally).
         self._assert_workspace_wired(home, evidence)
-        self.assertIn("- wire: auto-wired links-only", context, evidence)
+        self.assertIn("- links: auto-wired links-only;", context, evidence)
         self.assertNotIn("auto-wired (full setup)", context, evidence)
 
     def test_links_only_plans_mode_wires_without_touching_the_store(self) -> None:

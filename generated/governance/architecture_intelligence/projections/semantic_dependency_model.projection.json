@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "dependency_rules": {
@@ -87,6 +87,17 @@
           "identity_model",
           "contracts",
           "authority_model"
+        ]
+      },
+      "implementation_ir": {
+        "change_effect": "implementation_ir_and_target_artifacts_stale",
+        "depends_on": [
+          "product_manifest",
+          "authority_revision",
+          "target_binding",
+          "behavior_contract_refs",
+          "behavior_contract_digests",
+          "compiler_coordinates"
         ]
       },
       "port_resolution": {
@@ -191,10 +202,10 @@
       "upstream_revision_change": "evaluate_dependency_impact"
     }
   },
-  "projection_digest": "sha256:d0378d89856ebb476f8b1ed07d3188938bdb03ff70e9471cccd955e827c2ebf3",
+  "projection_digest": "sha256:be62c5fe3de4c173b9723d24d18058677bc1a63ed3f7b0a09f2cb1e5829f59ad",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:d48ad347e3c39c33274017ccca30843b4a11f5339c519cc957aaa057f0440a14",
+  "source_digest": "sha256:b6204c0128ba0493c6e70dfd6976fd409efdc6e8a68b70fac8ea9226833fcf9c",
   "source_ref": "l9.source/semantic-dependency-model@1"
 }

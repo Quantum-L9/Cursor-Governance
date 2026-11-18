@@ -110,7 +110,7 @@ tree was merged into top-level `ops/` (see `ops/operational-oversight.md`).
 
 ### Skills
 - [`commands/gmp.md`](commands/gmp.md) — /gmp locked execution (executor `workflows/gmp_executor.py`)
-- [`skills/l9-plan/SKILL.md`](skills/l9-plan/SKILL.md) — explicit-only owner of the PLAN_DOCUMENT schema, validator and projection renderer that `l9-plan-simple` runs; Program Execution planning stays retired
+- [`skills/l9-plan/SKILL.md`](skills/l9-plan/SKILL.md) — explicit-only Program Execution campaign planner (renders a `campaign-source.v2` for `make campaign`) and owner of the PLAN_DOCUMENT schema, validator and renderers that `l9-plan-simple` runs
 - [`environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`](environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md) — **first-class** executable plan template SSOT
 - [`environment/contracts/autonomy/MANIFEST.yaml`](environment/contracts/autonomy/MANIFEST.yaml) — **first-class** autonomy family registry (subordinate to PE; `owns_program_state: false`)
 - [`skills/l9-structured-reasoning/SKILL.md`](skills/l9-structured-reasoning/SKILL.md) — adaptive evidence-based reasoning (plan/review/architecture/debug/corpus)

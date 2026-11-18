@@ -1,0 +1,55 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "conformance_requirement_shape": {
+      "optional": [
+        "profile_hint",
+        "binding_constraints",
+        "evidence_requirements"
+      ],
+      "required": [
+        "id",
+        "subject_class",
+        "governing_refs",
+        "observable_semantics",
+        "verification_class"
+      ]
+    },
+    "global_rules": {
+      "conformance_evidence_does_not_grant_authority": true,
+      "every_conformance_requirement_traces_to_governing_semantics": true,
+      "fixture_or_test_must_not_invent_law": true,
+      "proof_obligations_preexist_candidate_implementation": true,
+      "system_under_test_must_not_define_expected_result": true,
+      "unresolved_semantics_do_not_compile_to_false_conformance": true
+    },
+    "output": "conformance_requirement_ir",
+    "ownership_boundary": {
+      "l9_conformance_owns": [
+        "fixture_identity",
+        "fixture_admission",
+        "profile_resolution",
+        "executable_conformance",
+        "conformance_receipts"
+      ],
+      "this_file_owns": "global_semantics_for_deriving_conformance_requirements"
+    },
+    "requirement_derivation_inputs": [
+      "invariants",
+      "contracts",
+      "capabilities",
+      "architecture_patterns",
+      "ports",
+      "provider_bindings"
+    ]
+  },
+  "projection_digest": "sha256:f2fc2fe2c5c747a38d48783dfd6948d253fcfead35c5a71373d5b083ac10423c",
+  "projection_profile_digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+  "projection_profile_ref": "l9.projection/contracts-conformance@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:e777a3cb7b8d94e044934d4778045d697bcdd85ecb2ebe241e95fe60bd7141c5",
+  "source_ref": "l9.source/conformance-model@1"
+}

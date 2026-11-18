@@ -474,6 +474,28 @@ def _admission_errors(blueprint: Path, *, admission_draft: bool) -> list[str]:
     return []
 
 
+_TEMPLATE_PLACEHOLDER = re.compile(r"\{\{[A-Z_]+\}\}")
+
+
+def _controller_identity(definition: dict[str, Any], program_id: str) -> str:
+    """The identity this runtime's receipts carry for their Controller.
+
+    An instantiated Controller declares its own id and that id is used as is.
+    A campaign hosted directly by the sealed template has no instantiation
+    step, so the declared id is still the unrendered template variable; every
+    handoff and closure receipt then named `{{CONTROLLER_ID}}` as its issuer.
+    A runtime hosted by the template is identified by the Program it was
+    bootstrapped for, in the form `TEMPLATE_VARIABLES.yaml` requires of an id.
+    """
+    declared = str(definition.get("id") or "").strip()
+    if declared and not _TEMPLATE_PLACEHOLDER.search(declared):
+        return declared
+    slug = re.sub(r"[^a-z0-9]+", "-", program_id.lower()).strip("-")
+    if not slug:
+        raise ControllerError("cannot derive a Controller id: the Program Lock names no program id")
+    return f"controller-{slug}"
+
+
 def bootstrap(
     workspace: Path,
     blueprint: Path,
@@ -524,7 +546,7 @@ def bootstrap(
         "schema": "program-execution-controller.runtime-config.v2",
         "template_root": str(template_root),
         "blueprint_root": str(blueprint),
-        "controller_id": controller_definition["id"],
+        "controller_id": _controller_identity(controller_definition, program_id),
         "controller_contract": controller_definition["contracts"]["controller"],
         "global_halt": False,
     }
@@ -3001,6 +3023,37 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 )
             else:
                 gates["validation"] = "INCOMPLETE"
+            if not changed:
+                # A writing task that changes nothing has normally not done its
+                # work, so `scope` is FAIL above. The one exception is a task
+                # whose objective already holds on its base (the change landed on
+                # the target before the campaign ran): the Controller's own run
+                # of the task's validation commands passes on the unchanged
+                # worktree and the worker declared no changed files. That is
+                # proof the change is unnecessary, not a claim, so it is the
+                # in-scope outcome `already_satisfied`. With no commands, or a
+                # failing one, a do-nothing attempt still FAILs.
+                #
+                # "Unchanged" must mean the base itself: HEAD is the task's base
+                # and the tree carries nothing uncommitted. An earlier attempt's
+                # leftover can make validation pass while this attempt changes
+                # nothing against its own baseline; that work would integrate as
+                # nothing and be lost, so it is not `already_satisfied`.
+                at_base = (
+                    run_git(worktree, "rev-parse", "HEAD", check=False).stdout.strip()
+                    == str(task["base_sha"])
+                    and not run_git(
+                        worktree, "status", "--porcelain", "--untracked-files=all", check=False
+                    ).stdout.strip()
+                )
+                satisfied = (
+                    at_base
+                    and bool(required_commands)
+                    and gates.get("validation") == "PASS"
+                    and gates.get("changed_files_exact") == "PASS"
+                )
+                gates["scope"] = "PASS" if satisfied else "FAIL"
+                gates["no_change_required"] = "PASS" if satisfied else "FAIL"
             gates["wiring"] = _wiring_gate(contract, task)
             # Controller-owned candidate identity. The worker cannot git add or
             # git commit (permission_renderer denials) and must return
@@ -3028,6 +3081,9 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             "candidate_sha": candidate_sha,
             "declared_changed_files": sorted(set(receipt.get("changed_files") or [])),
             "observed_changed_files": changed,
+            "outcome": (
+                "already_satisfied" if gates.get("no_change_required") == "PASS" else "changed"
+            ),
             "observed_file_digests": observed_digests,
             "validations": validations,
             "unenforced_prohibitions": unenforced_prohibitions,

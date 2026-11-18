@@ -2,6 +2,8 @@
 # Standalone canonical prefetch — used by the orchestrator; can run standalone.
 # Compiles the session hydration packet through the memory control plane
 # (ops/memory) and writes the local session state; never calls a provider.
+# No --agent-id: the writer identity is derived from host markers
+# (ops/memory/agent_identity.py), never configured here.
 set -uo pipefail
 REAL_HOOK="$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "${BASH_SOURCE[0]}")"
 HOOK_DIR="$(dirname "$REAL_HOOK")"
@@ -16,5 +18,5 @@ REPO="${CURSOR_PROJECT_DIR:-$PWD}"
 (cd "$ROOT" && PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}" \
   "$PY" -m ops.graphiti.hydration.cli compile \
   --project-dir "$REPO" --session-id "$CURSOR_CONVERSATION_ID" \
-  --agent-id "${L9_MEMORY_AGENT_ID:-cursor}" --format json) >/dev/null 2>&1 || true
+  --format json) >/dev/null 2>&1 || true
 exit 0

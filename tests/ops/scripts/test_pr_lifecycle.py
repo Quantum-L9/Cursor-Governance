@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -996,6 +997,35 @@ def test_open_pr_after_gate_subscribes_via_graphql() -> None:
     assert '-X PUT "repos/' not in helper
 
 
+def test_a_swarm_child_owns_its_pr_without_a_remediation_marker(
+    tmp_path: Path,
+) -> None:
+    """governance/cto-mode/MODE.yaml OWN YOUR PR (protocol v2): the publisher remediates.
+
+    A registered child subscribes to the PR it published, like any session, and is told it
+    owns the PR until it is ready to merge. It gets no remediation handoff marker, because
+    it remediates in its own session instead of handing off to a subagent.
+    """
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    probe = script.index('ops/autonomy/session_role.py" status')
+    assert probe < script.index('gh_subscribe_pr "$owner"')
+    assert probe < script.index("=== L9_AGENT_REQUIRED ===")
+    assert "subscribe: skipped" not in script
+    child = script[script.index('elif [[ "$_swarm_child" == "1" ]]; then') :]
+    assert child.index("CTO-STATUS: ready-to-merge") < child.index("\nfi\n")
+    assert "PR_REMEDIATE=0" in script[probe : script.index('gh_subscribe_pr "$owner"')]
+
+    # The probe the script runs: exit 0 only for a registered child.
+    role = Path(__file__).resolve().parents[3] / "ops" / "autonomy" / "session_role.py"
+    env = {**os.environ, "L9_SESSION_ROLE_DIR": str(tmp_path), "CLAUDE_CODE_SESSION_ID": "s1"}
+    env.pop("CURSOR_SESSION_ID", None)
+    status = [sys.executable, str(role), "status"]
+    assert subprocess.run(status, env=env, capture_output=True, check=False).returncode == 1
+    register = [sys.executable, str(role), "register-child", "--cto-session", "session_cto"]
+    subprocess.run(register, env=env, capture_output=True, check=True)
+    assert subprocess.run(status, env=env, capture_output=True, check=False).returncode == 0
+
+
 def _gate_function(gate: str, name: str) -> str:
     start = gate.index(f"{name}() {{")
     end = gate.index("\n}\n", start) + 3
@@ -1043,3 +1073,71 @@ def test_generated_heal_skips_consumer_workspace_with_skills_dir(tmp_path: Path)
         ["bash", "-c", script], env=env, capture_output=True, text=True, check=False
     )
     assert "HEAL RAN" in proc.stdout
+
+
+def _recover_harness(tmp_path: Path, *, pr_number: str, conflict: bool) -> tuple[int, str, Path]:
+    """Run the real _push_with_bounded_recover against a bare remote (#935)."""
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    body = script[script.index("_push_with_bounded_recover() {") :]
+    body = body[: body.index("\n}\n") + 3]
+    remote, work = tmp_path / "remote.git", tmp_path / "work"
+
+    def git(*args: str, cwd: Path = work) -> None:
+        subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True)
+
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(remote)], check=True)
+    subprocess.run(["git", "clone", "-q", str(remote), str(work)], check=True, capture_output=True)
+    git("config", "user.email", "t@example.invalid")
+    git("config", "user.name", "t")
+    (work / "f.txt").write_text("base\n", encoding="utf-8")
+    git("add", "f.txt")
+    git("commit", "-qm", "base")
+    git("push", "-q", "origin", "HEAD:main")
+    # The remote 'feat' is a spent branch: history main never took (squash-merged).
+    git("checkout", "-qb", "feat")
+    (work / "f.txt").write_text("old feat\n" if conflict else "base\n", encoding="utf-8")
+    (work / "old.txt").write_text("already merged\n", encoding="utf-8")
+    git("add", "f.txt", "old.txt")
+    git("commit", "-qm", "old feat")
+    git("push", "-q", "origin", "feat")
+    git("reset", "-q", "--hard", "main")
+    (work / "f.txt").write_text("new work\n" if conflict else "base\n", encoding="utf-8")
+    (work / "new.txt").write_text("new\n", encoding="utf-8")
+    git("add", "f.txt", "new.txt")
+    git("commit", "-qm", "new work")
+    harness = (
+        "set -u\n"
+        f'WS="{work}"; GOV_ROOT="{tmp_path}/nogov"; BASE_REF=main; branch=feat; '
+        f'pr_number="{pr_number}"\n'
+        'fetch_origin_branch() { git fetch -q origin "+refs/heads/$2:refs/remotes/origin/$2"; }\n'
+        "_reattest_recovered_head() { return 0; }\n_prove_template() { return 0; }\n"
+        f"{body}\n_push_with_bounded_recover\n"
+    )
+    proc = subprocess.run(
+        ["bash", "-c", harness], cwd=work, capture_output=True, text=True, check=False
+    )
+    return proc.returncode, proc.stdout + proc.stderr, work
+
+
+def test_push_recovery_never_merges_a_spent_remote_branch(tmp_path: Path) -> None:
+    """#935: no open PR means origin/<branch> is a spent name; it is never merged in."""
+    code, out, work = _recover_harness(tmp_path, pr_number="", conflict=False)
+    assert code == 1, out
+    assert "branch name is spent" in out
+    assert not (work / "old.txt").exists(), "already-merged history leaked into the branch"
+    log = subprocess.run(
+        ["git", "log", "--format=%s"], cwd=work, capture_output=True, text=True, check=True
+    ).stdout
+    assert "old feat" not in log
+
+
+def test_push_recovery_aborts_a_conflicted_merge(tmp_path: Path) -> None:
+    """#935: a recovery merge that conflicts leaves a clean tree, not a half-merge."""
+    code, out, work = _recover_harness(tmp_path, pr_number="983", conflict=True)
+    assert code == 1, out
+    assert "merge aborted" in out
+    status = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=work, capture_output=True, text=True, check=True
+    ).stdout
+    assert status == ""
+    assert not (work / ".git" / "MERGE_HEAD").exists()

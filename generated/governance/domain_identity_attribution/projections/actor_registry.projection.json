@@ -1,0 +1,76 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "actors": [
+      {
+        "description": "The Cursor agent actor.",
+        "id": "cursor",
+        "kind": "agent",
+        "status": "current"
+      },
+      {
+        "description": "The one logical Claude Code actor. Desktop, CLI, IDE, web, and mobile are SurfaceIdentity distinctions recorded in surface_registry.yaml, never separate actors.",
+        "id": "claude-code",
+        "kind": "agent",
+        "status": "current"
+      },
+      {
+        "description": "The Codex agent actor.",
+        "id": "codex",
+        "kind": "agent",
+        "status": "current"
+      },
+      {
+        "description": "The Gemini agent actor.",
+        "id": "gemini",
+        "kind": "agent",
+        "status": "current"
+      },
+      {
+        "description": "The Manus agent actor.",
+        "id": "manus",
+        "kind": "agent",
+        "status": "current"
+      },
+      {
+        "description": "A human actor acting directly rather than through an automated agent.",
+        "id": "human",
+        "kind": "human",
+        "status": "current"
+      }
+    ],
+    "alias_rules": {
+      "alias_does_not_authorize_new_consequential_authorship_after_downstream_migration": true,
+      "alias_kinds": {
+        "historical_actor_alias": "A former canonical or emitted ActorIdentity value that now canonicalizes to one current actor when read as an actor value."
+      },
+      "alias_meaning_is_bounded_to_actor_identity": true,
+      "alias_never_shadows_a_canonical_actor": true,
+      "alias_never_targets_another_alias": true,
+      "alias_resolves_to_exactly_one_canonical_actor": true
+    },
+    "aliases": [
+      {
+        "alias": "claude-code-desktop",
+        "alias_kind": "historical_actor_alias",
+        "canonical": "claude-code",
+        "note": "Historical actor value emitted by operating-plane identity derivation. When interpreted as an ActorIdentity value it canonicalizes to claude-code. The same string is a canonical SurfaceIdentity in surface_registry.yaml; equal strings do not imply equal identity kinds."
+      },
+      {
+        "alias": "claude-code-mobile",
+        "alias_kind": "historical_actor_alias",
+        "canonical": "claude-code",
+        "note": "Historical actor value emitted by operating-plane identity derivation. When interpreted as an ActorIdentity value it canonicalizes to claude-code. The same string is a canonical SurfaceIdentity in surface_registry.yaml; equal strings do not imply equal identity kinds."
+      }
+    ]
+  },
+  "projection_digest": "sha256:1a57bbcfcf74e2644553cecf5a90d0dbae41f357493021450116cf301a03fd5c",
+  "projection_profile_digest": "sha256:062a28729209c9857cf70f3068ea6d565bb1ce54c765ace52b92afaa5d09e5b6",
+  "projection_profile_ref": "l9.projection/identity-attribution@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:34fbe4abc246e21c28401941025317be52c109c88335577616a2648cc93c6f6f",
+  "source_ref": "l9.source/actor-registry@1"
+}

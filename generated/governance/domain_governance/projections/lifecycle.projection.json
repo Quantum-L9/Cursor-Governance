@@ -1,0 +1,276 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "lifecycles": {
+      "architecture_pattern": {
+        "branches": {
+          "admitted_global_pattern": "applicable_global_authority_admits_exact_candidate",
+          "domain_pattern": "domain_specific_authority_is_required_or_globalization_is_not_supported",
+          "rejected": "applicable_authority_refuses_candidate",
+          "unresolved": "evidence_or_authority_is_insufficient"
+        },
+        "purpose": "Govern observation and graduation of recurring architecture patterns without letting recognition create global authority.\n",
+        "rules": [
+          "recurrence_does_not_create_global_law",
+          "harvest_packet_is_proposal_not_admission",
+          "authority_resolution_binds_exact_candidate"
+        ],
+        "semantic_owner": "Quantum-L9/.github",
+        "stages": [
+          "seed",
+          "observed",
+          "cross_domain",
+          "semantically_stable",
+          "graduation_candidate",
+          "harvest_packet",
+          "authority_resolution"
+        ]
+      },
+      "conformance_receipt": {
+        "artifact_state": "immutable_after_emission",
+        "derived_statuses": [
+          "current",
+          "non_current"
+        ],
+        "emitted_state": "receipted",
+        "purpose": "Model receipt emission as immutable evidence while treating currentness as a derived coordinate evaluation rather than a mutable authority state.\n",
+        "rules": [
+          "currentness_depends_on_subject_profile_fixture_and_binding_coordinates",
+          "material_coordinate_change_makes_receipt_non_current_unless_compatibility_preserves_it",
+          "newer_receipt_does_not_rewrite_prior_receipt",
+          "receipt_currentness_does_not_grant_authority"
+        ],
+        "semantic_owner": "l9-conformance"
+      },
+      "distribution": {
+        "branches": {
+          "non_current": "distributed_coordinates_no_longer_match_required_published_coordinates",
+          "unresolved": "target_state_cannot_be_observed_or_verified"
+        },
+        "purpose": "Govern deterministic distribution of exact published coordinates and bounded reconciliation of consumer state without semantic reinterpretation.\n",
+        "rules": [
+          "distribution_requires_exact_published_identity_and_digest",
+          "distribution_does_not_reinterpret_payload_semantics",
+          "reconciliation_binds_exact_target_and_published_coordinates",
+          "distribution_receipt_does_not_replace_conformance_receipt"
+        ],
+        "semantic_owner": "Quantum-L9/.github",
+        "stages": [
+          "prepared",
+          "dispatched",
+          "reconciliation_pending",
+          "reconciled"
+        ]
+      },
+      "fixture": {
+        "branches": {
+          "globalization_candidate": "proposed_global_scope_lacks_global_authority",
+          "rejected": "mechanical_or_authority_gate_refuses_candidate",
+          "unresolved": "source_semantics_or_authority_are_insufficient"
+        },
+        "publication_gate": {
+          "all_of": [
+            "admitted",
+            "canonical_identity_exists",
+            "immutable_digest_exists",
+            "catalog_contains_subject",
+            "admitted_profile_references_subject",
+            "distribution_available"
+          ]
+        },
+        "purpose": "Govern fixture compilation, admission, publication, resolution, execution, and evidence without transferring fixture semantic ownership to the compiler or implementation under test.\n",
+        "rules": [
+          "compiler_candidate_is_not_admitted_fixture",
+          "system_under_test_does_not_define_expected_fixture_semantics",
+          "fixture_history_is_immutable_by_version_and_digest"
+        ],
+        "semantic_owner": "l9-conformance",
+        "stages": [
+          "candidate",
+          "derived",
+          "classified",
+          "admission_evaluated",
+          "awaiting_authority",
+          "admitted",
+          "published",
+          "resolvable",
+          "inherited_by_profiles",
+          "executed",
+          "receipted"
+        ]
+      },
+      "fixture_profile": {
+        "purpose": "Govern versioned conformance-profile membership and publication while preserving exact fixture closure and immutable prior versions.\n",
+        "rules": [
+          "membership_change_requires_new_profile_version",
+          "existing_profile_versions_are_immutable",
+          "published_profile_requires_exact_digest",
+          "profile_currentness_depends_on_exact_membership_and_source_coordinates"
+        ],
+        "semantic_owner": "l9-conformance",
+        "stages": [
+          "candidate",
+          "admitted",
+          "published",
+          "resolvable",
+          "superseded"
+        ]
+      },
+      "globalization_candidate": {
+        "purpose": "Govern a normalized cross-domain candidate from evidence accumulation to an explicit global-authority resolution.\n",
+        "rules": [
+          "candidate_generation_is_not_global_admission",
+          "target_global_authority_owns_resolution",
+          "material_candidate_change_requires_new_resolution"
+        ],
+        "semantic_owner": "Quantum-L9/.github",
+        "stages": [
+          "candidate",
+          "evidence_accumulating",
+          "awaiting_authority",
+          "authority_resolution"
+        ],
+        "terminal_resolutions": [
+          "admitted_global_law",
+          "retained_domain_local",
+          "rejected",
+          "unresolved"
+        ]
+      },
+      "harvest_packet": {
+        "artifact_state": "immutable_after_emission",
+        "purpose": "Preserve an emitted harvest proposal as an immutable evidence-bearing packet while the target authority resolves the candidate it carries.\n",
+        "rules": [
+          "packet_does_not_create_authority",
+          "packet_resolution_does_not_rewrite_emitted_packet",
+          "resolution_ref_may_be_attached_by_new_artifact_or_receipt"
+        ],
+        "semantic_owner": "packet_semantic_owner",
+        "stages": [
+          "emitted",
+          "awaiting_authority_resolution",
+          "resolved"
+        ]
+      },
+      "identity_assertion": {
+        "branches": {
+          "ambiguous": "multiple_materially_distinct_identities_remain",
+          "invalid": "assertion_or_evidence_binding_is_invalid",
+          "unknown": "required_identity_cannot_be_resolved"
+        },
+        "purpose": "Govern a dynamic IdentityAssertion as evidence bound to exact runtime evidence and governing coordinates without promoting it into authorization or identity-source authority.",
+        "rules": [
+          "identity_assertion_is_evidence_not_authority",
+          "material_runtime_evidence_change_invalidates_currentness",
+          "valid_current_assertion_is_consumed_not_rederived",
+          "unknown_actor_blocks_consequential_authorship_when_actor_required"
+        ],
+        "semantic_owner": "applicable_identity_resolution_owner",
+        "stages": [
+          "candidate",
+          "resolved",
+          "current",
+          "non_current",
+          "superseded"
+        ]
+      },
+      "product_manifest": {
+        "branches": {
+          "blocked": "resolved_manifest_gate_fails",
+          "unresolved": "required_product_resolution_is_incomplete"
+        },
+        "purpose": "Govern a derived proof-carrying ProductManifest while preserving exact upstream coordinates and non-authoritative derived status.",
+        "rules": [
+          "product_manifest_is_derived_not_product_authority",
+          "implementation_lowering_requires_validated_current_resolved_manifest",
+          "upstream_material_change_makes_manifest_non_current_unless_compatibility_preserves_it"
+        ],
+        "semantic_owner": "l9-semantic-compiler",
+        "stages": [
+          "derived",
+          "validated",
+          "current",
+          "non_current",
+          "superseded"
+        ]
+      },
+      "product_topology": {
+        "branches": {
+          "rejected": "schema_semantic_or_authority_gate_refuses_topology",
+          "unresolved": "kind_archetype_semantics_or_authority_cannot_be_resolved"
+        },
+        "purpose": "Govern an authoritative ProductTopology revision from candidate through admission, currentness, supersession, and retirement without allowing compiler resolution to overwrite product-owned semantics.",
+        "rules": [
+          "material_product_contract_change_creates_new_revision",
+          "compiler_does_not_mutate_admitted_product_topology",
+          "topology_admission_does_not_imply_implementation_conformance",
+          "product_kind_change_is_material"
+        ],
+        "semantic_owner": "product_semantic_owner",
+        "stages": [
+          "candidate",
+          "admission_evaluated",
+          "awaiting_authority",
+          "admitted",
+          "published",
+          "current",
+          "superseded",
+          "retired"
+        ]
+      },
+      "profile": {
+        "purpose": "Govern exact profile versions from candidate through publication and supersession.\n",
+        "rules": [
+          "profile_identity_and_digest_are_required_for_publication",
+          "membership_change_requires_new_version",
+          "existing_published_versions_are_immutable"
+        ],
+        "semantic_owner": "applicable_profile_semantic_owner",
+        "stages": [
+          "candidate",
+          "admitted",
+          "published",
+          "resolvable",
+          "superseded"
+        ]
+      },
+      "published_artifact": {
+        "publication_gate": {
+          "all_of": [
+            "canonical_identity_exists",
+            "immutable_digest_exists",
+            "catalog_presence_exists",
+            "owner_defined_publication_requirements_satisfied"
+          ],
+          "when_applicable": [
+            "required_profile_reachability_exists",
+            "required_distribution_availability_exists"
+          ]
+        },
+        "purpose": "Govern canonical publication and later supersession without collapsing admission, publication, or currentness into one state.\n",
+        "rules": [
+          "admission_does_not_imply_publication",
+          "publication_does_not_erase_prior_versions",
+          "material_change_requires_successor_revision_or_version"
+        ],
+        "semantic_owner": "applicable_artifact_semantic_owner",
+        "stages": [
+          "admitted",
+          "published",
+          "current",
+          "superseded",
+          "retired"
+        ]
+      }
+    }
+  },
+  "projection_digest": "sha256:dec16fb3e1d9700666e651ecad879071b32530fb94562305dd479508ac7c7914",
+  "projection_profile_digest": "sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d",
+  "projection_profile_ref": "l9.projection/governance@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:bb288184aff9b35269b756672af48369bfc55a280bac8ab3bc4c91ef5ba27a14",
+  "source_ref": "l9.source/lifecycle@1"
+}

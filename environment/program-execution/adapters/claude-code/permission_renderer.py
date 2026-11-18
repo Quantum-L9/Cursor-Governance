@@ -41,7 +41,11 @@ def render_permissions(
     # Workers may not mint a candidate commit. candidate_sha on the worker
     # receipt is JSON null; the controller records worktree HEAD after the
     # attempt. Do not grant git add/commit to "fix" that identity.
+    # The window does not load the operator's user-level settings, so the
+    # read denials that used to arrive from there are stated here.
     denied = [
+        "Read(./.env)",
+        "Read(./.mcp.json)",
         "Bash(git add:*)",
         "Bash(git commit:*)",
         "Bash(git reset --hard:*)",

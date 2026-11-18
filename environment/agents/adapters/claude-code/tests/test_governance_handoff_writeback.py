@@ -253,6 +253,38 @@ class GovernanceHandoffHookTest(unittest.TestCase):
         self.assertIn("— WRITTEN", output["systemMessage"])
         self.assertEqual(len(self.writes), 1)
 
+    def test_the_brief_reaches_delivery_as_friction_and_nothing_is_committed(self) -> None:
+        import post_publish  # noqa: PLC0415 - the module the hook calls through
+
+        calls: list[dict] = []
+
+        def record(
+            publisher: str, root: Path, pub: dict, lines: list[str], **kwargs: object
+        ) -> str:
+            calls.append({"publisher": publisher, "root": root, "pub": pub, **kwargs})
+            return "• report delivered: x"
+
+        self._prefetch()
+        self._publish()
+        brief = _brief()
+        self._write_brief(brief)
+        with mock.patch.object(post_publish, "publish_report", record):
+            output, _ = self._stop()
+
+        self.assertEqual(len(calls), 1)
+        call = calls[0]
+        self.assertEqual(call["publisher"], "publish_governance_handoff")
+        self.assertEqual(call["root"], self.repo)
+        # The normalized brief reaches delivery, so its friction becomes intake items.
+        self.assertEqual(
+            [f["item"] for f in call["brief"]["environment_friction"]],
+            [f["item"] for f in brief["environment_friction"]],
+        )
+        self.assertEqual(call["session_id"], SESSION)
+        assert output is not None
+        self.assertIn("• report delivered: x", output["systemMessage"])
+        self.assertFalse((self.repo / "reports").exists(), "no report file in the work tree")
+
     def test_observed_degradation_is_written_even_without_a_brief(self) -> None:
         self._prefetch(degraded=True)
         self._publish()

@@ -15,6 +15,61 @@
       "pattern": "^(?:sha256:)?[0-9a-f]{64}$",
       "type": "string"
     },
+    "projection": {
+      "additionalProperties": false,
+      "properties": {
+        "bundle_revision": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "profile_ref": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "schema": {
+          "const": "l9.peer-execution.projection-context.v1"
+        },
+        "views": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "digest": {
+                "pattern": "^sha256:[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "path": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "projection_digest": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "source_ref": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "digest",
+              "source_ref",
+              "projection_digest"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema",
+        "profile_ref",
+        "bundle_revision",
+        "views"
+      ],
+      "type": "object"
+    },
     "rendered_contract": {
       "type": "object"
     },

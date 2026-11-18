@@ -198,8 +198,29 @@ def main(argv: list[str] | None = None) -> int:
     toplevel = _gar_module().planned_workspace(workspace)
     if toplevel != workspace.resolve():
         plan_kernel_gate.clear_pipeline_required(toplevel, out_md)
+    _warn_outside_checkout(out_md, toplevel)
     print(f"PASS: wrote {out_md}")
     return 0
+
+
+def _warn_outside_checkout(out_md: Path, toplevel: Path) -> None:
+    """Say so when the plan landed outside the checkout being planned.
+
+    In a Cursor-Governance checkout `.cursor/plans` is a symlink to the primary
+    SSOT clone's `docs/plans`, so `--out-md .cursor/plans/...` from a worktree
+    wrote the plan into another checkout: it never reached this branch, and it
+    dirtied the SSOT clone. Not fatal (a consumer may want that), but never silent.
+    """
+    real = out_md.resolve()
+    try:
+        real.relative_to(toplevel.resolve())
+    except ValueError:
+        print(
+            f"WARN: plan written outside this checkout ({toplevel}): {real}. "
+            "It will not be committed on this branch; in a Cursor-Governance "
+            "checkout use --out-md docs/plans/<slug>.plan.md instead.",
+            file=sys.stderr,
+        )
 
 
 if __name__ == "__main__":

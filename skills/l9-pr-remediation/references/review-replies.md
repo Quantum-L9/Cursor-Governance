@@ -181,15 +181,22 @@ forbidden is a **hand-rolled per-thread `gh` loop outside the helper** on any
 surface, and any `gh pr …` / `gh api graphql` call on a REST-only surface.
 
 Single-thread writes go through `ops/scripts/pr_threads.py`. That command is
-the standing Claude Code allow. It posts only to the open PR named by
-`.l9/pr/pr-summary.json` in this checkout, and it appends the attribution
-footer itself. Discover comment ids with GET; do not hand-roll
-`gh api --method POST`.
+the standing Claude Code allow: `python3 ops/scripts/pr_threads.py` inside the
+governance clone, `python3 ~/.cursor-governance/ops/scripts/pr_threads.py`
+from any other checkout (a consumer repository, including a native publish
+route). It posts only to this checkout's open PR: the one named by
+`.l9/pr/pr-summary.json` when that receipt exists, otherwise the open PR whose
+head repository is origin, whose head branch is the checked-out branch, and
+whose head commit is HEAD or an ancestor of it (read live; any unreadable fact
+refuses). It appends the attribution footer itself. Discover comment ids with
+GET; do not hand-roll `gh api --method POST`.
+The examples below use the home-relative form, which works from every
+checkout; inside the governance clone the relative form is the same command.
 
 ### Reply to inline (diff) comments
 
 ```bash
-python3 ops/scripts/pr_threads.py reply --pr {pr_number} --comment-id {comment_id} <<'EOF'
+python3 ~/.cursor-governance/ops/scripts/pr_threads.py reply --pr {pr_number} --comment-id {comment_id} <<'EOF'
 {canonical_reply}
 EOF
 ```
@@ -200,7 +207,7 @@ EOF
 allowed. A PR comment is an issue comment. The helper posts that route:
 
 ```bash
-python3 ops/scripts/pr_threads.py comment --pr {pr_number} <<'EOF'
+python3 ~/.cursor-governance/ops/scripts/pr_threads.py comment --pr {pr_number} <<'EOF'
 {reply}
 EOF
 ```
@@ -215,7 +222,7 @@ gh api --method GET /repos/{owner}/{repo}/pulls/{pr_number}/ccr/review_threads
 # → [{resolved, outdated, path, line, comment_ids: [...]}, …]; bodies come from
 gh api --method GET /repos/{owner}/{repo}/pulls/{pr_number}/comments
 
-python3 ops/scripts/pr_threads.py resolve --pr {pr_number} --comment-id {comment_id}
+python3 ~/.cursor-governance/ops/scripts/pr_threads.py resolve --pr {pr_number} --comment-id {comment_id}
 ```
 
 ### Resolve a thread — local CLI / Desktop (GraphQL reachable)

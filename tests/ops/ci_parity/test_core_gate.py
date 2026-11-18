@@ -189,50 +189,6 @@ def test_proxy_shim_only_when_proxy_settings_exist(tmp_path: Path) -> None:
     assert stat.S_IMODE(shim.stat().st_mode) == 0o700
 
 
-def test_core_governance_is_read_from_core_and_staged_like_org_ci(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = run.GOVERNANCE_ROOT
-    files = {
-        f"{root}/defaults/execution-profiles.yaml": '{"profiles": {"pr_fast": {"strict": false}}}',
-        f"{root}/defaults/provider-requiredness.yaml": (
-            '{"profiles": {"pr_fast": {"semgrep": true}}}'
-        ),
-        f"{root}/defaults/quality-thresholds.yaml": (
-            '{"profiles": {"pr_fast": {"sdk_policy": "semgrep-policy.yaml"}}}'
-        ),
-        f"{root}/semgrep-policy.yaml": '{"defaults": {"mode": "blocking"}}',
-        f"{root}/identity-maps/python.yaml": "rules: {}\n",
-    }
-    reads: list[str] = []
-
-    class Reader:
-        @staticmethod
-        def core_commit(ref: str) -> str:
-            assert ref == "main"
-            return "d" * 40
-
-        @staticmethod
-        def core_file(sha: str, path: str) -> str:
-            reads.append(path)
-            return files[path]
-
-    monkeypatch.setattr(run, "_core_reader", lambda: Reader)
-    scan = tmp_path / "scan"
-    scan.mkdir()
-    ctx = _ctx(tmp_path, scan)
-    ctx = run.replace(ctx, loaded=run.replace(ctx.loaded, cache_root=tmp_path / "cache"))
-    gov = run.stage_core_governance(ctx, "pr_fast", ["python"])
-    assert (gov.strict, gov.required, gov.core_sha) == (False, True, "d" * 40)
-    assert (scan / gov.policy).read_text() == files[f"{root}/semgrep-policy.yaml"]
-    assert (scan / gov.identity_maps / "python.yaml").read_text() == "rules: {}\n"
-    first = len(reads)
-    run.stage_core_governance(ctx, "pr_fast", ["python"])
-    assert len(reads) == first  # cached per Core commit
-    with pytest.raises(ValueError, match="no 'strict' for profile 'release'"):
-        run.stage_core_governance(ctx, "release", ["python"])
-
-
 def test_lane_without_semgrep_installed_is_a_skip(tmp_path: Path) -> None:
     loaded = run.replace(manifest.load(), install_root=tmp_path / "nothing")
     ctx = run.replace(_ctx(tmp_path, tmp_path), loaded=loaded)

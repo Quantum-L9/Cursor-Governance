@@ -13,28 +13,31 @@ closeout:
   next_campaign: first execute_order whose lifecycle is not complete or cancelled
   leaving_in_progress_after_merge_or_converged: defect
 
-# Campaign execution is permanently LOCAL-COMMIT-ONLY. It inspects, edits
-# isolated task worktrees, runs validations, verifies, and commits — then stops.
-# It never pushes, opens or updates a PR, writes merge authority, or merges.
-# Publication below is a separate root operation, not a campaign stage, and no
-# environment variable can widen Program Execution authority into it.
+# PROGRAM_EXECUTION_MAKE_PR_FINISH_V1 (2026-11-13; supersedes local-commit-only).
+# Campaign execution inspects, edits isolated task worktrees, runs validations,
+# verifies and commits locally; its last stage then publishes the verified
+# integration branch through the governance SSOT make pr, once, and stops. It
+# never pushes, opens a PR or merges any other way, and never writes merge
+# authority. No environment variable widens this.
 execution:
-  local_commit_only: true
-  completion_boundary: prepare -> execute -> validate -> verify -> local commits -> STOP
-  push: forbidden
-  pull_request: forbidden
+  local_commit_only: false
+  completion_boundary: prepare -> execute -> validate -> verify -> local commits -> SSOT make pr -> STOP
+  push: via_make_pr_only
+  pull_request: via_make_pr_only
   merge: forbidden
   # Retained as a diagnostic compatibility name only; it is not an authority source.
   release_transition_env: null
 
 publish:
-  autonomous: forbidden
+  autonomous: campaign_finish  # the runner's `pr` stage: scripts/campaign_publish.py
   requires_release_transition: false
-  required_command: PR_REMEDIATE=0 make pr
+  required_command: PR_REMEDIATE=0 make -C <SSOT> pr WS=<campaign integration worktree>
   require_makefile_checkers: true
   raw_gh_pr_create: forbidden
-  # Publication is a separate root operation, not a campaign stage. Campaign runs
-  # end at verified local commits. When publication does run it MUST end green +
+  raw_git_push: forbidden
+  head: campaign/<campaign_id>
+  base: target_remote_default  # origin/main for Cursor-Governance
+  # The campaign's `pr` stage is its only publication. It MUST end green +
   # merge-ready and still does not merge. /l9-pr-remediation merges each PR
   # only under human authorization bound to it and its exact head; the
   # operator typing /l9-pr-remediation is that authorization for the repo's
@@ -47,7 +50,7 @@ publish:
     skill: l9-pr-remediation
     merge: per_pr_human_authorization  # §6.2.12–§6.2.15; a typed /l9-pr-remediation is one
     scope: stacked_prs_opened_by_this_run
-  open_pr_against_main: false
+  open_pr_against_main: true  # one PR per campaign, head campaign/<campaign_id>
   mix_with_other_feature_branches: false
 
 # Stacked-PR policy: when a PR is already open for the workstream, the next PR
@@ -157,8 +160,10 @@ owner:
   authority_id: AUTH-001
   terminal_verdict: CONVERGED
   declared_at: "2026-08-14T21:28:53Z"
-  # Ceiling for AUTONOMOUS execution. Push and pull_request moved to the release
-  # transition; merge remains /l9-pr-remediation's alone, under human authorization.
+  # Ceiling for AUTONOMOUS task execution (workers). Workers never push or open
+  # a PR; the campaign's one publication is the runner's `pr` stage through the
+  # SSOT make pr (PROGRAM_EXECUTION_MAKE_PR_FINISH_V1). Merge remains
+  # /l9-pr-remediation's alone.
   authorization_ceiling:
     commit: true
     push: false

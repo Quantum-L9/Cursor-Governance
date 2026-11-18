@@ -322,6 +322,23 @@ class StopStateMachineTest(unittest.TestCase):
         self.assertIsNotNone(h.closes[0]["handoff"])
         self.settle(h)
 
+    def test_a_foreign_hook_continuation_does_not_skip_the_one_request(self) -> None:
+        """``stop_hook_active`` is set when ANY Stop hook caused the continuation.
+        The first post-publish Stop may carry it (another hook blocked earlier);
+        the brief is still requested exactly once, never closed without asking."""
+        h = self.harness()
+        h.write(MISSING, MISSING)
+        outputs = h.stop(stop_hook_active=True)
+        self.assertEqual(len(h.blocks(REPO_HOOK)), 1)
+        self.assertIn(str(HANDOFF.HANDOFF_REL), outputs[REPO_HOOK][0]["reason"])
+        self.assertEqual(h.closes, [], "asked first, not closed without a brief")
+        h.write(VALID, VALID)
+        h.stop(stop_hook_active=True)
+        self.assertEqual(len(h.blocks()), 1, "never a second block")
+        self.assertEqual(len(h.closes), 1)
+        self.assertIsNotNone(h.closes[0]["handoff"])
+        self.settle(h)
+
     def test_an_invalid_governance_brief_is_asked_for_only_by_the_repository_hook(self) -> None:
         h = self.harness()
         h.write(VALID, INVALID)
@@ -421,6 +438,23 @@ class StopStateMachineTest(unittest.TestCase):
                 h.write(MISSING, VALID)
                 h.stop()
                 self.assertEqual(len(h.blocks(REPO_HOOK)), 1)
+
+    def test_a_registered_swarm_child_neither_asks_closes_nor_writes(self) -> None:
+        # governance/cto-mode/MODE.yaml STAND DOWN: a /lcto child's lane ends at
+        # publication; the CTO owns the handoff. Its SessionEnd close still runs.
+        sys.path.insert(0, str(REPO_ROOT / "ops" / "autonomy"))
+        import session_role
+
+        h = self.harness("child")
+        roles = self.base / "roles"
+        with mock.patch.dict(os.environ, {"L9_SESSION_ROLE_DIR": str(roles)}):
+            session_role.register_child("session_cto", session_id=SESSION)
+            h.write(MISSING, MISSING)
+            for _ in range(3):
+                outputs = h.stop()
+                self.assertEqual(outputs, {REPO_HOOK: [], GOV_HOOK: []})
+        self.assertEqual((h.closes, h.gov_writes, h.blocks()), ([], [], []))
+        self.assertEqual(h.persisted(), {}, "no ledger advanced by a swarm child")
 
     def test_a_degraded_but_usable_hydration_still_closes(self) -> None:
         h = self.harness(degraded=True)

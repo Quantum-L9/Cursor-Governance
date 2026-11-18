@@ -9,8 +9,10 @@
 # L9 ownership boundaries:
 # - filesystem governance SSOT: $HOME/.cursor-governance
 # - durable memory: l9-graphite-memory -> MemoryService
-# - interactive memory write: memory.phase_lock -> memory.write_governed
+# - interactive memory write: memory.write_agent (ordinary, ADR-0031);
+#   memory.phase_lock -> memory.write_governed (conflict-sensitive only)
 # - PR convergence: make pr -> l9-pr-remediation, not Send Later
+#   (ops/autonomy/surface_profile.yaml l4_local_autonomy.post_push.pr_watch)
 # - GitHub publication: make pr only
 # - Claude hosted GitHub transport: repository-scoped REST, never a known-bad GraphQL probe
 set -uo pipefail
@@ -22,9 +24,9 @@ LINES+=("L9 Claude bootstrap remediation mode: ENABLED")
 LINES+=("governance SSOT: $GOV")
 LINES+=("Do not invoke Register Repo Root to create or attach a second governance clone; use $GOV locally.")
 LINES+=("Durable agent memory: canonical l9-graphite-memory control plane terminating at MemoryService.")
-LINES+=("Interactive durable write: memory.phase_lock then memory.write_governed. The memory phase lock governs memory-write consistency only; it is not repository-write authority.")
+LINES+=("Interactive durable write: ordinary facts use memory.write_agent (no phase lock, ADR-0031); conflict-sensitive facts use memory.phase_lock then memory.write_governed. The memory phase lock governs memory-write consistency only; it is not repository-write authority.")
 LINES+=("Do not invoke retired graphiti-memory provider tools, provider aliases, or generic memory.ingest as an autonomous-write bypass.")
-LINES+=("Do not invoke Send Later for PR watching; make pr handoff + l9-pr-remediation own convergence/polling.")
+LINES+=("Do not invoke Send Later for PR watching; make pr handoff + l9-pr-remediation own convergence/polling (surface_profile post_push.pr_watch: subscribe_pr_activity_events_only). Exception: a /lcto CTO session schedules its own swarm check-in into itself (governance/cto-mode/MODE.yaml cto_wakeup); that is not PR watching.")
 LINES+=("Do not publish with raw git push, gh pr create, MCP create_pull_request, or push_files; publication is make pr only.")
 
 if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then

@@ -1,108 +1,94 @@
 ---
 name: end-session
-description: Force-retry ContinuationCapsuleV2 close when auto sessionEnd failed or hydrate printed REPAIR
+description: Repair a session close that did not land (SessionStart printed CLOSE_GAP) — canonical repair-write, never a push
 ---
 
-# /end-session — Force-retry / offline recovery
+# /end-session — repair a missed session close
 
-**Normal X-out does not need this command.** `sessionEnd` →
-`graphiti-session-end.sh` → Phase A/B close writes the continuation capsule automatically.
-See [`docs/MEMORY_PIPELINE_MAP.md`](../docs/MEMORY_PIPELINE_MAP.md) and
+**Normal session ends need nothing.** Both hosts close automatically:
+
+| Host | Event | What runs |
+|---|---|---|
+| Cursor | `sessionEnd` | `graphiti-session-end.sh` closes the continuation; `governance-backup.sh` → `session_end_preserve.py` parks this conversation's authored paths on `refs/l9/preserved/session/<sid>` |
+| Claude Code | `SessionEnd` | `session_end_close.py`: the same preserve, then the same close under `claude-session-end` |
+
+A resumed conversation closes again and **supersedes** its earlier continuation.
+Nothing on session end stages, commits or pushes (CANONICAL_LAW §5.1).
+
+This command is the **repair** for a close that did not land. Skill:
+[`skills/l9-end-session/SKILL.md`](../skills/l9-end-session/SKILL.md). Map:
+[`docs/MEMORY_PIPELINE_MAP.md`](../docs/MEMORY_PIPELINE_MAP.md),
 [ADR-0028](../docs/decisions/ADR-0028-session-hydrate-close-visibility.md).
 
-## Agent preload (required)
+## When to use
 
-1. Load [`skills/l9-end-session/SKILL.md`](../skills/l9-end-session/SKILL.md)
-2. Load [`skills/l9-graphiti-memory/SKILL.md`](../skills/l9-graphiti-memory/SKILL.md)
-3. Execute memory **only** via governance `.venv` (`python -m ops.memory.cli` / `hydration.cli`) — never bare `python3`
-4. Never pass `--scope`; always stamp `--agent-id` / `L9_MEMORY_AGENT_ID`
+- SessionStart printed `CLOSE_GAP <reason>` and `REPAIR: /end-session` (both
+  hosts read the prior session's close receipt locally).
+- You know the automatic close failed or was killed (Claude Code caps SessionEnd
+  at 60 s).
 
-## WHEN TO USE
+Not for `DEGRADED` (memory did not answer) or `ENVIRONMENT_FAULT` (runtime
+unbound): those are `make memory-readiness`, not a close repair (ADR-0032).
 
-- SessionStart printed `CLOSE_GAP` + `REPAIR: /end-session` (ADR-0032: a
-  close-gap is a lifecycle condition; `DEGRADED` is canonical memory not
-  answering and `ENVIRONMENT_FAULT` is an unbound runtime — neither is
-  repaired here)
-- Auto-close hook failed
-- Richer manual continuation after a thin Phase A close
-- Force governance backup / Redis handoff interactively
+## Execution
 
-## WHAT IT DOES (recovery)
-
-1. **Continuation** — `hydration.cli repair-write` (canonical write + receipt stamp).
-   Do not prefer `ops.memory.cli write --kind pickup_context` for this step.
-2. **Lessons / errors** — atomic writes with `--agent-id`
-3. **Governance backup** — push SSOT when requested
-4. **Confirmation** — closed-session summary
-
-Do **not** prefer `hydration.cli close` as the repair (ADR-0028).
-
-## EXECUTION
-
-### Phase 1 — CONTINUATION (primary = repair-write)
+### 1 — Repair the continuation (required)
 
 ```bash
-GOV="${HOME}/.cursor-governance"
-GRAPHITI_PY="${GOV}/.venv/bin/python"
-WS="${CURSOR_PROJECT_DIR:-$(pwd)}"
-memcli() { (cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.memory.cli "$@" --workspace "${WS:-$PWD}"); }
-export L9_MEMORY_AGENT_ID=cursor USER_ID=cursor_agent
-PRIOR_FILE="$WS/.l9/memory/previous_opened.json"
-REPAIR_SID=""
-if [ -f "$PRIOR_FILE" ]; then
-  REPAIR_SID="$("$GRAPHITI_PY" -c 'import json,sys; print(json.load(open(sys.argv[1])).get("session_id") or "")' "$PRIOR_FILE")"
-fi
-REPAIR_SID="${REPAIR_SID:-${CURSOR_CONVERSATION_ID:-manual}}"
-memcli health
-cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.graphiti.hydration.cli repair-write \
-  --project-dir "$WS" \
-  --session-id "$REPAIR_SID" \
-  --objective "{TASK}" --next "{NEXT}" --agent-id cursor
+GOV="$HOME/.cursor-governance"
+PY="$GOV/.venv/bin/python"
+WS="${CURSOR_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}}"
+PRIOR="$WS/.l9/memory/previous_opened.json"
+SID="$("$PY" -c 'import json,sys; print(json.load(open(sys.argv[1])).get("session_id") or "")' "$PRIOR" 2>/dev/null)"
+(cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.memory.cli health --workspace "$WS")
+(cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.graphiti.hydration.cli repair-write \
+  --project-dir "$WS" --session-id "${SID:?no prior session in previous_opened.json}" \
+  --objective "{TASK}" --next "{NEXT}" --files "{FILES}" --blocker "{BLOCKER}")
 ```
 
-Do **not** substitute `ops.memory.cli write` for this step. That path
-creates a pickup-class episode and never calls `write_receipt`, so hydrate still
-classifies a close-gap. `repair-write` is the only documented repair.
+- `repair-write` is the only close-gap repair: it writes the canonical
+  continuation **and** stamps the close receipt. `ops.memory.cli write` does
+  neither and is not this step.
+- Do **not** pass `--agent-id` or set `L9_MEMORY_AGENT_ID`. Identity is derived
+  from host markers (`ops/memory/agent_identity.py`); a value that differs from
+  the derived one is refused as identity drift.
+- A receipt already `closed_canonically` is skipped unless `--supersede`.
 
-Skip if the close receipt is already `closed` and `write_count>0` unless
-superseding. Do **not** write `memory-bank/`.
+### 2 — Durable lessons (optional)
 
-### Phase 2 — LESSONS & ERRORS (optional)
-
-Model-authored lessons take the MCP model write on `l9-graphite-memory`:
-`memory.write_agent` (ordinary; no `phase_lock`), or `memory.phase_lock` →
-`memory.write_governed` only when the fact is conflict-sensitive (ADR-0031).
-The CLI form below is the operator / offline-repair form, using the `memcli`
-defined in Phase 1:
+One atomic fact per write, built by the contract builder and passed unchanged to
+the `l9-graphite-memory` MCP tool (`l9.agent_memory_write.v1`):
 
 ```bash
-memcli write \
-  "LESSON|topic={TOPIC}|learned={LEARNED}|context={CONTEXT}" --kind lesson --agent-id cursor
+NS="$(cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.memory.cli resolve --workspace "$WS" \
+  | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["namespace"]["write_namespace_hint"])')"
+(cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.memory.agent_write build \
+  --namespace "$NS" --class insight --content "{one terse fact}" --tag "{topic}")
 ```
 
-### Phase 3 — GIT STATE (auto)
+→ `memory.write_agent` with exactly those arguments. Use `memory.phase_lock` →
+`memory.write_governed` only for a conflict-sensitive fact.
 
-Surface uncommitted count; do not auto-commit foreign paths.
+### 3 — Handoffs (only after a publication)
 
-### Phase 4 — GOVERNANCE GITHUB BACKUP (required)
+Generate both briefs from the debt ledger (record friction first with
+`session_debt.py friction`), then deliver them:
 
 ```bash
-bash "${GOV}/ops/scripts/backup_to_github.sh" \
-  "chore(governance): end-session $(date +%Y-%m-%d)"
+"$PY" "$GOV/ops/autonomy/session_debt.py" handoff --workspace "$WS" \
+  --pr {PR} --objective "{TASK}" --status "{STATUS}" --next "{NEXT}"
+(cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.reports.publish handoffs --workspace "$WS")
 ```
 
-Skip only with `GOVERNANCE_BACKUP_SKIP=1`.
+### 4 — Report
 
-### Phase 5 — CONFIRMATION
+Name the repaired session id, the receipt status after the repair, the lesson
+count, and whether handoffs were delivered.
 
-Do not hand-write the two post-publish briefs. Record environment friction
-as it happens (`session_debt.py friction <id> --detail ... --workaround ...`),
-then generate both from the debt ledger: `.l9/memory/handoff.json` (what is
-still to be done) and `.l9/memory/governance-handoff.json` (friction):
+## Never
 
-```bash
-"$GRAPHITI_PY" "$GOV/ops/autonomy/session_debt.py" --root "$WS" handoff \
-  --workspace "$WS" --pr {PR} --objective "{TASK}" --status "{STATUS}" --next "{NEXT}"
-```
-
-Then report continuation task / next / outcome, lesson count and backup status.
+- `git add -A`, a commit of foreign paths, or any push. Unpublished work is
+  already parked by the session-end preserve; publish with `make pr`.
+- The governance backup script from this command (that is `/governance-backup`,
+  an explicit operator action).
+- `memory-bank/`, PICKUP records, Redis session context — all retired.

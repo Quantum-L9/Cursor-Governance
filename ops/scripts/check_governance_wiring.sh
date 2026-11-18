@@ -37,6 +37,7 @@ FAIL_CONSUMER=0
 FAIL_SESSIONEND=0
 FAIL_GRAPHITI=0
 FAIL_LAUNCHAGENT=0
+FAIL_SSOT_TIP=0
 CURRENT_FAIL_CLASS=wiring
 
 WARN_FILE="$(mktemp)"
@@ -51,6 +52,7 @@ fail() {
     sessionend) FAIL_SESSIONEND=1 ;;
     graphiti) FAIL_GRAPHITI=1 ;;
     launchagent) FAIL_LAUNCHAGENT=1 ;;
+    ssot_tip) FAIL_SSOT_TIP=1 ;;
   esac
 }
 warn() { echo "$1" >> "$WARN_FILE"; }
@@ -72,7 +74,10 @@ emit_result() {
     if [ "$FAIL_LAUNCHAGENT" -eq 1 ]; then
       echo "RESULT: FAIL — LaunchAgent path law"
     fi
-    if [ "$FAIL_CONSUMER" -eq 0 ] && [ "$FAIL_SESSIONEND" -eq 0 ] && [ "$FAIL_GRAPHITI" -eq 0 ] && [ "$FAIL_LAUNCHAGENT" -eq 0 ]; then
+    if [ "$FAIL_SSOT_TIP" -eq 1 ]; then
+      echo "RESULT: FAIL — SSOT tip is not origin/main (remedy: /ff)"
+    fi
+    if [ "$FAIL_CONSUMER" -eq 0 ] && [ "$FAIL_SESSIONEND" -eq 0 ] && [ "$FAIL_GRAPHITI" -eq 0 ] && [ "$FAIL_LAUNCHAGENT" -eq 0 ] && [ "$FAIL_SSOT_TIP" -eq 0 ]; then
       echo "RESULT: FAIL — governance wiring"
     fi
   fi
@@ -208,39 +213,26 @@ done
 echo ""
 echo "=== SSOT clone freshness ($GC) ==="
 SSOT_BRANCH_EXPECTED="main"
+# The SSOT clone is the operating plane every consumer workspace loads, so its tip
+# is ONE fact: on main at origin/main, or not. It used to be reported as three
+# FAIL lines (branch, ahead, HEAD != origin) with remedies that are themselves
+# forbidden here (agent `git checkout`, governance_activate_fresh.sh as a sync —
+# rules/55). The only sanctioned catch-up is /ff, which parks unique commits and
+# dirty bytes before it fast-forwards. Its own fail class keeps it out of
+# "consumer workspace wiring": the workspace links can be perfect while the
+# plane they point at is a feature branch.
+CURRENT_FAIL_CLASS=ssot_tip
 if ! git -C "$GC" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   fail "SSOT checkout is not a Git worktree at $GC"
 else
-  ssot_branch=$(git -C "$GC" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-  if [ "$ssot_branch" = "$SSOT_BRANCH_EXPECTED" ]; then
-    pass "SSOT on branch $SSOT_BRANCH_EXPECTED"
-  elif [ "$WS_KIND" = "ssot_checkout" ]; then
-    warn "SSOT checked out on '$ssot_branch', expected '$SSOT_BRANCH_EXPECTED' (ssot_checkout: not a gate)"
-  else
-    fail "SSOT checked out on '$ssot_branch', expected '$SSOT_BRANCH_EXPECTED' (fix: git -C \"$GC\" checkout $SSOT_BRANCH_EXPECTED)"
-  fi
-
   if git -C "$GC" diff --quiet 2>/dev/null && git -C "$GC" diff --cached --quiet 2>/dev/null; then
     pass "SSOT working tree clean"
   else
     dirty_count=$(git -C "$GC" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-    warn "SSOT working tree dirty ($dirty_count file(s)) — commit+push or stash before it silently diverges from GitHub"
+    warn "SSOT working tree dirty ($dirty_count file(s)) — /ff parks it before catching up"
   fi
 
-  ahead=$(git -C "$GC" rev-list --count "origin/$SSOT_BRANCH_EXPECTED..HEAD" 2>/dev/null || echo "")
-  if [ -z "$ahead" ]; then
-    warn "no cached origin/$SSOT_BRANCH_EXPECTED ref in SSOT clone — run git -C \"$GC\" fetch origin"
-  elif [ "$ahead" -gt 0 ]; then
-    if [ "$WS_KIND" = "ssot_checkout" ]; then
-      warn "SSOT has $ahead unpushed commit(s) ahead of origin/$SSOT_BRANCH_EXPECTED (ssot_checkout: not a gate)"
-    else
-      fail "SSOT has $ahead unpushed commit(s) ahead of origin/$SSOT_BRANCH_EXPECTED — review before they linger (see git -C \"$GC\" log origin/$SSOT_BRANCH_EXPECTED..HEAD)"
-    fi
-  else
-    pass "SSOT has no unpushed commits ahead of origin/$SSOT_BRANCH_EXPECTED (last fetched)"
-  fi
-
-  # Tip freshness: HEAD must equal origin/main. Refresh fetch when activate receipt is stale (>900s).
+  # Tip freshness: refresh the cached origin ref when the activate receipt is stale (>900s).
   RECEIPT="$HOME/.cursor/governance-activate.last"
   NEED_FETCH=1
   if [ -f "$RECEIPT" ]; then
@@ -262,24 +254,34 @@ print(int(time.time() - ts))
   if [ "$NEED_FETCH" -eq 1 ]; then
     git -C "$GC" fetch --quiet origin "$SSOT_BRANCH_EXPECTED" 2>/dev/null || true
   fi
+
+  ssot_branch=$(git -C "$GC" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
   HEAD_SHA="$(git -C "$GC" rev-parse HEAD 2>/dev/null || echo "")"
   ORIGIN_SHA="$(git -C "$GC" rev-parse "origin/$SSOT_BRANCH_EXPECTED" 2>/dev/null || echo "")"
-  if [ -n "$HEAD_SHA" ] && [ -n "$ORIGIN_SHA" ] && [ "$HEAD_SHA" = "$ORIGIN_SHA" ]; then
-    pass "SSOT HEAD == origin/$SSOT_BRANCH_EXPECTED (${HEAD_SHA:0:7})"
+  ahead=$(git -C "$GC" rev-list --count "origin/$SSOT_BRANCH_EXPECTED..HEAD" 2>/dev/null || echo "?")
+  behind=$(git -C "$GC" rev-list --count "HEAD..origin/$SSOT_BRANCH_EXPECTED" 2>/dev/null || echo "?")
+  tip_desc="on '${ssot_branch:-?}' @${HEAD_SHA:0:7}, ${ahead} ahead / ${behind} behind origin/$SSOT_BRANCH_EXPECTED ${ORIGIN_SHA:0:7}"
+  if [ -z "$ORIGIN_SHA" ]; then
+    if [ "$WS_KIND" = "ssot_checkout" ]; then
+      warn "SSOT has no cached origin/$SSOT_BRANCH_EXPECTED ref (ssot_checkout: not a gate)"
+    else
+      fail "SSOT tip unknown: no origin/$SSOT_BRANCH_EXPECTED ref (fetch failed or offline; HEAD=${HEAD_SHA:0:7})"
+    fi
+  elif [ "$ssot_branch" = "$SSOT_BRANCH_EXPECTED" ] && [ "$HEAD_SHA" = "$ORIGIN_SHA" ]; then
+    pass "SSOT tip: $SSOT_BRANCH_EXPECTED == origin/$SSOT_BRANCH_EXPECTED (${HEAD_SHA:0:7})"
   elif [ "$WS_KIND" = "ssot_checkout" ]; then
-    warn "SSOT HEAD ${HEAD_SHA:0:7} != origin/$SSOT_BRANCH_EXPECTED ${ORIGIN_SHA:0:7} (ssot_checkout: not a gate)"
-  elif [ -z "$ORIGIN_SHA" ]; then
-    fail "SSOT missing origin/$SSOT_BRANCH_EXPECTED ref — fetch failed or offline (HEAD=${HEAD_SHA:0:7})"
+    warn "SSOT tip $tip_desc (ssot_checkout: not a gate)"
   else
-    fail "SSOT HEAD ${HEAD_SHA:0:7} != origin/$SSOT_BRANCH_EXPECTED ${ORIGIN_SHA:0:7} — run governance_activate_fresh.sh"
+    fail "SSOT tip $tip_desc — run /ff (parks unique commits, then fast-forwards; never discards)"
   fi
+fi
+CURRENT_FAIL_CLASS=consumer
 
-  # SSOT must not carry a self-alias even when the checked workspace is a consumer.
-  if [ -e "$GC/.cursor-commands" ] || [ -L "$GC/.cursor-commands" ]; then
-    fail "SSOT has .cursor-commands self-alias at $GC/.cursor-commands (remove)"
-  else
-    pass "SSOT has no .cursor-commands self-alias"
-  fi
+# SSOT must not carry a self-alias even when the checked workspace is a consumer.
+if [ -e "$GC/.cursor-commands" ] || [ -L "$GC/.cursor-commands" ]; then
+  fail "SSOT has .cursor-commands self-alias at $GC/.cursor-commands (remove)"
+else
+  pass "SSOT has no .cursor-commands self-alias"
 fi
 
 # Dev checkout vs machine SSOT: slash commands resolve via .cursor-commands → SSOT.
@@ -575,11 +577,8 @@ if [ -f "$MEMORY_BOUNDARY" ]; then
   else
     fail "plan-kernel-gate.py missing under ~/.cursor/hooks"
   fi
-  if [ -x "$HOME/.cursor/hooks/plan-kernel-execute-gate.sh" ] || [ -L "$HOME/.cursor/hooks/plan-kernel-execute-gate.sh" ]; then
-    pass "plan-kernel-execute-gate.sh installed under ~/.cursor/hooks"
-  else
-    fail "plan-kernel-execute-gate.sh missing under ~/.cursor/hooks"
-  fi
+  # plan-kernel-execute-gate.sh is a retired beforeShellExecution predecessor:
+  # its registration fails above, so its install is not required here.
   else
     cursor_host_skip "hooks.json sessionStart, prompt and shell gate registrations"
   fi
@@ -619,7 +618,7 @@ else
 fi
 
 if [ -d "$WORKSPACE/memory-bank" ]; then
-  warn "memory-bank/ still present — deprecated; remove after Graphiti migrate (do not scaffold)"
+  warn "memory-bank/ still present — retired and never read (canonical memory is the resume SSOT); delete it when convenient (do not scaffold)"
 else
   pass "memory-bank/ absent (retired)"
 fi

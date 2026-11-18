@@ -1,10 +1,8 @@
 PE_ROOT := environment/program-execution
 AGENTS_TOOLS := environment/agents/tools
 L9_TARGETS += \
-	campaign \
 	campaign-architecture \
 	campaign-architecture-check \
-	campaign-check-input \
 	campaign-stack-base \
 	program-execution-core-validate \
 	program-execution-adapters \
@@ -27,18 +25,8 @@ L9_TARGETS += \
 # ---------------------------------------------------------------------------
 # Campaign entrypoints
 # ---------------------------------------------------------------------------
-campaign:
-	@test -n "$(INTENT)" || ( \
-		echo "INTENT= path to activate seed is required" >&2; \
-		exit 2 \
-	)
-	TARGET="$(TARGET)" \
-		$(PYTHON) environment/program-execution/scripts/run_campaign.py \
-			--intent "$(INTENT)" \
-			--until "$(or $(CAMPAIGN_UNTIL),execute)" \
-			$(if $(TARGET),--target "$(TARGET)") \
-			$(if $(TARGET_CHECKOUT),--target-checkout "$(TARGET_CHECKOUT)") \
-			$(CAMPAIGN_ARGS)
+# `campaign` and `campaign-check-input` are registered in the root graph
+# from ops/make/campaign.mk (PROGRAM_EXECUTION_REGISTERED_STAGE_V1).
 campaign-architecture:
 	@test -n "$(INTENT)" || ( \
 		echo "INTENT= path to the architecture document is required" >&2; \
@@ -63,14 +51,6 @@ campaign-architecture-check:
 			$(if $(TARGET),--target "$(TARGET)") \
 			$(if $(TARGET_CHECKOUT),--target-checkout "$(TARGET_CHECKOUT)") \
 			$(ARCHITECTURE_ARGS)
-campaign-check-input:
-	@test -n "$(INTENT)" || ( \
-		echo "INTENT= path to classify is required" >&2; \
-		exit 2 \
-	)
-	$(PYTHON) \
-		environment/program-execution/scripts/run_campaign.py \
-		--check-input "$(INTENT)"
 campaign-stack-base:
 	@test -n "$(CAMPAIGN_ID)" || ( \
 		echo "CAMPAIGN_ID= is required" >&2; \

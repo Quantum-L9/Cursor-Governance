@@ -1,6 +1,6 @@
 ---
 name: l9-end-session
-description: force-retry session close — canonical repair-write of the continuation record plus governed learning writes when auto sessionEnd failed or hydrate printed REPAIR. use for recovery, richer handoff, or governance backup — not required for normal X-out.
+description: repair a session close that did not land — canonical repair-write of the continuation record (receipt stamped) plus optional governed lesson writes. use when SessionStart printed CLOSE_GAP or the automatic sessionEnd / SessionEnd close failed. never pushes; not required for a normal session end.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -9,129 +9,95 @@ metadata:
   tags: [l9, session, handoff, memory, governance, control-plane, force-retry]
   owner: igor_beylin
   status: active
-  version: 1.7.1
-  updated: 2026-09-07
+  version: 2.0.0
+  updated: 2026-11-14
 ---
 
-# End Session (force-retry / offline recovery)
+# End Session (close repair)
 
 ## Purpose
 
-**Normal closes are automatic.** Cursor `sessionEnd` runs
-`ops/hooks/graphiti-session-end.sh` → `ops/graphiti/hydration/close_session.py`.
-You should **not** need this skill for a routine X-out.
+**Session close is automatic on both hosts.** Cursor `sessionEnd` runs
+`ops/hooks/graphiti-session-end.sh` → `ops/graphiti/hydration/close_session.py`
+and parks the conversation's authored paths (`ops/scripts/session_end_preserve.py`).
+Claude Code `SessionEnd` runs
+`environment/agents/adapters/claude-code/hooks/session_end_close.py`: the same
+preserve, then the same close under the `claude-session-end` envelope. A resumed
+conversation closes again and supersedes its earlier continuation.
 
-Use `/end-session` when SessionStart prints `CLOSE_GAP` + `REPAIR: /end-session`,
-or the auto-close hook failed, or you need a richer manual continuation
-record. A close-gap is a **lifecycle** condition, not memory degradation
-(ADR-0032): `DEGRADED` means canonical memory did not answer, and
-`ENVIRONMENT_FAULT` means the memory runtime was never bound — repair those
-with `make memory-readiness`, not with this skill. See ADR-0028 (as amended
-2026-09-07), ADR-0030 and ADR-0032.
+Use this skill only to **repair** a close that did not land: SessionStart printed
+`CLOSE_GAP <reason>` with `REPAIR: /end-session`, or the automatic close was
+killed or failed. A close-gap is a **lifecycle** condition (ADR-0032).
+`DEGRADED` (memory did not answer) and `ENVIRONMENT_FAULT` (runtime unbound) are
+repaired with `make memory-readiness`, not here. See ADR-0028 (as amended
+2026-09-07), ADR-0030 and ADR-0032; map:
+[`docs/MEMORY_PIPELINE_MAP.md`](../../docs/MEMORY_PIPELINE_MAP.md).
 
-Map: [`docs/MEMORY_PIPELINE_MAP.md`](../../docs/MEMORY_PIPELINE_MAP.md).
+Slash command entry: [`commands/end-session.md`](../../commands/end-session.md)
+— it carries the exact commands; this skill carries the contract.
 
 ## Mandatory preload
 
-Before any memory CLI call, **load and follow** [`l9-graphiti-memory`](../l9-graphiti-memory/SKILL.md):
+Load [`l9-graphiti-memory`](../l9-graphiti-memory/SKILL.md) first:
 
-- Use governance **`.venv` Python** (`GRAPHITI_PY`), never bare `python3`.
-- `write` accepts `--kind`, `--group-id`, `--agent-id`, `--dry-run` — **never** `--scope`.
-- Stamp `L9_MEMORY_AGENT_ID=cursor` (or `--agent-id cursor`).
-- The repair is a **deterministic adapter** (`hydration.cli repair-write`);
-  model-authored learnings are MCP writes on the `l9-graphite-memory` server:
-  ordinary / cold lessons use `memory.write_agent` (no `phase_lock`), and
-  conflict-sensitive facts use `memory.phase_lock` → `memory.write_governed`
-  (ADR-0031, CANONICAL_LAW §8.5). Neither reaches a provider; all admit
-  through the same `MemoryService`.
+- Use the governance `.venv` interpreter, never bare `python3`.
+- Identity is **derived** from host markers (`ops/memory/agent_identity.py`).
+  Never pass `--agent-id` or set `L9_MEMORY_AGENT_ID`: a value that differs from
+  the derived identity is refused as identity drift, and a Claude surface can
+  never stamp the Cursor identity.
+- `repair-write` is a deterministic adapter over the same `MemoryService` the
+  hooks use. Model-authored lessons are MCP writes on `l9-graphite-memory`:
+  `memory.write_agent` (ordinary, no `phase_lock`) or `memory.phase_lock` →
+  `memory.write_governed` (conflict-sensitive), with arguments built by
+  `python -m ops.memory.agent_write build` and passed unchanged
+  (`l9.agent_memory_write.v1`, ADR-0031, CANONICAL_LAW §8.5).
 
-Slash command entry: [`commands/end-session.md`](../../commands/end-session.md).
+## Core contract
 
-## Core Contract (recovery path)
+`CLOSE_GAP → HEALTH → repair-write (continuation + receipt) → optional lesson
+writes → handoffs (only after a publication) → report`
 
-`HEALTH → repair-write (continuation record + receipt) → optional governed lesson writes → REDIS (optional) → GOVERNANCE BACKUP → HANDOFF`
+- **Target:** the prior session named in `.l9/memory/previous_opened.json`.
+- **Primary:** `ops.graphiti.hydration.cli repair-write`. It writes the
+  canonical continuation and stamps the close receipt. `ops.memory.cli write`
+  stamps nothing and is not a repair; `hydration.cli close` is the hook closer,
+  not the repair (ADR-0028 Option C rejected).
+- **Idempotent:** a receipt already `closed_canonically` is skipped unless
+  `--supersede`.
+- **Handoffs:** `session_debt.py handoff` generates both briefs from the debt
+  ledger; `python -m ops.reports.publish handoffs` delivers them (PR comment and
+  governance friction intake). Nothing is committed onto the PR
+  (`ops/memory/HANDOFF_CONTRACT.md`).
 
-**Primary** is `hydration.cli repair-write` (canonical continuation write +
-`write_receipt`). A bare `ops.memory.cli write` does **not** stamp the close
-receipt and is not the close-gap repair. Do **not** prefer
-`hydration.cli close --reason force_retry` — that replays the hook closer
-(ADR-0028 Option C rejected). Repair the **prior** session from
-`previous_opened.json` when SessionStart reported a close-gap.
+## Never
 
-```bash
-GOV="${HOME}/.cursor-governance"
-GRAPHITI_PY="${GOV}/.venv/bin/python"
-memcli() { (cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.memory.cli "$@" --workspace "${WS:-$PWD}"); }  # canonical control plane (C11)
-WS="${CURSOR_PROJECT_DIR:-$(pwd)}"
-PRIOR_FILE="$WS/.l9/memory/previous_opened.json"
-REPAIR_SID=""
-if [ -f "$PRIOR_FILE" ]; then
-  REPAIR_SID="$("$GRAPHITI_PY" -c 'import json,sys; print(json.load(open(sys.argv[1])).get("session_id") or "")' "$PRIOR_FILE")"
-fi
-REPAIR_SID="${REPAIR_SID:-${CURSOR_CONVERSATION_ID:-manual}}"
-export L9_MEMORY_AGENT_ID=cursor USER_ID=cursor_agent
-memcli health
-cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.graphiti.hydration.cli repair-write \
-  --project-dir "$WS" --session-id "$REPAIR_SID" \
-  --objective "{TASK}" --next "{NEXT}" --files "{FILES}" --blocker "{BLOCKER}" \
-  --agent-id cursor
-```
+- Stage, commit or push anything. Session end does not push (CANONICAL_LAW
+  §5.1); unpublished work is already parked on
+  `refs/l9/preserved/session/<sid>`, and publication is `make pr`.
+- Run the governance backup script as part of this repair (that is
+  `/governance-backup`, an explicit operator action).
+- Write `memory-bank/`, PICKUP records or a Redis session context (retired), or
+  a provider directly.
 
-Optional lesson writes after `repair-write` (same store; these do not stamp a
-close receipt). Model-authored facts are MCP writes on the `l9-graphite-memory`
-server; `memcli write` is the human-operator form only. An ordinary / cold
-lesson is `memory.write_agent`; a conflict-sensitive fact takes the lock first
-(ADR-0031, CANONICAL_LAW §8.5):
+## Authority order
 
-```text
-memory.write_agent     {namespace: "<memcli resolve write hint>", content: "{terse fact}", memory_class: "lesson", tags: ["agent:cursor"]}
-memory.phase_lock      {namespace: "<memcli resolve write hint>", task_signature: "end-session:<session_id>"}   # conflict-sensitive only
-memory.write_governed  {namespace, content: "{terse fact}", task_signature: "end-session:<session_id>", memory_class: "lesson", tags: ["agent:cursor"]}
-```
-
-`repair-write` skips a duplicate continuation record when the close receipt
-is already `closed` and `write_count>0`, unless `--supersede`.
-
-`hydration.cli close` remains the **hook** closer only — not the preferred repair.
-
-## Authority Order
-
-1. ADR-0030 — memory control plane is the single front door (interactive write contract, items 7–9)
+1. ADR-0030 — one memory control plane (interactive write contract, items 7–9)
 2. ADR-0028 (amended 2026-09-07) — hydrate/close visibility and canonical repair
-3. `docs/MEMORY_PIPELINE_MAP.md` — live hydrate/close path
-4. `ops/graphiti/hydration/pickup_write.py` — canonical repair writes (`repair_close`)
-5. `ops/graphiti/hydration/close_session.py` — automatic hook closer
-6. [`l9-graphiti-memory`](../l9-graphiti-memory/SKILL.md) — venv + CLI flags + governed write
-7. `ops/scripts/backup_to_github.sh` — governance backup
+3. `docs/MEMORY_PIPELINE_MAP.md` — live close path
+4. `ops/graphiti/hydration/pickup_write.py` — `repair_close`
+5. `ops/graphiti/hydration/close_session.py` — the automatic closer (both hosts)
+6. [`l9-graphiti-memory`](../l9-graphiti-memory/SKILL.md) — interpreter, flags, writes
 
-## Compact Workflow
-
-1. Confirm close-gap (hydrate `CLOSE_GAP` + `REPAIR: /end-session`, `close_gap_reason`, missing receipt, or `write_count=0`).
-2. HEALTH, then `repair-write` targeting the prior session id. Do not use client `write` as the close-gap repair.
-3. Optional Redis `cache_set_session_context`; the canonical continuation record (`ContinuationCapsuleV2`) is the resume SSOT either way.
-4. Run governance backup if needed.
-5. Publish the handoff reports to the open PR when the Stop hooks did not
-   (Cursor, or a failed hook): `cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m
-   ops.reports.publish handoffs --workspace "$WS"` → `reports/end-session/session-handoff/`
-   and `reports/end-session/governance-handoff/` (created when absent).
-6. Emit handoff summary (completed / in-progress / next).
-
-## Resource Map
-
-- [`../../docs/decisions/ADR-0028-session-hydrate-close-visibility.md`](../../docs/decisions/ADR-0028-session-hydrate-close-visibility.md)
-- [`../../docs/MEMORY_PIPELINE_MAP.md`](../../docs/MEMORY_PIPELINE_MAP.md)
-- [`../l9-graphiti-memory/SKILL.md`](../l9-graphiti-memory/SKILL.md)
-- [`../../commands/end-session.md`](../../commands/end-session.md)
-- `ops/hooks/graphiti-session-end.sh` — automatic primary close
-- `ops/graphiti/hydration/` — compile / close / latches / repair-write
-
-## Failure Handling
+## Failure handling
 
 | Symptom | Action |
 |---------|--------|
-| Receipt already `closed` + `write_count>0` | Skip duplicate unless `--supersede` |
+| No `previous_opened.json` / empty session id | No prior session to repair; report and stop |
+| Receipt already `closed_canonically` | Skip unless superseding deliberately |
+| `identity drift` / `no memory identity` | Remove any `--agent-id` / `L9_MEMORY_AGENT_ID`; the host must be identifiable |
 | `No module named 'yaml'` | Use `$GOV/.venv/bin/python` |
-| `missing agent_id` | Export `L9_MEMORY_AGENT_ID` or pass `--agent-id` |
-| Memory runtime unbound (`readiness` R0 fails / `BINDING_FAILED`) | `make -C "$GOV" memory-binding`; warn; continue backup/handoff — no memory-bank, no provider write |
+| Memory runtime unbound (`BINDING_FAILED`) | `make -C "$GOV" memory-binding`; report the gap — no memory-bank, no provider write |
 
-When blocked: state exact gap, label `Unknown`, give smallest next action.
+When blocked: state the exact gap, label it `Unknown`, give the smallest next action.
+
+Reference walkthrough: [`references/end-session-protocol.md`](references/end-session-protocol.md).

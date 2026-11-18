@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-11-04T01:25:01Z'
+generated_utc: '2026-11-17T06:16:45Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:445c8246791dda01faba1b2a8daff088a153e761dd4e220ce7999c5633e42903
+source_tree_digest: sha256:631dac2bf70b585a2422808ef8a3f2db34ee037e99966a4121edad18f8584576
 summary:
   total_mdc_files: 68
   always_apply_true: 35
@@ -69,8 +69,8 @@ rules:
   globs: null
   first_heading: Slash Command Recognition
   has_yaml_frontmatter: true
-  line_count: 135
-  content_digest: sha256:e8fb57d4d513ece89aebb271aad891a023dbc073a15d6b952332b6eb7815b573
+  line_count: 138
+  content_digest: sha256:67c358660bce0434d2a9bcf8a0139c52ddf7430a7e2a8b938c801b2a1a900e4d
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -484,8 +484,8 @@ rules:
   globs: null
   first_heading: Pre-Action Verification
   has_yaml_frontmatter: true
-  line_count: 111
-  content_digest: sha256:6012003b2d54a0ecb85a89b4eed024c1fa0f3f9268a143a86268ccbca16e4d68
+  line_count: 112
+  content_digest: sha256:ad6db04f4149e200c08eafb175454c5a6da4b39b87f1ad3e3fc12313ecfdc2ae
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -553,8 +553,8 @@ rules:
   globs: null
   first_heading: make pr → green merge-ready; /l9-pr-remediation → merge under human authorization, else MERGE_PENDING
   has_yaml_frontmatter: true
-  line_count: 232
-  content_digest: sha256:3448d30de87d33f2bd51828c9465b49335540f477a35a3a41d565d020b1e6bb6
+  line_count: 234
+  content_digest: sha256:f7f1b98f7a86ded87bf4c12c5b77f7b999595f496c7648e40bbd86b7223fbab7
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -728,8 +728,8 @@ rules:
   globs: null
   first_heading: Fast-forward only (no SSOT clobber)
   has_yaml_frontmatter: true
-  line_count: 67
-  content_digest: sha256:51910ece34bf961386c1aa736d086052de2b04a18e2ca2227b9d6a281813f603
+  line_count: 70
+  content_digest: sha256:34cd8743591b029d9850892a1ccd21915c0acb8140fcbe1f0c7890f825a0b2f1
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -995,8 +995,8 @@ rules:
   - '**/*.md'
   first_heading: Review ergonomics (L9)
   has_yaml_frontmatter: true
-  line_count: 145
-  content_digest: sha256:e31fd8743dbcbde42b8ac38459ff6991a639dc125e33695f5f6557ba11d9d239
+  line_count: 146
+  content_digest: sha256:b55fa4821a9c20a25a1733d8879a6143e960165f193f14074e104936bb3c22b0
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1206,7 +1206,7 @@ rules:
   first_heading: GMP audit and verification (L9)
   has_yaml_frontmatter: true
   line_count: 93
-  content_digest: sha256:5563e69a190e8fd4f6b36862b8fbe160cecbe8645c37f0af0b7c172f925e5f8f
+  content_digest: sha256:88df5734c81ac38f7c4d2cb167a5b3354e4f9e0e21f1167cf55e7d35e6d38d6e
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1342,8 +1342,8 @@ rules:
   globs: null
   first_heading: L4 Local Autonomy (no mid-execution push)
   has_yaml_frontmatter: true
-  line_count: 93
-  content_digest: sha256:83dbe49136ba4310e7e7655e62db2500589c3bb92c6f6184fb00c7cc0337424b
+  line_count: 96
+  content_digest: sha256:ac112bfaa2026b5fa0b9676ebecb672fec14c1ff2c051e29c20f094c7dfd9fcd
   authority: canonical_global
   context_cost: moderate
   deprecated: false

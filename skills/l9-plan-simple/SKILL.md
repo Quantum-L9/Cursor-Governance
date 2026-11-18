@@ -117,7 +117,9 @@ Steps 0–9 are **identical in both modes**.
 
    The renderer fills **every** template section from PLAN_DOCUMENT. `--workspace .` binds the immutable baseline with read-only git probes. Each success property's proof is the `final_validation` entry it names (by id, e.g. `V1`, or by a shared script/file name). Resolve markers in PLAN_DOCUMENT and re-run the pipeline — do not hand-edit the projection.
 
-   `cursor-build` writes `.cursor/plans/<slug>_<8hex>.plan.md`. `embedded` (`--execute-via=embedded`) returns the projection to the caller. Frontmatter must carry `kind: simple`, the selected `execute_via`, and `status: current`. `harvested` is a tag, never a status.
+   **Where the files go.** In a Cursor-Governance checkout, worktrees included, write the plan and its GAR run into that checkout's tracked `docs/plans/`: `--gar-run docs/plans/<slug>.gar-run.json --out-md docs/plans/<slug>.plan.md`. There `.cursor/plans` is a symlink to the primary SSOT clone, so a plan written through it never reaches the branch and dirties the SSOT clone; the pipeline warns when that happens. A tracked plan is admitted only when its section receipt and the GAR run it names are tracked too, so commit all three together. In any other repository `.cursor/plans/` is the Cursor plans folder.
+
+   `cursor-build` writes the `--out-md` path. `embedded` (`--execute-via=embedded`) returns the projection to the caller. Frontmatter must carry `kind: simple`, the selected `execute_via`, and `status: current`. `harvested` is a tag, never a status.
 10. **Section receipt** — written only by the pipeline. It stamps `handoff_mode`, `gar_upstream.run_path`, and `gar_upstream.run_sha256`. Any template `<parameter>` slot left in the projection fails it (`G_UNFILLED_PARAMETER`). FAIL → not ready.
 11. **Admission** — `admit_plan.py` exits non-zero unless that receipt passes. A title and a paragraph is not a plan.
 12. **Handoff** — mode-specific, below.
@@ -147,7 +149,7 @@ Return the validated PLAN_DOCUMENT and the embedded projection to the invoking c
 - [`../l9-plan/scripts/validate_plan_document.py`](../l9-plan/scripts/validate_plan_document.py)
 - [`../l9-plan/scripts/render_plan_pe_autonomy.py`](../l9-plan/scripts/render_plan_pe_autonomy.py) — `--execute-via=cursor-build` | `--execute-via=embedded`
 - [`../l9-plan/scripts/route_plan.py`](../l9-plan/scripts/route_plan.py)
-- `l9-plan` is archived. PE/campaign planning has no live owner.
+- PE/campaign planning belongs to the explicit-only `l9-plan` (CANONICAL_LAW `PROGRAM_EXECUTION_PLANNER_V1`), which renders a `campaign-source.v2` for `make campaign`. This skill does not absorb it.
 
 ## Validation
 
@@ -177,8 +179,8 @@ A delivered `embedded` plan is incomplete unless `validate_plan_document.py` PAS
 - Ambiguous objective → STOP; ask.
 - Validator or section-receipt FAIL → fix or set `convergence.status=blocked`; do not claim ready.
 - GAR skipped → not ready; load `l9-global-architect` before emit, in either mode.
-- User asks for PE / campaign / `make campaign` / Program Lock → reject as retired/unavailable. Do not absorb PE semantics and do not invent a PE lock here.
-- KERNEL / PE overlay landing → unavailable. Program Execution planning is retired. Do not absorb it here.
+- User asks for PE / campaign / `make campaign` / Program Lock → hand off: tell the user to invoke `/l9-plan`. Do not absorb PE semantics and do not invent a PE lock here.
+- KERNEL / PE overlay landing → not this skill: Program Execution planning is `/l9-plan`. Do not absorb it here.
 - Execution tooling unavailable in `cursor-build` → report the blocker. Do not silently switch to `embedded`.
 - Caller requests `embedded` but expects mutation → STOP; the modes are not interchangeable and embedded confers no authority.
 - User presses Build → if any open PR exists, execute on the unique chain tip (never `origin/main`); after todos `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the **PR URL**; do not run `make campaign`.

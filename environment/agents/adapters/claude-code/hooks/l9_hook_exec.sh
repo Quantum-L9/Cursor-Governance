@@ -18,10 +18,14 @@
 #                     BLOCKED. A gate that cannot evaluate has not passed;
 #                     it has failed to run, and those are not the same thing.
 #
-#   --class observer  A hook that RECORDS or ENRICHES but decides nothing.
+#   --class observer  A hook whose ABSENCE must not block. The class governs only
+#                     what happens when the hook cannot run; once it runs, its own
+#                     exit code and output pass through unchanged (memory_writeback
+#                     blocks one post-publish Stop to request the handoff).
 #                     skill_usage_logger, user_prompt_skill_router,
-#                     memory_prefetch, memory_writeback,
-#                     governance_handoff_writeback.
+#                     context7_stack_pretool, memory_prefetch, memory_writeback,
+#                     governance_handoff_writeback, session_end_close,
+#                     session_authored_paths_wrap.
 #                     If it cannot run it exits 0 — but it appends a timestamped
 #                     line to ~/.l9/claude/hook-skips.log first, so the skip is
 #                     auditable rather than invisible.
@@ -82,7 +86,7 @@ esac
 # being wrong is silent.
 l9_required_class() {
   case "$1" in
-    merge_gate_wrap.py|local_execution_gate_wrap.py|memory_gate.py|coding_agent_binding_gate_wrap.py|session_debt_wrap.py|context7_stack_pretool.py)
+    merge_gate_wrap.py|local_execution_gate_wrap.py|memory_gate.py|coding_agent_binding_gate_wrap.py|session_debt_wrap.py|swarm_role_gate_wrap.py|context7_stack_pretool.py)
       printf 'gate' ;;
     *) printf '' ;;
   esac

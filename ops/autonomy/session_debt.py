@@ -10,10 +10,11 @@ Three operator rules, one mechanism (rules/42-no-abandoned-work.mdc):
 Doctrine alone did not hold these. An agent can read a rule saying "do not leave
 work uncommitted" and still end a session with five local commits and a blocker
 narrated in chat, because narrating a blocker *feels* like discharging it. So
-each rule is reduced here to a machine-checkable debt item, and the Stop hook
-runs this as a `--class gate`: exit 2 blocks the turn from ending and hands the
-reason back to the model. Work cannot be abandoned quietly; it can only be
-finished or explicitly, durably deferred with a reason a human can read later.
+each rule is reduced here to a machine-checkable debt item. It is NOT installed
+as a Claude Stop gate (rules/42; ``test_hook_exec_failclosed.py`` asserts the
+absence): run ``check`` / ``status`` deliberately. ``check`` exits 2 while
+anything is open. Work cannot be abandoned quietly; it can only be finished or
+explicitly, durably deferred with a reason a human can read later.
 
 Two debt kinds:
 

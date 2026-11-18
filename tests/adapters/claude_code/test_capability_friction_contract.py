@@ -67,6 +67,43 @@ def test_canonical_memory_operations_are_no_prompt() -> None:
     assert required <= allow
 
 
+HOSTED_MEMORY_PREFIX = "mcp__L9-Memory__"
+
+
+def test_relay_connector_calls_are_no_prompt_on_the_hosted_connector() -> None:
+    """Every call the relay obliges the agent to make must already be approved.
+
+    The Stop hook blocks the turn until each relayed record is carried to the
+    account connector, so a call that prompts turns every turn into an operator
+    dialog. Derived from the relay's own tool map, not restated.
+    """
+    from ops.memory.relay import CONNECTOR_TOOLS
+
+    permissions = _settings(TEMPLATE)["permissions"]
+    allow = set(permissions["allow"])  # type: ignore[index]
+    deny = set(permissions["deny"])  # type: ignore[index]
+    for tool in CONNECTOR_TOOLS.values():
+        entry = HOSTED_MEMORY_PREFIX + tool.replace(".", "_")
+        assert entry in allow, f"{entry}: relay requires it, so it must not prompt"
+        assert entry not in deny, f"{entry}: relay requires it, so it must not be denied"
+
+
+def test_hosted_connector_keeps_admin_and_generic_ingest_denied() -> None:
+    permissions = _settings(TEMPLATE)["permissions"]
+    allow = set(permissions["allow"])  # type: ignore[index]
+    deny = set(permissions["deny"])  # type: ignore[index]
+    for tool in (
+        "memory_ingest",
+        "memory_delete",
+        "memory_promote",
+        "memory_bootstrap",
+        "memory_distill",
+        "memory_invalidate_source",
+    ):
+        assert HOSTED_MEMORY_PREFIX + tool in deny
+        assert HOSTED_MEMORY_PREFIX + tool not in allow
+
+
 def test_graphql_and_raw_publish_are_not_standing_approvals() -> None:
     allow = set(_settings(TEMPLATE)["permissions"]["allow"])  # type: ignore[index]
     forbidden = {
@@ -107,12 +144,32 @@ def test_preflight_routes_platform_helpers_to_l9_owners() -> None:
     assert "Do not invoke Register Repo Root" in text
     assert "canonical l9-graphite-memory control plane" in text
     assert "memory.phase_lock then memory.write_governed" in text
+    # ADR-0031: the ordinary agent write takes no phase lock.
+    assert "ordinary facts use memory.write_agent" in text
+    assert "cto_wakeup" in text  # the /lcto check-in is not PR watching
     assert "Do not invoke Send Later" in text
     assert "publication is make pr only" in text
     assert "Do not invoke Add Repo for this repository at SessionStart" in text
     assert "genuinely different repository" in text
     assert "access=push" not in text
     assert "graphiti_memory_client.py" not in text
+
+
+def test_preflight_send_later_line_cites_the_profile_pr_watch_key() -> None:
+    """The Send Later ban is profile policy; the hook only delivers it."""
+    import yaml
+
+    profile = yaml.safe_load(
+        (ROOT / "ops/autonomy/surface_profile.yaml").read_text(encoding="utf-8")
+    )
+    pr_watch = profile["l4_local_autonomy"]["post_push"]["pr_watch"]
+    assert pr_watch == "subscribe_pr_activity_events_only"
+    line = next(
+        row
+        for row in PREFLIGHT.read_text(encoding="utf-8").splitlines()
+        if "Do not invoke Send Later" in row
+    )
+    assert f"post_push.pr_watch: {pr_watch}" in line
 
 
 def test_primary_checkout_does_not_probe_or_request_add_repo(tmp_path: Path) -> None:

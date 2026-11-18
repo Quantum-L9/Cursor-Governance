@@ -1,0 +1,28 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "agent_authority": {
+      "rules": [
+        "authority_must_be_explicit",
+        "agent_must_not_self_expand_authority",
+        "bounded_autonomy_requires_explicit_scope",
+        "conformance_evidence_does_not_grant_authority"
+      ]
+    },
+    "escalation_rules": {
+      "authority_missing": "block",
+      "changed_candidate_after_decision": "require_new_decision",
+      "semantic_conflict": "block",
+      "unknown": "remain_unknown"
+    }
+  },
+  "projection_digest": "sha256:2f3f3e1ee6396739be8da030bd4000eba5e3903d206dca894482166466777e80",
+  "projection_profile_digest": "sha256:68c2727e15edebb7b60bf30bb15e6aa1b00e0ef3967a5e194f37842741d5c036",
+  "projection_profile_ref": "l9.projection/technical-coordination@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+  "source_ref": "l9.source/authority-model@1"
+}

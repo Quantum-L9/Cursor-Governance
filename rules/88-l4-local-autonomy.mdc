@@ -78,7 +78,10 @@ to its own `make pr` exactly once.
 ## Enforcement
 
 - Claude PreToolUse: `local_execution_gate_wrap.py` → `ops/autonomy/local_execution_gate.py`
-- Cursor `beforeShellExecution`: `ops/hooks/l4-local-execution-gate-shell.sh`
+- Cursor `beforeShellExecution`: `ops/hooks/before-shell-execution-gate.sh` →
+  `ops/hooks/before_shell_execution_gate.py`, which resolves and loads the same
+  `ops/autonomy/local_execution_gate.py` (`l4-local-execution-gate-shell.sh` is its
+  retired standalone predecessor)
 - Shared-worktree isolation (same gate): see `rules/49-shared-worktree-isolation.mdc`
 - `make pr` / `open_pr_after_gate.sh` fail-closed without a release receipt that
   matches the worktree

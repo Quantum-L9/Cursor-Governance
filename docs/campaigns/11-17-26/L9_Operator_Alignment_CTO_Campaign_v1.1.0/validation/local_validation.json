@@ -1,0 +1,36 @@
+{
+  "approved_source_local_archive_verification": {
+    "strategy/OPERATOR_DOCTRINE.yaml": "PASS_LOCAL_REFERENCE_SHA256",
+    "strategy/alignment/agent_views.yaml": "PASS_LOCAL_REFERENCE_SHA256",
+    "strategy/alignment/consumer_bindings.yaml": "PASS_LOCAL_REFERENCE_SHA256",
+    "strategy/alignment/operator_alignment.profile.yaml": "PASS_LOCAL_REFERENCE_SHA256",
+    "strategy/operator_strategic_intent.yaml": "PASS_LOCAL_REFERENCE_SHA256"
+  },
+  "approved_source_reference_archive_sha256": "sha256:cd80612d81642d32f422e8102f530a9721acef883e92e8f43a73874a20f3909f",
+  "collision_fixtures": {
+    "known_bad": "REJECTED",
+    "known_good": "PASS",
+    "real_current_PR_file_census": "UNRUN"
+  },
+  "kind": "l9.cto-campaign.local-verification",
+  "limit": "Static artifact checks and synthetic negative witnesses only. No current GitHub PR CI, compiler producer receipt, Cursor host execution, real credential ACL or approved merging proved.",
+  "negative_configuration_controls": {
+    "expected": 11,
+    "rejected": 11,
+    "status": "PASS"
+  },
+  "operator_subject_digest": "sha256:4db9854e950737ebefa337323152d1f7776482e137aee3c0204698cdfb1951bc",
+  "predecessor_campaign_sha256": "sha256:dec6475c2aa3415e08468170511d07e605d9accaaf31b048ca6b5d00ca01c72f",
+  "runtime_gates": {
+    "Cursor_mode_activations": "UNRUN",
+    "GitHub_merges": "UNRUN",
+    "coding_agent_source_confidentiality": "BLOCKED_UNTIL_ACL_PROOF",
+    "compiler_operator_source_projection": "UNRUN",
+    "github_swarm_child_write": "BLOCKED_UNDER_OBSERVED_CHILD_PROMPT",
+    "operator_strategy_adoption": "UNRUN"
+  },
+  "source_bytes_currently_in_GitHub": "UNVERIFIED_AT_RUNTIME",
+  "source_kernel_sha256": "sha256:ce9f7d2face6e7007c27313cbc885a5d11df85335877851e60ddb87b84adb639",
+  "status": "PASS_LOCAL_STRUCTURE_ONLY",
+  "version": "1.1.0"
+}

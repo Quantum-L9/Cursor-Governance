@@ -310,9 +310,9 @@ def test_status_cli_is_report_only_by_default(tmp_path: Path) -> None:
         check=False,
     )
     assert completed.returncode == 0, completed.stderr
-    assert (
-        completed.stdout.startswith("coding projection: ") and "(report-only)" in completed.stdout
-    )
+    # Verification is reported, never presented as a session binding.
+    assert completed.stdout.startswith("coding projection: ")
+    assert "not bound in this session — /coding-agent binds it" in completed.stdout
     assert (
         json.loads(
             subprocess.run(

@@ -9,8 +9,12 @@ subcommands.
     python3 ops/scripts/pr_threads.py resolve --pr N --comment-id C
     python3 ops/scripts/pr_threads.py comment --pr N
 
-``reply`` and ``comment`` read the body on stdin. The PR must be the open PR
-named by ``.l9/pr/pr-summary.json``, and that receipt's repo must match origin.
+``reply`` and ``comment`` read the body on stdin. The PR must be this
+checkout's open PR: the one named by ``.l9/pr/pr-summary.json`` when that
+receipt exists (its repo must match origin), otherwise the open PR whose head
+repository is origin, whose head branch is the checked-out branch, and whose
+head commit is HEAD or an ancestor of it. From a checkout other than the
+governance clone, run ``python3 ~/.cursor-governance/ops/scripts/pr_threads.py``.
 """
 
 from __future__ import annotations
@@ -68,7 +72,7 @@ def execute(
     slug = origin if origin is not None else origin_repo(root)
     if not slug:
         fail(f"origin repo is unresolved in {root}")
-    require_own_pr(root, args.pr, slug)
+    require_own_pr(root, args.pr, slug, run=run)
     if args.action == "resolve":
         resolve(slug, args.pr, int(args.comment_id), run=run)
         return 0

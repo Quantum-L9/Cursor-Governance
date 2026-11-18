@@ -272,18 +272,21 @@ def _frontmatter(plan: dict, execute_via: str = EXECUTE_VIA_PE) -> str:
     if len(overview) > 400:
         overview = overview[:397] + "..."
     todos = _todo_rows(plan)
+    # Every free-text scalar goes through _yaml_scalar (a JSON string, which is
+    # valid YAML). An unquoted `name:` broke the whole frontmatter for any title
+    # containing ": " or a leading YAML indicator; the receipt then fell back to
+    # a line parser and reported a misleading `todos` failure.
     lines = [
         "---",
-        f"name: {title}",
-        f'overview: "{overview.replace(chr(34), chr(39))}"',
+        f"name: {_yaml_scalar(title)}",
+        f"overview: {_yaml_scalar(overview)}",
         "todos:",
     ]
     if not todos:
         lines.append("  []")
     for t in todos:
         lines.append(f"  - id: {t['id']}")
-        content = t["content"].replace('"', "'")
-        lines.append(f'    content: "{content}"')
+        lines.append(f"    content: {_yaml_scalar(t['content'])}")
         lines.append("    status: pending")
         lines.append(f"    phase: {t['phase']}")
         lines.append(f"    depends_on: {_yaml_list(t['depends_on'])}")
@@ -1267,7 +1270,10 @@ def _section_key(title: str) -> str:
 
 
 def _fill_preamble(preamble: str, c: _Ctx) -> str:
-    preamble = re.sub(r"^# PLAN:.*$", f"# PLAN: {c.title}", preamble, count=1, flags=re.M)
+    # A callable replacement: a string one is a template, so a title carrying a
+    # backslash (`\s`, `\1`) raised "bad escape" or injected a group.
+    heading = f"# PLAN: {c.title}"
+    preamble = re.sub(r"^# PLAN:.*$", lambda _m: heading, preamble, count=1, flags=re.M)
     preamble = preamble.replace(
         f"# PLAN: {c.title}\n",
         f"# PLAN: {c.title}\n\n> **Projected by** `scripts/render_plan_pe_autonomy.py` "

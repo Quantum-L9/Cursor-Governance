@@ -17,6 +17,7 @@ from select_pr_pytest_paths import (  # noqa: E402
     _drop_unrunnable,
     root_addopts_ignores,
     root_collect_ignores,
+    root_norecursedirs,
     select_pr_pytest_paths,
     skill_mirror_tests,
 )
@@ -39,6 +40,25 @@ def _registry(path: Path) -> Path:
         encoding="utf-8",
     )
     return path
+
+
+LIVE_REGISTRY = SCRIPT_DIR.parent / "config" / "python-contract.json"
+
+
+def _pytest_owner_id(path: str) -> str | None:
+    """The one non-root pytest suite in the live registry that owns *path*, if any."""
+    suites = json.loads(LIVE_REGISTRY.read_text(encoding="utf-8")).get("suites") or []
+    owners = [
+        str(suite.get("id"))
+        for suite in suites
+        if str(suite.get("kind") or "pytest") == "pytest"
+        and "." not in (suite.get("owned_paths") or [])
+        and any(
+            path == str(root) or path.startswith(str(root).rstrip("/") + "/")
+            for root in (suite.get("owned_paths") or [])
+        )
+    ]
+    return owners[0] if len(owners) == 1 else None
 
 
 class SelectPrPytestPathsTests(unittest.TestCase):
@@ -133,13 +153,18 @@ class UncollectableTargetTests(unittest.TestCase):
             msg=f"emitted an uncollectable peer_execution target: {selected}",
         )
 
-    def test_eviction_target_autonomy_change_is_not_routed_to_generic_pytest(self) -> None:
-        """Program Execution is an eviction target; no generic suite runs its tests."""
-        selected = select_pr_pytest_paths([f"{self.PEER_CORE}/autonomy/scheduler.py"])
-        self.assertFalse(
-            [item for item in selected if item.startswith(self.PEER_CORE)],
-            msg=f"routed an eviction-target test into the generic gate: {selected}",
+    def test_changed_autonomy_test_is_kept_for_the_claude_code_autonomy_suite(self) -> None:
+        """Root-ignored, but the registered claude-code-autonomy pytest suite collects it."""
+        changed = f"{self.PEER_CORE}/autonomy/tests/test_scheduler.py"
+        self.assertEqual(
+            [_pytest_owner_id(changed)],
+            ["claude-code-autonomy"],
         )
+        self.assertIn(changed, select_pr_pytest_paths([changed]))
+
+    def test_autonomy_source_change_selects_its_twin_test(self) -> None:
+        selected = select_pr_pytest_paths([f"{self.PEER_CORE}/autonomy/scheduler.py"])
+        self.assertIn(f"{self.PEER_CORE}/autonomy/tests/test_scheduler.py", selected)
 
     def test_root_conftest_change_is_not_a_collect_target(self) -> None:
         selected = select_pr_pytest_paths(["conftest.py"])
@@ -267,13 +292,30 @@ class FixtureAndCampaignScopeTests(unittest.TestCase):
         selected = select_pr_pytest_paths([self.COMPILER_SRC])
         self.assertNotIn(self.CAMPAIGN_TEST, selected)
 
-    def test_eviction_target_sources_select_no_eviction_target_tests(self) -> None:
-        """Program Execution is an eviction target; the generic gate runs none of its tests."""
-        for source in (self.CAMPAIGN_SRC, self.COMPILER_SRC):
+    def test_pe_source_selects_the_suite_collectable_tests_that_name_it(self) -> None:
+        """A PE source with no test twin selects the tests naming it that a suite collects."""
+        autonomy = "environment/program-execution/peer_execution/autonomy"
+        selected = select_pr_pytest_paths([f"{autonomy}/merge_coordinator.py"])
+        self.assertIn(f"{autonomy}/tests/test_join_merge.py", selected)
+
+    def test_pe_sources_select_only_tests_a_pytest_suite_can_collect(self) -> None:
+        """A PE test no registered pytest suite owns is still dropped, never handed to root."""
+        sources = (
+            self.CAMPAIGN_SRC,
+            self.COMPILER_SRC,
+            "environment/program-execution/peer_execution/autonomy/merge_coordinator.py",
+        )
+        for source in sources:
             selected = select_pr_pytest_paths([source])
+            orphaned = [
+                item
+                for item in selected
+                if item.startswith("environment/program-execution/")
+                and _pytest_owner_id(item) is None
+            ]
             self.assertFalse(
-                [item for item in selected if item.startswith("environment/program-execution/")],
-                msg=f"{source} routed eviction-target tests into the generic gate: {selected}",
+                orphaned,
+                msg=f"{source} selected PE tests no pytest suite collects: {selected}",
             )
 
 
@@ -451,6 +493,40 @@ class CommandSuiteOwnershipTests(unittest.TestCase):
     def test_live_registry_never_selects_the_archived_test(self) -> None:
         selected = select_pr_pytest_paths(["skills/AUTONOMY_MANIFEST.yaml", self.ARCHIVED])
         self.assertNotIn(self.ARCHIVED, selected)
+
+
+class NorecursedirsTests(unittest.TestCase):
+    """A test under a `norecursedirs` directory is never a scoped target.
+
+    `skills/_archived/l9-idea-foundry/scripts/test_factory_qualification.py` is in
+    no conftest `collect_ignore` list; only `norecursedirs = ["_archived", ...]`
+    keeps root pytest out of it. A change to a file whose name this test mentions selected it,
+    the explicit argument overrode `norecursedirs`, and collection failed on
+    `import self_test`.
+    """
+
+    ARCHIVED = "skills/_archived/l9-idea-foundry/scripts/test_factory_qualification.py"
+    ROOT_ONLY = [{"id": "repo-root", "kind": "pytest", "owned_paths": ["."]}]
+
+    def test_norecursedirs_are_read_from_pyproject(self) -> None:
+        self.assertIn("_archived", root_norecursedirs())
+
+    def test_path_under_a_norecursedir_is_dropped(self) -> None:
+        self.assertNotIn(self.ARCHIVED, root_collect_ignores())
+        keep, dropped = _drop_unrunnable([self.ARCHIVED], self.ROOT_ONLY)
+        self.assertEqual((keep, dropped), ([], [self.ARCHIVED]))
+
+    def test_only_directory_components_match(self) -> None:
+        live = "tests/ops/scripts/test_select_pr_pytest_paths.py"
+        keep, dropped = _drop_unrunnable([live], self.ROOT_ONLY)
+        self.assertEqual((keep, dropped), ([live], []))
+
+    def test_live_registry_never_selects_it_for_a_name_match(self) -> None:
+        # The archived test names `architecture.yaml`; selection is by name, so this
+        # binding selected it before norecursedirs was honoured.
+        selected = select_pr_pytest_paths(["governance/projection-bindings/architecture.yaml"])
+        self.assertNotIn(self.ARCHIVED, selected)
+        self.assertFalse(any("/_archived/" in item for item in selected))
 
 
 class SkillMirrorTestsTests(unittest.TestCase):

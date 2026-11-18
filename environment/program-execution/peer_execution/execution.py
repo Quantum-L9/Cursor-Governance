@@ -139,6 +139,26 @@ def _mapping_list(
     return output
 
 
+_VALIDATION_CLAIM_KEYS = frozenset({"command", "status", "exit_code", "evidence"})
+_VALIDATION_CLAIM_STATUSES = frozenset({"PASS", "FAIL", "BLOCKED", "UNKNOWN"})
+
+
+def _is_validation_claim(item: Mapping[str, Any]) -> bool:
+    """Whether one worker-reported entry fits the attempt-receipt item schema."""
+    if set(item) != _VALIDATION_CLAIM_KEYS:
+        return False
+    command = item["command"]
+    exit_code = item["exit_code"]
+    evidence = item["evidence"]
+    return (
+        isinstance(command, str)
+        and bool(command)
+        and item["status"] in _VALIDATION_CLAIM_STATUSES
+        and (exit_code is None or (isinstance(exit_code, int) and not isinstance(exit_code, bool)))
+        and (evidence is None or isinstance(evidence, str))
+    )
+
+
 class PeerExecutionAdapter(BaseExecutionAdapter):
     """Provider-neutral lifecycle owner for peer/provider execution."""
 
@@ -162,6 +182,10 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             if autonomy_authority is not None
             else None
         )
+        #: The projection this program is bound to, verified, handed to every
+        #: window this adapter opens. Like root authority it travels beside the
+        #: rendered contract, never inside it or its digest.
+        self.projection: dict[str, Any] | None = None
         self.adapter_id = _required_string("adapter_id", self.descriptor.get("adapter_id"))
         self.adapter_version = _required_string(
             "adapter_version",
@@ -210,6 +234,10 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
         self.autonomy_authority = (
             validate_autonomy_authority(authority) if authority is not None else None
         )
+
+    def bind_projection(self, projection: Mapping[str, Any] | None) -> None:
+        """Carry the program's verified projection into the windows this adapter opens."""
+        self.projection = dict(projection) if projection is not None else None
 
     def _authority_for(self, contract: Mapping[str, Any]) -> dict[str, Any] | None:
         """This adapter's authority, refused when it belongs to another task."""
@@ -282,7 +310,9 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
     ) -> CanonicalExecutionRequest:
         contract = binding.raw
         dispatch_id = _required_string("dispatch_id", record.get("dispatch_id"))
-        context_path = write_context_manifest(self.runtime.root, dispatch_id, contract)
+        context_path = write_context_manifest(
+            self.runtime.root, dispatch_id, contract, self.projection
+        )
         context_value = json.loads(context_path.read_text(encoding="utf-8"))
         context_errors = self.schemas.validate_context_manifest(context_value)
         if context_errors:
@@ -478,6 +508,15 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             )
         except ValueError:
             validation_results = []
+            residuals.append("validation_results_unusable_shape")
+        conformant = [item for item in validation_results if _is_validation_claim(item)]
+        if len(conformant) != len(validation_results):
+            # A worker's validation results are claims, never the verdict: the
+            # Controller runs the declared commands itself. An entry the
+            # attempt-receipt schema cannot carry is dropped and recorded, the
+            # same way an unusable container is, instead of voiding an attempt
+            # whose effects already exist.
+            validation_results = conformant
             residuals.append("validation_results_unusable_shape")
         return attempt_receipt(
             contract,

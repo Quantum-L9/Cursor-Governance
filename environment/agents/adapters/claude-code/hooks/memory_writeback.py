@@ -328,6 +328,141 @@ def _writeback_roots(contract: dict, receipt_id: str, workspace: Path) -> list[P
     return pp.session_roots(contract, receipt_id, _shared_workspace_roots, workspace)
 
 
+#: Suffix of the per-session marker that records the relay notice was printed,
+#: so a session sees at most one notice line (ADR-0055 operator amendment).
+RELAY_NOTICE_SUFFIX = ".relay-notice"
+
+
+def _relay_roots(workspace: Path) -> list[Path]:
+    """Repository roots whose outbox the gate reads, governance clone included.
+
+    ``governance_handoff_writeback`` queues under the governance clone, which a
+    consumer workspace's roots do not include.
+    """
+    candidates = list(_shared_workspace_roots(workspace, cap=64) or [workspace])
+    try:
+        candidates.append(Path(mb.find_governance_root()))
+    except Exception:  # noqa: BLE001 - fail-open; the workspace roots still count
+        pass
+    roots: list[Path] = []
+    for candidate in candidates:
+        resolved = Path(candidate).resolve()
+        if resolved not in roots:
+            roots.append(resolved)
+    return roots
+
+
+def _hosted_carrier_active() -> bool:
+    """True when this process's hook carrier is ``hosted`` (ADR-0055)."""
+    try:
+        from ops.memory.hook_carrier import HOSTED, CarrierError, resolve_carrier
+    except Exception:  # noqa: BLE001 - Stop-hook contract is fail-open
+        return False
+    try:
+        return resolve_carrier() == HOSTED
+    except CarrierError:
+        return False
+
+
+def _hosted_transport() -> object | None:
+    """One hosted transport for the whole Stop, so the token is fetched once."""
+    try:
+        from ops.memory.hosted_hook_transport import HostedHookTransport
+    except Exception:  # noqa: BLE001 - Stop-hook contract is fail-open
+        return None
+    return HostedHookTransport()
+
+
+def _drain_hosted(root: Path, transport: object) -> str | None:
+    """Carry owed entries through the hosted transport; the stop reason, if any.
+
+    Each drained entry is acknowledged with its hosted receipt or settled with
+    the service's refusal; a transport failure leaves the rest owed. Only
+    settled work is printed here; a failure reason is folded into the gate's
+    single per-session notice. Fail-open.
+    """
+    try:
+        from ops.memory.hosted_hook_transport import drain
+
+        report = drain(root, transport=transport)  # type: ignore[arg-type]
+    except Exception as exc:  # noqa: BLE001 - Stop-hook contract is fail-open
+        return f"hosted drain did not run ({type(exc).__name__})"
+    if report["acked"] or report["rejected"]:
+        print(
+            f"memory-relay: hosted drain {root}: acked={len(report['acked'])} "
+            f"rejected={len(report['rejected'])} remaining={report['remaining']}",
+            file=sys.stderr,
+        )
+    return report["stopped"]
+
+
+def _relay_gate(workspace: Path, notice_marker: Path | None = None) -> None:
+    """Carry or announce owed relay entries; NEVER blocks a Stop (ADR-0055).
+
+    Supersedes CANONICAL_LAW §8.11 item 4 ("The agent carries it"): account
+    connector tools are permissioned per tool in claude.ai, so every relayed
+    call could raise an operator approval prompt no local rule suppresses.
+
+    - ``hosted`` carrier: owed entries are drained through the hosted transport
+      (acknowledged with the hosted receipt, or settled with the refusal).
+    - otherwise (``relay``): nothing is asked of the agent. Whatever is still
+      owed stays in the outbox and is announced in one non-blocking stderr line,
+      at most once per session (``notice_marker``); ``python -m ops.memory.relay
+      status`` keeps it visible.
+
+    Fail-open by contract — an unreadable outbox is skipped silently.
+    """
+
+    try:
+        mb.ensure_importable()
+        from ops.memory import relay
+    except Exception:  # noqa: BLE001 - Stop-hook contract is fail-open
+        return None
+    # Resolved only once something is owed: the carrier decision binds the hook
+    # credential, which an empty outbox (the common Stop) never needs.
+    hosted: list[object | None] = []
+    owed_total = 0
+    owed_roots: list[str] = []
+    stopped: str | None = None
+    for root in _relay_roots(workspace):
+        try:
+            if relay.pending(root):
+                if not hosted:
+                    hosted.append(_hosted_transport() if _hosted_carrier_active() else None)
+                if hosted[0] is not None:
+                    stopped = _drain_hosted(root, hosted[0]) or stopped
+            owed = relay.pending(root)
+        except (OSError, relay.RelayError):
+            continue
+        if owed:
+            owed_total += len(owed)
+            owed_roots.append(str(root))
+    if not owed_total:
+        return None
+    if notice_marker is not None and notice_marker.exists():
+        return None
+    print(
+        f"memory-relay: {owed_total} hook record(s) still owed to the shared store, kept in "
+        f"the outbox (not asked for; python -m ops.memory.relay --workspace <repo> status): "
+        f"{', '.join(owed_roots)}" + (f" [hosted drain: {stopped}]" if stopped else ""),
+        file=sys.stderr,
+    )
+    if notice_marker is not None:
+        try:
+            notice_marker.parent.mkdir(parents=True, exist_ok=True)
+            notice_marker.write_text("noticed\n", encoding="utf-8")
+        except OSError:
+            pass  # fail-open: at worst the notice repeats on a later Stop
+    return None
+
+
+def _relay_notice_marker(contract: dict, session_id: str) -> Path | None:
+    try:
+        return Path(st.receipt_path(contract, f"{session_id}{RELAY_NOTICE_SUFFIX}"))
+    except Exception:  # noqa: BLE001 - fail-open; the notice may then repeat
+        return None
+
+
 def main() -> int:
     try:
         event = json.load(sys.stdin)
@@ -344,6 +479,16 @@ def main() -> int:
         # close. A subagent inherits read evidence only and writes nothing.
         _record(contract, session_id, status="skipped_subagent")
         return 0
+    if pp.is_swarm_child(event):
+        # A /lcto swarm child reports to its CTO by transcript and owns its PR in its
+        # own session: no handoff request, no PR handoff comment. Its continuation
+        # still closes at SessionEnd.
+        _record(contract, session_id, status="skipped_swarm_child")
+        return 0
+    # Owed hook records (CANONICAL_LAW §8.11 as amended by ADR-0055): drained on
+    # a hosted surface, otherwise announced once. Never a block, never an ask.
+    notice_marker = _relay_notice_marker(contract, session_id)
+    _relay_gate(st.workspace_root(), notice_marker)
     # The prefetch receipt is keyed by the writer-scoped id
     # (``<writer_agent>__<chat>``, memory_state.resolve_receipt_id), the one
     # key prefetch stamps and the write gate reads. This hook looked it up by
@@ -483,11 +628,11 @@ def main() -> int:
         except session_handoff.HandoffError as exc:
             missing[str(governance_handoff.GOVERNANCE_REL)] = str(exc)
         ledger_rel = HANDOFF_LEDGER_REL
-        if (
-            missing
-            and not pp.ledger(root, ledger_rel, key).get("requested")
-            and not event.get("stop_hook_active")
-        ):
+        # ``requested`` alone bounds the ask to once per publication.
+        # ``stop_hook_active`` is not consulted: Claude Code sets it when ANY
+        # Stop hook caused the continuation (e.g. a cloud "please push" hook),
+        # and honouring it skipped the request and closed without a brief.
+        if missing and not pp.ledger(root, ledger_rel, key).get("requested"):
             # Ask ONCE, for both handoffs in one reason: this is the only hook
             # that blocks (the governance hook runs in parallel and never does).
             # Blocking hands the agent the schemas and one more turn; the next
@@ -509,6 +654,7 @@ def main() -> int:
                             pr_label=pub["label"],
                             pr_number=pub["number"],
                             missing=missing,
+                            workspace=str(root),
                             governance=(
                                 gov_rel,
                                 governance_handoff.GOVERNANCE_SCHEMA,
@@ -542,8 +688,9 @@ def main() -> int:
             report = {"status": "error", "writes": [], "warnings": [type(exc).__name__]}
         text = compose_handoff_announcement(session_id, root, pub, report, handoff, handoff_error)
         if handoff is not None:
-            # The brief, published as a markdown report in the clone
-            # (reports/end-session/session-handoff/) and pushed to the PR branch.
+            # The brief, delivered as the PR's handoff comment (edited in place on
+            # later publications); a local copy stays under the git dir. Nothing
+            # is committed onto the PR (ops/reports/handoff_delivery.py).
             text += "\n" + pp.publish_report(
                 "publish_session_handoff",
                 root,
@@ -570,6 +717,9 @@ def main() -> int:
         )
 
     announcement = "\n\n".join(announcements)
+    # The close above may itself have queued relay records (continuation + close):
+    # drain them now on a hosted surface; elsewhere they stay owed, unasked.
+    _relay_gate(st.workspace_root(), notice_marker)
     _emit(announcement)
     _record(
         contract,

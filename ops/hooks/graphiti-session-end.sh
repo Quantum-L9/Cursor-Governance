@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # sessionEnd — canonical close (continuation capsule + memory.close); fail-open
-# Budget: hooks.json sessionEnd timeout is 30s (Phase A ≤8s, B ≤18s).
+# Budget: hooks.json sessionEnd timeout is 30s for the close and its single
+# retry (local Phase B was deleted at C15; distill runs in l9-memory).
 # Since stage C6 every write here crosses the memory control plane; nothing
 # writes a provider, and the fallback is an idempotent canonical close retry.
 set -uo pipefail
@@ -68,8 +69,9 @@ fi
   exit 0
 }
 
-export L9_MEMORY_AGENT_ID="${L9_MEMORY_AGENT_ID:-cursor}"
-export USER_ID="${USER_ID:-cursor_agent}"
+# Memory identity is DERIVED from host markers (ops/memory/agent_identity.py:
+# CURSOR_AGENT -> cursor), never configured; a default exported here would only be
+# reported as static drift (rules/03, rules/64).
 export CURSOR_CONVERSATION_ID="$SESSION_ID"
 
 GOV_ROOT="$(cd "$(dirname "$REAL_HOOK")/../.." && pwd)"
@@ -113,7 +115,6 @@ CLOSE_ARGS=(
   --project-dir "$REPO"
   --session-id "$SESSION_ID"
   --reason "$REASON"
-  --agent-id "$L9_MEMORY_AGENT_ID"
 )
 [ -n "$TRANSCRIPT_PATH" ] && CLOSE_ARGS+=(--transcript-path "$TRANSCRIPT_PATH")
 [ "$IS_BG" = "1" ] && CLOSE_ARGS+=(--background)
@@ -172,7 +173,7 @@ if [[ "$CLOSE_STATUS" != "idempotent_skip" ]] && { [[ "$CLOSE_RC" -ne 0 ]] || [[
   (cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
     "$PY" -m ops.graphiti.hydration.cli fallback-write \
     --project-dir "$REPO" --session-id "$SESSION_ID" \
-    --reason "$REASON" --agent-id "$L9_MEMORY_AGENT_ID" \
+    --reason "$REASON" \
     ${TRANSCRIPT_PATH:+--transcript-path "$TRANSCRIPT_PATH"}) || FB_RC=$?
   if [[ "$FB_RC" -ne 0 ]]; then
     echo "ERROR: canonical close retry failed — obligation stays close_incomplete; REPAIR: /end-session" >&2

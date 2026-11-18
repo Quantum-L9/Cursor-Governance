@@ -1065,8 +1065,9 @@ from {module_path} import ...
         from ops.reports.gmp import report_name
         from ops.reports.publish import ReportKind, report_dir
 
-        # reports/gmp/GMP-Report-<NNN>-<Description>.md — the one location and
-        # name pattern for GMP reports (rules/81-gmp-audit.mdc).
+        # reports/gmp/GMP-Report-<NNN>-<Description>.md, or the repository's
+        # declared gmp_report_dir (ops/config/publish-authority.json) — the one
+        # location and name pattern for GMP reports (rules/81-gmp-audit.mdc).
         reports = report_dir(self.work_root, ReportKind.GMP)
         number = int(self.state.gmp_id.rsplit("-", 1)[-1])
         path = reports / report_name(number, self.state.task)
@@ -1159,19 +1160,25 @@ from {module_path} import ...
                 response = "NO"
 
         if response == "YES":
+            from ops.reports.gmp import report_rel as gmp_report_rel
+
+            # The repository's GMP report folder (publish-authority
+            # gmp_report_dir, else reports/gmp), with a trailing slash so a
+            # sibling such as reports/gmp-old/ is not mistaken for it.
+            gmp_dir = gmp_report_rel(self.work_root).as_posix() + "/"
             paths = [t["file"] for t in self.state.todo_plan if t.get("file")]
             if self.state.report_path:
                 report_rel = self.state.report_path
                 if report_rel.startswith(str(self.work_root)):
                     report_rel = str(Path(report_rel).relative_to(self.work_root))
-                if "reports/" in report_rel:
-                    # Keep only the reports/... suffix when the generator printed a sentence.
-                    idx = report_rel.find("reports/")
+                if gmp_dir in report_rel:
+                    # Keep only the report-folder suffix when the generator printed a sentence.
+                    idx = report_rel.find(gmp_dir)
                     report_rel = report_rel[idx:]
                 paths.append(report_rel.split()[0])
             commit_msg = f"{self.state.gmp_id}: {self.state.task}"
-            report_paths = [p for p in paths if p.startswith("reports/")]
-            source_paths = [p for p in paths if not p.startswith("reports/")]
+            report_paths = [p for p in paths if p.startswith(gmp_dir)]
+            source_paths = [p for p in paths if not p.startswith(gmp_dir)]
             if source_paths:
                 self._run_argv(["git", "add", "--"] + source_paths, cwd=self.work_root)
             if report_paths:

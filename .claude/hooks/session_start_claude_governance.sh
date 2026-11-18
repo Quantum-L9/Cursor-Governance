@@ -525,25 +525,6 @@ if GOV=$(resolve_governance_dir); then
     fi
   fi
   say "authority order: CANONICAL_LAW.md > Autonomy Surface Profile > AGENTS.md > skills > agent-invented contracts"
-  if [ -d "$GOV/skills" ]; then
-    # Unique canonical coverage, not a sum of SKILL.md files. The banner used to
-    # add `find -L` counts over the workspace and user discovery paths, so each
-    # skill projected into both read twice (a "loadable" count of 119 for 59
-    # skills, issue #690). The census counts each canonical identity once,
-    # names missing / wrong-target / non-canonical entries separately, and
-    # reports claude.ai account copies under ~/.claude/skills/synced/ apart from
-    # coverage. Stdlib-only and read-only (~0.1 s), bounded like every probe here.
-    _census="$GOV/ops/scripts/reconcile_claude_l9_skills.py"
-    _census_out="$(_l9_bounded 2 "$PY" "$_census" --root "$GOV" --coverage --workspace "$WORKSPACE" 2>/dev/null)"
-    _census_rc=$?
-    if [ -n "$_census_out" ]; then
-      while IFS= read -r _census_line; do
-        say "$_census_line"
-      done <<<"$_census_out"
-    else
-      say "skills projected: UNKNOWN (coverage census unavailable, rc=$_census_rc)"
-    fi
-  fi
 
   # Two-clone topology: workspace checkout vs live SSOT SessionStart loaded.
   if git -C "$WORKSPACE" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -758,6 +739,31 @@ if GOV=$(resolve_governance_dir); then
     fi
   fi
 
+  if [ -d "$GOV/skills" ]; then
+    # Unique canonical coverage, not a sum of SKILL.md files. The banner used to
+    # add `find -L` counts over the workspace and user discovery paths, so each
+    # skill projected into both read twice (a "loadable" count of 119 for 59
+    # skills, issue #690). The census counts each canonical identity once,
+    # names missing / wrong-target / non-canonical entries separately, and
+    # reports claude.ai account copies under ~/.claude/skills/synced/ apart from
+    # coverage. Stdlib-only and read-only (~0.1 s), bounded like every probe here.
+    #
+    # It runs AFTER the installer / projection above, never before. Taken first,
+    # it reported the links as they were before this ceremony repaired them: a
+    # session whose installer replaced all 57 workspace links (projection
+    # receipt replaced_duplicates=57) still printed every one as wrong-target.
+    _census="$GOV/ops/scripts/reconcile_claude_l9_skills.py"
+    _census_out="$(_l9_bounded 2 "$PY" "$_census" --root "$GOV" --coverage --workspace "$WORKSPACE" 2>/dev/null)"
+    _census_rc=$?
+    if [ -n "$_census_out" ]; then
+      while IFS= read -r _census_line; do
+        say "$_census_line"
+      done <<<"$_census_out"
+    else
+      say "skills projected: UNKNOWN (coverage census unavailable, rc=$_census_rc)"
+    fi
+  fi
+
   if [ -f "$PROFILE_LOADER" ] && command -v "$PY" >/dev/null 2>&1; then
     PROFILE_BLOCK=$("$PY" "$PROFILE_LOADER" 2>/dev/null || true)
     if [ -n "$PROFILE_BLOCK" ]; then
@@ -849,6 +855,38 @@ _l9_door_status() {
   fi
   if [ -n "$_drift" ]; then
     say "memory identity: IGNORED configured L9_MEMORY_AGENT_ID=$_drift (the running surface is ${_agent:-unresolved}); remove it from the environment settings — the identity is derived, never configured"
+  fi
+  # The canonical identity assertion (l9.identity-assertion/v1) the memory store
+  # verifies against its pinned .github coordinates. Built read-only from the
+  # committed projection, exactly as the door would seal it: no HMAC, no key,
+  # no GitHub fetch. A projection whose bytes disagree with its receipt makes
+  # the builder refuse, and the store would refuse this identity the same way,
+  # so say so now rather than at the first write. Readiness of the assertion is
+  # not readiness of the transport: the Claude Code client is the account Memory
+  # connector (CANONICAL_LAW §8.10), whose activation stays UNKNOWN until seen.
+  if [ -n "$_agent" ]; then
+    local _assertion
+    _assertion="$(_l9_bounded 4 env PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -c '
+import sys
+try:
+    from ops.memory.print_agent_assertion_env import build_runtime_identity_assertion
+    a = build_runtime_identity_assertion()
+    dims = a["resolved_dimensions"]
+    rev = a["governing_coordinates"]["global_identity_authority_revision"]
+    surface = dims["surface_identity"].rsplit("#", 1)[-1]
+    actor = dims["actor_identity"].rsplit("#", 1)[-1]
+    print(f"READY actor {actor}, surface {surface}, pinned to Quantum-L9/.github {rev[:7]}")
+except Exception as exc:  # noqa: BLE001 - a status probe reports, never raises
+    print(f"UNAVAILABLE {type(exc).__name__}: {exc}")
+' 2>/dev/null)"
+    case "$_assertion" in
+      READY*)
+        say "memory identity assertion: READY — ${_assertion#READY } via the committed projection (receipt digest verified); grants no credential, role or namespace. Memory transport is the account connector (CANONICAL_LAW §8.10), activation UNKNOWN until observed" ;;
+      UNAVAILABLE*)
+        say "memory identity assertion: UNAVAILABLE — ${_assertion#UNAVAILABLE }; the store refuses this identity until generated/governance/canonical_identity.yaml and its receipt agree (tools/authority/project_canonical_identity.py)" ;;
+      *)
+        say "memory identity assertion: UNKNOWN — probe produced no result" ;;
+    esac
   fi
   [ -n "${L9_MEMORY_AGENTS_DOOR_SECRET:-}" ] || missing+=(L9_MEMORY_AGENTS_DOOR_SECRET)
   [ -n "${L9_MEMORY_AGENT_ASSERTION:-}" ] || missing+=(L9_MEMORY_AGENT_ASSERTION)
@@ -984,41 +1022,69 @@ emit_coding_projection() {
   out="$(_l9_bounded 2 "$py" "$reader" --workspace "$WORKSPACE" --format line 2>/dev/null)"
   rc=$?
   case "$rc" in
-    125) say "coding projection: UNVERIFIED — DEFERRED: hook budget exhausted (report-only)" ;;
-    124) say "coding projection: UNVERIFIED — TIMED OUT (report-only)" ;;
+    125) say "coding projection: UNVERIFIED — DEFERRED: hook budget exhausted (verification only; not bound in this session — /coding-agent binds it)" ;;
+    124) say "coding projection: UNVERIFIED — TIMED OUT (verification only; not bound in this session — /coding-agent binds it)" ;;
     *)
       if [ -n "$out" ]; then
         say "$out"
       else
-        say "coding projection: UNVERIFIED — classifier printed nothing (report-only)"
+        say "coding projection: UNVERIFIED — classifier printed nothing (verification only; not bound in this session — /coding-agent binds it)"
       fi
       ;;
   esac
 }
 
-# --- Operating-plane projection (report-only) --------------------------------
-# One line from the consumer adapter for l9.projection/cursor-governance-
-# operating-plane@2 (ops/scripts/operating_plane_v2_projection.py; Cursor renders
-# the same verdict as markdown). Admitted mode against the checkout's own
-# origin/main record; it never releases payload here, never fetches or writes.
-# No committed bundle or binding is UNVERIFIED, never a claim.
-emit_operating_plane_projection() {
-  local py="$1"
-  local adapter="$GOV/ops/scripts/operating_plane_v2_projection.py"
-  [ -f "$adapter" ] || return 0
-  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
-
-  local out rc
-  out="$(_l9_bounded 2 "$py" "$adapter" --mode admitted --workspace "$WORKSPACE" --format line 2>/dev/null)"
+# --- Authority checkout (shared by every workspace) --------------------------
+# The default binding verifies against a Quantum-L9/.github checkout. Without a
+# managed one it resolved only a `.github` clone beside the workspace, so a session
+# bound in one repository and was NOT BOUND in the next. ensure_authority_checkout.sh
+# provisions ~/.l9/authority/.github (full clone, fast-forward only, never destructive);
+# the binding below stays read-only. Fail-open and bounded by the hook budget.
+emit_authority_checkout() {
+  local ensure="$GOV/ops/scripts/ensure_authority_checkout.sh" out rc
+  [ -f "$ensure" ] || { say "authority checkout: provisioner unavailable"; return 0; }
+  out="$(_l9_bounded 4 bash "$ensure" 2>/dev/null)"
   rc=$?
   case "$rc" in
-    125) say "operating-plane projection: UNVERIFIED — DEFERRED: hook budget exhausted (report-only)" ;;
-    124) say "operating-plane projection: UNVERIFIED — TIMED OUT (report-only)" ;;
+    125) say "authority checkout: DEFERRED — hook budget exhausted" ;;
+    124) say "authority checkout: TIMED OUT — resumes next session" ;;
+    *) say "authority checkout: $(printf '%s\n' "$out" | sed -n 's/^AUTHORITY: //p' | tail -n 1)" ;;
+  esac
+}
+
+# --- Default projection binding (automatic) ---------------------------------
+# Every Claude Code session is bound automatically to the admitted operating plane
+# (l9.projection/cursor-governance-operating-plane@2) through ops/autonomy/host_binding.py
+# and governance/host-bindings/claude-code.yaml; Cursor renders the same binding as
+# markdown. No skill or command is involved; /coding-agent, /lcto and /architect are the
+# manual bindings. BOUND only when the consumer adapter reports CURRENT in admitted mode;
+# the session then reads a source class through that adapter. DEGRADED keeps what verified.
+# Fail-open: a failed, degraded, deferred or timed-out binding never stops the session and is
+# reported as exactly that, never as bound. Never fetches or writes.
+emit_operating_plane_projection() {
+  local py="$1"
+  local control="$GOV/ops/autonomy/host_binding.py"
+  local unbound="default projection binding (claude-code): NOT BOUND"
+  local nothing="nothing is bound (fail-open: the session continues; cite no operating-plane semantics)"
+  [ -f "$control" ] || { say "$unbound — host binding unavailable, so $nothing"; return 0; }
+  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || {
+    say "$unbound — interpreter unresolved, so $nothing"
+    return 0
+  }
+
+  local out rc
+  out="$(_l9_bounded 2 "$py" "$control" --host claude-code --workspace "$WORKSPACE" --format line 2>/dev/null)"
+  rc=$?
+  case "$rc" in
+    125) say "$unbound — DEFERRED: hook budget exhausted, so $nothing" ;;
+    124) say "$unbound — TIMED OUT, so $nothing" ;;
     *)
       if [ -n "$out" ]; then
-        say "$out"
+        while IFS= read -r line || [ -n "$line" ]; do
+          say "$line"
+        done <<< "$out"
       else
-        say "operating-plane projection: UNVERIFIED — adapter printed nothing (report-only)"
+        say "$unbound — host binding printed nothing, so $nothing"
       fi
       ;;
   esac
@@ -1049,12 +1115,12 @@ print("memory.mcp=" + str(d.get("memory_mcp_status", "UNKNOWN")))
 print("memory_control_plane=" + str(d.get("memory_control_plane_status", "UNKNOWN")))
 print("memory_transport=" + str(d.get("memory_transport", "UNKNOWN")))
 notes = d.get("notes") if isinstance(d.get("notes"), dict) else {}
+print("secret_boundary_status=" + str(notes.get("secret_boundary_status") or "UNKNOWN"))
 print("primary_blocker=" + str(notes.get("memory_control_plane_status") or "none"))
 ' 2>/dev/null || true)"
   [ -n "$parsed" ] || return 0
   say "--- capability plane readiness ---"
   say "capability_broker=retired (never shipped; not probed)"
-  say "secret_boundary_status=model-controlled (no broker/Infisical/Graphiti secret in this environment)"
   while IFS= read -r line || [ -n "$line" ]; do
     [ -n "$line" ] && say "$line"
   done <<< "$parsed"
@@ -1123,6 +1189,7 @@ emit_readiness_receipt() {
 emit_bootstrap_status "$PY"
 emit_account_drift "$PY"
 emit_readiness_receipt "$PY"
+emit_authority_checkout
 emit_coding_projection "$PY"
 emit_operating_plane_projection "$PY"
 emit_capability_readiness "$PY"

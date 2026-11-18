@@ -1,7 +1,9 @@
 """REST review routes keyed on comment id, plus the own-PR gate.
 
 Claude Code's permission list matches a command prefix, not a URL. The
-allowlisted command is ``ops/scripts/pr_threads.py``. These functions are the
+allowlisted command is ``ops/scripts/pr_threads.py`` inside the governance
+clone and ``~/.cursor-governance/ops/scripts/pr_threads.py`` from any other
+checkout. These functions are the
 only place that command, and the remediator batch script, build a review
 write. Paths are the three author-review routes. Merge, approve, unresolve,
 and GraphQL are not constructed here.
@@ -157,8 +159,86 @@ def load_summary(workspace: Path) -> dict[str, Any]:
     return data
 
 
-def require_own_pr(workspace: Path, number: int, origin: str) -> dict[str, Any]:
-    """The standing grant is the open PR this checkout's last publish recorded."""
+def git_out(workspace: Path, *args: str) -> str | None:
+    """Stdout of a read-only git command in ``workspace``, or None on any failure."""
+    try:
+        proc = subprocess.run(  # noqa: S603
+            ["git", "-C", str(workspace), *args],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip()
+
+
+def require_live_own_pr(
+    workspace: Path, number: int, origin: str, *, run: RunGh = run_gh
+) -> dict[str, Any]:
+    """Ownership without a receipt: the open PR whose head is this checkout's branch.
+
+    Used when no ``pr-summary.json`` exists, as on a native publish route whose
+    own ``make pr`` writes none. Every fact is read, never assumed: the PR is
+    open, its head repository is origin, its head ref is the checked-out
+    branch, and its head commit is HEAD or an ancestor of HEAD (a local fix not
+    yet pushed). Any unreadable fact refuses. Nothing is fetched to make the
+    proof pass.
+    """
+    branch = git_out(workspace, "rev-parse", "--abbrev-ref", "HEAD")
+    if not branch or branch == "HEAD":
+        fail(
+            f"no {SUMMARY_REL} and no checked-out branch in {workspace} — "
+            f"cannot prove PR #{number} is this checkout's"
+        )
+    raw = run(["gh", "api", "--method", "GET", f"repos/{origin}/pulls/{number}"])
+    try:
+        pr = json.loads(raw)
+    except json.JSONDecodeError:
+        fail(f"PR #{number}: GET returned non-JSON: {raw[:200]}")
+    if not isinstance(pr, dict):
+        fail(f"PR #{number}: GET returned no object")
+    state = str(pr.get("state") or "").strip().lower()
+    if state != "open":
+        fail(f"PR #{number} is {state or 'unknown'}, not open")
+    head = pr.get("head") if isinstance(pr.get("head"), dict) else {}
+    head_repo = head.get("repo") if isinstance(head.get("repo"), dict) else {}
+    head_full = str(head_repo.get("full_name") or "").strip().lower()
+    if head_full != origin.strip().lower():
+        fail(f"PR #{number} head repository {head_full or '<none>'} is not origin {origin}")
+    head_ref = str(head.get("ref") or "").strip()
+    if head_ref != branch:
+        fail(
+            f"PR #{number} head branch {head_ref or '<none>'} "
+            f"is not the checked-out branch {branch}"
+        )
+    head_sha = str(head.get("sha") or "").strip()
+    if not head_sha or git_out(workspace, "merge-base", "--is-ancestor", head_sha, "HEAD") is None:
+        fail(
+            f"PR #{number} head {head_sha[:12] or '<none>'} "
+            f"is not HEAD or an ancestor of HEAD in {workspace}"
+        )
+    return {
+        "repo": origin.strip().lower(),
+        "number": number,
+        "state": "open",
+        "source": "live_head_branch",
+    }
+
+
+def require_own_pr(
+    workspace: Path, number: int, origin: str, *, run: RunGh = run_gh
+) -> dict[str, Any]:
+    """The standing grant is the open PR this checkout published.
+
+    The ``pr-summary.json`` receipt decides when it exists. Without one, the
+    live head-branch proof in ``require_live_own_pr`` decides.
+    """
+    if not (workspace / SUMMARY_REL).is_file():
+        return require_live_own_pr(workspace, number, origin, run=run)
     summary = load_summary(workspace)
     recorded = str(summary.get("repo") or "").strip().lower()
     if recorded != origin.strip().lower():

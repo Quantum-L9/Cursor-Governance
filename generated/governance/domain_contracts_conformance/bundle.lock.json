@@ -1,0 +1,76 @@
+{
+  "authority": {
+    "repository": "Quantum-L9/.github",
+    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915"
+  },
+  "components": [
+    {
+      "path": "projections/conformance_model.projection.json",
+      "projection_digest": "sha256:f2fc2fe2c5c747a38d48783dfd6948d253fcfead35c5a71373d5b083ac10423c",
+      "receipt": "receipts/conformance_model.receipt.json",
+      "sha256": "sha256:5b9b41635e48f48b12abdf7ab9f188f0c9bc09585736e12c29fa9f83987c7c74",
+      "source_class": "conformance_model",
+      "source_digest": "sha256:e777a3cb7b8d94e044934d4778045d697bcdd85ecb2ebe241e95fe60bd7141c5",
+      "source_ref": "l9.source/conformance-model@1"
+    },
+    {
+      "path": "projections/requirement_model.projection.json",
+      "projection_digest": "sha256:71e6ae42a94c6f6a0d081595f961cfbd952afbde0ae7e5c1c15538a1b19035fc",
+      "receipt": "receipts/requirement_model.receipt.json",
+      "sha256": "sha256:f25b0d62e8c124d64720451bd1b30a1cbdcdcb4058d8c7d306ebbee10475c5f9",
+      "source_class": "requirement_model",
+      "source_digest": "sha256:7865723e78b7f02817db9d5f54aedb1350cb08b45d42759c8bdafeba1320c7c2",
+      "source_ref": "l9.source/requirement-model@1"
+    },
+    {
+      "path": "projections/resolution_model.projection.json",
+      "projection_digest": "sha256:bde31acf332b0266eedcff8c7e2206c3ef77f1bd6f41d9d1dfd87737e08397d9",
+      "receipt": "receipts/resolution_model.receipt.json",
+      "sha256": "sha256:01071c4ef955dce8ce78b6b6a2b40d52a2581e63ccebc8ab7073a31f7e239158",
+      "source_class": "resolution_model",
+      "source_digest": "sha256:3c0636b0eaca00789d6ced5425fb1c3a314319dd00525dd5f811f38f81c365fc",
+      "source_ref": "l9.source/resolution-model@1"
+    },
+    {
+      "path": "projections/invariants.projection.json",
+      "projection_digest": "sha256:7e9d8f568755a97bf9c0dea75ee6aeca79d133813b5fd446cb01c8a2b6171384",
+      "receipt": "receipts/invariants.receipt.json",
+      "sha256": "sha256:cd913652ee0795d00fb743039ca8d6628447b0ee8361e136a242625e1e5968f9",
+      "source_class": "invariants",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+      "source_ref": "l9.source/invariants@1"
+    },
+    {
+      "path": "projections/contracts.projection.json",
+      "projection_digest": "sha256:f7fb967d9ed5f86953a8a6b960dae9e6b7b5a65adfcfaff00706a3a9603e8c4c",
+      "receipt": "receipts/contracts.receipt.json",
+      "sha256": "sha256:5c4db838f44611a4a9ba2a810262e07cf87f49c1809c837af7c7f3ecff42bcd3",
+      "source_class": "contracts",
+      "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
+      "source_ref": "l9.source/contracts@1"
+    }
+  ],
+  "composed": {
+    "composition_digest": "sha256:e499a076e3f406506a6bbe38208805aa9fea9f92dc22995331f34cc0a49a9ab1",
+    "path": "composed.json",
+    "receipt": "receipts/composed.receipt.json",
+    "sha256": "sha256:e8fb15d9beab6552842f6de4308cca69471111fbce9762d95af1b07878f22390"
+  },
+  "composition_profile": {
+    "digest": "sha256:2335519ed06fb37316baad61e7b57b80c38728c983711a1cafc48f6dd4a17056",
+    "ref": "l9.compose/contracts-conformance@1"
+  },
+  "generated_by": "tools/authority/produce_projection_bundle.py",
+  "producer": {
+    "compiler": "l9-semantic-compiler",
+    "repository": "Quantum-L9/l9-semantic-compiler-engine",
+    "revision": "eeac5d28f9f1a44e72287190b9087d06aeb4d574",
+    "revision_basis": "caller_asserted",
+    "version": "0.10.0"
+  },
+  "projection_profile": {
+    "digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+    "ref": "l9.projection/contracts-conformance@1"
+  },
+  "schema": "l9.projection-bundle/v1"
+}
