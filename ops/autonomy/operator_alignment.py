@@ -1,9 +1,8 @@
 """Fail-closed operator-alignment consumer boundary.
 
-Lane B's producer contract is not frozen. This module does not declare a view
-schema, select a source, or project a view. It refuses unverified material.
-Two role results are complete for this lane: Coding Agent confidentiality is
-BLOCKED_PRIVACY, and Meta Planner with no admissible consumer is
+The admitted set holds the exact receipt bytes emitted for operator_doctrine.
+This module does not parse that receipt, select a source, or project a view.
+Coding Agent confidentiality stays BLOCKED_PRIVACY. Meta Planner stays
 BLOCKED_NO_CONSUMER.
 """
 
@@ -15,12 +14,19 @@ from pathlib import Path
 MISSING_RECEIPT = "MISSING_RECEIPT"
 DIGEST_MISMATCH = "DIGEST_MISMATCH"
 FORGED_VIEW = "FORGED_VIEW"
+ADMITTED = "ADMITTED"
 BLOCKED_PRIVACY = "BLOCKED_PRIVACY"
 BLOCKED_NO_CONSUMER = "BLOCKED_NO_CONSUMER"
 
-# Empty until a frozen producer contract names exact receipt bytes.
-# Parsing a receipt would invent that contract.
-ADMITTED_PRODUCER_RECEIPTS: frozenset[bytes] = frozenset()
+_RECEIPT_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "governance"
+    / "operator-alignment"
+    / "operator-doctrine.receipt.json"
+)
+
+# Exact producer bytes. The module does not parse them.
+ADMITTED_PRODUCER_RECEIPTS: frozenset[bytes] = frozenset({_RECEIPT_PATH.read_bytes()})
 
 
 def view_digest(view: bytes) -> str:
@@ -29,12 +35,11 @@ def view_digest(view: bytes) -> str:
 
 
 def reject_unverified_view(*, receipt: Path | None, view: bytes, claimed_digest: str) -> str:
-    """Refuse a view. Never returns a loaded view or a pass status.
+    """Accept only an admitted receipt whose view digest matches.
 
     A missing receipt, a claimed digest that is not the view's sha256, and any
-    view whose receipt is not an admitted producer emission are refused. The
-    admitted set is empty while the producer contract is unfrozen, so a
-    digest-matching hand-written view is FORGED_VIEW.
+    other receipt bytes are refused. ADMITTED names the receipt. It is not a
+    loaded view.
     """
     if receipt is None or not receipt.is_file():
         return MISSING_RECEIPT
@@ -42,7 +47,16 @@ def reject_unverified_view(*, receipt: Path | None, view: bytes, claimed_digest:
         return DIGEST_MISMATCH
     if not _origin_admitted(receipt):
         return FORGED_VIEW
-    raise RuntimeError("PRODUCER_CONTRACT_UNFROZEN")
+    return ADMITTED
+
+
+def opt_in_operator_view(receipt: Path) -> str:
+    """Cite an operator view only when the caller opts in with an admitted receipt."""
+    if not receipt.is_file():
+        return MISSING_RECEIPT
+    if receipt.read_bytes() not in ADMITTED_PRODUCER_RECEIPTS:
+        return FORGED_VIEW
+    return ADMITTED
 
 
 def _origin_admitted(receipt: Path) -> bool:

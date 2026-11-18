@@ -1,0 +1,8 @@
+schema: l9.operator-alignment-status/v1
+producer_receipt: governance/operator-alignment/operator-doctrine.receipt.json
+source_class: operator_doctrine
+authority_class: operator_scoped
+not_global_semantic_law: true
+coding_agent: BLOCKED_PRIVACY
+meta_planner: BLOCKED_NO_CONSUMER
+activation_defaults_unchanged: true
