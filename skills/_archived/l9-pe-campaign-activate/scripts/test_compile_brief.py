@@ -161,6 +161,61 @@ class CompileBriefTests(unittest.TestCase):
                 ["ops/scripts/resolve_stack_tip.py"],
             )
 
+    def test_plan_todo_validation_survives_into_the_seed(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            plan = root / "demo.plan.md"
+            plan.write_text(
+                "---\n"
+                "name: Tip\n"
+                "overview: Resolve the tip\n"
+                "todos:\n"
+                "  - id: T1\n"
+                "    content: Add resolver\n"
+                "    paths:\n"
+                "      - ops/scripts/resolve_stack_tip.py\n"
+                "    validation:\n"
+                "      - id: VAL-T1-1\n"
+                "        method: command\n"
+                "        command_or_inspection: python3 ops/scripts/resolve_stack_tip.py --check\n"
+                "        expected_result: PASS\n"
+                "      - id: VAL-T1-2\n"
+                "        method: inspection\n"
+                "        command_or_inspection: Review the resolver diff\n"
+                "      - id: VAL-T1-3\n"
+                "        method: command\n"
+                "        command_or_inspection: ''\n"
+                "---\n\n"
+                "# PLAN: Tip\n",
+                encoding="utf-8",
+            )
+            result = compile_brief(plan, output=root / "out.yaml")
+            validation = result["seed"]["tasks"][0]["validation"]
+            self.assertEqual([entry["id"] for entry in validation], ["VAL-T1-1", "VAL-T1-2"])
+            self.assertEqual(validation[0]["method"], "command")
+            self.assertEqual(
+                validation[0]["command_or_inspection"],
+                "python3 ops/scripts/resolve_stack_tip.py --check",
+            )
+
+    def test_plan_todo_without_validation_carries_none(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            plan = root / "demo.plan.md"
+            plan.write_text(
+                "---\n"
+                "name: Tip\n"
+                "overview: Resolve the tip\n"
+                "todos:\n"
+                "  - id: T1\n"
+                "    content: Add resolver\n"
+                "---\n\n"
+                "# PLAN: Tip\n",
+                encoding="utf-8",
+            )
+            result = compile_brief(plan, output=root / "out.yaml")
+            self.assertNotIn("validation", result["seed"]["tasks"][0])
+
 
 class NormalizedFrontmatterTests(unittest.TestCase):
     """A byte-order mark or CRLF endings must not hide a declared header."""

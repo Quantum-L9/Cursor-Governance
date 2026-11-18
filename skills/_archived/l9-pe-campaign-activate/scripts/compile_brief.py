@@ -324,6 +324,22 @@ def extract_plan_todos(raw: dict[str, Any]) -> list[dict[str, Any]]:
         deps = item.get("depends_on") or item.get("dependencies")
         if isinstance(deps, list) and deps:
             task["depends_on"] = [str(dep) for dep in deps if dep]
+        # A plan may declare per-todo validation (method + command_or_inspection).
+        # Pass it through so a task whose paths contain no test files still
+        # carries an executable verifier instead of dying at launchability with
+        # verification_deadlock. Dropping it here was silent: the projection
+        # then filled an inspection-method entry the launchability gate refuses.
+        validation = item.get("validation")
+        if isinstance(validation, list):
+            declared = [
+                entry
+                for entry in validation
+                if isinstance(entry, dict)
+                and str(entry.get("method") or "").strip()
+                and str(entry.get("command_or_inspection") or "").strip()
+            ]
+            if declared:
+                task["validation"] = declared
         tasks.append(task)
     if not tasks:
         raise BriefError("plan has no extractable todos; will not invent tasks")
