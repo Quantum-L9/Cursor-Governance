@@ -21,7 +21,7 @@ def test_checked_in_contract_covers_every_authoritative_model() -> None:
     raw = load_receipt_contract()
     assert raw["schema"] == CONTRACT_SCHEMA
     assert raw["contract_version"] == "memory-control-plane/v1"
-    assert compatible_package_majors() == frozenset({2})
+    assert compatible_package_majors() == frozenset({2, 3})
     models = canonical_receipt_schemas()
     assert tuple(sorted(models)) == tuple(sorted(CANONICAL_RECEIPT_MODELS))
 
@@ -41,9 +41,9 @@ def test_probe_fills_over_canonical_file() -> None:
     assert "WriteReceipt" in schemas
 
 
-def test_v2_package_receipt_is_accepted_across_2_2_and_2_3() -> None:
+def test_same_major_package_receipt_is_accepted() -> None:
     payload = health_payload()
-    payload["package_version"] = "2.2.0"
+    payload["package_version"] = "3.0.0"
     validator = CanonicalValidator(
         schemas=canonical_receipt_schemas(),
         expected_schema_version="2.2.0",

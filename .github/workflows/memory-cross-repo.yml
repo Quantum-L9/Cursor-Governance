@@ -7,10 +7,13 @@
 #      git ls-remote, a bare SHA is taken as is — and refuse any commit other
 #      than release_evidence.memory_sha (a moved tag fails here, never rebinds);
 #      then clone Quantum-L9/l9-graphiti-memory at that immutable SHA
-#   2. rebuild its wheel with uv build --wheel and the fixed SOURCE_DATE_EPOCH
-#      and refuse a digest that differs from release_evidence.artifact_sha256.
-#      That digest is the official published wheel (python -m build / PyPI).
-#      The rebuild is kept because it reproduces those bytes; a mismatch fails.
+#   2. rebuild its wheel with the memory release recipe at the fixed
+#      SOURCE_DATE_EPOCH (scripts/build_release_artifacts.sh: python -m build,
+#      then tools/assurance/reproducible_artifacts.py canonicalize) and refuse
+#      a digest that differs from release_evidence.artifact_sha256. The
+#      binding's build_backend_constraint must equal that source's
+#      [build-system] requires pin. uv build --wheel --build-constraint does
+#      not reproduce the admitted wheel. A mismatch fails.
 #   3. install that wheel with its `postgres` extra (held to uv.lock, as
 #      pyproject.toml composes it) into a clean environment and bind it through
 #      L9_MEMORY_INTERPRETER (runtime_mode=pinned_environment) — never a
@@ -183,16 +186,26 @@ jobs:
           EXPECTED_ARTIFACT: ${{ steps.binding.outputs.artifact }}
           SOURCE_DATE_EPOCH: ${{ steps.binding.outputs.epoch }}
           BUILD_CONSTRAINT: ${{ steps.binding.outputs.build_constraint }}
+          SRC: ${{ runner.temp }}/memory-src
         run: |
           set -euo pipefail
+          src="${RUNNER_TEMP}/memory-src"
+          # uv build --build-constraint does not reproduce the admitted wheel.
+          # The one recipe is the memory repository's release script. The
+          # constraint stays an exact setuptools== pin and must be the pin
+          # that script's isolated build will resolve.
+          python3 -c 'import os, sys, tomllib; from pathlib import Path
+reqs = tomllib.loads((Path(os.environ["SRC"]) / "pyproject.toml").read_text())["build-system"]["requires"]
+want = os.environ["BUILD_CONSTRAINT"]
+if reqs != [want]:
+    sys.exit("build-system requires %r, binding constraint is %s" % (reqs, want))' 
+          frontend="${RUNNER_TEMP}/memory-build-frontend"
+          uv venv "${frontend}" --python "${PYTHON_VERSION}"
+          uv pip install --python "${frontend}/bin/python" "build>=1.2,<2"
           out="${RUNNER_TEMP}/memory-wheel"
-          mkdir -p "${out}"
-          # The isolated build env resolves the backend afresh; pin the one that
-          # produced the official wheel, or a new setuptools release changes bytes.
-          printf '%s\n' "${BUILD_CONSTRAINT}" > "${RUNNER_TEMP}/memory-build-constraints.txt"
-          uv build --wheel --out-dir "${out}" \
-            --build-constraint "${RUNNER_TEMP}/memory-build-constraints.txt" \
-            "${RUNNER_TEMP}/memory-src"
+          SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH}" \
+            PYTHON="${frontend}/bin/python" \
+            bash "${src}/scripts/build_release_artifacts.sh" "${out}"
           wheel="${out}/${EXPECTED_ARTIFACT}"
           if [ ! -f "${wheel}" ]; then
             echo "::error::expected artifact ${EXPECTED_ARTIFACT} was not built; got: $(ls "${out}")"
