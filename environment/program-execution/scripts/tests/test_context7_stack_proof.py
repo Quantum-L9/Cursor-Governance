@@ -125,7 +125,7 @@ class Context7StackProofTests(unittest.TestCase):
                 "objective": "Configure Context7 MCP and the HTTP API",
                 "tasks": [{"title": "Docs", "objective": "query-docs"}],
             }
-            receipt = self.mod.prove_stack(seed, primed_dir=primed, fetch=fetch)
+            receipt = self.mod.prove_stack(seed, primed_dir=primed, fetch=fetch, bind=lambda: None)
             self.assertEqual(receipt["status"], "pass")
             path = primed / "ctx-demo" / "stack-proof.json"
             self.assertTrue(path.is_file())
@@ -161,16 +161,68 @@ class Context7StackProofTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as raw:
             primed = Path(raw)
-            self.mod.prove_stack(seed, primed_dir=primed, fetch=fetch, tool_cache=cache)
+            self.mod.prove_stack(
+                seed, primed_dir=primed, fetch=fetch, bind=lambda: None, tool_cache=cache
+            )
             first = len(calls)
             self.assertTrue(first, "the first proof fetched nothing")
 
             edited = {**seed, "tasks": [{"title": "Docs", "objective": "query-docs twice"}]}
-            receipt = self.mod.prove_stack(edited, primed_dir=primed, fetch=fetch, tool_cache=cache)
+            receipt = self.mod.prove_stack(
+                edited, primed_dir=primed, fetch=fetch, bind=lambda: None, tool_cache=cache
+            )
 
             self.assertEqual(len(calls), first, "an unrelated task edit re-fetched the docs")
             self.assertEqual(receipt["status"], "pass")
             self.assertTrue(receipt["tools"][0]["fetch_evidence"]["digest"])
+
+    def test_vault_bind_is_the_primary_key_source(self) -> None:
+        seen_headers: dict[str, str] = {}
+        os.environ["CONTEXT7_API_KEY"] = "env-key-not-the-vault"
+
+        def fetch(url: str, headers=None):
+            if "libs/search" in url:
+                seen_headers.update(headers or {})
+                return 200, json.dumps({"results": [{"id": "/upstash/context7"}]})
+            return 200, "language_name must be the full English name. language_code is en."
+
+        seed = {
+            "campaign_id": "bind-primary",
+            "objective": "Configure Context7 MCP and the HTTP API",
+            "tasks": [{"title": "Docs", "objective": "query-docs"}],
+        }
+        receipt = self.mod.prove_stack(
+            seed,
+            primed_dir=Path(tempfile.mkdtemp()),
+            fetch=fetch,
+            bind=lambda: "vault-key",
+        )
+        self.assertEqual(receipt["status"], "pass")
+        self.assertEqual(seen_headers.get("Authorization"), "Bearer vault-key")
+        self.assertNotIn("vault-key", json.dumps(receipt))
+
+    def test_env_key_used_only_when_the_vault_has_none(self) -> None:
+        seen_headers: dict[str, str] = {}
+
+        def fetch(url: str, headers=None):
+            if "libs/search" in url:
+                seen_headers.update(headers or {})
+                return 200, json.dumps({"results": [{"id": "/upstash/context7"}]})
+            return 200, "language_name must be the full English name. language_code is en."
+
+        seed = {
+            "campaign_id": "bind-miss",
+            "objective": "Configure Context7 MCP and the HTTP API",
+            "tasks": [{"title": "Docs", "objective": "query-docs"}],
+        }
+        receipt = self.mod.prove_stack(
+            seed,
+            primed_dir=Path(tempfile.mkdtemp()),
+            fetch=fetch,
+            bind=lambda: None,
+        )
+        self.assertEqual(receipt["status"], "pass")
+        self.assertEqual(seen_headers.get("Authorization"), "Bearer test-key-not-a-secret")
 
     def test_missing_key_refuses_on_live_fetch(self) -> None:
         os.environ.pop("CONTEXT7_API_KEY", None)
@@ -180,7 +232,9 @@ class Context7StackProofTests(unittest.TestCase):
             "tasks": [{"title": "API", "objective": "GET docs"}],
         }
         with self.assertRaises(self.mod.StackProofError) as ctx:
-            self.mod.prove_stack(seed, primed_dir=Path(tempfile.mkdtemp()))
+            self.mod.prove_stack(
+                seed, primed_dir=Path(tempfile.mkdtemp()), bind=lambda: None
+            )
         self.assertIn("CONTEXT7_API_KEY", str(ctx.exception))
 
     def test_docs_url_get_failure_refuses(self) -> None:
@@ -196,7 +250,9 @@ class Context7StackProofTests(unittest.TestCase):
             "tasks": [{"title": "API", "objective": "payload"}],
         }
         with self.assertRaises(self.mod.StackProofError):
-            self.mod.prove_stack(seed, primed_dir=Path(tempfile.mkdtemp()), fetch=fetch)
+            self.mod.prove_stack(
+                seed, primed_dir=Path(tempfile.mkdtemp()), fetch=fetch, bind=lambda: None
+            )
 
     def test_default_fetch_refuses_file_and_non_https_schemes(self) -> None:
         for url in (

@@ -5,6 +5,13 @@ Infer API / MCP / install / Docker / named products from the activate seed,
 fetch current docs (Context7 HTTP, then official page GET, plus live MCP
 schemas), write $HOME/.l9/primed/<id>/stack-proof.json, and validate.
 Agent-written receipts without fetch evidence fail closed.
+
+The Context7 key is resolved bind-first: the primary source is the in-process
+Infisical bind (``ops/secrets/capability_bind.bind("CONTEXT7_API_KEY")``) held
+in a local variable only — never exported, never printed, never written to the
+receipt. A key already present in the environment (trusted-operator surfaces)
+is the secondary source. With no key from either source the live fetch refuses
+fail-closed, exactly as before.
 """
 
 from __future__ import annotations
@@ -25,6 +32,8 @@ from typing import Any
 _OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
 if str(_OPS_LIB) not in sys.path:
     sys.path.insert(0, str(_OPS_LIB))
+
+_OPS_SECRETS = Path(__file__).resolve().parents[3] / "ops" / "secrets"
 
 from safe_https import tls12_context  # noqa: E402
 
@@ -71,6 +80,7 @@ LANGUAGE_NAME_ISO_RE = re.compile(
 )
 
 FetchFn = Callable[[str, dict[str, str] | None], tuple[int, str]]
+BindFn = Callable[[], str | None]
 
 
 class StackProofError(RuntimeError):
@@ -154,8 +164,39 @@ def is_pure_file_edit(seed: dict[str, Any], inferred: list[dict[str, str]]) -> b
     return bool(PURE_FILE_RE.search(seed_text(seed)))
 
 
-def _headers() -> dict[str, str]:
+def _default_bind() -> str | None:
+    """Primary key source: bind CONTEXT7_API_KEY in-process from Infisical.
+
+    The value is returned to the caller and never printed, exported or
+    written anywhere. Mirrors the governed vault-MCP bridge
+    (``ops/secrets/vault_mcp_bridge.py``): the key lives in runner-owned
+    process memory only, never in a model-readable environment or file.
+    """
+    if str(_OPS_SECRETS) not in sys.path:
+        sys.path.insert(0, str(_OPS_SECRETS))
+    import capability_bind  # noqa: PLC0415
+
+    return capability_bind.bind("CONTEXT7_API_KEY")
+
+
+def _context7_key(bind: BindFn | None) -> str:
+    """Resolve the Context7 key, bind-first, fail-closed.
+
+    Primary: the in-process Infisical bind. Secondary: an environment key a
+    trusted operator exported for this process. Neither: refuse with the
+    canonical missing-key error — the live fetch never runs unauthenticated
+    and never degrades silently.
+    """
+    key = ((bind or _default_bind)() or "").strip()
+    if key:
+        return key
     key = os.environ.get("CONTEXT7_API_KEY", "").strip()
+    if not key:
+        raise StackProofError("CONTEXT7_API_KEY missing on the live stack-proof path")
+    return key
+
+
+def _headers(key: str) -> dict[str, str]:
     headers = {"User-Agent": "l9-pe-stack-proof/1"}
     if key:
         headers["Authorization"] = f"Bearer {key}"
@@ -254,11 +295,11 @@ def context7_fetch(
     query: str,
     *,
     fetch: FetchFn,
+    bind: BindFn | None = None,
 ) -> dict[str, Any] | None:
-    if not os.environ.get("CONTEXT7_API_KEY", "").strip():
-        raise StackProofError("CONTEXT7_API_KEY missing on the live stack-proof path")
+    key = _context7_key(bind)
     params = urllib.parse.urlencode({"libraryName": name, "query": query})
-    status, body = fetch(f"{CONTEXT7_SEARCH}?{params}", _headers())
+    status, body = fetch(f"{CONTEXT7_SEARCH}?{params}", _headers(key))
     if status != 200:
         return None
     try:
@@ -273,7 +314,7 @@ def context7_fetch(
     if not library_id:
         return None
     ctx_params = urllib.parse.urlencode({"libraryId": library_id, "query": query, "type": "json"})
-    ctx_status, ctx_body = fetch(f"{CONTEXT7_CONTEXT}?{ctx_params}", _headers())
+    ctx_status, ctx_body = fetch(f"{CONTEXT7_CONTEXT}?{ctx_params}", _headers(key))
     if ctx_status != 200 or not ctx_body.strip():
         return None
     return {
@@ -374,6 +415,7 @@ def fetch_one_tool(
     seed: dict[str, Any],
     *,
     fetch: FetchFn,
+    bind: BindFn | None = None,
 ) -> dict[str, Any]:
     name = tool["name"]
     query = str(seed.get("objective") or name)[:200]
@@ -385,7 +427,7 @@ def fetch_one_tool(
             if tool["kind"] == "mcp":
                 fetched = inspect_mcp_schemas(name)
             if fetched is None:
-                fetched = context7_fetch(name, query, fetch=fetch)
+                fetched = context7_fetch(name, query, fetch=fetch, bind=bind)
             if fetched is None and docs_url:
                 fetched = official_docs_fetch(docs_url, fetch=fetch, source="docs_url")
             if fetched is None:
@@ -479,6 +521,7 @@ def prove_stack(
     *,
     primed_dir: Path | None = None,
     fetch: FetchFn | None = None,
+    bind: BindFn | None = None,
     tool_cache: Any | None = None,
 ) -> dict[str, Any]:
     campaign_id = str(seed.get("campaign_id") or "").strip()
@@ -510,7 +553,7 @@ def prove_stack(
             key = tool_cache_key(tool, seed)
             proven = tool_cache.get("stack_proof_tool", key) if tool_cache is not None else None
             if not isinstance(proven, dict):
-                proven = fetch_one_tool(tool, seed, fetch=fetch_fn)
+                proven = fetch_one_tool(tool, seed, fetch=fetch_fn, bind=bind)
                 if tool_cache is not None:
                     tool_cache.put("stack_proof_tool", key, proven)
             tools.append(proven)
