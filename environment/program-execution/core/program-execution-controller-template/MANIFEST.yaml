@@ -107,7 +107,7 @@ files:
 - path: scripts/pec/dispatch.py
   sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
 - path: scripts/pec/exec_env.py
-  sha256: 7088f364da22f5f93044f82e97f81a55de7df620dc33a7c740618604e487f2bc
+  sha256: b3be90a4e3c5ff92d6adff623c645c65f5d24fd9955df677c1514f5d944bd9af
 - path: scripts/pec/gates.py
   sha256: 32a07cdb47b48ec3cd40ffa131561e9183a46201a97604b6c1aaeb2083cb29af
 - path: scripts/pec/ledger.py
@@ -160,6 +160,8 @@ files:
   sha256: 8fd96068f7442f96de8af2abc401ff1cbf3800cfe227b2bccef55869d2dbeadf
 - path: scripts/tests/test_do_not_build_verify.py
   sha256: bec6145fab2c70007baf383813c19cdc2e39e788d5154d6159294c4f4752425b
+- path: scripts/tests/test_exec_env_provisioning.py
+  sha256: 542bc58e8ead8b8b1990618379670aaef2194f00bf4cdccfd5f104f0be5bdd78
 - path: scripts/tests/test_exec_env_root.py
   sha256: aacac11e7303897620396c0ba7e6659b3f0930af06938d7d3f704a5c76600d64
 - path: scripts/tests/test_exec_env_truncation.py
