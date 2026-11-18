@@ -86,9 +86,10 @@ class UserScopeSettingsTests(unittest.TestCase):
         # 20 registrations covering 18 distinct hook scripts: skill_usage_logger
         # is registered twice (PreToolUse and UserPromptExpansion), and so is
         # operator_merge_instruction_wrap.py (UserPromptSubmit and, matched to
-        # l9-pr-remediation, UserPromptExpansion). Four are fail-closed gates
-        # (merge, local execution, memory, and the coding-agent binding gate on
-        # the file tools); sixteen are observers. The two Stop observers,
+        # l9-pr-remediation, UserPromptExpansion). Five are fail-closed gates
+        # (merge, local execution, memory, the coding-agent binding gate, and
+        # context7_stack_pretool.py, which denies stack edits); fifteen are
+        # observers. The two Stop observers,
         # memory_writeback.py and governance_handoff_writeback.py, run in
         # parallel once per publication. ci_parity_push_gate.py and
         # ci_parity_posttool.py are observers, so the gate count is unchanged.
@@ -104,8 +105,8 @@ class UserScopeSettingsTests(unittest.TestCase):
         # §6.2.13); at UserPromptExpansion it records a typed /l9-pr-remediation
         # as the fleet instruction (§6.2.15). It decides nothing and never blocks.
         self.assertEqual(len(commands), 20, "every L9 hook registration must reach user scope")
-        self.assertEqual(sum("--class gate" in c for c in commands), 4)
-        self.assertEqual(sum("--class observer" in c for c in commands), 16)
+        self.assertEqual(sum("--class gate" in c for c in commands), 5)
+        self.assertEqual(sum("--class observer" in c for c in commands), 15)
         names = {c.rsplit(" ", 1)[-1].rstrip("'") for c in commands}
         self.assertEqual(len(names), 18, "eighteen distinct hook scripts")
         session_start_commands = [

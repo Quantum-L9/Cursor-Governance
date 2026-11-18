@@ -11,7 +11,8 @@
 # THE DISTINCTION THIS FILE EXISTS TO ENFORCE (INV-1):
 #
 #   --class gate      A hook that DECIDES whether a tool call may proceed.
-#                     merge_gate_wrap, local_execution_gate_wrap, memory_gate.
+#                     merge_gate_wrap, local_execution_gate_wrap, memory_gate,
+#                     context7_stack_pretool (permissionDecision deny).
 #                     If it cannot evaluate — no launcher, no hook file, no
 #                     locked interpreter — it exits 2 and the tool call is
 #                     BLOCKED. A gate that cannot evaluate has not passed;
@@ -19,7 +20,7 @@
 #
 #   --class observer  A hook that RECORDS or ENRICHES but decides nothing.
 #                     skill_usage_logger, user_prompt_skill_router,
-#                     context7_stack_pretool, memory_prefetch, memory_writeback,
+#                     memory_prefetch, memory_writeback,
 #                     governance_handoff_writeback.
 #                     If it cannot run it exits 0 — but it appends a timestamped
 #                     line to ~/.l9/claude/hook-skips.log first, so the skip is
@@ -81,7 +82,7 @@ esac
 # being wrong is silent.
 l9_required_class() {
   case "$1" in
-    merge_gate_wrap.py|local_execution_gate_wrap.py|memory_gate.py|coding_agent_binding_gate_wrap.py|session_debt_wrap.py)
+    merge_gate_wrap.py|local_execution_gate_wrap.py|memory_gate.py|coding_agent_binding_gate_wrap.py|session_debt_wrap.py|context7_stack_pretool.py)
       printf 'gate' ;;
     *) printf '' ;;
   esac

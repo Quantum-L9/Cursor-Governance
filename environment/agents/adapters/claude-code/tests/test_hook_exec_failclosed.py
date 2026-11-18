@@ -40,18 +40,19 @@ GATES = (
     "memory_gate.py",
     "coding_agent_binding_gate_wrap.py",
     "session_debt_wrap.py",
+    "context7_stack_pretool.py",
 )
 REGISTERED_GATES = (
     "merge_gate_wrap.py",
     "local_execution_gate_wrap.py",
     "memory_gate.py",
     "coding_agent_binding_gate_wrap.py",
+    "context7_stack_pretool.py",
 )
 OBSERVERS = (
     "skill_usage_logger.py",
     "user_prompt_skill_router.py",
     "operator_merge_instruction_wrap.py",
-    "context7_stack_pretool.py",
     "memory_prefetch.py",
     "memory_writeback.py",
     "ci_parity_posttool.py",
