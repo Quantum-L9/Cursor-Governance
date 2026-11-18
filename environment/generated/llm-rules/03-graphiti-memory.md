@@ -117,5 +117,7 @@ HTTP stays forbidden. The `ops/memory` CLI above is the operator/hook lane,
 not a substitute MCP transport. A package that only knows stdio is
 `UPSTREAM_BLOCKED`. Live Auth0 and mobile proof stay UNKNOWN. Law:
 CANONICAL_LAW §8.10.
+Tag `v3.0.0` is deployed (2026-11-16). This repository's package pin stays
+2.6.0. Do not install 3.0.0 in place of that pin.
 
 <!-- generated-from: rules/03-graphiti-memory.mdc; do-not-edit -->
