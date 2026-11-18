@@ -2,5 +2,8 @@
   "repo": "Quantum-L9/Cursor-Governance",
   "number": 1011,
   "head_sha": "92a347ff7c3195580ab069779e63fa3454a1c11d",
-  "paths": ["skills/l9-strategic-plan/SKILL.md", "skills/AUTONOMY_MANIFEST.yaml"]
+  "paths": [
+    "skills/l9-strategic-plan/SKILL.md",
+    "skills/AUTONOMY_MANIFEST.yaml"
+  ]
 }
