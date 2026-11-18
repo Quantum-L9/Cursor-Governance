@@ -34,8 +34,8 @@
       "sha256": "ba076a3c130dfb9a0bd94763495327cefbbfce6b5d689232001ba637b8ff48a1"
     },
     "08_CTO_SWARM_RUNBOOK.md": {
-      "bytes": 5415,
-      "sha256": "7a27aa9cc071d38aa7ecd1b592ec226a0d1e41dd1d46d5c56ab3717c50d49668"
+      "bytes": 5407,
+      "sha256": "fbaa5e4849c3f043d64a2e7af7d5ce0e0e1c099ae72d9ea7817dce68c7a1d5e5"
     },
     "09_EXECUTION_BINDING.md": {
       "bytes": 10353,
@@ -74,8 +74,8 @@
       "sha256": "4cd66187157d0c17cb7996409bfe6d68f0e8cc272ff262e1100cbf3f5d64a93a"
     },
     "scripts/validate_pack.py": {
-      "bytes": 8067,
-      "sha256": "785af4f1f948aaea84f2e317d1ef23878f0cda4f9999f56954d3343bdcd6ac90"
+      "bytes": 8533,
+      "sha256": "7b1ca6b7367de074c4d9ddb8d9de2191c2de04634dd8c04168261ac664b77155"
     }
   },
   "note": "Integrity of handoff files only; execution binding checked 2026-11-18; no admission, merge, or live enforcement proof",

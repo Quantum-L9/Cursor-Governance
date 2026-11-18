@@ -12,7 +12,7 @@ The user is the single human owner. L9-ORG-007 explicitly permits an authenticat
 S: four read-only pool Tasks, no new lane files
 |
 A: CTO session, one .github worktree, owner decision
-|          
+|  
 +-- B: CTO session, same .github writer slot, after A merges
 |    |-- C: pool, Cursor-Governance, after B is verified
 |    `-- M: pool, L9-Ops-MCP, after B is verified
