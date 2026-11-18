@@ -691,6 +691,12 @@ class ProjectionMode:
             return EXIT["REJECTED"]
         return None
 
+    def cite_operator_view(self, receipt: Path) -> str:
+        """Opt-in citation. Mode evaluation does not call this."""
+        from ops.autonomy.operator_alignment import opt_in_operator_view
+
+        return opt_in_operator_view(receipt)
+
     def main(self, argv: list[str] | None = None) -> int:
         parser = self._parser()
         args = parser.parse_args(argv)
