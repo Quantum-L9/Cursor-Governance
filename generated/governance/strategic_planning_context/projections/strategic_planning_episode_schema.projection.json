@@ -1,0 +1,317 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "artifact_id": "l9.schema/strategic-planning-episode@1",
+    "authority": {
+      "authority_class": "canonical",
+      "owner": "Quantum-L9/.github",
+      "scope": "l9_global_strategic_planning_episode_schema"
+    },
+    "canonical": true,
+    "canonical_source": {
+      "artifact": "strategic_planning_episode.schema.yaml",
+      "format": "yaml"
+    },
+    "governed_by": {
+      "authority_ref": "authority_model.yaml#strategic_authority",
+      "plan_graph_schema_ref": "l9.schema/strategic-plan-graph@1",
+      "semantic_model_ref": "strategic_cognition_model.yaml#reasoning_artifacts.strategic_planning_episode"
+    },
+    "instance_semantics": {
+      "authoritative": false,
+      "authority_class": "derived",
+      "authority_effect": "none",
+      "producer_role": "plan_keeper"
+    },
+    "properties": {
+      "affected_closure": {
+        "fields": {
+          "digest": {
+            "type": "semantic_digest"
+          },
+          "ref": {
+            "type": "semantic_ref"
+          }
+        },
+        "required": [
+          "ref",
+          "digest"
+        ],
+        "type": "object"
+      },
+      "current_meta_view": {
+        "fields": {
+          "digest": {
+            "type": "semantic_digest"
+          },
+          "ref": {
+            "type": "semantic_ref"
+          }
+        },
+        "required": [
+          "ref",
+          "digest"
+        ],
+        "type": "object"
+      },
+      "episode_digest": {
+        "type": "semantic_digest"
+      },
+      "episode_ref": {
+        "type": "semantic_ref"
+      },
+      "objective_refs": {
+        "type": "semantic_ref_list"
+      },
+      "plan_graph_digest": {
+        "type": "semantic_digest"
+      },
+      "plan_ref": {
+        "type": "semantic_ref"
+      },
+      "plan_revision_ref": {
+        "type": "semantic_ref"
+      },
+      "provenance": {
+        "type": "object"
+      },
+      "recommendation": {
+        "fields": {
+          "authority_effect": {
+            "const": "none"
+          },
+          "candidate_path_ref": {
+            "type": "semantic_ref_or_null"
+          },
+          "outcome": {
+            "enum": [
+              "retain_current_plan",
+              "propose_revision",
+              "unresolved"
+            ]
+          },
+          "rationale_refs": {
+            "type": "semantic_ref_list"
+          }
+        },
+        "required": [
+          "outcome",
+          "authority_effect"
+        ],
+        "type": "object"
+      },
+      "schema": {
+        "const": "l9.strategic-planning-episode/v1"
+      },
+      "strategic_authority_ref": {
+        "type": "semantic_ref"
+      },
+      "strategic_intent_refs": {
+        "min_items": 1,
+        "type": "semantic_ref_list"
+      },
+      "trigger_sources": {
+        "items": {
+          "fields": {
+            "change_ref": {
+              "type": "semantic_ref"
+            },
+            "digest": {
+              "type": "semantic_digest"
+            },
+            "ref": {
+              "type": "semantic_ref"
+            }
+          },
+          "required": [
+            "ref",
+            "digest"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "workspace": {
+        "fields": {
+          "assumptions": {
+            "items": {
+              "fields": {
+                "basis_refs": {
+                  "type": "semantic_ref_list"
+                },
+                "ref": {
+                  "type": "semantic_ref"
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "status": {
+                  "enum": [
+                    "provisional",
+                    "challenged",
+                    "retained_for_episode"
+                  ]
+                }
+              },
+              "required": [
+                "ref",
+                "statement"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "candidate_paths": {
+            "items": {
+              "fields": {
+                "disposition": {
+                  "enum": [
+                    "considered",
+                    "rejected",
+                    "recommended_for_candidate"
+                  ]
+                },
+                "rationale_refs": {
+                  "type": "semantic_ref_list"
+                },
+                "ref": {
+                  "type": "semantic_ref"
+                },
+                "statement": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "ref",
+                "statement",
+                "disposition"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "decision_question": {
+            "type": "string"
+          },
+          "evaluations": {
+            "items": {
+              "fields": {
+                "evidence_refs": {
+                  "type": "semantic_ref_list"
+                },
+                "objective_refs": {
+                  "type": "semantic_ref_list"
+                },
+                "rationale": {
+                  "type": "string"
+                },
+                "ref": {
+                  "type": "semantic_ref"
+                },
+                "result": {
+                  "enum": [
+                    "favorable",
+                    "unfavorable",
+                    "mixed",
+                    "unknown"
+                  ]
+                },
+                "subject_ref": {
+                  "type": "semantic_ref"
+                }
+              },
+              "required": [
+                "ref",
+                "subject_ref",
+                "result"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "material_unknowns": {
+            "type": "unknown_list"
+          },
+          "observations": {
+            "items": {
+              "fields": {
+                "ref": {
+                  "type": "semantic_ref"
+                },
+                "source_refs": {
+                  "min_items": 1,
+                  "type": "semantic_ref_list"
+                },
+                "statement": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "ref",
+                "statement",
+                "source_refs"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "decision_question",
+          "observations",
+          "assumptions",
+          "candidate_paths",
+          "evaluations",
+          "material_unknowns"
+        ],
+        "type": "object"
+      }
+    },
+    "purpose": "Define the minimum immutable record of one bounded Plan Keeper reasoning episode over exact planning inputs. The episode preserves observations, assumptions, candidate paths, evaluations, material Unknowns, and a recommendation without turning workspace content into Strategy or granting the episode authority to revise the Strategic Plan.\n",
+    "required": [
+      "schema",
+      "episode_ref",
+      "plan_ref",
+      "plan_revision_ref",
+      "plan_graph_digest",
+      "strategic_authority_ref",
+      "strategic_intent_refs",
+      "objective_refs",
+      "current_meta_view",
+      "trigger_sources",
+      "workspace",
+      "recommendation",
+      "provenance",
+      "episode_digest"
+    ],
+    "schema": "l9.schema-definition/v1",
+    "semantic_rules": [
+      "planning_episode_is_non_authoritative_reasoning_record",
+      "reasoning_workspace_content_is_not_strategic_plan_content_without_authorized_decision",
+      "planning_episode_may_record_alternatives_without_committing_to_them",
+      "material_unknown_must_remain_unknown",
+      "episode_cannot_modify_strategic_plan",
+      "episode_cannot_grant_or_expand_strategic_authority",
+      "episode_is_provider_model_prompt_and_storage_neutral"
+    ],
+    "type": "object",
+    "workspace_rules": {
+      "assumptions_are_provisional_reasoning_objects_not_plan_owned_beliefs": true,
+      "candidate_paths_are_not_strategic_commitments": true,
+      "changed_bound_input_digest_invalidates_episode_currentness": true,
+      "evaluations_do_not_create_objective_or_evidence_authority": true,
+      "observations_reference_sources_but_do_not_take_truth_ownership": true,
+      "propose_revision_outcome_requires_separate_revision_candidate_artifact": true,
+      "recommendation_is_not_a_strategic_decision": true
+    }
+  },
+  "projection_digest": "sha256:2a33208a8b71e4660b9c8c7c67b86006d7c60685567a18d13f70512bdada2f17",
+  "projection_profile_digest": "sha256:2940f0e2ae41676d262365c594b901f4e1de27be5249affbae9480f48633e173",
+  "projection_profile_ref": "l9.projection/strategic-planning-context@2",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:017931d0f8a07e85124a6492e07f65c7781905ed86042c7978c7451a80ab8513",
+  "source_ref": "l9.source/strategic-planning-episode-schema@1"
+}

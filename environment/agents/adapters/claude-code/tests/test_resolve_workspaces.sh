@@ -44,13 +44,16 @@ set -e
 [ "$rc" -ne 0 ] || fail "zero repositories must fail resolution (got: $out)"
 pass "zero repositories returns failure"
 
-# T2 — exactly one repository: unchanged behaviour (regression guard).
+# T2 — exactly one repository under a non-repo root: the repository, then the
+# container root itself, emitted LAST (setup.sh resolve_workspaces: the root is
+# the directory a multi-repo session loads from, so it is wired too).
 one="$TMP_ROOT/one"
 make_repo "$one/only"
 out="$(resolve_in "$one")"
-[ "$(wc -l <<<"$out")" -eq 1 ] || fail "one repo should resolve to one path, got: $out"
-grep -q "/only$" <<<"$out" || fail "resolved the wrong path: $out"
-pass "single repository resolves exactly as before"
+[ "$(wc -l <<<"$out")" -eq 2 ] || fail "one repo should resolve to the repo plus the root, got: $out"
+[ "$(sed -n 1p <<<"$out")" = "$(cd "$one/only" && pwd)" ] || fail "resolved the wrong path first: $out"
+[ "$(sed -n '$p' <<<"$out")" = "$(cd "$one" && pwd)" ] || fail "the container root must be emitted last: $out"
+pass "single repository resolves, then the container root last"
 
 # T3 — the audited shape: five siblings plus a dotfile repo under a non-repo parent.
 many="$TMP_ROOT/many"
@@ -61,12 +64,13 @@ done
 mkdir -p "$many/not-a-repo"
 out="$(resolve_in "$many")"
 count="$(wc -l <<<"$out")"
-[ "$count" -eq 6 ] || fail "expected 6 repositories, resolved $count: $out"
+[ "$count" -eq 7 ] || fail "expected 6 repositories plus the root, resolved $count: $out"
+[ "$(sed -n '$p' <<<"$out")" = "$(cd "$many" && pwd)" ] || fail "the container root must be emitted last: $out"
 for r in Cursor-Governance LLM-Router SEO-Bot Website-Bot l9-graphiti-memory .github; do
   grep -q "/$r$" <<<"$out" || fail "$r missing from resolution"
 done
 grep -q "not-a-repo" <<<"$out" && fail "a non-repository was resolved"
-pass "six repositories including .github all resolve"
+pass "six repositories including .github all resolve, root last"
 
 # T4 — the dotfile repository specifically (the old ./*/ glob could not see it).
 dotonly="$TMP_ROOT/dotonly"

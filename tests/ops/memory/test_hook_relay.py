@@ -41,10 +41,15 @@ def _client(bound: RuntimeBinding, cli: FakeMemoryCli, surface: str | None = Non
 # --- carrier decision --------------------------------------------------------
 
 
+def _unbound(_name: str, _env: object) -> bool:
+    """The hook credential does not bind (no host profile decides a test)."""
+    return False
+
+
 def test_carrier_defaults_to_relay_only_on_a_cloud_container() -> None:
-    assert resolve_carrier({"CLAUDE_CODE_REMOTE": "true"}) == "relay"
-    assert resolve_carrier({}) == "local"
-    assert resolve_carrier({"CLAUDE_CODE_REMOTE": "false"}) == "local"
+    assert resolve_carrier({"CLAUDE_CODE_REMOTE": "true"}, binder=_unbound) == "relay"
+    assert resolve_carrier({}, binder=_unbound) == "local"
+    assert resolve_carrier({"CLAUDE_CODE_REMOTE": "false"}, binder=_unbound) == "local"
 
 
 def test_explicit_carrier_wins_in_both_directions() -> None:
@@ -58,7 +63,7 @@ def test_unknown_carrier_is_refused_not_guessed() -> None:
 
 
 def test_unknown_carrier_fails_the_write_closed(bound, fake_cli, tmp_path, monkeypatch) -> None:
-    monkeypatch.setenv(CARRIER_ENV, "hosted")
+    monkeypatch.setenv(CARRIER_ENV, "remote")
     outcome = _client(bound, fake_cli).write(
         "fact", workspace=str(tmp_path), namespace=NS, memory_class="decision"
     )
@@ -234,7 +239,12 @@ def test_cli_ack_and_status(tmp_path, capsys) -> None:
     assert relay.main(["--workspace", str(tmp_path), "ack", ident, "--receipt", receipt]) == 0
     capsys.readouterr()
     assert relay.main(["--workspace", str(tmp_path), "status"]) == 0
-    assert json.loads(capsys.readouterr().out) == {"total": 1, "acked": 1, "pending": 0}
+    assert json.loads(capsys.readouterr().out) == {
+        "total": 1,
+        "acked": 1,
+        "rejected": 0,
+        "pending": 0,
+    }
 
 
 def test_instruction_names_the_tool_arguments_and_ack(tmp_path) -> None:
@@ -360,3 +370,43 @@ def test_cli_refuses_a_workspace_that_is_not_a_repository(tmp_path, capsys) -> N
     plain.mkdir()
     assert relay.main(["--workspace", str(plain), "status"]) == 1
     assert "not a repository root" in capsys.readouterr().err
+
+
+# --- refusals ----------------------------------------------------------------
+
+
+def test_a_recorded_refusal_settles_the_entry_and_stays_visible(tmp_path, capsys) -> None:
+    ident = _queue(tmp_path)
+    reason = "supersession refused: superseded record does not exist: 273f1156"
+    argv = ["--workspace", str(tmp_path), "reject", ident, "--refusal", reason]
+    assert relay.main(argv) == 0
+    capsys.readouterr()
+    assert relay.pending(tmp_path) == []
+    assert relay.rejects(tmp_path)[ident]["refusal"] == reason
+    assert relay.main(["--workspace", str(tmp_path), "status"]) == 0
+    assert json.loads(capsys.readouterr().out) == {
+        "total": 1,
+        "acked": 0,
+        "rejected": 1,
+        "pending": 0,
+    }
+
+
+def test_a_refusal_must_quote_a_reason(tmp_path) -> None:
+    ident = _queue(tmp_path)
+    with pytest.raises(relay.RelayError, match="must quote"):
+        relay.reject(tmp_path, ident, "  ")
+    assert len(relay.pending(tmp_path)) == 1
+
+
+def test_an_acknowledged_entry_cannot_be_rejected(tmp_path) -> None:
+    ident = _queue(tmp_path)
+    relay.ack(tmp_path, ident, str(uuid.uuid4()))
+    with pytest.raises(relay.RelayError, match="already acknowledged"):
+        relay.reject(tmp_path, ident, "late refusal")
+
+
+def test_instruction_names_the_refusal_route(tmp_path) -> None:
+    _queue(tmp_path)
+    text = relay.instruction(tmp_path, relay.pending(tmp_path))
+    assert "python -m ops.memory.relay reject" in text

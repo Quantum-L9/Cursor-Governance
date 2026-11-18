@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-11-15T14:47:59Z`. Source: `rules/*.mdc`.
+Generated: `2026-11-18T18:31:52Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -20,8 +20,8 @@ Generated: `2026-11-15T14:47:59Z`. Source: `rules/*.mdc`.
 |---|---|---|---|---|---:|---|
 | `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 41 | `d92b573ca45a` |
 | `01-authority-chain.mdc` | `l9.rule.01.authority.chain` | global | general | always | 64 | `a2f5f3993a02` |
-| `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 137 | `ef37b002dda4` |
-| `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 127 | `d0a29ce05d89` |
+| `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 138 | `67c358660bce` |
+| `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 129 | `1b3a7d910989` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 72 | `97752a5553dd` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
 | `06-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | git | always | 56 | `d08e5923b2c6` |
@@ -84,7 +84,7 @@ Generated: `2026-11-15T14:47:59Z`. Source: `rules/*.mdc`.
 | `95-test-fix-policy.mdc` | `l9.rule.testing.integrity` | global | testing | always | 57 | `cbf9a0e89a3d` |
 | `96-multi-agent-main-bound-execution.mdc` | `l9.rule.96.multi.agent.main.bound.execution` | global | git | always | 129 | `4c3da47effd7` |
 | `97-graph-layer-boundary.mdc` | `l9.rule.graph-layer-boundary` | global | memory | always | 52 | `9d0d1ad1eda0` |
-| `98-graphiti-memory-gate.mdc` | `l9.rule.graphiti.memory.gate` | global | memory | always | 89 | `0094e73a2932` |
+| `98-graphiti-memory-gate.mdc` | `l9.rule.graphiti.memory.gate` | global | memory | always | 91 | `8407ac326638` |
 | `99-no-auto-commit.mdc` | `l9.rule.git.mutation-gate` | global | git | always | 66 | `25471f02cfac` |
 
 ## Notes

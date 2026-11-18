@@ -1,7 +1,7 @@
 # Setup script — paste-ready
 
 **Field:** claude.ai/code → environment → **Setup script**
-**Revision:** `2026-11-10.1` · **Checksum:** `fcf33987fe2f7eb1`
+**Revision:** `2026-11-17.1` · **Checksum:** `b58d0c06d0fe5eb5`
 **Applies to:** NEW sessions only.
 
 Source of truth: `environment/agents/adapters/claude-code/web/setup.bootstrap.sh`.
@@ -146,7 +146,7 @@ unset _l9_contaminated
 # to see it from inside the sandbox. Recording the revision that actually ran
 # turns "is the pasted stub current?" from unanswerable into a comparison
 # (audit B-06). verify_account_env.py reads it back from cloud-session.env.
-L9_STUB_REVISION="2026-11-10.1"
+L9_STUB_REVISION="2026-11-17.1"
 
 warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
 note() { printf 'L9 bootstrap: %s\n' "$*"; }
@@ -288,7 +288,13 @@ if [ -d "$GOV_DIR/.git" ]; then
 else
   rm -rf "$GOV_DIR"
   git clone --depth 1 --branch "$GOV_BRANCH" "$GOV_REMOTE" "$GOV_DIR" || {
-    warn "governance clone FAILED — allowlist github.com (see web/network-policy.md)"
+    warn "governance clone FAILED — $GOV_REMOTE could not be read"
+    # Since 2026-11-16 Quantum-L9/Cursor-Governance is PRIVATE. A session's git
+    # proxy serves a private repository only when this environment lists it, so
+    # the usual cause is a missing Repositories entry, not the network policy.
+    warn "  add Quantum-L9/Cursor-Governance AND Quantum-L9/.github under Repositories in"
+    warn "  this environment's settings (session title bar -> environment -> Edit), then"
+    warn "  start a NEW session; also confirm the network allows github.com"
     exit 1
   }
 fi
@@ -405,7 +411,7 @@ exit 0
 Start a NEW session, then:
 
 ```bash
-grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-11-10.1
+grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-11-17.1
 make claude-env                                    # structural + RUNTIME verdicts
 ```
 

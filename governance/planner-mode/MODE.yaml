@@ -1,0 +1,166 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/planner-mode/MODE.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-11-17
+# Consumer-local contract for the opt-in planner mode, a sibling of architect mode
+# (governance/architect-mode/MODE.yaml) and CTO mode (governance/cto-mode/MODE.yaml). It selects
+# meaning; it is not authority to admit a profile, it grants no permission, and it never
+# confers Strategic Authority over the Plan.
+schema: l9.cursor-governance.planner-mode/v1
+artifact_id: l9.cursor-governance/planner-mode@1
+canonical: true
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: planner_mode_consumer_contract
+  authority_class: local_canonical_binding
+intended_consumer:
+  hosts: [claude-code, cursor]
+  role: strategic_planning_navigation
+  skill: skills/l9-strategic-plan/SKILL.md
+  not:
+    - the default operating plane (l9.projection/cursor-governance-operating-plane@2)
+    - the Plan Keeper (plan_keeper is a semantic role; reading its context confers no Strategic Authority)
+    - a task manager or a WorkState store
+activation:
+  default: false
+  always_enabled: false
+  entrypoint: commands/planner.md
+  control: ops/autonomy/planner_mode.py
+  implementation: ops/autonomy/projection_mode.py
+  interpreter: $HOME/.cursor-governance/.venv/bin/python
+  state: <workspace>/.l9/planner-mode/session.json
+  state_schema: l9.planner-mode-session/v1
+  session_bound: true
+  repository_presence_alone_activates: false
+  skill_presence_alone_activates: false
+  off: $HOME/.cursor-governance/.venv/bin/python $HOME/.cursor-governance/ops/autonomy/planner_mode.py off --workspace <workspace>
+# The domain selection is exactly the required domain set of the canonical consumer binding
+# l9.domain-consumer-binding/strategic-planner@1 in Quantum-L9/.github
+# semantics/domain_consumer_bindings.yaml (v3.36.0, ADR-033). Its conditional domains
+# (contracts-conformance@1, identity-attribution@1) are not selected: a mode selection has no
+# conditional form yet. The Plan Keeper context role projection
+# l9.projection/strategic-planning-context@2 (v3.35.0, ADR-032) is added read-only; its declared
+# consumer is plan_keeper and it is the only admitted profile that carries the Plan model, the
+# Plan graph schema, the affected-closure schema, the planning episode and the revision candidate.
+# The legacy consumer profiles strategic-planner-value@1 and strategic-planner-interaction@1 and
+# strategic-metacognition@2 are not selected.
+#
+# The canonical binding's repository_ref and entrypoint are unresolved upstream and its
+# predecessor migration dispositions are open. Its versioned successor naming
+# skills/l9-strategic-plan/SKILL.md is a Quantum-L9/.github admission; this contract does not
+# claim it.
+selection:
+  owner: repository owner
+  status: complete
+  basis:
+    - l9.domain-consumer-binding/strategic-planner@1
+    - l9.projection/strategic-planning-context@2
+  projections:
+    - ref: l9.projection/strategic-value@1
+      binding: governance/projection-bindings/strategic-value.yaml
+      required: true
+      basis: l9.domain-consumer-binding/strategic-planner@1 requires
+    - ref: l9.projection/architecture@1
+      binding: governance/projection-bindings/architecture.yaml
+      required: true
+      basis: l9.domain-consumer-binding/strategic-planner@1 requires
+    - ref: l9.projection/signals@1
+      binding: governance/projection-bindings/signals.yaml
+      required: true
+      basis: l9.domain-consumer-binding/strategic-planner@1 requires
+    - ref: l9.projection/governance@1
+      binding: governance/projection-bindings/governance.yaml
+      required: true
+      basis: l9.domain-consumer-binding/strategic-planner@1 requires
+    - ref: l9.projection/evidence-provenance@1
+      binding: governance/projection-bindings/evidence-provenance.yaml
+      required: true
+      basis: l9.domain-consumer-binding/strategic-planner@1 requires
+    - ref: l9.projection/capabilities-dependencies@1
+      binding: governance/projection-bindings/capabilities-dependencies.yaml
+      required: true
+      basis: l9.domain-consumer-binding/strategic-planner@1 requires
+    - ref: l9.projection/strategic-planning-context@2
+      binding: governance/projection-bindings/strategic-planning-context.yaml
+      required: true
+      basis: Plan Keeper context, read-only (Quantum-L9/.github ADR-032)
+role_activation:
+  activate_only_when:
+    - mode_requested_in_this_session
+    - every_required_projection_status_is_ADMITTED_AND_CURRENT
+  missing_or_stale_required_projection: block_role_activation
+  blocked_effect: >-
+    No claim may cite the blocked projection, and the session reports the exact blocker. There
+    is no fallback to the legacy strategic-planner profiles, memory or repository reads.
+plan_access:
+  plan_source: >-
+    The persistent Strategic Plan revision retrieved through the authorized L9 Memory
+    connector (memory.search, memory.hydrate, memory.get) in an existing repository namespace.
+    A working plan in a pull request is a candidate source, never Plan admission.
+  graph_intelligence: optional; when memory.graph capabilities report disabled, use search,
+    hydrate and get only and say so.
+  full_plan_graph_readers:
+    - planner_mode
+    - cto_mode (strategy-aligned coordination)
+    - architect_mode (architectural alignment)
+    - strategic_plan_metacognitive_reasoner (advisory analysis)
+  coding_agents: bounded handoff only (goal, scope, acceptance criteria, authority ceiling)
+  mutation: >-
+    A Plan revision is emitted as a strategic_plan_revision_candidate. It is admitted only by
+    the Plan Keeper under explicitly granted Strategic Authority, through the governed Memory
+    admission path. A candidate never self-admits.
+scope_discipline:
+  labels_are_mode_local: true
+  labels:
+    ADVANCE: >-
+      Advances an existing goal, accepted commitment or mandatory obligation and has a
+      feasible next proof.
+    PARK: >-
+      Worth preserving but lacks a current dependency, accepted priority or authorization;
+      record its hypothesis and wake condition.
+    ESCALATE: >-
+      Requires a material change in Strategic Intent, commitments, hard constraints or
+      authority.
+  promotion_rule: >-
+    Before a new initiative is promoted into active work, name the goal it advances, the
+    commitment or obligation that supports it, and the work it displaces.
+views:
+  - mission_and_goals
+  - executive_focus
+  - dependencies_and_unlocks
+  - evidence_and_readiness
+  - parallel_lanes
+  - portfolio_continuity
+  - strategic_change_impact
+behavioral_scope:
+  may:
+    - rehydrate_the_current_plan_revision_and_zoom_into_goals_and_branches
+    - derive_the_seven_views_from_plan_relations_and_current_evidence
+    - compare_feasible_alternatives_and_prioritize_proof_producing_moves
+    - compute_affected_strategic_closure_and_parallel_lanes
+    - classify_new_work_as_ADVANCE_PARK_or_ESCALATE
+    - emit_a_bounded_strategic_plan_revision_candidate
+    - cite_each_claim_by_composition_digest_and_source_class
+  must_not:
+    - treat_a_projection_as_authority_to_act
+    - self_admit_a_plan_revision_or_mutate_the_plan_without_strategic_authority
+    - substitute_strategic_value_for_plan_keeper_strategic_authority
+    - invent_numerical_priority_weights
+    - create_goals_automatically
+    - substitute_agent_reported_progress_for_target_evidence
+    - grant_coding_agents_plan_graph_access
+    - reconstruct_a_blocked_projection_from_memory
+    - publish_merge_or_deploy_without_specific_authorization
+constraints:
+  - Activation changes what this session reads, never what it may do. Publication, merge,
+    push and deploy authority stay with CANONICAL_LAW.md and ops/autonomy/surface_profile.yaml.
+  - A projection is read only after its binding's verifier reports ADMITTED_AND_CURRENT.
+  - Bundles are produced by tools/authority/produce_projection_bundle.py with the canonical
+    compiler and verified in CI; this mode never produces or edits them.
+  - Every enables claim stays attributable to a Strategic Hypothesis
+    (Quantum-L9/.github semantics/strategic_plan_model.yaml).

@@ -21,6 +21,7 @@ todos:
     content: Add kernel_unfired to audit_plans.py, staleness-rules, and audit self_test; one-line pointer in SKILL.md, plan-workflow-pe-autonomy.md, and commands/l9-plan.md; AGENTS.md append-only; make pr-check
     status: pending
 isProject: false
+status: partially-built
 ---
 
 # Plan kernel auto-pass (hook + receipt)

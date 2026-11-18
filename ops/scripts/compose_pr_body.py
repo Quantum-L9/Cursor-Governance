@@ -206,9 +206,11 @@ GITHUB_BODY_LIMIT = 65536
 BODY_BUDGET = 60000
 #: Compaction levels, applied in order only while a body is over BODY_BUDGET:
 #: 1 = Fix lists commit subjects without bodies; 2 = Changes by intent lists
-#: every path without its per-path reason. Path rows are never dropped:
-#: --check-body proves every changed path is declared in both inventories.
-COMPACT_LEVELS = (0, 1, 2)
+#: every path without its per-path reason; 3 = both inventories collapse to a
+#: count plus a sha256 of the sorted path keys. Levels 0–2 keep every path
+#: row, which ``--check-body`` reads. Level 3 is the only fit once those rows
+#: themselves exceed the budget; the token is the proof those rows were measured.
+COMPACT_LEVELS = (0, 1, 2, 3)
 COMPACT_FIX_NOTE = (
     "_Commit messages are omitted: the full body exceeds GitHub's 65,536-character limit. "
     "Read them with `git log`._"
@@ -217,6 +219,12 @@ COMPACT_INTENT_NOTE = (
     "_Per-path reasons are omitted: the full body exceeds GitHub's 65,536-character limit. "
     "Every changed path is still listed once._"
 )
+COMPACT_INVENTORY_NOTE = (
+    "_The path list is omitted: listing every changed path exceeds GitHub's "
+    "65,536-character limit. The token below is the count and sha256 of the "
+    "sorted path keys. Read the paths with `git diff --name-status`._"
+)
+INVENTORY_TOKEN_RE = re.compile(r"<!-- l9-path-inventory: (\d+) ([0-9a-f]{64}) -->")
 STATUS_WORDS = {
     "A": "added",
     "M": "modified",
@@ -1616,9 +1624,18 @@ def declared_intent(text: str) -> dict[str, str]:
     return declared
 
 
+def path_inventory_token(keys: list[str]) -> str:
+    """Count plus sha256 of the sorted keys, so a collapsed inventory still proves the set."""
+    digest = hashlib.sha256("\n".join(sorted(keys)).encode()).hexdigest()
+    return f"<!-- l9-path-inventory: {len(keys)} {digest} -->"
+
+
 def render_changes_by_intent(facts: MechanicalFacts, keep_why: dict[str, str] | None = None) -> str:
     """Every row exactly once, grouped by status. ``keep_why`` carries reviewer
     text forward so a refresh changes the path set, never someone's words."""
+    if facts.compact >= 3:
+        rows = _rows(facts)
+        return f"{COMPACT_INVENTORY_NOTE}\n\n{path_inventory_token([row.key for row in rows])}"
     keep_why = keep_why or {}
     groups: dict[str, list[str]] = {"Added": [], "Modified": [], "Renamed": [], "Deleted": []}
     for row in _rows(facts):
@@ -1656,6 +1673,12 @@ def render_changes_by_intent(facts: MechanicalFacts, keep_why: dict[str, str] | 
 def render_files_touched(facts: MechanicalFacts) -> str:
     """Grouped inventory, one entry per row, in the layout pr-files.yml used."""
     rows = _rows(facts)
+    if facts.compact >= 3:
+        head = f"**{len(rows)} file{'' if len(rows) == 1 else 's'}**"
+        if facts.shortstat:
+            head += f" — {facts.shortstat}"
+        token = path_inventory_token([row.key for row in rows])
+        return f"{head}\n\n{COMPACT_INVENTORY_NOTE}\n\n{token}"
     count = len(rows)
     head = f"**{count} file{'' if count == 1 else 's'}**"
     if facts.shortstat:
@@ -1807,9 +1830,19 @@ def render_protected_paths(facts: MechanicalFacts) -> str:
 
 def check_inventory(body: str, rows: list[DiffRow]) -> tuple[list[str], list[str]]:
     """(undeclared, phantom): diff rows missing from Changes by intent, and
-    declared paths that are not rows. Both empty is the only passing state."""
-    declared = declared_intent(body)
+    declared paths that are not rows. Both empty is the only passing state.
+
+    A level-3 body has no path bullets. It passes only when its inventory
+    token carries the count and sha256 of these exact keys.
+    """
     keys = [row.key for row in rows]
+    token = INVENTORY_TOKEN_RE.search(body)
+    if token:
+        expected = hashlib.sha256("\n".join(sorted(keys)).encode()).hexdigest()
+        if int(token.group(1)) == len(keys) and token.group(2) == expected:
+            return [], []
+        return keys, []
+    declared = declared_intent(body)
     undeclared = [key for key in keys if key not in declared]
     phantom = [key for key in declared if key not in set(keys)]
     return undeclared, phantom
@@ -2888,6 +2921,56 @@ class TemplateSource:
     revision: str
 
 
+#: Where ``ops/scripts/sync_org_pr_template.py`` pins ``<owner>/.github``'s
+#: template inside this governance tree (one directory per owner).
+PINNED_TEMPLATE_ROOT = Path(__file__).resolve().parents[2] / "generated/governance/org_pr_template"
+
+PinnedLoader = Callable[[str], "tuple[str, str] | None"]
+
+
+def pinned_template(owner: str, root: Path = PINNED_TEMPLATE_ROOT) -> tuple[str, str] | None:
+    """``(revision, text)`` of the pinned template for ``owner``, or ``None``.
+
+    Only bytes that still match the sha256 their receipt recorded are returned:
+    a pinned copy edited by hand is no copy of the authority at all.
+    """
+    # GitHub owner names are case-insensitive; a remote spelled "quantum-l9"
+    # still finds the pin committed under "Quantum-L9".
+    matches = (
+        [d for d in root.iterdir() if d.is_dir() and d.name.casefold() == owner.casefold()]
+        if root.is_dir()
+        else []
+    )
+    if len(matches) != 1:
+        return None
+    directory = matches[0]
+    try:
+        receipt = json.loads((directory / "pull_request_template.receipt.json").read_text("utf-8"))
+        text = (directory / "pull_request_template.md").read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return None
+    if not isinstance(receipt, dict):
+        return None
+    actual = "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+    revision = str(receipt.get("revision") or "")
+    if actual != receipt.get("sha256") or not re.fullmatch(r"[0-9a-f]{40}", revision):
+        return None
+    return revision, text
+
+
+def _repository_template(workspace: Path) -> tuple[str, str] | None:
+    """The repository's own template as committed at HEAD, or None when absent.
+
+    Committed bytes only: an uncommitted edit is not part of the PR.
+    """
+    try:
+        sha = _run_git_strict(workspace, "rev-parse", "HEAD").strip()
+        text = _run_git_strict(workspace, "show", f"HEAD:{TEMPLATE_PATH}")
+    except GitRangeError:
+        return None
+    return sha, text
+
+
 def resolve_template(
     workspace: Path,
     owner: str,
@@ -2895,14 +2978,23 @@ def resolve_template(
     *,
     gh: org_dotgithub.GhApi = org_dotgithub.gh_api,
     git: org_dotgithub.GitRead = org_dotgithub.git_read,
+    pinned: PinnedLoader = pinned_template,
 ) -> TemplateSource:
-    """The organization's canonical PR template at one exact commit.
+    """The PR template this body is composed from, at one exact commit.
 
-    ``<owner>/.github`` owns the template. A consumer's local copy is never
-    read here — a divergent copy must not change what the body is composed
-    from — and there is no stale fallback: an unreachable or invalid template
-    is an error, not a silent switch to some other bytes. The org repository
-    composes its own PRs from the template at its own PR head.
+    Order (operator directive 2026-11-17, superseding the 2026-10-13 rule that
+    the repository's own copy is never read):
+
+    1. the repository's own ``.github/pull_request_template.md`` as committed at
+       HEAD, when it exists and passes ``validate_template``; every governed
+       repository is seeded with it, so a PR never needs another repository;
+    2. the organization's ``<owner>/.github`` template, read live;
+    3. the copy of that template pinned in this governance tree, only while its
+       bytes match their receipt.
+
+    A repository copy that fails validation falls through to the org template
+    with a NOTE. With nothing usable the result is still an error. The org
+    repository itself composes from the template at its own PR head.
     """
     if not owner:
         msg = "cannot resolve the repository owner, so the org PR template has no source"
@@ -2914,11 +3006,41 @@ def resolve_template(
         except GitRangeError as exc:
             raise TemplateError(str(exc)) from exc
     else:
+        own = _repository_template(workspace)
+        if own is not None:
+            own_sha, own_text = own
+            own_errors = validate_template(own_text)
+            if not own_errors:
+                return TemplateSource(text=own_text, revision=f"{owner}/{name}@{own_sha}")
+            print(
+                f"NOTE: {owner}/{name}'s own {TEMPLATE_PATH} at {own_sha[:12]} is not usable "
+                f"({'; '.join(own_errors)}); falling back to the {owner}/.github template",
+                file=sys.stderr,
+            )
+        source = "live"
         try:
             org = org_dotgithub.read_org_file(owner, TEMPLATE_PATH, gh=gh, git=git)
+            sha, text = org.sha, org.text
         except org_dotgithub.OrgFileError as exc:
-            raise TemplateError(str(exc)) from exc
-        sha, text = org.sha, org.text
+            held = pinned(owner)
+            if held is None:
+                raise TemplateError(f"{exc}; no pinned template for {owner}") from exc
+            sha, text = held
+            source = "pinned"
+            print(
+                f"NOTE: {owner}/.github is unreachable from this session; composing from the "
+                f"template pinned in Cursor-Governance at {sha[:12]} "
+                "(generated/governance/org_pr_template)",
+                file=sys.stderr,
+            )
+        revision = f"{owner}/.github@{sha}" + (" (pinned)" if source == "pinned" else "")
+        errors = validate_template(text)
+        if errors:
+            msg = f"canonical PR template {revision}:{TEMPLATE_PATH} is not usable: " + "; ".join(
+                errors
+            )
+            raise TemplateError(msg)
+        return TemplateSource(text=text, revision=revision)
     revision = f"{owner}/.github@{sha}"
     errors = validate_template(text)
     if errors:

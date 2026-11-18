@@ -1,0 +1,9 @@
+{
+  "artifact_id": "l9.compiler/operator-source@1",
+  "authority_class": "operator_scoped",
+  "not_global_semantic_law": true,
+  "schema": "l9.operator-source-receipt/v1",
+  "source_class": "operator_doctrine",
+  "source_digest": "sha256:2b454ee209764461030b39bb766a9adc94b92f4c3b10bb3a6b6188cb44b31f11",
+  "source_path": "strategy/OPERATOR_DOCTRINE.yaml"
+}

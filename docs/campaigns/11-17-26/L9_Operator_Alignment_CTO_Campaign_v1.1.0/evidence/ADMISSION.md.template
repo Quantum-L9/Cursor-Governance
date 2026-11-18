@@ -1,0 +1,9 @@
+# Operator-scoped strategy adoption
+
+This record installs the sealed v1 subject under private `strategy/`. It is not global semantic-foundation admission and it does not change `.github/semantics/`.
+
+- subject_digest: sha256:4db9854e950737ebefa337323152d1f7776482e137aee3c0204698cdfb1951bc
+- release_manifest: strategy/OPERATOR_RELEASE_MANIFEST.json
+- release_manifest_bytes: identical to the campaign evidence file evidence/approved_v1_exact_subject_manifest.json
+- approved_sources: the five paths and digests inside that manifest
+- effect: operator-owned strategy instances only

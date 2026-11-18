@@ -31,7 +31,7 @@ status: active
 | LLM rules (.md peers) | `environment/generated/llm-rules/` (projected; do not hand-edit) | Claude: `.claude/rules` → generated mount via `reconcile_llm_rule_adapters.py` |
 | Ops scripts | `ops/scripts/` | `.cursor-commands/ops/scripts/` |
 | Intelligence | `intelligence/` | Active signal corpus (never archive) |
-| **Org invariants** | `Quantum-L9/.github` `policies/ORG_INVARIANTS.yaml` @ `ec3f5c6734530a3a90438a80827ebd8edd876734` | Organization policy source. This clone's `ORG_INVARIANTS.yaml` is a consumer mirror (`canonical: false`), not the author. |
+| **Org invariants** | `~/.cursor-governance/ORG_INVARIANTS.yaml` | Canonical Quantum-L9 policy; mirrored to consumer repos |
 | **Executable plan template** | `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md` | First-class primitive (`MANIFEST.yaml`); `/plan` + `l9-plan` default projection; `.cursor/plans/_TEMPLATE.plan.md` is a local mirror only |
 | **Autonomy family** | `environment/contracts/autonomy/MANIFEST.yaml` | First-class subordinate primitive family (root `autonomy/` + `ops/autonomy` + Claude scheduler SSOTs); PE Controller remains authoritative; `owns_program_state: false`; validate via `make autonomy-contracts-validate` |
 | **Peer Execution thin-adapter law** | `environment/contracts/execution/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml` | Binding provider-neutral execution architecture; validate via `make peer-execution-conformance` |
@@ -2070,28 +2070,85 @@ relay.
 SSOT: this section; `ops/memory/hook_carrier.py`, `ops/memory/relay.py`;
 `docs/decisions/ADR-0054-relay-hook-carrier.md`.
 
-<!-- MEMORY_RELEASE_301_V1 -->
-## 8.12 Memory release 3.0.1 (2026-11-18) — supersedes the 2.6.0 pin in §8.8
+<!-- MEMORY_HOOK_HOSTED_V1 -->
+## 8.12 Hosted hook carrier; relay becomes the fallback (2026-11-17) — amends §8.11
 
-Append-only. §8.8 stays the historical 2.6.0 pin. This section is the live
-package pin. It does not retag `v3.0.0` or `v3.0.1`, does not upload 3.0.0,
-and does not redeploy the hosted service. §8.11's relay carrier stays; item 6
-of that section is still the separate hosted remote-mode cutover.
+Append-only. Operator decisions, 2026-11-17: "memory reads and writes must be
+frictionless and 90% + of the time triggered with a hook not manually written
+although there is the 10% which i don't want to manually approve either", and
+"stop with the memories i'm tired of approving things just fix it up stream so i
+don't ever have to again".
 
-1. **Bound head.** `ops/config/memory-binding.json` `source.ref` and
-   `release_evidence.memory_sha` are
-   `96ed99eb172bb3b7433600db8581991c4c890737`. Annotated tag `v3.0.1`, tag
-   object `5df53ff67edccc5cb606d040e5f674a4dfc764bf`. Package
-   `l9-graphite-memory==3.0.1`.
-2. **Wheel.** Official published artifact
-   `l9_graphite_memory-3.0.1-py3-none-any.whl`, sha256
-   `4822b889dc8d590cedc0194d1d802e20b173d385ad377f80f4a0852502b1c957`.
-   `pyproject.toml` / `uv.lock` pin that registry wheel. There is no path
-   override. `scripts/build_release_artifacts.sh` at
-   `SOURCE_DATE_EPOCH=1784592000` reproduces this digest. `uv build --wheel
-   --build-constraint setuptools==84.2.1` does not. The cross-repo proof runs
-   the release recipe and refuses any other bytes.
-   `build_backend_constraint` is `setuptools==84.2.1`, the 3.0.1
-   `[build-system]` pin. `setuptools==84.0.0` remains the 2.6.0 fact.
-3. **Contract.** `memory-control-plane/v1` and memory schema `2.2.0` are
-   unchanged. `installed_record_digest` stays unpinned.
+1. **Why.** Under §8.11 every hook record on a cloud surface waited for the
+   agent to carry it through the account connector, whose tools are
+   permissioned per tool in claude.ai: each relayed call could raise an
+   operator approval prompt no local allow rule suppresses. The memory service
+   now admits a machine hook principal (Auth0 client credentials of the
+   `l9-memory-hooks` application, bound server-side in
+   `L9_MEMORY_HOOK_PRINCIPALS_JSON`) — the exit §8.11 item 6 named.
+2. **One carrier decision** (supersedes §8.11 item 2).
+   `ops/memory/hook_carrier.py` resolves `hosted`, `relay` or `local`:
+   `L9_MEMORY_HOOK_CARRIER` when set (an unknown value is refused, never
+   guessed); otherwise `hosted` when both `L9_MEMORY_HOOK_CLIENT_ID` and
+   `L9_MEMORY_HOOK_CLIENT_SECRET` bind through `ops/secrets/capability_bind.py`
+   (Infisical `cursor-governance`, `/`; root keys, not operator-only); otherwise
+   `relay` when `CLAUDE_CODE_REMOTE=true`; otherwise `local`.
+3. **Hosted.** `MemoryControlPlaneClient` admits each hook record against its
+   envelope exactly as before, then `ops/memory/hosted_hook_transport.py` sends
+   it to the Memory MCP endpoint (`resource.identifier` of
+   `ops/config/memory-auth0-onboarding.yaml`, also the token audience) with one
+   `initialize` and one `tools/call` naming the relay's connector tool. HTTPS
+   only, through `ops/lib/safe_https.py`; the token endpoint comes from the
+   onboarding issuer, else RFC 9728 metadata then OIDC discovery, and must sit
+   on the issuer's host; the token is cached in-process only. `OK` only for a
+   UUID hosted receipt that proves the commit (transport `hosted-mcp`). A
+   refusal — tool error, JSON-RPC error on the call, HTTP 403, receipt status
+   `rejected` / `quarantined` / `failed` — is `REJECTED` and is never rerouted.
+   A transport failure is not a verdict: the record goes to the relay outbox
+   with its reason and the outcome is `RELAYED`.
+4. **Nobody is asked** (supersedes §8.11 item 4, "The agent carries it"). The
+   Claude Stop hook never blocks a turn and never asks the agent to make a
+   connector call. On `hosted` it drains owed outbox entries through the hosted
+   transport, acknowledging each with the hosted receipt or recording the
+   refusal. On `relay` the entries stay in the outbox, one non-blocking line per
+   session reports how many are owed, and `python -m ops.memory.relay status`
+   keeps them visible. Carrying an entry by hand remains possible
+   (`python -m ops.memory.relay instructions`) and is never required.
+5. **Attribution.** Hosted records carry `carrier:hosted` and
+   `hook-surface:<surface>` and are written by the hook principal; relayed
+   records keep `carrier:relay`.
+6. **One store, one supersession chain.** `relay` and `hosted` both land in the
+   hosted `MemoryService`, so a continuation admitted by either supersedes the
+   other's; neither supersedes a `local` reference, nor the reverse.
+7. **Boundary.** `ops/memory/hosted_hook_transport.py` is the single memory-path
+   module allowed a network transport (`urllib` request/error types through
+   `safe_https`, to hosts read from configuration). The hosted `MemoryService`
+   is the canonical authority, not a provider; INV-03 holds.
+8. **Provisioning.** The `l9-memory-hooks` application, its server-side binding,
+   the two Infisical values and its onboarding client row are the operator
+   provisioning runbook's job. Until both values bind, `relay` applies and
+   nothing is asked.
+
+SSOT: this section; `ops/memory/hook_carrier.py`,
+`ops/memory/hosted_hook_transport.py`, `ops/memory/relay.py`,
+`environment/agents/adapters/claude-code/hooks/memory_writeback.py`;
+`docs/decisions/ADR-0055-hosted-hook-carrier.md`.
+
+<!-- MEMORY_RELEASE_300_HOSTED_V1 -->
+## 8.13 Memory release 3.0.0 is the admitted hosted release (2026-11-16)
+
+Append-only. §8.8 stays the consumer package pin **2.6.0**. §8.4's `2.3.1`
+pin stays historical. This section does not rebind
+`ops/config/memory-binding.json`, `pyproject.toml`, or `uv.lock`.
+
+1. **Admitted release.** Tag `v3.0.0`, source
+   `d8b33870c33dc4625f177282c5e99c888356efd8`. Wheel
+   `l9_graphite_memory-3.0.0-py3-none-any.whl` sha256
+   `c8967cd376414231d898bfc351ea0a5e682ed549cf8471bf828c832899af7bc6`.
+   Not on PyPI; 3.0.1 is the stated PyPI resume. Position
+   `ADMISSIBLE_WITH_ACCEPTED_RESIDUAL_RISK`.
+2. **Deployment.** Quantum-L9/l9-deploy run `43786931510` on 2026-11-16.
+   Image `ghcr.io/quantum-l9/l9-graphiti-memory@sha256:73aae7ae580733406d23aa52c83a7f4e0b82530c10c5784f9d8b87de404866f3`.
+3. **Consumer pin.** This repository still binds package 2.6.0. Hosted 3.0
+   MCP is authenticated Streamable HTTP (§8.10). Do not install 3.0.0 in
+   place of the 2.6.0 pin from this section.

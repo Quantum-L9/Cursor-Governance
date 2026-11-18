@@ -258,6 +258,8 @@ class PeSmokeCampaignTests(unittest.TestCase):
             # rebuild it from a weaker seed and this run would not be a proof.
             source = self.activate.build_source(READY_SEED, stamp="2026-01-01T00:00:00Z")
             source["tasks"][1]["depends_on"] = ["TASK-001"]
+            # TASK-001 opts its worker into the bound projection; TASK-002 does not.
+            source["tasks"][0]["projection_context"] = True
             entry = root / "CAMPAIGN_SOURCE.yaml"
             _dump(entry, source)
             l9 = raw / "l9"
@@ -469,17 +471,26 @@ class PeSmokeCampaignTests(unittest.TestCase):
             self.assertEqual(states["TASK-002"], "COMPLETED", msg="dependency did not advance")
             contexts = list((workspace / "runtime/peer-execution/contexts").glob("*.json"))
             self.assertGreaterEqual(len(contexts), 2)
+            handed: dict[str, bool] = {}
             for context in contexts:
                 payload = json.loads(context.read_text(encoding="utf-8"))
                 self.assertEqual(payload["schema"], "l9.peer-execution.context-manifest.v1")
-                # Every window was handed the program's projection, payloads in its prompt.
-                self.assertEqual(
-                    payload["projection"]["profile_ref"], "l9.projection/coding-agent-execution@1"
-                )
-                self.assertEqual(len(payload["projection"]["views"]), 3)
-                self.assertIn(
-                    "PROJECTION VIEW l9.source/invariants@1", payload["worker_instruction"]
-                )
+                if payload["task_id"] == "TASK-001":
+                    # The opted-in window was handed the projection, payloads in its prompt.
+                    self.assertEqual(
+                        payload["projection"]["profile_ref"],
+                        "l9.projection/coding-agent-execution@1",
+                    )
+                    self.assertEqual(len(payload["projection"]["views"]), 3)
+                    self.assertIn(
+                        "PROJECTION VIEW l9.source/invariants@1", payload["worker_instruction"]
+                    )
+                else:
+                    # A window whose contract did not opt in gets the contract alone.
+                    self.assertNotIn("projection", payload)
+                    self.assertNotIn("PROJECTION VIEW", payload["worker_instruction"])
+                handed[payload["task_id"]] = "projection" in payload
+            self.assertEqual(handed, {"TASK-001": True, "TASK-002": False})
             # The source the compiler read must be the operator's, not a rebuild.
             # A closed campaign is archived under COMPLETED/, so accept either.
             campaigns = Path(report.worktree) / "environment/program-execution/campaigns"

@@ -47,11 +47,22 @@ def test_session_start_and_before_submit_share_identity(tmp_path: Path):
 
 def test_missing_conversation_id_is_unresolved(monkeypatch):
     monkeypatch.delenv(loc.CONVERSATION_ENV, raising=False)
+    monkeypatch.delenv("CURSOR_CONVERSATION_ID", raising=False)
     assert loc.locator_from_payload({"session_id": "only-session"}) is None
     # sessionStart-exported env is the fallback correlation for later hooks.
     monkeypatch.setenv(loc.CONVERSATION_ENV, "conv-env")
     built = loc.locator_from_payload({})
     assert built is not None and built.conversation_id == "conv-env"
+
+
+def test_make_start_uses_cursor_conversation_id(monkeypatch):
+    """TTY/make start has no hook payload; the agent shell id is the same key."""
+    monkeypatch.delenv(loc.CONVERSATION_ENV, raising=False)
+    monkeypatch.setenv("CURSOR_CONVERSATION_ID", "conv-cursor")
+    built = loc.locator_from_payload({})
+    assert built is not None and built.conversation_id == "conv-cursor"
+    hooked = loc.locator_from_payload({"conversation_id": "conv-hook"})
+    assert hooked is not None and hooked.conversation_id == "conv-hook"
 
 
 def test_workspace_roots_normalized_and_order_independent(tmp_path: Path):

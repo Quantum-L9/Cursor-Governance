@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""The Stop gate for relay-carrier hook records (CANONICAL_LAW §8.11).
+"""The Stop gate for relay-carrier hook records (CANONICAL_LAW §8.11 as amended).
 
 A relay entry is owed to the shared store from the moment a hook queues it.
-``memory_writeback._relay_gate`` blocks the Stop with the exact connector calls
-while any entry lacks an acknowledgement, clears once each is acked with a
-connector receipt id, and stops blocking (but keeps announcing) after
-``RELAY_MAX_ASKS`` requests per entry so a session that cannot reach the
-connector is never trapped.
+Since ADR-0055 (operator decision 2026-11-17) ``memory_writeback._relay_gate``
+never blocks a Stop and never asks the agent for a connector call: on a hosted
+surface it drains the outbox through the hosted transport; otherwise it keeps
+the entries and prints at most one non-blocking notice per session.
 """
 
 from __future__ import annotations
@@ -78,57 +77,141 @@ class RelayGateTests(unittest.TestCase):
         )
         return str(entry["id"])
 
-    def test_nothing_owed_does_not_block(self) -> None:
-        self.assertIsNone(self.wb._relay_gate(self.root))
-
-    def test_owed_entry_blocks_with_the_connector_call_and_ack(self) -> None:
-        ident = self._queue()
-        reason = self.wb._relay_gate(self.root)
-        self.assertIsNotNone(reason)
-        assert reason is not None
-        self.assertIn("memory.write_agent", reason)
-        self.assertIn(f"python -m ops.memory.relay ack {ident}", reason)
-
-    def test_acked_entry_clears_the_gate(self) -> None:
-        ident = self._queue()
-        self.assertIsNotNone(self.wb._relay_gate(self.root))
-        self.relay.ack(self.root, ident, str(uuid.uuid4()))
-        self.assertIsNone(self.wb._relay_gate(self.root))
-
-    def test_gate_stops_blocking_after_max_asks_but_keeps_announcing(self) -> None:
-        self._queue()
-        for _ in range(self.wb.RELAY_MAX_ASKS):
-            self.assertIsNotNone(self.wb._relay_gate(self.root))
+    def _gate(self, marker: Path | None = None) -> tuple[object, str]:
         err = io.StringIO()
         with redirect_stderr(err):
-            self.assertIsNone(self.wb._relay_gate(self.root))
-        self.assertIn("STILL OWED", err.getvalue())
-        self.assertEqual(len(self.relay.pending(self.root)), 1, "the entry stays owed")
+            result = self.wb._relay_gate(self.root, marker)
+        return result, err.getvalue()
 
-    def test_a_new_entry_blocks_again_after_an_old_one_is_exhausted(self) -> None:
-        self._queue("old")
-        for _ in range(self.wb.RELAY_MAX_ASKS):
-            self.wb._relay_gate(self.root)
-        new = self._queue("new")
-        with redirect_stderr(io.StringIO()):
-            reason = self.wb._relay_gate(self.root)
-        self.assertIsNotNone(reason)
-        assert reason is not None
-        self.assertIn(new, reason)
+    def test_nothing_owed_does_not_block_or_announce(self) -> None:
+        result, err = self._gate()
+        self.assertIsNone(result)
+        self.assertEqual(err, "")
 
-    def test_the_governance_writers_outbox_is_scanned_too(self) -> None:
+    def test_owed_entries_never_block_and_ask_for_no_connector_call(self) -> None:
+        """ADR-0055 operator amendment: the relay gate never blocks a turn."""
+        ident = self._queue()
+        result, err = self._gate()
+        self.assertIsNone(result, "the relay gate must never return a block reason")
+        self.assertIn("1 hook record(s) still owed", err)
+        self.assertNotIn("memory.write_agent", err)
+        self.assertNotIn("ack", err.replace("acked", ""))
+        self.assertEqual([row["id"] for row in self.relay.pending(self.root)], [ident])
+
+    def test_the_notice_is_printed_at_most_once_per_session(self) -> None:
+        self._queue("a")
+        marker = Path(self._tmp.name) / "state" / "sess.relay-notice"
+        _, first = self._gate(marker)
+        self._queue("b")
+        _, second = self._gate(marker)
+        self.assertEqual(first.count("still owed"), 1)
+        self.assertEqual(second, "")
+        self.assertEqual(len(self.relay.pending(self.root)), 2, "entries are kept")
+
+    def test_existing_entries_are_kept_across_stops(self) -> None:
+        idents = {self._queue("x"), self._queue("y")}
+        for _ in range(5):
+            self._gate()
+        self.assertEqual({row["id"] for row in self.relay.pending(self.root)}, idents)
+
+    def test_the_governance_writers_outbox_is_counted_too(self) -> None:
         """Review finding on #1008: governance_handoff_writeback queues under the
         governance clone, which a consumer workspace's roots do not include."""
-        entry = self.relay.enqueue(
+        self.relay.enqueue(
             self.gov,
             surface="claude-governance-handoff",
             operation="write",
             arguments={"namespace": "cursor-governance", "content": "friction"},
         )
-        reason = self.wb._relay_gate(self.root)
-        self.assertIsNotNone(reason)
-        assert reason is not None
-        self.assertIn(str(entry["id"]), reason)
+        result, err = self._gate()
+        self.assertIsNone(result)
+        self.assertIn(str(self.gov.resolve()), err)
+
+
+class _FakeHostedResult:
+    def __init__(self, verdict: str, receipt_id: str | None = None, reason: str | None = None):
+        self.verdict = verdict
+        self.receipt_id = receipt_id
+        self.reason = reason
+
+    @property
+    def ok(self) -> bool:
+        return self.verdict == "ok"
+
+    @property
+    def refused(self) -> bool:
+        return self.verdict == "refused"
+
+
+class _FakeHostedTransport:
+    """Answers per entry content: ``ok-*`` acks, ``refuse-*`` refuses, else down."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict]] = []
+
+    def call(self, operation: str, arguments: dict) -> _FakeHostedResult:
+        self.calls.append((operation, dict(arguments)))
+        content = str(arguments.get("content", ""))
+        if content.startswith("ok"):
+            return _FakeHostedResult("ok", receipt_id=str(uuid.uuid4()))
+        if content.startswith("refuse"):
+            return _FakeHostedResult("refused", reason="rejected: namespace not granted")
+        return _FakeHostedResult("unavailable", reason="URLError reaching the endpoint")
+
+
+class HostedDrainGateTests(RelayGateTests):
+    # Inherits the relay-gate tests with entries the fake transport cannot carry
+    # ("c", "a", "x", "friction"): a failed drain leaves the relay contract intact.
+
+    """ADR-0055: on a hosted surface the Stop hook drains before it asks."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.transport = _FakeHostedTransport()
+        self.active = mock.Mock(return_value=True)
+        for patcher in (
+            mock.patch.object(self.wb, "_hosted_carrier_active", self.active),
+            mock.patch.object(self.wb, "_hosted_transport", lambda: self.transport),
+        ):
+            patcher.start()
+            self._patches.append(patcher)
+
+    def test_drained_entries_are_acked_and_nothing_is_announced(self) -> None:
+        first, second = self._queue("ok-1"), self._queue("ok-2")
+        result, err = self._gate()
+        self.assertIsNone(result)
+        self.assertNotIn("still owed", err)
+        self.assertEqual(self.relay.pending(self.root), [])
+        self.assertEqual(set(self.relay.acks(self.root)), {first, second})
+
+    def test_a_refusal_is_settled_not_asked_for(self) -> None:
+        refused = self._queue("refuse-1")
+        result, _err = self._gate()
+        self.assertIsNone(result)
+        self.assertIn("namespace not granted", self.relay.rejects(self.root)[refused]["refusal"])
+
+    def test_only_what_is_still_owed_is_announced(self) -> None:
+        self._queue("ok-1")
+        owed = self._queue("down-1")
+        result, err = self._gate()
+        self.assertIsNone(result)
+        self.assertIn("1 hook record(s) still owed", err)
+        self.assertEqual([row["id"] for row in self.relay.pending(self.root)], [owed])
+
+    def test_an_empty_outbox_asks_nothing_and_resolves_no_carrier(self) -> None:
+        result, err = self._gate()
+        self.assertIsNone(result)
+        self.assertEqual(err, "")
+        self.active.assert_not_called()
+        self.assertEqual(self.transport.calls, [])
+
+    def test_a_relay_surface_does_not_drain(self) -> None:
+        self.active.return_value = False
+        self._queue("ok-1")
+        result, err = self._gate()
+        self.assertIsNone(result)
+        self.assertIn("still owed", err)
+        self.assertEqual(self.transport.calls, [])
 
 
 if __name__ == "__main__":
