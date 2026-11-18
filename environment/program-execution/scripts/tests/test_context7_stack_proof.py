@@ -232,9 +232,7 @@ class Context7StackProofTests(unittest.TestCase):
             "tasks": [{"title": "API", "objective": "GET docs"}],
         }
         with self.assertRaises(self.mod.StackProofError) as ctx:
-            self.mod.prove_stack(
-                seed, primed_dir=Path(tempfile.mkdtemp()), bind=lambda: None
-            )
+            self.mod.prove_stack(seed, primed_dir=Path(tempfile.mkdtemp()), bind=lambda: None)
         self.assertIn("CONTEXT7_API_KEY", str(ctx.exception))
 
     def test_docs_url_get_failure_refuses(self) -> None:
