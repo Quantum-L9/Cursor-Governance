@@ -128,14 +128,21 @@ class FailedResultHarvestTests(unittest.TestCase):
         cls.mod = _load("run_campaign_failed_harvest", SCRIPT)
 
     def test_provider_failure_preserves_terminal_result(self) -> None:
-        contract = {"task_id": "TASK-001", "program_digest": "sha256:0", "requested_actions": []}
+        # This contract opts in, so the real front door must carry the projection
+        # to the window (a contract without the flag gets none: test_projection_opt_in).
+        contract = {
+            "task_id": "TASK-001",
+            "program_digest": "sha256:0",
+            "requested_actions": [],
+            "projection_context": True,
+        }
         with (
             patch.object(self.mod, "_peer_pipeline", return_value=_FrontDoor()),
             patch.object(self.mod, "_peer_identity", return_value=("agent", "surface", None)),
             patch.object(self.mod, "_live_controller_attempt", return_value=None),
         ):
             outcome = self.mod._run_peer_execution(_bound_workspace(), contract)
-        # The window was handed the program's verified projection.
+        # The opted-in window was handed the program's verified projection.
         handed = _FailingLifecycle.handed[-1]
         self.assertEqual(handed["profile_ref"], "l9.projection/coding-agent-execution@1")
         self.assertEqual(len(handed["views"]), 3)

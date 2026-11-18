@@ -1819,6 +1819,7 @@ def _compile_into(
                 "target_id": item["target_id"],
                 "execution_kind": item["execution_kind"],
                 "kernel_profile": _task_kernel_profile(item),
+                **({"projection_context": True} if item.get("projection_context") is True else {}),
                 "objective": str(item["objective"]).strip(),
                 "authority_basis_ids": item["authority_basis_ids"],
                 "required_decision_ids": item.get("required_decision_ids") or [],

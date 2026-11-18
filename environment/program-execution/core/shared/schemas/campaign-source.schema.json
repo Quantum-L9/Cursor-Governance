@@ -264,6 +264,10 @@
               "AUDIT"
             ]
           },
+          "projection_context": {
+            "type": "boolean",
+            "description": "true hands the bound coding-agent projection views to this task's worker; absent or false hands none"
+          },
           "nugget_id": {
             "type": "string",
             "minLength": 1

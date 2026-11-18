@@ -96,7 +96,7 @@ def validate_source_contract(contract: dict[str, Any], task: dict[str, Any]) -> 
         "stop_conditions",
         "rollback",
     }
-    allowed = required | {"kernel_profile", "consumers", "entrypoints"}
+    allowed = required | {"kernel_profile", "consumers", "entrypoints", "projection_context"}
     missing = sorted(required - set(contract))
     unknown = sorted(set(contract) - allowed)
     if missing:
@@ -237,6 +237,8 @@ def draft_source_contract(
             source.get("kernel_profile") or task.get("kernel_profile") or "BUILD"
         ),
     }
+    if source.get("projection_context") is True or task.get("projection_context") is True:
+        payload["projection_context"] = True
     payload = validate_source_contract(payload, task)
     write_json(output, payload)
     return output

@@ -1,10 +1,10 @@
-"""The mutating worker's turn budget reaches the provider argv.
+"""Workers have no turn ceiling unless a profile deliberately sets one.
 
-`worker-default` sat at 12 turns while the canonical request permits up to 64,
-so nontrivial BUILD tasks exhausted their budget and the workaround was to split
-one task into several one-file tasks. This proves the registry value is what
-Claude is actually launched with — a registry edit nothing forwards is not a
-fix.
+`worker-default` sat at 12 and then 24 turns, so nontrivial BUILD tasks ran out
+of turns and the workaround was to split one task into several one-file tasks.
+Program Execution exists to run long campaigns, so no registered profile caps
+turns and the worker is launched without `--max-turns`. A profile that still
+sets max_turns gets exactly that value forwarded, and a value below 1 is refused.
 """
 
 from __future__ import annotations
@@ -27,8 +27,7 @@ if str(PE_ROOT) not in sys.path:
 from peer_execution.profiles import load_profile  # noqa: E402
 from peer_execution.provider import CanonicalExecutionRequest  # noqa: E402
 
-WORKER_DEFAULT_MAX_TURNS = 24
-READ_ONLY_MAX_TURNS = 8
+REGISTERED_PROFILES = ("worker-default", "worker-read-only", "reviewer-default")
 
 
 def _provider_module():
@@ -42,29 +41,24 @@ def _provider_module():
 
 
 class ProfileRegistryTurnBudgetTests(unittest.TestCase):
-    def test_worker_default_is_twenty_four(self) -> None:
-        profile = load_profile(PE_ROOT, "worker-default")
-        self.assertEqual(profile["inference_budget"]["max_turns"], WORKER_DEFAULT_MAX_TURNS)
-
-    def test_read_only_and_reviewer_profiles_are_unchanged(self) -> None:
-        for ref in ("worker-read-only", "reviewer-default"):
+    def test_no_registered_profile_caps_turns(self) -> None:
+        for ref in REGISTERED_PROFILES:
             with self.subTest(profile=ref):
-                profile = load_profile(PE_ROOT, ref)
-                self.assertEqual(profile["inference_budget"]["max_turns"], READ_ONLY_MAX_TURNS)
+                self.assertNotIn("max_turns", load_profile(PE_ROOT, ref)["inference_budget"])
 
     def test_no_retry_or_profile_selection_mechanism_was_added(self) -> None:
-        for ref in ("worker-default", "worker-read-only", "reviewer-default"):
+        for ref in REGISTERED_PROFILES:
             with self.subTest(profile=ref):
                 profile = load_profile(PE_ROOT, ref)
                 self.assertEqual(profile["retry_policy"]["max_attempts"], 1)
                 self.assertEqual(profile["retry_policy"]["backoff_seconds"], 0)
 
-    def test_canonical_request_accepts_twenty_four(self) -> None:
-        request = _request(WORKER_DEFAULT_MAX_TURNS)
-        self.assertEqual(request.inference_budget["max_turns"], WORKER_DEFAULT_MAX_TURNS)
+    def test_canonical_request_accepts_no_cap_and_large_caps(self) -> None:
+        self.assertEqual(_request(None).inference_budget, {})
+        self.assertEqual(_request(10_000).inference_budget["max_turns"], 10_000)
 
-    def test_canonical_request_still_refuses_out_of_range_budgets(self) -> None:
-        for value in (0, 65):
+    def test_canonical_request_still_refuses_a_cap_below_one(self) -> None:
+        for value in (0, -1):
             with self.subTest(max_turns=value), self.assertRaises(Exception):
                 _request(value)
 
@@ -86,7 +80,7 @@ AUTHORITY = {
 }
 
 
-def _request(max_turns: int) -> CanonicalExecutionRequest:
+def _request(max_turns: int | None) -> CanonicalExecutionRequest:
     return CanonicalExecutionRequest(
         execution_id="EXEC-001",
         task_id="TASK-001",
@@ -104,7 +98,7 @@ def _request(max_turns: int) -> CanonicalExecutionRequest:
             "allowed_actions": ["inspect", "local_write"],
             "denied_actions": ["push"],
         },
-        inference_budget={"max_turns": max_turns},
+        inference_budget={} if max_turns is None else {"max_turns": max_turns},
         timeout_budget={"dispatch_seconds": 1800, "poll_seconds": 30},
         requested_capabilities=("local_write",),
         telemetry_context={},
@@ -117,7 +111,7 @@ def _request(max_turns: int) -> CanonicalExecutionRequest:
 class ClaudeArgvTurnBudgetTests(unittest.TestCase):
     """No live Claude invocation: the subprocess seam is stubbed."""
 
-    def _argv_for(self, max_turns: int) -> list[str]:
+    def _argv_for(self, max_turns: int | None) -> list[str]:
         provider = _provider_module()
         captured: dict[str, list[str]] = {}
         workspace = Path(tempfile.mkdtemp())
@@ -144,22 +138,19 @@ class ClaudeArgvTurnBudgetTests(unittest.TestCase):
                     raise
         return captured["argv"]
 
-    def test_worker_default_budget_reaches_claude_argv(self) -> None:
-        argv = self._argv_for(WORKER_DEFAULT_MAX_TURNS)
-        self.assertIn("--max-turns", argv)
-        self.assertEqual(argv[argv.index("--max-turns") + 1], "24")
+    def test_unbounded_worker_is_launched_without_max_turns(self) -> None:
+        self.assertNotIn("--max-turns", self._argv_for(None))
 
-    def test_registry_value_is_what_gets_forwarded(self) -> None:
+    def test_registry_profiles_forward_no_turn_cap(self) -> None:
         """End to end: registry -> canonical request -> argv."""
-        profile = load_profile(PE_ROOT, "worker-default")
-        budget = int(profile["inference_budget"]["max_turns"])
-        argv = self._argv_for(budget)
-        self.assertEqual(argv[argv.index("--max-turns") + 1], str(budget))
-        self.assertEqual(str(budget), "24")
+        for ref in REGISTERED_PROFILES:
+            with self.subTest(profile=ref):
+                budget = load_profile(PE_ROOT, ref)["inference_budget"]
+                self.assertNotIn("--max-turns", self._argv_for(budget.get("max_turns")))
 
-    def test_read_only_budget_is_forwarded_unchanged(self) -> None:
-        argv = self._argv_for(READ_ONLY_MAX_TURNS)
-        self.assertEqual(argv[argv.index("--max-turns") + 1], "8")
+    def test_an_explicit_cap_is_still_forwarded(self) -> None:
+        argv = self._argv_for(500)
+        self.assertEqual(argv[argv.index("--max-turns") + 1], "500")
 
 
 if __name__ == "__main__":  # pragma: no cover

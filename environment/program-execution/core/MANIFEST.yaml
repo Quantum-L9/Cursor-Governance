@@ -192,8 +192,8 @@ files:
   sha256: 49713e146de1991478f9f30e5f443c79d41d0fe75a13038fa59395199d6485b7
   bytes: 374
 - path: program-execution-blueprint-template/schemas/task-cards.schema.json
-  sha256: 6c544565fad90e7f6787a03d8bacccbaece7e36204f914111bb8a86ced086ed5
-  bytes: 9292
+  sha256: 2740883b090fba9d034d06c52c303a1d20cf8173050fd7e0e84127d915899b61
+  bytes: 9369
 - path: program-execution-blueprint-template/schemas/unknown-register.schema.json
   sha256: 6e84ce48972fb1f8bb951990c8b54873fd96a86c1c3c468679458c73d5c60239
   bytes: 2140
@@ -330,8 +330,8 @@ files:
   sha256: 0e55cf39acc7afcfa362dbb135b3417e4f364c6f25b79a88daa5f254c1993275
   bytes: 4319
 - path: program-execution-controller-template/schemas/task-contract.schema.json
-  sha256: 08dd769b01fcca140d0b43647ddce142ea3fd07384e2f7ba26bf8fa658d3f919
-  bytes: 4791
+  sha256: e2552688b5c8996691b7f4a194896d181efae00931f2cf4a98800d03e442f445
+  bytes: 4850
 - path: program-execution-controller-template/schemas/verification-receipt.schema.json
   sha256: 21c7e97cd549ee6a1552d820ed57c15850617dc0b3a766878e4490e699e6e546
   bytes: 4095
@@ -357,8 +357,8 @@ files:
   sha256: 3b5abe5832329ba6f0f6df7cf457f65ea2e26a476d6f2495e4dcb6776bd9c258
   bytes: 3814
 - path: program-execution-controller-template/scripts/pec/contracts.py
-  sha256: fdd601d8a585ea34aaca1697920e454fc484434698a38d7236c5121160ac4ea0
-  bytes: 18243
+  sha256: bca3501a6828dd6cef7b9351fa424c964b02edc767db19fd966c0def8b84d380
+  bytes: 18401
 - path: program-execution-controller-template/scripts/pec/controller.py
   sha256: b30c9fcb49efd7644b3b7390d962ae3805c9f5910d75becc0786f28a9b78e616
   bytes: 188253
@@ -503,6 +503,9 @@ files:
 - path: program-execution-controller-template/scripts/tests/test_program_lock_schema.py
   sha256: b1666159c9fabafe648a7e61f0cd05d8809a78b702ff2d39f4a4ed8813dea005
   bytes: 1314
+- path: program-execution-controller-template/scripts/tests/test_projection_context_lineage.py
+  sha256: 80e5b6b2e83553cbe86ead1567eaa57cf471d9d18f898555e24572dc92efc8bc
+  bytes: 2285
 - path: program-execution-controller-template/scripts/tests/test_recovery.py
   sha256: ca574cbd806aed91a8647e2d73616914265d959126e55fb5cc486a1183a32b08
   bytes: 1399
@@ -609,8 +612,8 @@ files:
   sha256: f6d7dce38cac015d0549f1c4d499d840c99d9a9b7e350fd81f171a1f9956b31b
   bytes: 981
 - path: shared/schemas/campaign-source.schema.json
-  sha256: f9a0c3f20f758e19689c4d5616c42c71522ad1dbd516ec493373df24ba0a95aa
-  bytes: 10601
+  sha256: b03d1bc3a5ae03f53f0d28f43a2cdaf159d3dfcc3f6dcd127a0b5baa5345a8ac
+  bytes: 10809
 - path: shared/schemas/evidence-reference.schema.json
   sha256: a40c5ddc764d4c99bfe0c501def26ac26ad025d5cc799e9aa0bf412cdf125ba8
   bytes: 2076
@@ -666,5 +669,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 220
-  total_bytes: 1150801
+  file_count: 221
+  total_bytes: 1153588

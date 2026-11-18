@@ -702,6 +702,29 @@ class CompileCampaignSourceTests(unittest.TestCase):
                 card = next(item for item in cards["tasks"] if item["id"] == "TASK-001")
                 self.assertEqual(card["kernel_profile"], expected)
 
+    def test_projection_context_is_carried_only_when_true(self) -> None:
+        """A task opts its worker into the bound projection; absent or false carries nothing."""
+        for declared, expected in ((None, False), (False, False), (True, True)):
+            with self.subTest(projection_context=declared):
+                source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+                if declared is not None:
+                    source["tasks"][0]["projection_context"] = declared
+                with tempfile.TemporaryDirectory() as raw:
+                    path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+                    path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+                    target = Path(raw) / "blueprint"
+                    self.compiler.compile_source(
+                        path, target, stack_proof=_pass_proof(Path(raw) / "stack-proof.json")
+                    )
+                    cards = yaml.safe_load((target / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+                    errors = self.validator.validate(target, "template")
+                    self.assertEqual(errors, [], msg="\n".join(errors))
+                card = next(item for item in cards["tasks"] if item["id"] == "TASK-001")
+                if expected:
+                    self.assertIs(card["projection_context"], True)
+                else:
+                    self.assertNotIn("projection_context", card)
+
     def test_unknown_kernel_profile_is_refused(self) -> None:
         source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
         source["tasks"][0]["kernel_profile"] = "RELEASE"

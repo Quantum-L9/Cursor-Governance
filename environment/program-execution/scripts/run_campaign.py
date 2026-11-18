@@ -3472,7 +3472,13 @@ def _run_peer_execution(
     front_door = _peer_pipeline()
     if autonomy_authority is None:
         autonomy_authority = _task_autonomy_authority(workspace, contract)
+    # The binding is verified on every dispatch (fail closed), but its views
+    # reach the worker only when the task contract asks for them: a worker's
+    # context is the contract, and governance semantics it does not need cost
+    # it turns and tokens.
     projection = bound_projection_context(workspace)
+    if contract.get("projection_context") is not True:
+        projection = None
     agent_ref, surface, provider_override = _peer_identity()
     task_id = contract.get("task_id")
     attempt = _live_controller_attempt(workspace, str(task_id or ""))
