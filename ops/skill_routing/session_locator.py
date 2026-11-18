@@ -72,12 +72,19 @@ def workspace_key(roots: list[str]) -> str:
 
 
 def extract_conversation_id(payload: dict[str, Any]) -> str:
-    """The single correlation adapter between Cursor payloads and receipts."""
+    """The single correlation adapter between Cursor payloads and receipts.
+
+    Hook stdin wins. ``make start`` has no hook payload; the agent shell
+    carries the same id in ``CURSOR_CONVERSATION_ID``.
+    """
     value = payload.get("conversation_id")
     if isinstance(value, str) and value.strip():
         return value.strip()
-    env_value = os.environ.get(CONVERSATION_ENV, "").strip()
-    return env_value
+    for name in (CONVERSATION_ENV, "CURSOR_CONVERSATION_ID"):
+        env_value = os.environ.get(name, "").strip()
+        if env_value:
+            return env_value
+    return ""
 
 
 @dataclass(frozen=True)
