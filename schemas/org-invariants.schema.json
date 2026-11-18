@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://quantum-l9.github.io/schemas/org-invariants.schema.json",
   "title": "Quantum-L9 Organization Invariants",
-  "description": "Structural contract for the canonical ORG_INVARIANTS.yaml artifact.",
+  "description": "Structural contract for the Cursor-Governance consumer mirror of organization policy. Quantum-L9/.github authors that policy.",
   "type": "object",
   "required": [
     "l9_schema",
@@ -24,7 +24,7 @@
       "enum": ["proposed", "active", "deprecated", "retired"]
     },
     "canonical": {
-      "const": true
+      "const": false
     },
     "metadata": {
       "$ref": "#/$defs/metadata"
@@ -168,16 +168,27 @@
         },
         "canonical_source": {
           "type": "object",
-          "required": ["repository", "path"],
+          "required": ["repository", "path", "revision", "payload_sha256"],
           "properties": {
             "repository": {
-              "const": "Quantum-L9/Cursor-Governance"
+              "const": "Quantum-L9/.github"
             },
             "path": {
-              "const": "ORG_INVARIANTS.yaml"
+              "const": "policies/ORG_INVARIANTS.yaml"
             },
-            "branch": {
-              "type": "string"
+            "revision": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "payload_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "signature_status": {
+              "const": "UNKNOWN"
+            },
+            "admission": {
+              "const": false
             },
             "url": {
               "type": "string"

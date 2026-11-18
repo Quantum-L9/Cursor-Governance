@@ -2,11 +2,15 @@
 l9_schema: 1
 artifact_type: assertion_type_registry
 status: active
-canonical: true
+canonical: false
 metadata:
   registry_id: quantum-l9.org-invariant-assertions
   title: Quantum-L9 Organization-Invariant Assertion Types
+  role: local_evaluation_vocabulary
   owner_repository: Quantum-L9/Cursor-Governance
+  policy_source_repository: Quantum-L9/.github
+  policy_source_path: policies/ORG_INVARIANTS.yaml
+  policy_source_revision: ec3f5c6734530a3a90438a80827ebd8edd876734
   compatibility:
     unknown_critical_assertion: reject
     unknown_high_assertion: reject

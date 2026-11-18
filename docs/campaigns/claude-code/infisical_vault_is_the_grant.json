@@ -76,7 +76,9 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T1"],
+      "dependencies": [
+        "T1"
+      ],
       "operation": "Replace",
       "anchor": "operator_only_names",
       "leverage_rank": 2,
@@ -94,7 +96,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T1"],
+      "dependencies": [
+        "T1"
+      ],
       "operation": "Insert",
       "anchor": "BIND_NAMES",
       "leverage_rank": 3,
@@ -112,7 +116,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T1"],
+      "dependencies": [
+        "T1"
+      ],
       "operation": "Wrap",
       "anchor": "mcpServers",
       "leverage_rank": 4,
@@ -120,7 +126,12 @@
       "shared_root_cause": "agents are not shown the grant"
     }
   ],
-  "critical_path": ["T1", "T2", "T3", "T4"],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T3",
+    "T4"
+  ],
   "milestones": [
     {
       "id": "M1",
@@ -157,7 +168,9 @@
     {
       "surface": "AGENTS.md",
       "action": "update",
-      "todo_ids": ["T3"],
+      "todo_ids": [
+        "T3"
+      ],
       "reason": "Append one fragment: vault presence authorizes bind. Do not rewrite the existing make-pr token sentence."
     },
     {
@@ -168,7 +181,9 @@
     {
       "surface": "skills/l9-secrets/SKILL.md",
       "action": "update",
-      "todo_ids": ["T3"],
+      "todo_ids": [
+        "T3"
+      ],
       "reason": "The grant is vault presence. The skill must say so, including the identity-secret refusal."
     },
     {
@@ -193,7 +208,12 @@
     "rollback": "Revert the branch. Restore operator_only_keys and run operator_only_iam.py --apply to put the forbid privilege back. No vault value is rotated by this change. The machine-identity secrets were never issued."
   },
   "leverage": {
-    "ranked_todo_ids": ["T1", "T2", "T3", "T4"],
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T4"
+    ],
     "shared_causes": [
       "allow-list narrower than the vault",
       "agents are not shown the grant"
@@ -254,7 +274,9 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["U1"],
+    "remaining_unknown_ids": [
+      "U1"
+    ],
     "next_skill": "l9-plan-simple",
     "stop_reason": "Plan is ready for Cursor Build. Implementation has not run. U1 is bounded: if the IAM delete fails, report it and do not claim Claude can read the Auth0 names."
   },
@@ -306,7 +328,9 @@
   "execution_envelope": {
     "network": {
       "mode": "bounded_external_write",
-      "allowed_services": ["app.infisical.com"]
+      "allowed_services": [
+        "app.infisical.com"
+      ]
     },
     "secrets": {
       "access": "read_only_named"
@@ -319,7 +343,9 @@
       "SessionStart report",
       "MCP spawn"
     ],
-    "external_systems_touched": ["Infisical project cursor-governance"],
+    "external_systems_touched": [
+      "Infisical project cursor-governance"
+    ],
     "migration_required": true
   }
 }

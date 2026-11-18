@@ -54,12 +54,12 @@ For governance-sensitive changes:
 
 ## Authority separation
 
-The canonical authority is:
-
-1. CANONICAL_LAW.md;
-2. ORG_INVARIANTS.yaml;
-3. registered assertion semantics;
-4. approved release metadata.
+Local operating law remains `CANONICAL_LAW.md`. Organization policy is authored
+at `Quantum-L9/.github` `policies/ORG_INVARIANTS.yaml`. This repository's
+`ORG_INVARIANTS.yaml` is the consumer mirror of that file. Registered
+assertion semantics here are the local evaluation vocabulary. An approved
+release record is not claimed for the pinned candidate: its signature is
+UNKNOWN.
 
 Consumer repositories, platform bindings, and adapters may not declare
 competing canonical authority.

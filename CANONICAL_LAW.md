@@ -31,7 +31,7 @@ status: active
 | LLM rules (.md peers) | `environment/generated/llm-rules/` (projected; do not hand-edit) | Claude: `.claude/rules` → generated mount via `reconcile_llm_rule_adapters.py` |
 | Ops scripts | `ops/scripts/` | `.cursor-commands/ops/scripts/` |
 | Intelligence | `intelligence/` | Active signal corpus (never archive) |
-| **Org invariants** | `~/.cursor-governance/ORG_INVARIANTS.yaml` | Canonical Quantum-L9 policy; mirrored to consumer repos |
+| **Org invariants** | `Quantum-L9/.github` `policies/ORG_INVARIANTS.yaml` @ `ec3f5c6734530a3a90438a80827ebd8edd876734` | Organization policy source. This clone's `ORG_INVARIANTS.yaml` is a consumer mirror (`canonical: false`), not the author. |
 | **Executable plan template** | `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md` | First-class primitive (`MANIFEST.yaml`); `/plan` + `l9-plan` default projection; `.cursor/plans/_TEMPLATE.plan.md` is a local mirror only |
 | **Autonomy family** | `environment/contracts/autonomy/MANIFEST.yaml` | First-class subordinate primitive family (root `autonomy/` + `ops/autonomy` + Claude scheduler SSOTs); PE Controller remains authoritative; `owns_program_state: false`; validate via `make autonomy-contracts-validate` |
 | **Peer Execution thin-adapter law** | `environment/contracts/execution/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml` | Binding provider-neutral execution architecture; validate via `make peer-execution-conformance` |
