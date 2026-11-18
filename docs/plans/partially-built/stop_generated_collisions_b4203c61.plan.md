@@ -42,6 +42,7 @@ kernel_pass:
       - "Companion PLAN_DOCUMENT JSON remains the machine SSOT"
       - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
       - "Confirmed no l9-generated GitHub merge driver; .gitattributes stays out of scope"
+status: partially-built
 ---
 
 # Stop generated snapshot collisions (PE+autonomy)
