@@ -47,12 +47,13 @@ publication:
   prohibit_gate_only_smoke_rehearsal: true
   prohibit_raw_push_and_gh_pr_create_bypass: true
   require_pr_url_and_exact_head_receipt: true
-  pr_stack: empty
+  pr_stack: predecessor_or_overlapping_open_pr
   open_pr: 1
   pr_remediate: 0
+  merge_authority: operator_only
+  unmerged_prs_block_progress: false
   command: >-
-    PR_STACK= PR_REMEDIATE=0 OPEN_PR=1 make -C "$HOME/.cursor-governance" pr
-    WS="$WT"
+    PR_REMEDIATE=0 OPEN_PR=1 make -C "$HOME/.cursor-governance" pr WS="$WT"
 execution_binding:
   document: 09_EXECUTION_BINDING.md
   checked_at: '2026-11-18'
@@ -66,6 +67,8 @@ execution_binding:
   pool_size: 4
   pool_cap: 5
   swarm_launch: not_authorized_by_this_binding
+  stack_authorization: >-
+    operator 2026-11-18: stack on open PRs; unmerged PRs do not block
 permissions:
   exact_owner_admission_required: true
   agent_may_not_self_authorize_admission: true

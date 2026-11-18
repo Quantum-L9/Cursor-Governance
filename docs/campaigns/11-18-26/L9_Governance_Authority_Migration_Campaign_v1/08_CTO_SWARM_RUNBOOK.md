@@ -11,22 +11,20 @@ The user is the single human owner. L9-ORG-007 explicitly permits an authenticat
 ```text
 S: four read-only pool Tasks, no new lane files
 |
-A: CTO session, one .github worktree, owner decision
-|  
-+-- B: CTO session, same .github writer slot, after A merges
-|    |-- C: pool, Cursor-Governance, after B is verified
-|    `-- M: pool, L9-Ops-MCP, after B is verified
+A: CTO session opens the .github PR
 |
-`-- E: pool, l9-ci-core, may open after A merges
-      must not merge enforcement until B is on .github main
++-- B: CTO session stacks on A's head immediately
+|    |-- C: pool stacks on B's head, and on any overlapping Cursor PR
+|    `-- M: pool stacks on B's head, and on any overlapping Ops PR
+|
+`-- E: pool opens against l9-ci-core main, pinned to A's or B's head
 
-F: CTO session, same .github writer slot, after B+C+M+E
-   dispositions (PASS or BLOCKED), not only after all PASS.
+F: CTO session stacks on B's head once B, C, M, and E have a disposition.
 ```
 
-The pool is four coding agents, cap five, launched once and reused. A, B, and F are not pool slots. See `09_EXECUTION_BINDING.md`. When A merges, E may open its Core pull request while the CTO session authors B. C and M start when B is verified. E must not merge required-job enforcement before that same B ref is on `.github` `main`. If a lane is blocked on signature or owner authorization, leave nondependent lanes progressing and record the disposition. Do not skip the barrier by calling the blocked lane passed.
+The pool is four coding agents, cap five, launched once and reused. A, B, and F are not pool slots. See `09_EXECUTION_BINDING.md`. B starts when A's head exists. E, C, and M start when that head, or B's head, can be pinned. They push pin updates to their own open pull requests. The CTO never merges. An unmerged pull request does not pause a lane. A signature or owner gap is recorded and the other lanes continue. Do not call a blocked lane passed.
 
-Lock files via `repo + branch + path` and one mutating agent per worktree. `PR_STACK` stays empty. CTO alone reconciles cross-repository contracts. No shared `.github` writers. The open-PR holds in `09_EXECUTION_BINDING.md` outrank the older “four open PRs” sentence. Recheck #1036, #1037, and #1038 before C edits, and L9-Ops-MCP #44 before M edits.
+Lock files via `repo + branch + path` and one mutating agent per worktree. Stack on the predecessor or overlapping open pull request. `PR_STACK=auto` fail-closes while Cursor-Governance has several sibling pull requests against `main`, so name that parent head. CTO alone reconciles cross-repository contracts. No shared `.github` writers. Recheck #1036, #1037, and #1038 when C chooses its base, and L9-Ops-MCP #44 when M chooses its base.
 
 ## Per-lane execution discipline
 
@@ -34,7 +32,7 @@ Lock files via `repo + branch + path` and one mutating agent per worktree. `PR_S
 2. Inspect the owning source and actual affected code, including tests, before deriving edits and commands. Never use guessed script names as execution instructions.
 3. Reconcile paths, scope, one-writer and prior PR overlap; branch from current correct integration base or exact predecessor head for a real stack.
 4. Implement only bounded finding set. Verify native schema/contract + minimal relevant positive/negative paths. Avoid accidental large full-corpus reruns when current ownership already supplies tested output.
-5. For each completed code lane, invoke one Cursor-Governance publication ceremony with `WS` at its exact target worktree: `PR_STACK= PR_REMEDIATE=0 OPEN_PR=1 make -C "$HOME/.cursor-governance" pr WS="$WT"`. Run `l4_local.py begin` and `authorize-release` in that worktree first. Do not call `kernel_gate.py`; that file is absent at the pinned governance SHA. No `OPEN_PR=0 make pr` rehearsal and no raw push or `gh pr create`. The exact holds and the worktree entrance are in `09_EXECUTION_BINDING.md`.
+5. For each completed code lane, invoke one Cursor-Governance publication ceremony with `WS` at its exact target worktree: `PR_REMEDIATE=0 OPEN_PR=1 make -C "$HOME/.cursor-governance" pr WS="$WT"`, with `PR_BASE` set to the predecessor or overlapping open pull request head. Run `l4_local.py begin` and `authorize-release` in that worktree first. Do not call `kernel_gate.py`; that file is absent at the pinned governance SHA. No `OPEN_PR=0 make pr` rehearsal and no raw push or `gh pr create`. The stack rule is in `09_EXECUTION_BINDING.md`. The CTO does not merge.
 6. Independently check the created PR, checks, reviewability, exact user owner authorization and merge SHA. Fix in-scope defects at the real owning repo and revalidate affected interfaces, not hidden downstream patches.
 7. CTO binds integration on exact release SHA and gathers live required-check evidence. A green PR is neither policy admission nor organization-wide enforcement.
 

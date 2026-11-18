@@ -29,30 +29,40 @@ The same session authors and coordinates A, B, and F. That is a consequence of t
 
 On Cursor, a pool slot is a Task. Launch four Tasks in the bootstrap sitting and reuse them. Do not launch a fifth except as one reported replacement for a dead slot. Lane S may split across those four Tasks. Each task prompt narrows the repository list. Do not add lane files. The S header remains the maximum read set.
 
-## Publication
+## Publication and stacking
 
-Every lane, including A, B, and F, publishes with the governance ceremony against that lane's worktree:
+The CTO has no merge authority. An unmerged pull request is not a hold, a queue, or a reason to pause any lane. The operator merges when they choose. Lanes keep opening and updating stacked pull requests until then.
+
+Every lane publishes with the governance ceremony against that lane's worktree:
 
 ```bash
-PR_STACK= PR_REMEDIATE=0 OPEN_PR=1 \
+PR_REMEDIATE=0 OPEN_PR=1 \
   make -C "$HOME/.cursor-governance" pr WS="$WT"
 ```
 
-`PR_STACK` stays empty. These lanes publish against fetched `origin/main`. Do not set `PR_STACK=auto`. `OPEN_PR` defaults to 1; set it explicitly so a surrounding `OPEN_PR=0` cannot turn the ceremony into diagnosis. `PR_REMEDIATE` defaults to 1; this campaign passes `0`. One ceremony per PR. Do not run `OPEN_PR=0 make pr` as a rehearsal. Do not use raw `git push` or `gh pr create`.
+Set the base as follows. `OPEN_PR=1` and `PR_REMEDIATE=0` stay explicit. One ceremony per pull request. Do not run `OPEN_PR=0 make pr` as a rehearsal. Do not use raw `git push` or `gh pr create`.
 
-Before that command, in the lane worktree: scoped commits, then `l4_local.py begin`, then `l4_local.py authorize-release`, using `"$HOME/.cursor-governance/.venv/bin/python"`. Cursor-Governance `48c9e134bfbb5520adc18645ded9e68cdcb1056a` has no `ops/autonomy/kernel_gate.py`. Do not invent that command. The live remote predicate is `l4_local.py check-remote`.
+- A branch that already has an open pull request is updated in place. Its base stays the base GitHub already records.
+- A lane that continues another open pull request, or edits a path that pull request already changes, stacks on that pull request's head. Pass `PR_BASE=origin/<parent head branch>` and `L9_TASK_BASE_AUTHORIZED="operator 2026-11-18: stack on open PRs; unmerged PRs do not block"`.
+- `PR_STACK=auto` is used only when the resolver reports one chain. Cursor-Governance currently has several sibling pull requests against `main`, and `auto` fail-closes on that board. Name the predecessor head instead of stopping.
+- An unrelated open pull request, including Dependabot, is not a parent and not a wait. Parallel non-overlapping lanes publish together.
 
-Create the worktree from inside a dedicated clone of the lane repository, not from the managed authority pin and not with raw `git worktree add`:
+Create the worktree from the stacked base, not from a merge:
 
 ```bash
 cd "$CLONE"
-PR_STACK= bash "$HOME/.cursor-governance/ops/scripts/agent_worktree_start.sh" \
-  --agent-id <id> --task-id <lane> --json
+L9_TASK_BASE_AUTHORIZED="operator 2026-11-18: stack on open PRs; unmerged PRs do not block" \
+  bash "$HOME/.cursor-governance/ops/scripts/agent_worktree_start.sh" \
+  --agent-id <id> --task-id <lane> --base "origin/<parent head branch>" --json
 ```
 
-Then publish with `WS` set to the printed worktree. Do not run a bare `make pr` inside `.github`, `l9-ci-core`, or `L9-Ops-MCP`. Those trees are consumers. The governance gate skips its own pytest registry for a consumer and does not run that repository's tests. The lane runs the repository's own relevant tests before `make pr`. That repository's CI remains the required-check authority.
+A first pull request in a repository with no predecessor uses `--base origin/main` and omits the authorization variable.
 
-Do not base any lane on the local Cursor-Governance `main` commit `39fd2492b314a2b6b132f393af61a27b47764dd1`. Fetched `origin/main` is `48c9e134bfbb5520adc18645ded9e68cdcb1056a`.
+Before that command, in the lane worktree: scoped commits, then `l4_local.py begin`, then `l4_local.py authorize-release`, using `"$HOME/.cursor-governance/.venv/bin/python"`. Cursor-Governance `48c9e134bfbb5520adc18645ded9e68cdcb1056a` has no `ops/autonomy/kernel_gate.py`. Do not invent that command. The live remote predicate is `l4_local.py check-remote`.
+
+Create that worktree from inside a dedicated clone of the lane repository, not from the managed authority pin and not with raw `git worktree add`. Then publish with `WS` set to the printed worktree. Do not run a bare `make pr` inside `.github`, `l9-ci-core`, or `L9-Ops-MCP`. Those trees are consumers. The governance gate skips its own pytest registry for a consumer and does not run that repository's tests. The lane runs the repository's own relevant tests before `make pr`. That repository's CI remains the required-check authority.
+
+Fetched `origin/main` for Cursor-Governance is `48c9e134bfbb5520adc18645ded9e68cdcb1056a`. Local `main` commit `39fd2492b314a2b6b132f393af61a27b47764dd1` is outside this campaign. Stack on an open pull request head, or on fetched `origin/main` when the lane has no predecessor and no overlapping open pull request.
 
 ## Live recheck
 
@@ -60,21 +70,23 @@ Writable `main` SHAs match `CAMPAIGN.yaml` `observed_start_revisions`. `.github`
 
 Cursor-Governance open pull requests: [#1038](https://github.com/Quantum-L9/Cursor-Governance/pull/1038), [#1037](https://github.com/Quantum-L9/Cursor-Governance/pull/1037), [#1036](https://github.com/Quantum-L9/Cursor-Governance/pull/1036), [#1014](https://github.com/Quantum-L9/Cursor-Governance/pull/1014), [#1013](https://github.com/Quantum-L9/Cursor-Governance/pull/1013), [#1012](https://github.com/Quantum-L9/Cursor-Governance/pull/1012).
 
-- #1038 changes `AGENTS.md` and `CANONICAL_LAW.md`. Lane C must not edit those two paths while #1038 is open. Do not push onto `docs/memory-3.0.0-hosted-release`. Sequence those two files until #1038 merges, or stop that part of C and record the overlap.
-- #1036 changes `.github/CODEOWNERS`, `.github/dependabot.yml`, and `.github/workflows/governance.yml`. Lane C must not edit those paths while #1036 is open.
-- #1037's changed-file list has no path under the lane C prefixes `ORG_INVARIANTS.yaml`, `AGENTS.md`, `CANONICAL_LAW.md`, `governance/`, `schemas/`, `releases/`, `ops/scripts/validate_org_policy.py`, `tests/org_policy/`, or `.github/workflows/validate-org-policy.yml`. Recheck with the pulls files API immediately before C edits, because the diff is larger than 300 files.
+- #1038 changes `AGENTS.md` and `CANONICAL_LAW.md`. Lane C stacks on `docs/memory-3.0.0-hosted-release` for those paths. It does not wait for #1038 to merge and it does not push onto that branch as if it owned the parent.
+- #1036 changes `.github/CODEOWNERS`, `.github/dependabot.yml`, and `.github/workflows/governance.yml`. Lane C stacks on `chore/governance-sync` only if it must edit those paths. Otherwise #1036 is not a parent and not a wait.
+- #1037's changed-file list has no path under the lane C prefixes `ORG_INVARIANTS.yaml`, `AGENTS.md`, `CANONICAL_LAW.md`, `governance/`, `schemas/`, `releases/`, `ops/scripts/validate_org_policy.py`, `tests/org_policy/`, or `.github/workflows/validate-org-policy.yml`. Recheck with the pulls files API when C chooses its base. A sibling with no shared path is not a stack parent.
 
-L9-Ops-MCP open pull requests include [#44](https://github.com/Quantum-L9/L9-Ops-MCP/pull/44), #43, #42, #40, and #38. #44 changes `.github/CODEOWNERS`, `.github/dependabot.yml`, and `.github/pull_request_template.md`. Lane M must not edit those paths while #44 is open. M's `ORG_INVARIANTS.yaml` and `scripts/validate_org_invariants.py` are outside that list today. Recheck before editing.
+L9-Ops-MCP open pull requests include [#44](https://github.com/Quantum-L9/L9-Ops-MCP/pull/44), #43, #42, #40, and #38. #44 changes `.github/CODEOWNERS`, `.github/dependabot.yml`, and `.github/pull_request_template.md`. Lane M stacks on that head only when it edits those paths. `ORG_INVARIANTS.yaml` and `scripts/validate_org_invariants.py` are outside that list today, so M opens against `main` immediately and restacks if a later edit overlaps.
 
-## Enforcement barriers
+## Stack edges, not merge gates
 
-Lane E may open its Core pull request after A has merged. E must not merge a change that makes `Analyze (central Core)` enforce org policy until B's immutable release is on `.github` `main`. A missing release must not become a green skip. An unmerged pull request is the only safe state before B.
+A opens its pull request. B branches from A's head as soon as that head exists and publishes with `PR_BASE` set to A's branch. F branches from B's head the same way. One `.github` worktree writes a given path at a time. When the parent branch moves, the child git-merges that branch into its own branch. Nobody waits for a GitHub merge.
 
-Lane F's `depends_on` means each of B, C, M, and E has a recorded disposition. A `BLOCKED` predecessor with an owner and one next action unblocks F to finish the census. It does not let F mark that predecessor `PASS`.
+E opens against `l9-ci-core` `main` as soon as it has A's or B's head SHA to pin. C and M pin that same open head. When the parent head moves, they push the new pin to their own open pull requests. A missing signature is recorded on B and does not close C, M, E, or F.
+
+Lane F's `depends_on` means each of B, C, M, and E has a recorded disposition, including a stacked open pull request. A `BLOCKED` predecessor with an owner and one next action still lets F publish its census. It does not let F mark that predecessor `PASS`. The CTO does not merge F.
 
 If no deterministic mirror renderer exists, record `L9-CTRL-004` as `BLOCKED` and name the smallest existing owner path. Do not create a new release product.
 
-Signing and in-toto tooling are still `UNKNOWN` until B reads the merged `.github` source. If the signer or attestor is unavailable, B is `BLOCKED`. C, M, and E activation stay closed. Preparatory Core work may remain an unmerged pull request.
+Signing and in-toto tooling are still `UNKNOWN` until B reads `.github` source. If the signer or attestor is unavailable, B records `BLOCKED` and the other lanes keep publishing against the stacked heads. The CTO does not merge those pull requests and does not wait for the operator to merge them.
 
 ## Ruleset read
 

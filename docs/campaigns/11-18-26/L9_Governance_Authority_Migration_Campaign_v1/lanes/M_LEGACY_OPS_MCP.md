@@ -10,7 +10,7 @@ repository_access:
 
 # M: legacy L9-Ops-MCP mirror compatibility
 
-**Executor:** one pool agent. **Activation dependency:** B release verified. Independent of C, so both may execute concurrently. One writer in this repo. While #44 is open, do not edit `.github/CODEOWNERS`, `.github/dependabot.yml`, or `.github/pull_request_template.md`. Recheck #43, #42, #40, and #38 before editing. `PR_STACK` stays empty. See `09_EXECUTION_BINDING.md`.
+**Executor:** one pool agent. Start when B's head, or A's head, can be pinned. Independent of C, so both publish concurrently. One writer in this repo. Stack on #44's head only when editing `.github/CODEOWNERS`, `.github/dependabot.yml`, or `.github/pull_request_template.md`. Otherwise open against `main` immediately. Recheck #43, #42, #40, and #38 when choosing the base, and stack on any of them that already changes a path this lane edits. An unmerged pull request does not pause the lane. See `09_EXECUTION_BINDING.md`.
 
 ## Observed input
 
