@@ -58,23 +58,19 @@ L9_TASK_BASE_AUTHORIZED="operator 2026-11-18: stack on open PRs; unmerged PRs do
 
 A first pull request in a repository with no predecessor uses `--base origin/main` and omits the authorization variable.
 
-Before that command, in the lane worktree: scoped commits, then `l4_local.py begin`, then `l4_local.py authorize-release`, using `"$HOME/.cursor-governance/.venv/bin/python"`. Cursor-Governance `48c9e134bfbb5520adc18645ded9e68cdcb1056a` has no `ops/autonomy/kernel_gate.py`. Do not invent that command. The live remote predicate is `l4_local.py check-remote`.
+Before that command, in the lane worktree: scoped commits, then `l4_local.py begin`, then `l4_local.py authorize-release`, using `"$HOME/.cursor-governance/.venv/bin/python"`. Cursor-Governance `59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd` has no `ops/autonomy/kernel_gate.py`. Do not invent that command. The live remote predicate is `l4_local.py check-remote`.
 
 Create that worktree from inside a dedicated clone of the lane repository, not from the managed authority pin and not with raw `git worktree add`. Then publish with `WS` set to the printed worktree. Do not run a bare `make pr` inside `.github`, `l9-ci-core`, or `L9-Ops-MCP`. Those trees are consumers. The governance gate skips its own pytest registry for a consumer and does not run that repository's tests. The lane runs the repository's own relevant tests before `make pr`. That repository's CI remains the required-check authority.
 
-Fetched `origin/main` for Cursor-Governance is `48c9e134bfbb5520adc18645ded9e68cdcb1056a`. Local `main` commit `39fd2492b314a2b6b132f393af61a27b47764dd1` is outside this campaign. Stack on an open pull request head, or on fetched `origin/main` when the lane has no predecessor and no overlapping open pull request.
+Fetched `origin/main` for Cursor-Governance is `59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd`. That tip already contains merged #1037, #1038, and #1039. Local `main` commit `39fd2492b314a2b6b132f393af61a27b47764dd1` is outside this campaign. A lane with no predecessor and no overlapping open pull request branches from that fetched tip.
 
 ## Live recheck
 
-Writable `main` SHAs match `CAMPAIGN.yaml` `observed_start_revisions`. `.github` and `l9-ci-core` have no open pull requests.
+The launch base is fetched `origin/main`, not the earlier observation SHA `48c9e134`. Cursor-Governance `main` is `59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd` and already contains #1037, #1038, and #1039. `.github`, `l9-ci-core`, and L9-Ops-MCP `main` SHAs are unchanged. `.github` and `l9-ci-core` have no open pull requests.
 
-Cursor-Governance open pull requests: [#1038](https://github.com/Quantum-L9/Cursor-Governance/pull/1038), [#1037](https://github.com/Quantum-L9/Cursor-Governance/pull/1037), [#1036](https://github.com/Quantum-L9/Cursor-Governance/pull/1036), [#1014](https://github.com/Quantum-L9/Cursor-Governance/pull/1014), [#1013](https://github.com/Quantum-L9/Cursor-Governance/pull/1013), [#1012](https://github.com/Quantum-L9/Cursor-Governance/pull/1012).
+Cursor-Governance still has [#1040](https://github.com/Quantum-L9/Cursor-Governance/pull/1040), [#1036](https://github.com/Quantum-L9/Cursor-Governance/pull/1036), [#1014](https://github.com/Quantum-L9/Cursor-Governance/pull/1014), [#1013](https://github.com/Quantum-L9/Cursor-Governance/pull/1013), and [#1012](https://github.com/Quantum-L9/Cursor-Governance/pull/1012). None of them is the integration base. #1036 changes only `.github/CODEOWNERS`, `.github/dependabot.yml`, and `.github/workflows/governance.yml`. Lane C stacks on `chore/governance-sync` only if it edits one of those three files.
 
-- #1038 changes `AGENTS.md` and `CANONICAL_LAW.md`. Lane C stacks on `docs/memory-3.0.0-hosted-release` for those paths. It does not wait for #1038 to merge and it does not push onto that branch as if it owned the parent.
-- #1036 changes `.github/CODEOWNERS`, `.github/dependabot.yml`, and `.github/workflows/governance.yml`. Lane C stacks on `chore/governance-sync` only if it must edit those paths. Otherwise #1036 is not a parent and not a wait.
-- #1037's changed-file list has no path under the lane C prefixes `ORG_INVARIANTS.yaml`, `AGENTS.md`, `CANONICAL_LAW.md`, `governance/`, `schemas/`, `releases/`, `ops/scripts/validate_org_policy.py`, `tests/org_policy/`, or `.github/workflows/validate-org-policy.yml`. Recheck with the pulls files API when C chooses its base. A sibling with no shared path is not a stack parent.
-
-L9-Ops-MCP open pull requests include [#44](https://github.com/Quantum-L9/L9-Ops-MCP/pull/44), #43, #42, #40, and #38. #44 changes `.github/CODEOWNERS`, `.github/dependabot.yml`, and `.github/pull_request_template.md`. Lane M stacks on that head only when it edits those paths. `ORG_INVARIANTS.yaml` and `scripts/validate_org_invariants.py` are outside that list today, so M opens against `main` immediately and restacks if a later edit overlaps.
+L9-Ops-MCP still has [#44](https://github.com/Quantum-L9/L9-Ops-MCP/pull/44), #43, #42, #40, and #38. #44 changes only `.github/CODEOWNERS`, `.github/dependabot.yml`, and `.github/pull_request_template.md`. Lane M stacks on that head only when it edits one of those three files. `ORG_INVARIANTS.yaml` and `scripts/validate_org_invariants.py` are outside that list, so M branches from `origin/main`.
 
 ## Stack edges, not merge gates
 

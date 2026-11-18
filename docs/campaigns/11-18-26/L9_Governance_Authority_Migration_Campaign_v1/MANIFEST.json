@@ -10,16 +10,16 @@
       "sha256": "53c497a901e55f505e2212f4b2204e5d332013f2e49eb27f0313b24a3d6f79e0"
     },
     "02_VERIFIED_SOURCE_BASELINE.md": {
-      "bytes": 10187,
-      "sha256": "33455b1f7588ee3c56a91e8ae3b31ef846e89ea8cb10fba60ea31b7c65090c11"
+      "bytes": 11202,
+      "sha256": "a2816a135b82c1d1ef38eb755f187b33063977800de823f8453dd159984107f5"
     },
     "03_ADMISSION_AND_RELEASE_CONTRACT.md": {
       "bytes": 9649,
       "sha256": "57e212eea467b011f736288af74f856f4994de8f4d0bfa7fe23c6c435734371f"
     },
     "04_CONSUMER_AND_LEGACY_CUTOVER.md": {
-      "bytes": 7156,
-      "sha256": "1dfa76869e49f3a28c80904d3298a19c06fed517c0b9ed493084175d10864fd5"
+      "bytes": 7132,
+      "sha256": "52bc46afbbff0d551b75a27f813732d744a0cb276caf15bdcf2c66b67d84492e"
     },
     "05_CI_RELATIONSHIP_AND_ROLLOUT.md": {
       "bytes": 7414,
@@ -34,16 +34,16 @@
       "sha256": "ba076a3c130dfb9a0bd94763495327cefbbfce6b5d689232001ba637b8ff48a1"
     },
     "08_CTO_SWARM_RUNBOOK.md": {
-      "bytes": 5407,
-      "sha256": "f235751c31c2ab1739a6f261fe9982166eb79a92b85130f6591aaf6a028f1c33"
+      "bytes": 5497,
+      "sha256": "a0782b9663984285fb092350663ab6b35f27d58a26b5063e579092ad3f3e1138"
     },
     "09_EXECUTION_BINDING.md": {
-      "bytes": 12106,
-      "sha256": "a1f1a21c7d39f72a91500bb6d6c5cd6451844cd6caa3ac5bcf74061b39e4bf01"
+      "bytes": 11601,
+      "sha256": "e0114405d5cb820155c30186c6bcfa1ba37d92078c8b4132560776a6d0eb9db2"
     },
     "CAMPAIGN.yaml": {
-      "bytes": 5249,
-      "sha256": "a3ebf6dd412aee0f512bdb67654959802a84cb00f50da06312aa33fafd12c634"
+      "bytes": 5668,
+      "sha256": "67234989c29caaf9c9bf306cce025c4b718d664eba74ac7e76882c4c3401d07e"
     },
     "lanes/A_UPSTREAM_POLICY_ADMISSION.md": {
       "bytes": 3713,
@@ -54,8 +54,8 @@
       "sha256": "2d3430a82242aba4491630670c42c128c80cec6df3a1c41b54f7d3813c5b5ec8"
     },
     "lanes/C_OPERATING_PLANE_CONSUMER.md": {
-      "bytes": 3977,
-      "sha256": "fe40381e3a1b596ea8a87968654b4e9421190cf7004b4fde07cb80a77f12c249"
+      "bytes": 3937,
+      "sha256": "29c4ec1ca1c415838aff54cb899f051bc35517cbc30d04f9385e6c5af681f7be"
     },
     "lanes/E_CORE_REQUIRED_POLICY_CHECK.md": {
       "bytes": 3381,
@@ -66,12 +66,12 @@
       "sha256": "ae77b6718f8b3a1ad9a800d40492fb11f728433149d18dc07b08d23c97d0b43c"
     },
     "lanes/M_LEGACY_OPS_MCP.md": {
-      "bytes": 2428,
-      "sha256": "c4a8292a3f3cd4294cc8ef4ce10b19662721456ad2c6c7eb078598a6bbad05eb"
+      "bytes": 2382,
+      "sha256": "136e341e92a3c22199c9103eb74f4bf9986c7b283aa97bfcb0aaf2ed510e34bf"
     },
     "lanes/S_READ_ONLY_RECONNAISSANCE.md": {
-      "bytes": 2961,
-      "sha256": "4cd66187157d0c17cb7996409bfe6d68f0e8cc272ff262e1100cbf3f5d64a93a"
+      "bytes": 3076,
+      "sha256": "5d514cea2b238b075d933a8d55993432985bdc317f015c3eb0fb62861f22a422"
     },
     "scripts/validate_pack.py": {
       "bytes": 8533,

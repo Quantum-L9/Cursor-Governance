@@ -24,6 +24,12 @@ observed_start_revisions:
   Quantum-L9/Cursor-Governance: 48c9e134bfbb5520adc18645ded9e68cdcb1056a
   Quantum-L9/l9-ci-core: 027e86543701740c4a238e593bd33c03f59eda00
   Quantum-L9/L9-Ops-MCP: e372d303ee03cefc56f0179098eb6a2ebb011257
+launch_base_revisions:
+  Quantum-L9/.github: 00500268eb24de29a5e647a447d6f992d609f6f5
+  Quantum-L9/Cursor-Governance: 59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd
+  Quantum-L9/l9-ci-core: 027e86543701740c4a238e593bd33c03f59eda00
+  Quantum-L9/L9-Ops-MCP: e372d303ee03cefc56f0179098eb6a2ebb011257
+  cursor_merged_onto_launch_base: [1037, 1038, 1039]
 live_start_observations:
   org_ruleset_id: 21895545
   required_job: Analyze (central Core)
@@ -58,7 +64,9 @@ execution_binding:
   document: 09_EXECUTION_BINDING.md
   checked_at: '2026-11-18'
   state: bound_pending_operator_launch
-  baseline_shas_match_origin_main: true
+  baseline_shas_match_origin_main: false
+  launch_base_matches_origin_main: true
+  start_from: fetched_origin_main
   dotgithub_push_proven: dry_run_only
   child_prompt_forbids_pool_writes_to_dotgithub: true
   mode_contract_edited: false

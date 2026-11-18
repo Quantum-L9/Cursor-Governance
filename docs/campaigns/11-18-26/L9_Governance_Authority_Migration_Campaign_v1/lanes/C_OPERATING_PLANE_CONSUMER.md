@@ -10,7 +10,7 @@ repository_access:
 
 # C: Cursor-Governance consumes canonical policy while owning its own operation
 
-**Executor:** one pool agent. Start when B's head, or A's head, can be pinned. **One Cursor worktree writer.** Stack on #1038's branch `docs/memory-3.0.0-hosted-release` because it already changes `AGENTS.md` and `CANONICAL_LAW.md`. Stack on #1036's branch `chore/governance-sync` only if this lane edits `.github/CODEOWNERS`, `.github/dependabot.yml`, or `.github/workflows/governance.yml`. Leave local `main` commit `39fd2492b314a2b6b132f393af61a27b47764dd1` out of the base. Do not push onto the parent branch. An unmerged parent does not pause the lane. Current global operating-plane @2 profile stays separate and never gains policy admission by implication. The stack rule is in `09_EXECUTION_BINDING.md`.
+**Executor:** one pool agent. Start when B's head, or A's head, can be pinned. **One Cursor worktree writer** branched from fetched `origin/main` `59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd`. #1037, #1038, and #1039 are already on that tip. Stack on #1036's branch `chore/governance-sync` only if this lane edits `.github/CODEOWNERS`, `.github/dependabot.yml`, or `.github/workflows/governance.yml`. Leave local `main` commit `39fd2492b314a2b6b132f393af61a27b47764dd1` out of the base. Do not push onto a parent branch. Current global operating-plane @2 profile stays separate and never gains policy admission by implication. The stack rule is in `09_EXECUTION_BINDING.md`.
 
 ## Editable surfaces
 

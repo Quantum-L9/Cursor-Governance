@@ -24,7 +24,7 @@ F: CTO session stacks on B's head once B, C, M, and E have a disposition.
 
 The pool is four coding agents, cap five, launched once and reused. A, B, and F are not pool slots. See `09_EXECUTION_BINDING.md`. B starts when A's head exists. E, C, and M start when that head, or B's head, can be pinned. They push pin updates to their own open pull requests. The CTO never merges. An unmerged pull request does not pause a lane. A signature or owner gap is recorded and the other lanes continue. Do not call a blocked lane passed.
 
-Lock files via `repo + branch + path` and one mutating agent per worktree. Stack on the predecessor or overlapping open pull request. `PR_STACK=auto` fail-closes while Cursor-Governance has several sibling pull requests against `main`, so name that parent head. CTO alone reconciles cross-repository contracts. No shared `.github` writers. Recheck #1036, #1037, and #1038 when C chooses its base, and L9-Ops-MCP #44 when M chooses its base.
+Lock files via `repo + branch + path` and one mutating agent per worktree. Every lane starts from fetched `origin/main`. Stack on a predecessor head, or on an open pull request that already edits the same path. `PR_STACK=auto` fail-closes while Cursor-Governance has several sibling pull requests against `main`, so name that parent head when a stack is required. CTO alone reconciles cross-repository contracts. No shared `.github` writers. #1037, #1038, and #1039 are already on Cursor `main` and are not parents.
 
 ## Per-lane execution discipline
 
@@ -39,7 +39,7 @@ Lock files via `repo + branch + path` and one mutating agent per worktree. Stack
 ## Known collision and risk checklist
 
 - `.github` policy and ruleset authoring both mutate the same owner: A, B, F serialized.
-- `Cursor-Governance #1036` may change governance files or generated references: diff current worktrees before C.
+- `Cursor-Governance #1036` changes three `.github` files and is not the start base. Diff it only if C edits one of those files.
 - Org ruleset 21895545's live `strict=false` and always-bypass admin vs committed expected config must be reconciled; never blindly apply stale JSON.
 - `.github` may be excluded from its own org ruleset. Prove its separate platform protection.
 - Core `Analyze (central Core)` check must run even when PR title/body changes, ref retargets or a metadata waiver tries to skip; preserve non-skippable semantics.
