@@ -2575,3 +2575,13 @@ listed call on the account-managed L9 Memory connector and acknowledge it with
 `python -m ops.memory.relay ack <id> --receipt <receipt_id>`. Shared-store
 hydration is `memory_hydrate` on that connector. `L9_MEMORY_HOOK_CARRIER=local|relay`
 overrides the default. ADR-0054.
+
+<!-- MEMORY_RELEASE_300_HOSTED_V1 -->
+## Memory 3.0.0 hosted release (2026-11-16)
+
+Append-only. Tag `v3.0.0` is the admitted hosted Memory release (source
+`d8b33870c33dc4625f177282c5e99c888356efd8`), deployed 2026-11-16 by
+Quantum-L9/l9-deploy run `43786931510`. Hosted MCP is authenticated
+Streamable HTTP (CANONICAL_LAW §8.10 and §8.13). This checkout's bound
+package remains `l9-graphite-memory==2.6.0` until a separate rebind. The
+3.0.0 wheel is not on PyPI. Do not install 3.0.0 over that pin.

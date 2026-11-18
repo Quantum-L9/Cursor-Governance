@@ -2133,3 +2133,22 @@ SSOT: this section; `ops/memory/hook_carrier.py`,
 `ops/memory/hosted_hook_transport.py`, `ops/memory/relay.py`,
 `environment/agents/adapters/claude-code/hooks/memory_writeback.py`;
 `docs/decisions/ADR-0055-hosted-hook-carrier.md`.
+
+<!-- MEMORY_RELEASE_300_HOSTED_V1 -->
+## 8.13 Memory release 3.0.0 is the admitted hosted release (2026-11-16)
+
+Append-only. §8.8 stays the consumer package pin **2.6.0**. §8.4's `2.3.1`
+pin stays historical. This section does not rebind
+`ops/config/memory-binding.json`, `pyproject.toml`, or `uv.lock`.
+
+1. **Admitted release.** Tag `v3.0.0`, source
+   `d8b33870c33dc4625f177282c5e99c888356efd8`. Wheel
+   `l9_graphite_memory-3.0.0-py3-none-any.whl` sha256
+   `c8967cd376414231d898bfc351ea0a5e682ed549cf8471bf828c832899af7bc6`.
+   Not on PyPI; 3.0.1 is the stated PyPI resume. Position
+   `ADMISSIBLE_WITH_ACCEPTED_RESIDUAL_RISK`.
+2. **Deployment.** Quantum-L9/l9-deploy run `43786931510` on 2026-11-16.
+   Image `ghcr.io/quantum-l9/l9-graphiti-memory@sha256:73aae7ae580733406d23aa52c83a7f4e0b82530c10c5784f9d8b87de404866f3`.
+3. **Consumer pin.** This repository still binds package 2.6.0. Hosted 3.0
+   MCP is authenticated Streamable HTTP (§8.10). Do not install 3.0.0 in
+   place of the 2.6.0 pin from this section.

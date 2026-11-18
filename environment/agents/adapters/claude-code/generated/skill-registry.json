@@ -1128,7 +1128,7 @@
       "path": "skills/l9-graphiti-memory",
       "reason": "",
       "skill_md": "skills/l9-graphiti-memory/SKILL.md",
-      "skill_sha256": "1e110580ed09a69ba1803f46d184c69a73739c1d87119c91f44b41c4f03b642c",
+      "skill_sha256": "b7ff4a5c5d988c438ac4e6478440fa012fc24c4e0cacf7d4a3776f15a164b76e",
       "user_invocable": true,
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     },
