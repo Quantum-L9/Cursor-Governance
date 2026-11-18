@@ -3,8 +3,9 @@
 
 A title and a paragraph, a ``kind: simple`` plan with no receipt, and a
 receipt whose GAR run file is missing all exit non-zero. ``_TEMPLATE.plan.md``
-and plans already filed under built or archive shelves are exempt, in any
-case (`BUILT` is the same shelf). This script does not delete a plan file.
+and plans already filed under built, archive, partially-built, or campaign
+shelves are exempt, in any case (`BUILT` is the same shelf). This script
+does not delete a plan file.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from plan_sections import projection_marker_errors
 from validate_plan_section_receipt import check_receipt
 
 EXEMPT_NAMES = {"_TEMPLATE.plan.md"}
-SHELVED = ("/built/", "/archive/", "/superseded/")
+SHELVED = ("/built/", "/archive/", "/superseded/", "/partially-built/", "/campaigns/")
 
 
 def _repo_root() -> Path:

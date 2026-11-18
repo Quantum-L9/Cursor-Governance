@@ -50,6 +50,7 @@ class HookHarness(unittest.TestCase):
             }
         )
         self.env.pop(loc.CONVERSATION_ENV, None)
+        self.env.pop("CURSOR_CONVERSATION_ID", None)
 
     def tearDown(self) -> None:
         self._tmp.cleanup()

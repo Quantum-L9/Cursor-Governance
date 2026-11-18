@@ -1,0 +1,83 @@
+{
+  "campaign_id": "L9-ORG-AUTHORITY-CUTOVER-2026-11-18-v1",
+  "files": {
+    "00_LAUNCH_IN_CTO_MODE.md": {
+      "bytes": 7014,
+      "sha256": "efc45d646ec1e91e301c9cd2a8f7743330142e61c31541504294d8f1607ef9e4"
+    },
+    "01_ARCHITECTURE_LOCK.md": {
+      "bytes": 6174,
+      "sha256": "53c497a901e55f505e2212f4b2204e5d332013f2e49eb27f0313b24a3d6f79e0"
+    },
+    "02_VERIFIED_SOURCE_BASELINE.md": {
+      "bytes": 10187,
+      "sha256": "33455b1f7588ee3c56a91e8ae3b31ef846e89ea8cb10fba60ea31b7c65090c11"
+    },
+    "03_ADMISSION_AND_RELEASE_CONTRACT.md": {
+      "bytes": 9504,
+      "sha256": "16f6f732830e9667b3287569756d5aa997c95bacf5b4c847ea0854409688f347"
+    },
+    "04_CONSUMER_AND_LEGACY_CUTOVER.md": {
+      "bytes": 7156,
+      "sha256": "1dfa76869e49f3a28c80904d3298a19c06fed517c0b9ed493084175d10864fd5"
+    },
+    "05_CI_RELATIONSHIP_AND_ROLLOUT.md": {
+      "bytes": 7389,
+      "sha256": "75b640c87e6a5dbc44251de178be04e7230fcd8f15d598bf5f868b9b11d632e4"
+    },
+    "06_ACCEPTANCE_AND_PROOF.md": {
+      "bytes": 6998,
+      "sha256": "d425d3f626f01560bd956e15549d40362d450d0df0f843bb2596ba2702218db5"
+    },
+    "07_INVARIANT_CONTROL_MATRIX.md": {
+      "bytes": 7477,
+      "sha256": "ba076a3c130dfb9a0bd94763495327cefbbfce6b5d689232001ba637b8ff48a1"
+    },
+    "08_CTO_SWARM_RUNBOOK.md": {
+      "bytes": 5407,
+      "sha256": "fbaa5e4849c3f043d64a2e7af7d5ce0e0e1c099ae72d9ea7817dce68c7a1d5e5"
+    },
+    "09_EXECUTION_BINDING.md": {
+      "bytes": 10353,
+      "sha256": "c137a0974a3c3efe8cfb0178838a2fa692a44bd67879c7d745b87357bbdb50fd"
+    },
+    "CAMPAIGN.yaml": {
+      "bytes": 5068,
+      "sha256": "ff52dd4ef25af460e02a7db001a3844600675bdfc315cf104cbe91ac5d4a6dd6"
+    },
+    "lanes/A_UPSTREAM_POLICY_ADMISSION.md": {
+      "bytes": 3665,
+      "sha256": "b3866d6041a66b4a54f3f58710699fea60bb0de2eb0222359e64f3730d220e16"
+    },
+    "lanes/B_IMMUTABLE_POLICY_RELEASE.md": {
+      "bytes": 2674,
+      "sha256": "ad01f08d3712acb1a3b94a8675f989110df0b254a0c8e99b9cf1463de22de7af"
+    },
+    "lanes/C_OPERATING_PLANE_CONSUMER.md": {
+      "bytes": 3957,
+      "sha256": "20ceba082f35aefea83fe0c511fc61d6e24e2a198418a402d74b4cbbcfda561c"
+    },
+    "lanes/E_CORE_REQUIRED_POLICY_CHECK.md": {
+      "bytes": 3349,
+      "sha256": "107a9c65a8cd771e62cc2d72a3aab560b44cc4478a49d4c677c029806b374754"
+    },
+    "lanes/F_LIVE_ORG_RULESET_AND_COVERAGE.md": {
+      "bytes": 3499,
+      "sha256": "e9c1591de1bcdeb0e871c9fa1e5d3c74356360eaef464b58ac3d1897402f1d18"
+    },
+    "lanes/M_LEGACY_OPS_MCP.md": {
+      "bytes": 2276,
+      "sha256": "f7ad9f892225f35946c4ceae0e5086aea646ca30c250f2ec4940cb89c6ef540e"
+    },
+    "lanes/S_READ_ONLY_RECONNAISSANCE.md": {
+      "bytes": 2961,
+      "sha256": "4cd66187157d0c17cb7996409bfe6d68f0e8cc272ff262e1100cbf3f5d64a93a"
+    },
+    "scripts/validate_pack.py": {
+      "bytes": 8533,
+      "sha256": "7b1ca6b7367de074c4d9ddb8d9de2191c2de04634dd8c04168261ac664b77155"
+    }
+  },
+  "note": "Integrity of handoff files only; execution binding checked 2026-11-18; no admission, merge, or live enforcement proof",
+  "schema": "l9.campaign-pack-manifest/local-v1"
+}

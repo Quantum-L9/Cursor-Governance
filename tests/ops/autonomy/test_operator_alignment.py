@@ -26,8 +26,9 @@ def _readable_github(tmp_path: Path) -> Path:
     return root
 
 
-def test_admitted_producer_receipts_stay_empty() -> None:
-    assert operator_alignment.ADMITTED_PRODUCER_RECEIPTS == frozenset()
+def test_admitted_producer_receipts_are_the_emitted_bytes() -> None:
+    receipt = REPO / "governance" / "operator-alignment" / "operator-doctrine.receipt.json"
+    assert operator_alignment.ADMITTED_PRODUCER_RECEIPTS == frozenset({receipt.read_bytes()})
 
 
 def test_consumer_does_not_parse_a_receipt_or_select_a_source() -> None:
@@ -75,6 +76,17 @@ def test_forged_view_with_matching_digest_is_refused(tmp_path: Path) -> None:
     assert (
         operator_alignment.reject_unverified_view(receipt=receipt, view=view, claimed_digest=digest)
         == operator_alignment.FORGED_VIEW
+    )
+
+
+def test_admitted_receipt_is_accepted(tmp_path: Path) -> None:
+    view = b"operator-doctrine-view"
+    digest = operator_alignment.view_digest(view)
+    receipt = tmp_path / "receipt"
+    receipt.write_bytes(next(iter(operator_alignment.ADMITTED_PRODUCER_RECEIPTS)))
+    assert (
+        operator_alignment.reject_unverified_view(receipt=receipt, view=view, claimed_digest=digest)
+        == operator_alignment.ADMITTED
     )
 
 

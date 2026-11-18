@@ -206,9 +206,11 @@ GITHUB_BODY_LIMIT = 65536
 BODY_BUDGET = 60000
 #: Compaction levels, applied in order only while a body is over BODY_BUDGET:
 #: 1 = Fix lists commit subjects without bodies; 2 = Changes by intent lists
-#: every path without its per-path reason. Path rows are never dropped:
-#: --check-body proves every changed path is declared in both inventories.
-COMPACT_LEVELS = (0, 1, 2)
+#: every path without its per-path reason; 3 = both inventories collapse to a
+#: count plus a sha256 of the sorted path keys. Levels 0–2 keep every path
+#: row, which ``--check-body`` reads. Level 3 is the only fit once those rows
+#: themselves exceed the budget; the token is the proof those rows were measured.
+COMPACT_LEVELS = (0, 1, 2, 3)
 COMPACT_FIX_NOTE = (
     "_Commit messages are omitted: the full body exceeds GitHub's 65,536-character limit. "
     "Read them with `git log`._"
@@ -217,6 +219,12 @@ COMPACT_INTENT_NOTE = (
     "_Per-path reasons are omitted: the full body exceeds GitHub's 65,536-character limit. "
     "Every changed path is still listed once._"
 )
+COMPACT_INVENTORY_NOTE = (
+    "_The path list is omitted: listing every changed path exceeds GitHub's "
+    "65,536-character limit. The token below is the count and sha256 of the "
+    "sorted path keys. Read the paths with `git diff --name-status`._"
+)
+INVENTORY_TOKEN_RE = re.compile(r"<!-- l9-path-inventory: (\d+) ([0-9a-f]{64}) -->")
 STATUS_WORDS = {
     "A": "added",
     "M": "modified",
@@ -1616,9 +1624,18 @@ def declared_intent(text: str) -> dict[str, str]:
     return declared
 
 
+def path_inventory_token(keys: list[str]) -> str:
+    """Count plus sha256 of the sorted keys, so a collapsed inventory still proves the set."""
+    digest = hashlib.sha256("\n".join(sorted(keys)).encode()).hexdigest()
+    return f"<!-- l9-path-inventory: {len(keys)} {digest} -->"
+
+
 def render_changes_by_intent(facts: MechanicalFacts, keep_why: dict[str, str] | None = None) -> str:
     """Every row exactly once, grouped by status. ``keep_why`` carries reviewer
     text forward so a refresh changes the path set, never someone's words."""
+    if facts.compact >= 3:
+        rows = _rows(facts)
+        return f"{COMPACT_INVENTORY_NOTE}\n\n{path_inventory_token([row.key for row in rows])}"
     keep_why = keep_why or {}
     groups: dict[str, list[str]] = {"Added": [], "Modified": [], "Renamed": [], "Deleted": []}
     for row in _rows(facts):
@@ -1656,6 +1673,12 @@ def render_changes_by_intent(facts: MechanicalFacts, keep_why: dict[str, str] | 
 def render_files_touched(facts: MechanicalFacts) -> str:
     """Grouped inventory, one entry per row, in the layout pr-files.yml used."""
     rows = _rows(facts)
+    if facts.compact >= 3:
+        head = f"**{len(rows)} file{'' if len(rows) == 1 else 's'}**"
+        if facts.shortstat:
+            head += f" — {facts.shortstat}"
+        token = path_inventory_token([row.key for row in rows])
+        return f"{head}\n\n{COMPACT_INVENTORY_NOTE}\n\n{token}"
     count = len(rows)
     head = f"**{count} file{'' if count == 1 else 's'}**"
     if facts.shortstat:
@@ -1807,9 +1830,19 @@ def render_protected_paths(facts: MechanicalFacts) -> str:
 
 def check_inventory(body: str, rows: list[DiffRow]) -> tuple[list[str], list[str]]:
     """(undeclared, phantom): diff rows missing from Changes by intent, and
-    declared paths that are not rows. Both empty is the only passing state."""
-    declared = declared_intent(body)
+    declared paths that are not rows. Both empty is the only passing state.
+
+    A level-3 body has no path bullets. It passes only when its inventory
+    token carries the count and sha256 of these exact keys.
+    """
     keys = [row.key for row in rows]
+    token = INVENTORY_TOKEN_RE.search(body)
+    if token:
+        expected = hashlib.sha256("\n".join(sorted(keys)).encode()).hexdigest()
+        if int(token.group(1)) == len(keys) and token.group(2) == expected:
+            return [], []
+        return keys, []
+    declared = declared_intent(body)
     undeclared = [key for key in keys if key not in declared]
     phantom = [key for key in declared if key not in set(keys)]
     return undeclared, phantom
