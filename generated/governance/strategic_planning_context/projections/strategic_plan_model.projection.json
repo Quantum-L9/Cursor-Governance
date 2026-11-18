@@ -1,0 +1,78 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "global_rules": {
+      "compound_causal_claims_are_expressible_by_one_strategic_hypothesis": true,
+      "outcome_of_one_primitive_does_not_establish_correctness_of_another": true,
+      "planning_horizon_does_not_create_primitive_types": true,
+      "reality_change_may_require_reconsideration_but_never_directly_modifies_or_invalidates_strategic_plan": true,
+      "reasoning_workspace_content_is_not_strategic_plan_content_without_authorized_decision": true,
+      "strategic_hypothesis_is_plan_owned_belief_not_authoritative_truth": true,
+      "strategic_plan_represents_strategy_without_absorbing_external_truth_ownership": true
+    },
+    "primitives": {
+      "strategic_commitment": {
+        "definition": "A course of action recorded in the current Strategy as chosen for pursuit under Strategic Authority, distinct from a candidate path considered during reasoning.",
+        "question": "Which path have we chosen?"
+      },
+      "strategic_goal": {
+        "definition": "A broad desired future condition represented in the current Strategy because its realization would advance Strategic Intent.",
+        "question": "What future condition do we seek?"
+      },
+      "strategic_hypothesis": {
+        "definition": "A Plan-owned causal belief represented in the current Strategy about how relevant conditions, capabilities, constraints, actions, or combinations thereof may influence realization of Strategic Goals or Targets.",
+        "question": "Why do we believe this path or condition should produce the expected consequence?"
+      },
+      "strategic_target": {
+        "definition": "A more concrete desired condition, threshold, milestone, or recognizable state represented in the current Strategy to give bounded resolution to progress toward one or more Strategic Goals.",
+        "question": "What more concrete condition would demonstrate progress toward the Goal?"
+      }
+    },
+    "reasoning_concepts": {
+      "affected_strategic_closure": {
+        "authoritative": false,
+        "authority_class": "derived",
+        "definition": "The smallest reachable set of Plan-owned claims whose current justification may materially depend on a changed belief, reference, condition, or authoritative input.",
+        "may_not": [
+          "decide_strategy",
+          "modify_strategic_plan",
+          "invalidate_strategic_plan",
+          "mark_dependent_strategy_stale_automatically"
+        ],
+        "purpose": "selective_plan_reconsideration",
+        "representation_does_not_define_closure_algorithm": true,
+        "representation_schema_ref": "l9.schema/affected-strategic-closure@1"
+      }
+    },
+    "relation_rules": {
+      "material_causal_enables_claims_remain_attributable_to_a_strategic_hypothesis": true,
+      "relations_do_not_transfer_ownership_or_authority": true
+    },
+    "relations": {
+      "advances": {
+        "meaning": "Within the current Strategy, realization of the source contributes toward realization of the target; following it upward answers why a Plan-owned object exists."
+      },
+      "conflicts_with": {
+        "meaning": "Within the current Strategy, pursuing or maintaining the source is materially incompatible with the target under the current assumptions."
+      },
+      "depends_on": {
+        "meaning": "Within the current Strategy, the source's viability is contingent on the target."
+      },
+      "enables": {
+        "meaning": "Under a Strategic Hypothesis in the current Strategy, the source is believed to make the target possible or materially more achievable."
+      },
+      "supersedes": {
+        "semantics_ref": "lifecycle.yaml#lifecycle_relations.supersedes"
+      }
+    }
+  },
+  "projection_digest": "sha256:bca3fb2608eb72e1fa2c40bb7ed54bfbdbde6c5988757e11221e58d28d7b8c2e",
+  "projection_profile_digest": "sha256:2940f0e2ae41676d262365c594b901f4e1de27be5249affbae9480f48633e173",
+  "projection_profile_ref": "l9.projection/strategic-planning-context@2",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:4fffeb59d95fa05158c718b3637288c20bad41243b58b9ed3be50121acae840a",
+  "source_ref": "l9.source/strategic-plan-model@1"
+}

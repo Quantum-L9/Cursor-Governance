@@ -117,7 +117,7 @@ fi
 branch="$(g "$ROOT" symbolic-ref --quiet --short HEAD 2>/dev/null || echo DETACHED)"
 note=""
 if [ "$branch" != "main" ]; then
-  note=" — HEAD is $branch, not main; left as is (domains report STALE until it is main)"
+  note=" — HEAD is $branch, not main; left as is (verifiers read origin/main beside this checkout)"
 elif [ -n "$(g "$ROOT" status --porcelain 2>/dev/null)" ]; then
   note=" — working tree dirty; left as is"
 elif ! g "$ROOT" merge --quiet --ff-only refs/remotes/origin/main >/dev/null 2>&1; then

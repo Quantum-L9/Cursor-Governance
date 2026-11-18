@@ -1,0 +1,158 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "authority_separation": {
+      "invariant_ref": "L9-STRATEGY-001",
+      "resolution_ref": "authority_model.yaml#strategic_cognition_authority",
+      "strategic_plan_owner": "plan_keeper",
+      "strategic_plan_reasoning_analysis_owner": "strategic_plan_metacognitive_reasoner",
+      "teaching_relation": {
+        "authority_effect": "none",
+        "carries": "planning_cognition_lessons",
+        "from": "strategic_plan_metacognitive_reasoner",
+        "to": "plan_keeper"
+      }
+    },
+    "concepts": {
+      "current_meta_view": {
+        "artifact_class_ref": "composed_projection",
+        "authoritative": false,
+        "authority_class": "derived",
+        "canonical_source": false,
+        "component_artifact_class_ref": "projection_artifact",
+        "definition": "The bounded current view used when reasoning about Strategy, composed from relevant authoritative projections.",
+        "properties": {
+          "derived": true,
+          "disposable": true,
+          "invalidated_when_source_truth_changes": true,
+          "may_create_authority": false,
+          "may_reinterpret_source_truth": false,
+          "provenance_preserving": true
+        },
+        "schema_ref": "l9.schema/composed-projection@1"
+      },
+      "strategic_cognition": {
+        "consumes": [
+          "current_meta_view",
+          "strategic_intent",
+          "strategic_plan"
+        ],
+        "definition": "The reasoning concern through which the Plan Keeper compares current authoritative understanding and Strategic Intent with the current Strategy to determine whether the Strategic Plan should remain unchanged or be revised.",
+        "does_not_own": [
+          "underlying_truth_sources",
+          "runtime_execution",
+          "architecture_semantics",
+          "evidence_semantics",
+          "memory_semantics",
+          "capability_semantics",
+          "authority_semantics"
+        ],
+        "maintains": [
+          "strategic_plan"
+        ]
+      },
+      "strategic_intent": {
+        "authority_ref": "authority_model.yaml#strategic_authority",
+        "definition": "The purpose supplied by an applicable authority that constrains what the current Strategy is intended to advance.",
+        "owned_here": false,
+        "owner": "applicable_strategic_authority"
+      },
+      "strategic_plan": {
+        "content_defined_here": false,
+        "definition": "The authoritative maintained record of the current Strategy within a scope for which the Plan Keeper has been granted Strategic Authority.",
+        "owner_role": "plan_keeper",
+        "structure_defined_here": false
+      },
+      "strategy": {
+        "definition": "An integrated theory of intended change that identifies desired future conditions, causal beliefs about how relevant conditions and actions may influence those conditions, and chosen courses of action under uncertainty."
+      }
+    },
+    "global_rules": {
+      "metacognition_is_advisory_to_strategic_authority": true,
+      "metacognitive_analysis_is_advisory_and_cannot_mutate_strategy": true,
+      "plan_revision_candidate_is_not_strategy_until_admitted_under_strategic_authority": true,
+      "planning_episode_is_non_authoritative_reasoning_record": true,
+      "projection_consumption_does_not_transfer_truth_source_ownership": true,
+      "reasoning_capability_does_not_confer_strategic_authority": true,
+      "semantic_compiler_remains_independent_of_reasoning_plane": true,
+      "strategic_cognition_does_not_own_runtime_execution": true,
+      "strategic_cognition_does_not_own_underlying_truth_sources": true,
+      "strategic_label_does_not_create_authority_or_ownership": true,
+      "strategic_roles_are_semantic_roles_not_actor_identities": true
+    },
+    "reasoning_artifacts": {
+      "strategic_plan_revision_candidate": {
+        "authority_class": "candidate",
+        "authority_effect": "none_until_admitted",
+        "definition": "A digest-bound candidate binding an exact predecessor Strategic Plan revision, one exact proposed Strategic Plan Graph, and the planning episode that produced it. Candidate status alone does not revise Strategy.",
+        "may_not": [
+          "self_admit",
+          "mutate_strategic_plan_without_applicable_strategic_authority",
+          "float_across_changed_candidate_or_proposed_graph_digests"
+        ],
+        "producer_role": "plan_keeper",
+        "schema_ref": "l9.schema/strategic-plan-revision-candidate@1"
+      },
+      "strategic_planning_episode": {
+        "authority_class": "derived",
+        "authority_effect": "none",
+        "definition": "An immutable, non-authoritative record of one bounded Plan Keeper reasoning episode over exact planning inputs, observations, assumptions, candidate paths, evaluations, material Unknowns, and its recommendation.",
+        "may_not": [
+          "become_strategic_plan_content_by_recording",
+          "grant_strategic_authority",
+          "mutate_strategic_plan"
+        ],
+        "producer_role": "plan_keeper",
+        "schema_ref": "l9.schema/strategic-planning-episode@1"
+      }
+    },
+    "roles": {
+      "plan_keeper": {
+        "actor_identity_binding": "none",
+        "authority_source": "strategic_authority",
+        "definition": "The reasoning role responsible for maintaining the Strategic Plan within granted Strategic Authority.",
+        "does_not_own": [
+          "underlying_truth_sources",
+          "capability_semantics",
+          "evidence",
+          "memory",
+          "architecture",
+          "execution",
+          "environment_truth"
+        ],
+        "may": [
+          "revise_strategic_plan_within_granted_strategic_authority",
+          "emit_strategic_planning_episode",
+          "emit_strategic_plan_revision_candidate",
+          "consume_planning_cognition_lessons"
+        ],
+        "may_not": [
+          "acquire_truth_source_ownership_by_consuming_projections",
+          "derive_authority_from_reasoning_capability",
+          "become_execution_or_implementation_authority_by_implication",
+          "treat_planning_episode_as_strategic_plan_content",
+          "treat_revision_candidate_as_authorized_plan_revision_without_admission",
+          "revise_strategic_plan_beyond_granted_strategic_authority"
+        ],
+        "owns": [
+          "strategic_plan"
+        ],
+        "reasons_over": [
+          "current_meta_view",
+          "strategic_intent",
+          "strategic_plan"
+        ],
+        "role_kind": "semantic_role"
+      }
+    }
+  },
+  "projection_digest": "sha256:56e41495990548305eabc8b292764cef534f7f7acb228532604b8e0b6b3762c4",
+  "projection_profile_digest": "sha256:2940f0e2ae41676d262365c594b901f4e1de27be5249affbae9480f48633e173",
+  "projection_profile_ref": "l9.projection/strategic-planning-context@2",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:af540e9607915878b66cb7632fd3ca63f57f80707b1c605fc21536d06ec81a7d",
+  "source_ref": "l9.source/strategic-cognition-model@1"
+}

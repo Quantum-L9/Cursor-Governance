@@ -1,0 +1,158 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "artifact_id": "l9.schema/strategic-plan-revision-candidate@1",
+    "authority": {
+      "authority_class": "canonical",
+      "owner": "Quantum-L9/.github",
+      "scope": "l9_global_strategic_plan_revision_candidate_schema"
+    },
+    "candidate_rules": {
+      "admission_must_bind_candidate_digest_and_proposed_graph_digest": true,
+      "candidate_change_requires_new_authority_decision": true,
+      "candidate_may_be_rejected_without_mutating_current_plan": true,
+      "predecessor_must_be_current_at_admission_or_admission_fails_closed": true,
+      "proposed_graph_change_requires_new_authority_decision": true,
+      "proposed_graph_must_conform_to_strategic_plan_graph_schema": true,
+      "proposed_graph_plan_ref_must_equal_candidate_plan_ref": true,
+      "proposed_graph_predecessor_must_bind_exact_predecessor": true
+    },
+    "canonical": true,
+    "canonical_source": {
+      "artifact": "strategic_plan_revision_candidate.schema.yaml",
+      "format": "yaml"
+    },
+    "governed_by": {
+      "admission_pattern_ref": "l9.pattern/authority-candidate-admission@1",
+      "authority_ref": "authority_model.yaml#strategic_authority",
+      "plan_graph_schema_ref": "l9.schema/strategic-plan-graph@1",
+      "semantic_model_ref": "strategic_cognition_model.yaml#reasoning_artifacts.strategic_plan_revision_candidate"
+    },
+    "instance_semantics": {
+      "authoritative": false,
+      "authority_class": "candidate",
+      "authority_effect": "none_until_admitted",
+      "producer_role": "plan_keeper"
+    },
+    "properties": {
+      "affected_closure": {
+        "fields": {
+          "digest": {
+            "type": "semantic_digest"
+          },
+          "ref": {
+            "type": "semantic_ref"
+          }
+        },
+        "required": [
+          "ref",
+          "digest"
+        ],
+        "type": "object"
+      },
+      "candidate_digest": {
+        "type": "semantic_digest"
+      },
+      "candidate_ref": {
+        "type": "semantic_ref"
+      },
+      "plan_ref": {
+        "type": "semantic_ref"
+      },
+      "predecessor": {
+        "fields": {
+          "graph_digest": {
+            "type": "semantic_digest"
+          },
+          "revision_ref": {
+            "type": "semantic_ref"
+          }
+        },
+        "required": [
+          "revision_ref",
+          "graph_digest"
+        ],
+        "type": "object"
+      },
+      "proposed_graph": {
+        "fields": {
+          "digest": {
+            "type": "semantic_digest"
+          },
+          "ref": {
+            "type": "semantic_ref"
+          },
+          "schema_ref": {
+            "const": "l9.schema/strategic-plan-graph@1"
+          }
+        },
+        "required": [
+          "ref",
+          "schema_ref",
+          "digest"
+        ],
+        "type": "object"
+      },
+      "provenance": {
+        "type": "object"
+      },
+      "rationale_refs": {
+        "type": "semantic_ref_list"
+      },
+      "reasoning_episode": {
+        "fields": {
+          "digest": {
+            "type": "semantic_digest"
+          },
+          "ref": {
+            "type": "semantic_ref"
+          }
+        },
+        "required": [
+          "ref",
+          "digest"
+        ],
+        "type": "object"
+      },
+      "schema": {
+        "const": "l9.strategic-plan-revision-candidate/v1"
+      },
+      "strategic_authority_ref": {
+        "type": "semantic_ref"
+      }
+    },
+    "purpose": "Define the digest-bound candidate that bridges Plan Keeper reasoning and an authorized Strategic Plan revision. The candidate binds an exact predecessor, one exact proposed Strategic Plan Graph, and the exact reasoning episode that produced it. It is never Strategy merely because it exists and cannot admit, approve, or apply itself.\n",
+    "required": [
+      "schema",
+      "candidate_ref",
+      "plan_ref",
+      "predecessor",
+      "proposed_graph",
+      "reasoning_episode",
+      "strategic_authority_ref",
+      "rationale_refs",
+      "provenance",
+      "candidate_digest"
+    ],
+    "schema": "l9.schema-definition/v1",
+    "semantic_rules": [
+      "revision_candidate_is_candidate_not_strategy",
+      "revision_candidate_does_not_self_admit",
+      "revision_candidate_does_not_modify_strategic_plan",
+      "strategic_authority_ref_does_not_itself_prove_authorization",
+      "admission_is_external_to_candidate_artifact",
+      "authorization_must_bind_exact_candidate_and_proposed_graph_digests",
+      "candidate_preserves_reasoning_and_predecessor_provenance"
+    ],
+    "type": "object"
+  },
+  "projection_digest": "sha256:23442e7952ba453b50f6ebf497386f9b2b63f0c87bcc29ebb1d53914782eaa22",
+  "projection_profile_digest": "sha256:2940f0e2ae41676d262365c594b901f4e1de27be5249affbae9480f48633e173",
+  "projection_profile_ref": "l9.projection/strategic-planning-context@2",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:48fdecd1a015f13cd739e718b3ea48948ce7891c2905311201ea90bd7d56c0fc",
+  "source_ref": "l9.source/strategic-plan-revision-candidate-schema@1"
+}

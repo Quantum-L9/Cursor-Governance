@@ -25,7 +25,8 @@ import json
 import os
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -308,20 +309,53 @@ def resolve_session_id(explicit: str | None = None) -> str | None:
     return None
 
 
+@contextmanager
+def authority_main_checkout(root: Path | None) -> Iterator[Path | None]:
+    """Yield a checkout whose HEAD is ``refs/remotes/origin/main``.
+
+    Domain verifiers refuse a checkout whose HEAD is not that pin, so every
+    consumer repository goes STALE (``AUTHORITY_REVISION_MISMATCH``) when the
+    shared Quantum-L9/.github clone sits on another branch. The operating plane
+    already detaches a shared checkout at the pin (``pinned_checkout``) and
+    leaves the operator's branch alone. Domain verification uses that same
+    snapshot. No ``origin/main`` yields *root* unchanged, and the verifier
+    reports that absence itself.
+    """
+    if root is None:
+        yield None
+        return
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    from tools.authority.verify_coding_projection import Unobserved, pinned_checkout, resolve
+
+    main = resolve(root, "refs/remotes/origin/main")
+    if main is None:
+        yield root
+        return
+    try:
+        holder = pinned_checkout(root, main)
+    except Unobserved:
+        yield root
+        return
+    with holder as checkout:
+        yield Path(checkout) / "authority"
+
+
 def run_verifier(binding: Path, authority_root: Path | None) -> dict[str, Any]:
     """The binding's own verifier, admitted mode. No second verification lives here."""
     doc = yaml.safe_load(binding.read_text(encoding="utf-8"))
     coding = doc.get("schema") == CODING_BINDING_SCHEMA
     _ref, verifier = binding_profile(doc)
-    cmd = [sys.executable, str(REPO / str(verifier))]
-    if coding:
-        # The shared coding-projection classifier: the same verdict SessionStart reports.
-        cmd += ["--format", "json"]
-    else:
-        cmd += ["--binding", str(binding), "--mode", "admitted"]
-    if authority_root is not None:
-        cmd += ["--authority-root", str(authority_root)]
-    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    with authority_main_checkout(authority_root) as pinned:
+        cmd = [sys.executable, str(REPO / str(verifier))]
+        if coding:
+            # The shared coding-projection classifier: the same verdict SessionStart reports.
+            cmd += ["--format", "json"]
+        else:
+            cmd += ["--binding", str(binding), "--mode", "admitted"]
+        if pinned is not None:
+            cmd += ["--authority-root", str(pinned)]
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     try:
         report = json.loads(proc.stdout)
     except json.JSONDecodeError:
@@ -354,8 +388,11 @@ def resolve_authority(explicit: Path | None, workspace: Path | None) -> Path | N
     """The Quantum-L9/.github checkout, resolved like every other projection consumer here.
 
     One order for all of them (ops/scripts/coding_projection_status.py `_authority`): an
-    explicit path, then L9_AUTHORITY_ROOT, then `.github` inside or beside the workspace,
-    each accepted only if it is a verified authority checkout. None when none is.
+    explicit path, then L9_AUTHORITY_ROOT, then the managed ``~/.l9/authority/.github``
+    checkout, then `.github` inside or beside the workspace. Each is accepted only if
+    it is a verified authority checkout. None when none is. Callers that verify pass
+    the result through ``authority_main_checkout`` so the clone's own branch is not
+    the pin.
     """
     if str(REPO) not in sys.path:
         sys.path.insert(0, str(REPO))
@@ -601,7 +638,8 @@ class ProjectionMode:
             type=Path,
             help=(
                 "Quantum-L9/.github checkout (default: $L9_AUTHORITY_ROOT, "
-                "then .github in or beside the workspace)"
+                "then ~/.l9/authority/.github, then .github in or beside the workspace). "
+                "Verification reads origin/main; the checkout's branch is not the pin."
             ),
         )
         parser.add_argument(

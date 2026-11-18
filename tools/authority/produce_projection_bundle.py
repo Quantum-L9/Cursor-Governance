@@ -105,6 +105,12 @@ BUNDLES: dict[str, dict[str, Any]] = {
         "composition_profile": "l9.compose/signals@1",
         "output": Path("generated/governance/domain_signals"),
     },
+    # Plan Keeper context role projection (Quantum-L9/.github v3.35.0, ADR-032) bound read-only
+    # by planner mode (governance/planner-mode/MODE.yaml).
+    "l9.projection/strategic-planning-context@2": {
+        "composition_profile": "l9.compose/strategic-planning-context@2",
+        "output": Path("generated/governance/strategic_planning_context"),
+    },
 }
 
 # Canonical domain consumer bindings (Quantum-L9/.github ADR-033) this repository materializes,

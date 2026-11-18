@@ -36,6 +36,7 @@ on:
       - "generated/governance/pr_audit/**"
       - "generated/governance/domain_*/**"
       - "generated/governance/technical_coordination/**"
+      - "generated/governance/strategic_planning_context/**"
   push:
     branches:
       - main
@@ -46,6 +47,7 @@ on:
       - "generated/governance/pr_audit/**"
       - "generated/governance/domain_*/**"
       - "generated/governance/technical_coordination/**"
+      - "generated/governance/strategic_planning_context/**"
       - "tools/authority/produce_projection_bundle.py"
   workflow_dispatch:
     inputs:
@@ -95,6 +97,8 @@ jobs:
             profile: l9.projection/identity-attribution@1
           - bundle: technical_coordination
             profile: l9.projection/technical-coordination@1
+          - bundle: strategic_planning_context
+            profile: l9.projection/strategic-planning-context@2
     steps:
       - name: Resolve the subject commit
         id: subject
@@ -130,9 +134,21 @@ jobs:
           SHA: ${{ steps.subject.outputs.sha }}
           URL: ${{ steps.subject.outputs.url }}
           BUNDLE: ${{ matrix.bundle }}
+          # This repository is private: a plain fetch of its own pull-request head fails with
+          # "could not read Username". The job's read-only GITHUB_TOKEN (contents: read)
+          # authenticates that one fetch through a transient header; it is never persisted,
+          # never placed in a URL, and never offered to any other host.
+          GH_TOKEN: ${{ github.token }}
+          OWN_URL: ${{ github.server_url }}/${{ github.repository }}.git
         run: |
           git init -q subject-git
-          git -C subject-git fetch -q --no-tags --depth=1 "$URL" "$SHA"
+          auth=()
+          if [[ "$URL" == "$OWN_URL" ]]; then
+            basic="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+            echo "::add-mask::$basic"
+            auth=(-c "http.extraheader=AUTHORIZATION: basic $basic")
+          fi
+          git -C subject-git "${auth[@]}" fetch -q --no-tags --depth=1 "$URL" "$SHA"
           # A subject without this bundle has nothing to attest for it: the other bundle, or the
           # bootstrap push before any bundle exists, is the event. A present bundle must replay.
           if [[ -z "$(git -C subject-git ls-tree "$SHA" -- "generated/governance/$BUNDLE")" ]]; then
@@ -304,7 +320,7 @@ jobs:
         bundle: [architecture_intelligence, coding_agent_execution, pr_audit, operating_plane_v2,
                  domain_architecture, domain_governance, domain_evidence_provenance, domain_contracts_conformance, domain_capabilities_dependencies, domain_strategic_value, domain_signals,
                  domain_identity_attribution,
-                 technical_coordination]
+                 technical_coordination, strategic_planning_context]
     steps:
       - name: Read this bundle's attestation (the uploaded JSON, fetched over the API)
         shell: bash

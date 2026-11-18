@@ -22,6 +22,7 @@ current session only, by hand:
 | `/coding-agent` | `coding-agent-execution@1` | `governance/coding-agent-mode/MODE.yaml` |
 | `/lcto` | technical-coordination plus seven domains | `governance/cto-mode/MODE.yaml` |
 | `/architect` | seven architecture and strategic-planning domains | `governance/architect-mode/MODE.yaml` |
+| `/planner` | six strategic-planner domains + Plan Keeper context (read-only) | `governance/planner-mode/MODE.yaml` |
 
 How they work: each runs its `ops/autonomy/<name>_mode.py on --workspace "$PWD"`. The
 request is recorded for this host session only. The mode is `ACTIVE` only when every
