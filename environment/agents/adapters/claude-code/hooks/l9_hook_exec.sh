@@ -11,8 +11,7 @@
 # THE DISTINCTION THIS FILE EXISTS TO ENFORCE (INV-1):
 #
 #   --class gate      A hook that DECIDES whether a tool call may proceed.
-#                     merge_gate_wrap, local_execution_gate_wrap, memory_gate,
-#                     context7_stack_pretool (permissionDecision deny).
+#                     merge_gate_wrap, local_execution_gate_wrap, memory_gate.
 #                     If it cannot evaluate — no launcher, no hook file, no
 #                     locked interpreter — it exits 2 and the tool call is
 #                     BLOCKED. A gate that cannot evaluate has not passed;
