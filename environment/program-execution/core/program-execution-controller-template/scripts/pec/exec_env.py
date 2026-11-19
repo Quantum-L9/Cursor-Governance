@@ -26,6 +26,17 @@ DEFAULT_VALIDATION_TIMEOUT_S = 300
 _ENV_OVERRIDE = "L9_PE_PYTHON"
 _EVIDENCE_TAIL = 2000
 _STREAM_TAIL = 8000
+# Same four files as classify_workspace_kind / is_governance_identity_tree.
+_GOVERNANCE_IDENTITY = (
+    "CANONICAL_LAW.md",
+    "skills/AUTONOMY_MANIFEST.yaml",
+    "rules/RULES-MANIFEST.yaml",
+    "ops/scripts/check_governance_wiring.sh",
+)
+
+
+class ExecEnvError(RuntimeError):
+    """The task interpreter could not be resolved."""
 
 
 def _venv_root(python: Path) -> Path | None:
@@ -59,6 +70,30 @@ def is_l9_isolate_workspace(path: Path) -> bool:
     except ValueError:
         return False
     return len(parts) >= 2 and parts[0] in {"gov-worktrees", "programs"}
+
+
+def is_governance_identity_tree(path: Path) -> bool:
+    """True when the worktree is this governance repo, whatever directory it sits in."""
+    root = path.resolve()
+    return all((root / rel).is_file() for rel in _GOVERNANCE_IDENTITY)
+
+
+def _uv_package_disabled(project: Path) -> bool:
+    """True when pyproject says this tree is not an installable uv package."""
+    path = project / "pyproject.toml"
+    if not path.is_file():
+        return False
+    try:
+        import tomllib
+    except ImportError:  # pragma: no cover - Python 3.11+
+        return False
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return False
+    tool = data.get("tool")
+    uv = tool.get("uv") if isinstance(tool, dict) else None
+    return isinstance(uv, dict) and uv.get("package") is False
 
 
 def is_consumer_task_worktree(path: Path) -> bool:
@@ -105,6 +140,13 @@ def _discover_python(cwd: Path | None) -> Path:
         located = shutil.which(override)
         if located:
             return _keep_venv_shim(Path(located))
+    # A governance checkout is this repo even when it lives under programs/.
+    # Its pyproject is not an installable package, so uv must not provision it.
+    if cwd is not None and is_governance_identity_tree(cwd):
+        donor = _donor_toolchain_python()
+        if donor is None:
+            raise ExecEnvError("governance worktree has no donor toolchain; set L9_PE_PYTHON")
+        return donor
     consumer = cwd is not None and is_consumer_task_worktree(cwd)
     # Governance isolates are not uv projects. Their local .venv, if any, is
     # pytest-less. Validation must use the donor toolchain that owns extras.
@@ -113,7 +155,7 @@ def _discover_python(cwd: Path | None) -> Path:
         donor = _donor_toolchain_python()
         if donor is not None:
             return donor
-    if consumer and cwd is not None:
+    if consumer and cwd is not None and not _uv_package_disabled(cwd):
         project = _consumer_project_python(cwd)
         if project is not None:
             return project
@@ -212,7 +254,11 @@ def _consumer_project_python(cwd: Path) -> Path | None:
         timeout=600,
     )
     if installed.returncode != 0:
-        return python
+        detail = (installed.stderr or installed.stdout or "").strip().splitlines()
+        reason = detail[-1] if detail else "non-zero exit"
+        raise ExecEnvError(
+            "editable install failed and was not adopted as the task interpreter: " + reason
+        )
     return python
 
 

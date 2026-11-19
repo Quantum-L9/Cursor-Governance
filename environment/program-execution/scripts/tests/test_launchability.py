@@ -450,6 +450,207 @@ class ExecutionEnvironmentTest(unittest.TestCase):
                 'bash", "-lc"', path.read_text(encoding="utf-8"), msg=f"{path} still login-shells"
             )
 
+    def _identity_files(self, root: Path) -> None:
+        for rel in self.exec_env._GOVERNANCE_IDENTITY:
+            path = root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("identity\n", encoding="utf-8")
+
+    def test_governance_identity_uses_donor_and_never_calls_uv(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw) / "gov"
+            self._identity_files(root)
+            (root / "pyproject.toml").write_text("[tool.uv]\npackage = false\n", encoding="utf-8")
+            donor = Path(raw) / "donor"
+            (donor / ".venv" / "bin").mkdir(parents=True)
+            (donor / ".venv" / "pyvenv.cfg").write_text("home = /usr\n", encoding="utf-8")
+            donor_py = donor / ".venv" / "bin" / "python3"
+            donor_py.write_text("#!/bin/sh\n", encoding="utf-8")
+            donor_py.chmod(0o755)
+            env = {"GOV_TOOLCHAIN_ROOT": str(donor), "L9_PE_PYTHON": "", "VIRTUAL_ENV": ""}
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with unittest.mock.patch.object(
+                    self.exec_env, "is_consumer_task_worktree", return_value=True
+                ):
+                    with unittest.mock.patch.object(
+                        self.exec_env.subprocess, "run", side_effect=AssertionError("uv")
+                    ):
+                        resolved = self.exec_env.resolve_exec_env(root)
+            self.assertEqual(resolved.python, (donor / ".venv").resolve() / "bin" / "python3")
+
+    def test_governance_identity_without_a_donor_names_the_override(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw) / "gov"
+            self._identity_files(root)
+            env = {"L9_PE_PYTHON": "", "GOV_TOOLCHAIN_ROOT": "", "VIRTUAL_ENV": ""}
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with unittest.mock.patch.object(
+                    self.exec_env, "_donor_toolchain_python", return_value=None
+                ):
+                    with self.assertRaises(self.exec_env.ExecEnvError) as caught:
+                        self.exec_env.resolve_exec_env(root)
+            self.assertIn("L9_PE_PYTHON", str(caught.exception))
+
+    def test_package_false_does_not_provision_with_uv(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "pyproject.toml").write_text("[tool.uv]\npackage = false\n", encoding="utf-8")
+            env = {"L9_PE_PYTHON": "", "VIRTUAL_ENV": ""}
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with unittest.mock.patch.object(
+                    self.exec_env, "is_consumer_task_worktree", return_value=True
+                ):
+                    with unittest.mock.patch.object(
+                        self.exec_env.subprocess, "run", side_effect=AssertionError("uv")
+                    ):
+                        resolved = self.exec_env._discover_python(root)
+            self.assertEqual(resolved, self.exec_env._keep_venv_shim(Path(sys.executable)))
+
+    def test_failed_editable_install_is_not_the_interpreter(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            project = Path(raw) / "project"
+            project.mkdir()
+            (project / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+            runtime = Path(raw) / "runtime"
+
+            def fake_run(cmd, **kwargs):
+                if cmd[1] == "venv":
+                    python = runtime / ".venv" / "bin" / "python3"
+                    python.parent.mkdir(parents=True, exist_ok=True)
+                    python.write_text("#!/bin/sh\n", encoding="utf-8")
+                    return subprocess.CompletedProcess(cmd, 0, "", "")
+                return subprocess.CompletedProcess(cmd, 1, "", "install failed")
+
+            with unittest.mock.patch.object(self.exec_env, "exec_env_root", return_value=runtime):
+                with unittest.mock.patch.object(self.exec_env.shutil, "which", return_value="uv"):
+                    with unittest.mock.patch.object(
+                        self.exec_env.subprocess, "run", side_effect=fake_run
+                    ):
+                        with self.assertRaises(self.exec_env.ExecEnvError) as caught:
+                            self.exec_env._consumer_project_python(project)
+            self.assertIn("not adopted", str(caught.exception))
+
+
+class RenderedPlanCampaignTest(unittest.TestCase):
+    """A rendered .plan.md validates once and does not re-enter the judgment stages."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.run_campaign = _load(
+            "run_campaign_rendered_plan_test", PE_ROOT / "scripts/run_campaign.py"
+        )
+
+    def _plan(self, root: Path, *, rendered_by: str | None = None) -> Path:
+        source = root / "CAMPAIGN_SOURCE.yaml"
+        blueprint = root / "blueprint"
+        blueprint.mkdir()
+        (blueprint / "PROGRAM.yaml").write_text(
+            "program:\n  id: rendered-proof\n  definition_status: draft\n",
+            encoding="utf-8",
+        )
+        producer = rendered_by or "skills/l9-plan/scripts/render_campaign_source.py"
+        source.write_text(
+            "schema: l9.program-execution.campaign-source.v2\n"
+            "metadata:\n"
+            "  campaign_id: rendered-proof\n"
+            f"  rendered_by: {producer}\n"
+            "program:\n"
+            "  id: rendered-proof\n"
+            "targets:\n"
+            "  - repository_id: Quantum-L9/Cursor-Governance\n"
+            "tasks: []\n",
+            encoding="utf-8",
+        )
+        plan = root / "demo.plan.md"
+        plan.write_text(
+            "---\n"
+            "name: demo\n"
+            f"campaign_source: {source}\n"
+            f"campaign_blueprint: {blueprint}\n"
+            "---\n\nbody\n",
+            encoding="utf-8",
+        )
+        return plan
+
+    def test_rendered_plan_validates_then_starts_without_the_judgment_stages(self) -> None:
+        runner = self.run_campaign
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            plan = self._plan(root)
+            called = {"runtime": 0}
+
+            def runtime(run):
+                called["runtime"] += 1
+                self.assertEqual(run.blueprint, root / "blueprint")
+                self.assertIn("validate_blueprint", run.report.stages_completed)
+                self.assertNotIn("stack_proof", run.report.stages_completed)
+                program = (root / "blueprint" / "PROGRAM.yaml").read_text(encoding="utf-8")
+                self.assertIn("accepted", program)
+                return run.report
+
+            def refused(*_args, **_kwargs):
+                raise AssertionError("judgment stage ran")
+
+            env = {"L9_PE_OPERATOR_INVOCATION": f"make campaign {plan}"}
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with unittest.mock.patch.object(runner, "_stage_runtime", side_effect=runtime):
+                    with unittest.mock.patch.object(runner, "check_launchability", refused):
+                        with unittest.mock.patch.object(runner, "default_plan_window", refused):
+                            with unittest.mock.patch.object(
+                                runner, "default_compile_activation", refused
+                            ):
+                                with unittest.mock.patch.object(runner, "default_admit", refused):
+                                    with unittest.mock.patch.object(
+                                        runner, "default_context7_stack", refused
+                                    ):
+                                        report = runner._run_campaign_stages(
+                                            plan,
+                                            until="execute",
+                                            repo_root=root,
+                                            l9_root=root / "l9",
+                                            hooks=runner.Hooks(
+                                                validate_blueprint=lambda _blueprint: []
+                                            ),
+                                        )
+            self.assertEqual(called["runtime"], 1)
+            self.assertEqual(report.mode, "rendered-plan")
+            self.assertEqual(report.stages_completed[:2], ["validate_blueprint", "accept"])
+
+    def test_a_plan_without_recorded_paths_names_l9_plan(self) -> None:
+        runner = self.run_campaign
+        with tempfile.TemporaryDirectory() as raw:
+            plan = Path(raw) / "bare.plan.md"
+            plan.write_text("---\nname: bare\n---\n\n", encoding="utf-8")
+            env = {"L9_PE_OPERATOR_INVOCATION": f"make campaign {plan}"}
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with self.assertRaises(runner.CampaignError) as caught:
+                    runner._run_campaign_stages(plan, until="execute", l9_root=Path(raw) / "l9")
+            self.assertIn("/l9-plan", str(caught.exception))
+
+    def test_validation_errors_do_not_stamp_or_start(self) -> None:
+        runner = self.run_campaign
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            plan = self._plan(root)
+
+            def runtime(_run):
+                raise AssertionError("runtime started")
+
+            env = {"L9_PE_OPERATOR_INVOCATION": f"make campaign {plan}"}
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with unittest.mock.patch.object(runner, "_stage_runtime", side_effect=runtime):
+                    with self.assertRaises(runner.CampaignError) as caught:
+                        runner._run_campaign_stages(
+                            plan,
+                            until="execute",
+                            l9_root=root / "l9",
+                            hooks=runner.Hooks(validate_blueprint=lambda _blueprint: ["broken"]),
+                        )
+            self.assertIn("template validate failed", str(caught.exception))
+            program = (root / "blueprint" / "PROGRAM.yaml").read_text(encoding="utf-8")
+            self.assertIn("draft", program)
+            self.assertNotIn("accepted", program)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,9 +16,13 @@ Program Execution itself, not by a second validator here:
 
 1. `campaign_input.classify` + `campaign_input.preflight` (what
    `make campaign-check-input` runs);
-2. `compile_campaign_source.compile_source` into a throwaway Blueprint;
+2. `compile_campaign_source.compile_source` into a Blueprint kept beside the YAML;
 3. `launchability.check_tasks` with inference OFF, which must report the
    campaign launchable with no synthesized validation.
+
+On admission the script records `campaign_source` and `campaign_blueprint` on
+the `.plan.md` passed as `--plan-md`. `make campaign <plan.md>` reads those
+paths. It does not call this script.
 
 usage:
   render_campaign_source.py <plan.json> [--out PATH] [--target OWNER/REPO]
@@ -34,6 +38,7 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -472,8 +477,31 @@ def render(
     }
 
 
-def check_admission(source_path: Path, repo_root: Path) -> dict[str, Any]:
-    """Judge the rendered source with Program Execution's own front door and compiler."""
+def _upsert_frontmatter_scalar(body: str, key: str, value: str) -> str:
+    line = f"{key}: {json.dumps(value)}"
+    pattern = re.compile(rf"^{re.escape(key)}:.*$", re.M)
+    if pattern.search(body):
+        return pattern.sub(line, body, count=1)
+    return body.rstrip() + "\n" + line + "\n"
+
+
+def record_plan_paths(plan_md: Path, source: Path, blueprint: Path) -> None:
+    """Write the admitted campaign paths onto a Cursor plan without rewriting its body."""
+    text = plan_md.read_text(encoding="utf-8")
+    match = re.match(r"\A---\s*\n(.*?)\n---\s*(?:\n|\Z)", text, re.S)
+    if not match:
+        raise RenderError([f"{plan_md} has no YAML frontmatter to record campaign paths on"])
+    body = _upsert_frontmatter_scalar(match.group(1), "campaign_source", str(source.resolve()))
+    body = _upsert_frontmatter_scalar(body, "campaign_blueprint", str(blueprint.resolve()))
+    plan_md.write_text("---\n" + body.rstrip() + "\n---\n" + text[match.end() :], encoding="utf-8")
+
+
+def check_admission(source_path: Path, repo_root: Path, *, blueprint_dir: Path) -> dict[str, Any]:
+    """Judge the rendered source with Program Execution's own front door and compiler.
+
+    A passing admission leaves the compiled blueprint at ``blueprint_dir``.
+    A refusal deletes that directory.
+    """
     if str(PE_SCRIPTS) not in sys.path:
         sys.path.insert(0, str(PE_SCRIPTS))
     campaign_input = _load("l9_plan_pe_campaign_input", PE_SCRIPTS / "campaign_input.py")
@@ -490,19 +518,25 @@ def check_admission(source_path: Path, repo_root: Path) -> dict[str, Any]:
     launchability = _load("l9_plan_pe_launchability", PE_SCRIPTS / "launchability.py")
     stack = _load("l9_plan_pe_context7_stack_proof", PE_SCRIPTS / "context7_stack_proof.py")
     document = yaml.safe_load(source_path.read_text(encoding="utf-8"))
-    with tempfile.TemporaryDirectory(prefix="l9-plan-campaign-") as raw:
-        blueprint = Path(raw) / "blueprint"
-        try:
-            # The same stack proof make campaign primes for this source: the
-            # runner's seed view, proved offline when no external stack is
-            # inferred and against the docs otherwise.
+    # compile_source writes a staging directory beside this path and swaps it
+    # into place. The path must not already exist, or instantiate refuses.
+    if blueprint_dir.exists():
+        shutil.rmtree(blueprint_dir)
+    blueprint_dir.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with tempfile.TemporaryDirectory(prefix="l9-plan-campaign-") as raw:
+            # The same stack proof the renderer uses at admission. make campaign
+            # on a rendered plan does not run it again.
             receipt = stack.prove_stack(campaign_input.seed_view(document), primed_dir=Path(raw))
-            compiler.compile_source(source_path, blueprint, stack_proof=Path(receipt["path"]))
-        except Exception as exc:  # noqa: BLE001 - every compile failure is a refusal
-            raise RenderError([f"PE compiler refused the source: {exc}"]) from exc
+            compiler.compile_source(source_path, blueprint_dir, stack_proof=Path(receipt["path"]))
         report = launchability.check_tasks(
-            launchability.blueprint_tasks(blueprint), repo_root, infer=False
+            launchability.blueprint_tasks(blueprint_dir), repo_root, infer=False
         )
+    except Exception as exc:  # noqa: BLE001 - every compile failure is a refusal
+        shutil.rmtree(blueprint_dir, ignore_errors=True)
+        raise RenderError([f"PE compiler refused the source: {exc}"]) from exc
+    if not report.get("launchable") or report.get("synthesized_validations"):
+        shutil.rmtree(blueprint_dir, ignore_errors=True)
     if not report.get("launchable"):
         raise RenderError(
             [
@@ -519,6 +553,7 @@ def check_admission(source_path: Path, repo_root: Path) -> dict[str, Any]:
         "compiled": True,
         "launchable": True,
         "task_count": report.get("task_count"),
+        "blueprint": str(blueprint_dir.resolve()),
     }
 
 
@@ -530,6 +565,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--campaign-id", default=None)
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--no-check", action="store_true", help="render only (tests)")
+    parser.add_argument(
+        "--plan-md",
+        type=Path,
+        default=None,
+        help="record campaign_source and campaign_blueprint on this .plan.md",
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     if str(SCRIPTS) not in sys.path:
@@ -558,12 +599,33 @@ def main(argv: list[str] | None = None) -> int:
             yaml.safe_dump(source, sort_keys=False, allow_unicode=True, width=100),
             encoding="utf-8",
         )
+        staged_blueprint = out.parent / f"blueprint.staged-{os.getpid()}"
+        blueprint_path: Path | None = None
         try:
-            admission = {"skipped": True} if args.no_check else check_admission(staged, repo_root)
+            if args.no_check:
+                if args.plan_md is not None:
+                    raise RenderError(
+                        ["--plan-md requires the admission check that persists the blueprint"]
+                    )
+                admission = {"skipped": True}
+            else:
+                admission = check_admission(staged, repo_root, blueprint_dir=staged_blueprint)
             os.replace(staged, out)
+            if not args.no_check:
+                final_blueprint = out.parent / "blueprint"
+                if final_blueprint.exists():
+                    shutil.rmtree(final_blueprint)
+                staged_blueprint.rename(final_blueprint)
+                blueprint_path = final_blueprint.resolve()
+                admission["blueprint"] = str(blueprint_path)
+            if args.plan_md is not None and blueprint_path is not None:
+                record_plan_paths(args.plan_md.resolve(), out, blueprint_path)
         finally:
-            # Admitted: already moved onto --out. Refused or interrupted: discard.
+            # Admitted: the yaml is already at --out and the blueprint has been renamed.
+            # Refused or interrupted: discard both staged artifacts.
             staged.unlink(missing_ok=True)
+            if staged_blueprint.exists():
+                shutil.rmtree(staged_blueprint, ignore_errors=True)
     except RenderError as exc:
         if args.json:
             print(json.dumps({"status": "REFUSED", "errors": exc.errors}, indent=2))
@@ -578,10 +640,10 @@ def main(argv: list[str] | None = None) -> int:
         "target": target,
         "source": str(out),
         "admission": admission,
+        "blueprint": str(blueprint_path) if blueprint_path is not None else "",
         "next": [
-            "/coding-agent on   # in the workspace you run make campaign from",
-            'L9_PE_OPERATOR_INVOCATION="<your own words asking for this campaign>" '
-            f'make -C "$HOME/.cursor-governance" campaign INTENT={out} WS="$PWD"',
+            "make campaign "
+            + (str(args.plan_md.resolve()) if args.plan_md is not None else "<the .plan.md>")
         ],
     }
     if args.json:
