@@ -95,6 +95,11 @@ RECON_CAPABILITIES = [
     "repository.read",
     "repository.search",
     "graphiti.read",
+    # A read-only task still runs its contract's declared validation commands;
+    # `canonical_shell_capability` admits them as test.run only through the PE
+    # validation grammar (one operation, no substitution, read-only git), so
+    # this does not hand the recon worker an open shell.
+    "test.run",
     "artifact.write_recon_report",
 ]
 WRITE_AUTHORIZATIONS = ("repository.write_scoped",)
@@ -989,13 +994,17 @@ def submit_task_result(
     candidate_sha: str | None,
     contract_digest: str,
     evidence: Mapping[str, Any] | None = None,
+    status: str | None = None,
 ) -> dict[str, Any]:
-    """Terminalize the subordinate lease with a typed root ExecutionResult.
+    """Terminalize the subordinate lease with the typed root artifact its action expects.
 
     Root autonomy does not decide whether the Program task succeeded — the
     Controller verifies that independently. This records what the subordinate
     executor actually produced so its lease and resource claims are released
-    instead of staying live after the work is done.
+    instead of staying live after the work is done. A mutation grant
+    terminalizes as an ExecutionResult; a recon (read-only) grant's action
+    contract expects a ReconReport, so submitting an ExecutionResult there
+    fails the autonomy runtime's completion validation.
     """
     runtime = _runtime_for(grant)
     lease_id = str(grant["lease_id"])
@@ -1022,12 +1031,28 @@ def submit_task_result(
             f"{lease_id} was issued for {recorded!r}"
         )
     artifact_id = f"artifact-{uuid.uuid4().hex}"
+    if bool(grant.get("mutation", False)):
+        kind = "ExecutionResult"
+        payload: dict[str, Any] = {
+            "candidate_sha": candidate_sha,
+            "changed_files": sorted({str(item) for item in changed_files}),
+            "contract_digest": contract_digest,
+            "owns_program_state": False,
+            "evidence": dict(evidence or {}),
+        }
+    else:
+        kind = "ReconReport"
+        payload = {
+            "status": str(status or "COMPLETED"),
+            "evidence": dict(evidence or {}),
+            "owns_program_state": False,
+        }
     runtime.artifacts.submit(
         lease_id=lease_id,
         agent_id=agent_id,
         artifact={
             "artifact_id": artifact_id,
-            "kind": "ExecutionResult",
+            "kind": kind,
             "campaign_id": str(grant["campaign_id"]),
             "graph_id": str(grant["graph_id"]),
             "action_id": str(grant["action_id"]),
@@ -1035,13 +1060,7 @@ def submit_task_result(
             "producer_agent_id": agent_id,
             "base_sha": str(grant["base_sha"]),
             "input_artifacts": _dependency_artifacts(runtime, grant),
-            "payload": {
-                "candidate_sha": candidate_sha,
-                "changed_files": sorted({str(item) for item in changed_files}),
-                "contract_digest": contract_digest,
-                "owns_program_state": False,
-                "evidence": dict(evidence or {}),
-            },
+            "payload": payload,
         },
     )
     terminal = runtime.leases.get(lease_id)

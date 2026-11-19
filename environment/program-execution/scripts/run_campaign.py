@@ -3240,15 +3240,10 @@ def _peer_identity() -> tuple[str, str, str | None]:
         aliases["claude-code"] = claude_here
     binding = aliases.get(governance_surface)
     entrypoint = os.environ.get("CLAUDE_CODE_ENTRYPOINT", "").strip().lower()
-    # claude-vscode is a local Claude process. It has no topology row of its
-    # own; the local Claude row is claude-code-cli and resolves to one provider.
-    # This wins over an inherited Cursor host marker so the campaign stays on
-    # the Claude peer that armed it.
     if binding is None and entrypoint == "claude-vscode":
         binding = (claude_actor, identity.CLAUDE_CLI_SURFACE)
     elif binding is None and coarse == "cursor":
         binding = aliases["cursor"]
-        # cursor-ide declares two providers. The foreground lane is this session.
         if provider_ref is None:
             provider_ref = "cursor-foreground"
     if binding is None:
@@ -3955,13 +3950,16 @@ def _terminalize_root_authority(
     contract: dict[str, Any],
     changed: list[str],
     candidate_sha: str | None,
+    status: str | None = None,
 ) -> str | None:
     """Hand the root executor lease its terminal result, or leave it revoked.
 
     Root autonomy does not get to say the Program task passed — the Controller
     does that next, independently. What this closes is the child authority: a
     completed executor action releases the lease and its resource claims, so a
-    finished worker keeps no live mutation authority.
+    finished worker keeps no live mutation authority. A recon grant's action
+    contract expects a ReconReport, so the subordinate's own outcome status
+    travels with the result instead of a mutation payload.
     """
     grant = unit.get("grant")
     if not grant:
@@ -3974,6 +3972,7 @@ def _terminalize_root_authority(
             candidate_sha=candidate_sha,
             contract_digest=str(contract.get("contract_digest") or ""),
             evidence={"attempt_receipt_path": str(contract.get("attempt_receipt_path") or "")},
+            status=status,
         )
     except Exception as exc:  # noqa: BLE001 — a failed handoff must revoke, not linger
         grants.revoke_task_grant(
@@ -4718,6 +4717,7 @@ def _finish_peer_unit(
             contract=contract,
             changed=actual_changed,
             candidate_sha=receipt.get("candidate_sha"),
+            status=outcome.get("status"),
         )
         emit(
             trace,

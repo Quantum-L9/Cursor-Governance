@@ -110,7 +110,10 @@ def allowed_operations(contract: Mapping[str, Any]) -> list[str]:
     "Mutation" is not one permission. Every operation traces to the single
     action that justifies it: write operations to `local_write` (or
     `destructive_change`), `commit_local` to `commit`, and nothing to a bare
-    boolean standing in for both.
+    boolean standing in for both. A contract that declares validation
+    commands obliges its worker to run them, so the campaign grants the
+    `run_tests` operation those commands map to — still bounded downstream by
+    the canonical validation grammar.
     """
     requested = require_coherent_actions(contract)
     operations: list[str] = []
@@ -118,7 +121,14 @@ def allowed_operations(contract: Mapping[str, Any]) -> list[str]:
         operations.extend(LOCAL_WRITE_OPERATIONS)
     if "commit" in requested:
         operations.extend(COMMIT_OPERATIONS)
-    return operations or list(INSPECT_OPERATIONS)
+    if not operations:
+        operations.extend(INSPECT_OPERATIONS)
+    validation_declared = bool(
+        contract.get("validation_commands") or contract.get("verification_mechanisms")
+    )
+    if validation_declared and "run_tests" not in operations:
+        operations.append("run_tests")
+    return operations
 
 
 def _write_claims(contract: Mapping[str, Any]) -> list[dict[str, Any]]:
