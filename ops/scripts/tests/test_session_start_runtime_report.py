@@ -166,6 +166,25 @@ class SecretsPlaneClassificationTests(unittest.TestCase):
         self.assertEqual(line["class"], report.DEGRADED)
         self.assertIn("do not paste a token", line["summary"])
 
+    def test_authorized_catalog_lists_allow_list_names_only(self) -> None:
+        secrets = Path(__file__).resolve().parents[2] / "secrets"
+        if str(secrets) not in sys.path:
+            sys.path.insert(0, str(secrets))
+        import capability_bind as bind
+
+        bind.remember_vault_names(frozenset())
+        try:
+            line = report.classify_authorized_catalog(
+                ["PERPLEXITY_API_KEY", "sk-CANARY-VALUE", "CLAUDE_INFISICAL_CLIENT_SECRET"]
+            )
+        finally:
+            bind.remember_vault_names(None)
+        self.assertEqual(line["class"], report.OK)
+        self.assertIn("PERPLEXITY_API_KEY", line["summary"])
+        self.assertIn("authorized to bind when the task needs that system", line["summary"])
+        self.assertNotIn("sk-CANARY-VALUE", line["summary"])
+        self.assertNotIn("CLAUDE_INFISICAL_CLIENT_SECRET", line["summary"])
+
     def test_missing_receipt_is_unread_not_a_live_probe(self) -> None:
         line = report.classify_bind_line(None)
         self.assertEqual(line["class"], report.DEGRADED)

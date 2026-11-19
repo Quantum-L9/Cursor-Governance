@@ -22,6 +22,7 @@ Usage (from .mcp.json): run_vault_mcp_bridge.sh <name>
 from __future__ import annotations
 
 import json
+import os
 import sys
 import threading
 import urllib.error
@@ -58,6 +59,66 @@ def load_bridge(name: str, registry: Path = REGISTRY) -> dict[str, str]:
     if urlparse(entry["url"]).scheme != "https" or "{value}" not in entry["format"]:
         raise BridgeError(f"bridge {name!r} must be https and format must contain {{value}}")
     return {k: entry[k] for k in ("url", "secret", "header", "format")}
+
+
+_INHERIT = ("PATH", "HOME", "TMPDIR", "LANG")
+
+
+def load_spawn(name: str, registry: Path = REGISTRY) -> dict[str, Any]:
+    """A stdio MCP whose env names are vault names. Literals are non-secret."""
+    data = json.loads(registry.read_text(encoding="utf-8"))
+    entry = (data.get("spawns") or {}).get(name)
+    if not isinstance(entry, dict):
+        raise BridgeError(f"no spawn named {name!r} in {registry.name}")
+    command = entry.get("command")
+    args = entry.get("args")
+    env = entry.get("env") or {}
+    literal = entry.get("literal_env") or {}
+    if not isinstance(command, str) or not command:
+        raise BridgeError(f"spawn {name!r} lacks command")
+    if not isinstance(args, list) or not all(isinstance(item, str) for item in args):
+        raise BridgeError(f"spawn {name!r} args must be strings")
+    if not isinstance(env, dict) or not env:
+        raise BridgeError(f"spawn {name!r} lacks env")
+    for child_name, vault_name in env.items():
+        if not isinstance(child_name, str) or not isinstance(vault_name, str) or not vault_name:
+            raise BridgeError(f"spawn {name!r} has a bad env binding")
+        if vault_name in cb.REFUSED_NAMES:
+            raise BridgeError(f"spawn {name!r} refuses an identity secret")
+    if not isinstance(literal, dict) or any(key in env for key in literal):
+        raise BridgeError(f"spawn {name!r} literal_env overrides a bound name")
+    return {"command": command, "args": list(args), "env": dict(env), "literal_env": dict(literal)}
+
+
+def build_child_env(config: dict[str, Any]) -> dict[str, str]:
+    """Bind vault names into a new environment. The parent environment is not updated."""
+    child: dict[str, str] = {}
+    for key in _INHERIT:
+        value = os.environ.get(key)
+        if value:
+            child[key] = value
+    for child_name, vault_name in config["env"].items():
+        if vault_name not in cb.allowed_names():
+            raise BridgeError(f"spawn env {child_name} is not an allow-list name")
+        bound = cb.bind(vault_name)
+        if not bound:
+            raise BridgeError(f"spawn env {child_name} is not bound")
+        child[child_name] = bound
+    for key, value in config["literal_env"].items():
+        child[str(key)] = str(value)
+    return child
+
+
+def spawn(name: str) -> int:
+    """Replace this process with the stdio server. The bound values exist only in the child."""
+    try:
+        config = load_spawn(name)
+        child = build_child_env(config)
+    except BridgeError as exc:
+        print(f"vault_mcp_bridge: {exc}", file=sys.stderr)
+        return 1
+    os.execvpe(config["command"], [config["command"], *config["args"]], child)
+    return 1  # pragma: no cover - execvpe does not return
 
 
 def sse_messages(body: bytes) -> list[str]:
@@ -163,8 +224,10 @@ class Bridge:
 
 def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
+    if len(args) == 2 and args[0] == "spawn":
+        return spawn(args[1])
     if len(args) != 1:
-        print("usage: vault_mcp_bridge.py <bridge-name>", file=sys.stderr)
+        print("usage: vault_mcp_bridge.py <bridge-name> | spawn <spawn-name>", file=sys.stderr)
         return 2
     try:
         config = load_bridge(args[0])
