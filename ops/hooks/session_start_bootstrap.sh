@@ -683,6 +683,20 @@ if [ -f "$HOST_BINDING_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ]
   unset _hb_out _hb_rc
 fi
 
+# Organization policy is a second input from Quantum-L9/.github. The local
+# ORG_INVARIANTS.yaml is the projection named by the binding. Operating law
+# stays in this repository. Report-only: a missing pin does not stop the session.
+ORG_POLICY_MD="### organization policy
+- NOT BOUND — organization-policy binding unavailable"
+ORG_POLICY_PY="$GC/ops/autonomy/org_policy_binding.py"
+if [ -f "$ORG_POLICY_PY" ]; then
+  _op_out="$("$AUDIT_PY_BIN" "$ORG_POLICY_PY" --format markdown --role session 2>/dev/null)" || _op_out=""
+  if [ -n "$_op_out" ]; then
+    ORG_POLICY_MD="$_op_out"
+  fi
+  unset _op_out
+fi
+
 # Each fact is printed once. Wiring and backup verdicts belong to ### Runtime
 # (and, when failing, ### Degraded); this section carries only the SSOT tip and
 # the link state those verdicts do not show. The self-alias line appears only
@@ -705,6 +719,7 @@ ${HYDRATE_BLOCK}
 ${CODEGRAPH_MD}
 ${CODING_PROJECTION_MD}
 ${DEFAULT_BINDING_MD}
+${ORG_POLICY_MD}
 - authority checkout: ${AUTHORITY_NOTE}
 ${ROUTE_LOCATOR_MD}
 EOF

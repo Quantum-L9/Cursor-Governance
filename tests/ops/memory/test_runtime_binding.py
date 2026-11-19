@@ -1037,7 +1037,7 @@ def test_the_binding_names_the_release_tag_and_the_commit_it_resolves_to() -> No
     For a candidate SHA pin, source.ref == release_evidence.memory_sha (40-hex).
     For a release tag pin, source.ref is vX.Y.Z and memory_sha is the peeled commit.
     A moved tag fails the proof instead of silently rebinding.
-    Live target: package 2.6.0 at 846f283f…, official published wheel.
+    Live target: package 3.0.1 at 96ed99eb…, official published wheel.
     """
     manifest = rb.BindingManifest.load()
     raw = json.loads(rb.DEFAULT_MANIFEST_PATH.read_text(encoding="utf-8"))
@@ -1054,7 +1054,7 @@ def test_the_binding_names_the_release_tag_and_the_commit_it_resolves_to() -> No
         assert evidence["memory_tag"] == ref
     assert evidence["package_version"] == raw["expected_package_version"]
     assert evidence["artifact_sha256"] == (
-        "d493573254cecedafb66ad3e1ccc380841ec8c617e9501adb5d993c989653d15"
+        "4822b889dc8d590cedc0194d1d802e20b173d385ad377f80f4a0852502b1c957"
     )
 
 

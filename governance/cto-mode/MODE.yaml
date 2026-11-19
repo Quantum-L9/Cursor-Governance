@@ -12,6 +12,10 @@
 schema: l9.cursor-governance.cto-mode/v1
 artifact_id: l9.cursor-governance/cto-mode@1
 canonical: true
+organization_policy:
+  binding: governance/authority-bindings/org-invariants.yaml
+  role: cto
+  separate_from: l9.projection/cursor-governance-operating-plane@2
 authority:
   owner: Quantum-L9/Cursor-Governance
   scope: cto_mode_consumer_contract

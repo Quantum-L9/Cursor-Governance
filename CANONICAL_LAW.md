@@ -31,7 +31,7 @@ status: active
 | LLM rules (.md peers) | `environment/generated/llm-rules/` (projected; do not hand-edit) | Claude: `.claude/rules` → generated mount via `reconcile_llm_rule_adapters.py` |
 | Ops scripts | `ops/scripts/` | `.cursor-commands/ops/scripts/` |
 | Intelligence | `intelligence/` | Active signal corpus (never archive) |
-| **Org invariants** | `~/.cursor-governance/ORG_INVARIANTS.yaml` | Canonical Quantum-L9 policy; mirrored to consumer repos |
+| **Org invariants** | `Quantum-L9/.github` `policies/ORG_INVARIANTS.yaml` @ `ec3f5c6734530a3a90438a80827ebd8edd876734` | Organization policy source. This clone's `ORG_INVARIANTS.yaml` is a consumer mirror (`canonical: false`), not the author. |
 | **Executable plan template** | `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md` | First-class primitive (`MANIFEST.yaml`); `/plan` + `l9-plan` default projection; `.cursor/plans/_TEMPLATE.plan.md` is a local mirror only |
 | **Autonomy family** | `environment/contracts/autonomy/MANIFEST.yaml` | First-class subordinate primitive family (root `autonomy/` + `ops/autonomy` + Claude scheduler SSOTs); PE Controller remains authoritative; `owns_program_state: false`; validate via `make autonomy-contracts-validate` |
 | **Peer Execution thin-adapter law** | `environment/contracts/execution/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml` | Binding provider-neutral execution architecture; validate via `make peer-execution-conformance` |
@@ -2152,3 +2152,30 @@ pin stays historical. This section does not rebind
 3. **Consumer pin.** This repository still binds package 2.6.0. Hosted 3.0
    MCP is authenticated Streamable HTTP (§8.10). Do not install 3.0.0 in
    place of the 2.6.0 pin from this section.
+
+<!-- MEMORY_RELEASE_301_V1 -->
+## 8.14 Memory release 3.0.1 (2026-11-18) — supersedes the 2.6.0 consumer pin in §8.8 and §8.13
+
+Append-only. §8.8 and §8.13 stay the historical record. §8.13 records the
+hosted 3.0.0 admission and does not publish that wheel. This section is the
+live package pin. It does not retag `v3.0.0` or `v3.0.1`, does not upload
+3.0.0, and does not redeploy the hosted service. §8.11 and §8.12 stay; the
+hosted remote-mode cutover remains the carrier decision in §8.12.
+
+1. **Bound head.** `ops/config/memory-binding.json` `source.ref` and
+   `release_evidence.memory_sha` are
+   `96ed99eb172bb3b7433600db8581991c4c890737`. Annotated tag `v3.0.1`, tag
+   object `5df53ff67edccc5cb606d040e5f674a4dfc764bf`. Package
+   `l9-graphite-memory==3.0.1`.
+2. **Wheel.** Official published artifact
+   `l9_graphite_memory-3.0.1-py3-none-any.whl`, sha256
+   `4822b889dc8d590cedc0194d1d802e20b173d385ad377f80f4a0852502b1c957`.
+   `pyproject.toml` / `uv.lock` pin that registry wheel. There is no path
+   override. `scripts/build_release_artifacts.sh` at
+   `SOURCE_DATE_EPOCH=1784592000` reproduces this digest. `uv build --wheel
+   --build-constraint setuptools==84.2.1` does not. The cross-repo proof runs
+   the release recipe and refuses any other bytes.
+   `build_backend_constraint` is `setuptools==84.2.1`, the 3.0.1
+   `[build-system]` pin. `setuptools==84.0.0` remains the 2.6.0 fact.
+3. **Contract.** `memory-control-plane/v1` and memory schema `2.2.0` are
+   unchanged. `installed_record_digest` stays unpinned.
