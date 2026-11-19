@@ -237,9 +237,7 @@ class AutonomyControlPlaneBridgeTests(unittest.TestCase):
         validation commands keeps the plain inspect operations.
         """
         module = _mapper()
-        plain = module.allowed_operations(
-            {"requested_actions": ["inspect"], "writable_paths": []}
-        )
+        plain = module.allowed_operations({"requested_actions": ["inspect"], "writable_paths": []})
         self.assertEqual(plain, ["read", "search"])
         validating = module.allowed_operations(
             {
