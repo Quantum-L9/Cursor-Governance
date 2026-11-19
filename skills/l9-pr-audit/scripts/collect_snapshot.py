@@ -80,8 +80,27 @@ _THREADS_QUERY = (
     "{repository(owner:$owner,name:$name)"
     "{pullRequest(number:$number){reviewThreads(first:100,after:$cursor)"
     "{pageInfo{hasNextPage endCursor}nodes{isResolved isOutdated path line"
-    " comments(first:100){nodes{id}}}}}}}"
+    " comments(first:100){nodes{databaseId body}}}}}}}"
 )
+
+
+def _require_dict(value: Any, label: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ThreadsUnavailable(f"reviewThreads {label} missing")
+    return value
+
+
+def _comment_record(comment: Any) -> tuple[str, str]:
+    """REST database id plus body. The GraphQL node id is not a pulls/comments id."""
+    if not isinstance(comment, dict):
+        raise ThreadsUnavailable("review comment is not an object")
+    database_id = comment.get("databaseId")
+    body = comment.get("body")
+    if type(database_id) is not int:
+        raise ThreadsUnavailable("review comment databaseId is not a REST id")
+    if not isinstance(body, str):
+        raise ThreadsUnavailable("review comment body missing")
+    return str(database_id), body
 
 
 def _threads_graphql(repo: str, n: int) -> list[dict[str, Any]]:
@@ -111,26 +130,54 @@ def _threads_graphql(repo: str, n: int) -> list[dict[str, Any]]:
             payload = json.loads(proc.stdout)
         except json.JSONDecodeError as exc:
             raise ThreadsUnavailable(f"reviewThreads query returned no JSON: {exc}") from exc
-        window = (((payload.get("data") or {}).get("repository")) or {}).get("pullRequest") or {}
-        window = window.get("reviewThreads") or {}
-        for node in window.get("nodes") or []:
-            comments = ((node.get("comments") or {}).get("nodes")) or []
-            comment_ids = [str(c["id"]) for c in comments if c.get("id")]
-            if comment_ids:
+        if not isinstance(payload, dict):
+            raise ThreadsUnavailable("reviewThreads envelope is not an object")
+        if payload.get("errors"):
+            raise ThreadsUnavailable("reviewThreads query returned errors")
+        data = _require_dict(payload.get("data"), "data")
+        repository = _require_dict(data.get("repository"), "repository")
+        pull_request = _require_dict(repository.get("pullRequest"), "pullRequest")
+        window = _require_dict(pull_request.get("reviewThreads"), "connection")
+        nodes = window.get("nodes")
+        if not isinstance(nodes, list):
+            raise ThreadsUnavailable("reviewThreads nodes missing")
+        page_info = _require_dict(window.get("pageInfo"), "pageInfo")
+        if type(page_info.get("hasNextPage")) is not bool:
+            raise ThreadsUnavailable("reviewThreads pageInfo.hasNextPage missing")
+        for node in nodes:
+            if not isinstance(node, dict):
+                raise ThreadsUnavailable("reviewThreads node is not an object")
+            comments = node.get("comments")
+            if not isinstance(comments, dict) or not isinstance(comments.get("nodes"), list):
+                raise ThreadsUnavailable("reviewThreads comments missing")
+            records = [_comment_record(comment) for comment in comments["nodes"]]
+            if records:
+                comment_ids, bodies = zip(*records, strict=True)
                 threads.append(
                     {
                         "resolved": bool(node.get("isResolved")),
                         "outdated": node.get("isOutdated"),
                         "path": node.get("path"),
                         "line": node.get("line"),
-                        "comment_ids": comment_ids,
+                        "comment_ids": list(comment_ids),
+                        "comment_bodies": list(bodies),
                     }
                 )
-        page_info = window.get("pageInfo") or {}
-        if page_info.get("hasNextPage") and page_info.get("endCursor"):
-            cursor = str(page_info["endCursor"])
+        if page_info["hasNextPage"]:
+            end = page_info.get("endCursor")
+            if not isinstance(end, str) or not end:
+                raise ThreadsUnavailable("reviewThreads pagination cursor missing")
+            cursor = end
             continue
         return threads
+
+
+def comment_body(repo: str, comment_id: str) -> str:
+    """Body of a review comment through the numeric REST pulls/comments route."""
+    doc = gh(f"repos/{repo}/pulls/comments/{comment_id}")
+    if not isinstance(doc, dict) or not isinstance(doc.get("body"), str):
+        raise ThreadsUnavailable(f"pulls/comments/{comment_id} returned no body")
+    return doc["body"]
 
 
 def review_threads(

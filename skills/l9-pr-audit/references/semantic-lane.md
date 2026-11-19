@@ -39,10 +39,19 @@ probes, and judging the PR against what the requester asked for, are the lane's 
   the audited clone. To execute, copy the head: `git -C CLONE archive origin/pr/N | tar -x -C SCRATCH/pr-N`.
 - **Transport follows `protocol.rest_only`.** Review threads come from the GraphQL `reviewThreads`
   query unless `rest_only` is true, then `pulls/N/ccr/review_threads`; if the selected transport
-  fails, the collector tries the other once and exits non-zero when both fail. Bodies via
-  `pulls/comments/ID`; job logs via `actions/jobs/ID/logs`. Classic branch protection is recorded
-  only on evidence: `ABSENT` requires the exact 404 body `Branch not protected`; a 200 merges its
-  required checks; every other result is `UNKNOWN` and withholds complete READY.
+  fails, the collector tries the other once and exits non-zero when both fail. A GraphQL HTTP 200
+  whose envelope has `errors`, a null `repository` / `pullRequest` / `reviewThreads`, or a
+  malformed `nodes` / `pageInfo` is a failure, not an empty thread list. Comment ids stored from
+  GraphQL are `databaseId` (the numeric REST id). Bodies travel with that node and are fetched
+  again via `pulls/comments/ID` using that id, never the GraphQL node id. Job logs via
+  `actions/jobs/ID/logs`. Classic branch protection is recorded only on evidence: `ABSENT`
+  requires the exact 404 body `Branch not protected`; a 200 merges its required checks; every
+  other result is `UNKNOWN` and withholds complete READY.
+- **Admitted remediation coupling.** `scripts/collect_snapshot.py` imports `rest_only` from
+  `skills/l9-pr-remediation/scripts/protocol.py`. The selector is not copied into this pack.
+  That import is the one runtime dependency on `l9-pr-remediation`: transport selection only.
+  It does not grant remediation, mutation, convergence, or merge. A standalone audit pack that
+  is not shipped beside `l9-pr-remediation` cannot select the review-thread transport.
 - **No secret values** in any field; give the locator only.
 - **Exact heads.** Judge the `head_sha` in the snapshot. If the head moved, stop: the parent re-collects.
 
@@ -97,7 +106,15 @@ writes `[RUN]/runs/verification/receipt.json`:
 {
   "schema": "l9.pr-audit.verification-run-receipt/v1",
   "head_by_pr": {"1": "<40-hex frozen head>", "2": "<40-hex frozen head>"},
-  "commands": ["the commands that ran"],
+  "commands": [
+    {
+      "command": "the command that ran",
+      "head_sha": "<one frozen head>",
+      "exit_code": 0,
+      "measured_result": "what the command showed",
+      "provenance": "independent-verifier"
+    }
+  ],
   "claim_ids": ["<every claim_id of the audit>"],
   "obligation_ids": ["<every obligation_id, incl. OB-O-<n>, OB-TD-<n>, OB-<cid>>"],
   "probe_ids": {"1": ["adversarial_input", "base_discrimination", "merged_tree", "ci_causality", "ingress_reachability"], "2": ["..."]},
@@ -105,10 +122,13 @@ writes `[RUN]/runs/verification/receipt.json`:
 }
 ```
 
-The assembler checks the receipt exists, binds `head_by_pr` exactly to the frozen heads, and
-covers the claim, obligation and probe ids. Missing, unbound or incomplete: probes and validation
-runs record `NOT_EXECUTED`, nothing is stamped `SURVIVED`, READY is withheld, and convergence
-stops on `U-RECEIPT` naming the gap.
+The assembler reads only `runs/verification/receipt.json`. Another `runs/*/receipt.json` is not
+this verification. Each command must name a frozen head, an integer exit code, a measured
+result, and a provenance that is not the lane or the author. The id lists must cover every
+claim, obligation, and probe before any PASS, SURVIVED, or READY is projected. Missing, unbound,
+empty, or incomplete: probes and validation runs record `NOT_EXECUTED`, the VERIFICATION pass
+says `verification not executed`, nothing is stamped `SURVIVED`, READY is withheld, and
+`U-RECEIPT` blocks readiness and convergence.
 
 ## Independent verifier lane
 

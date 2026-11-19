@@ -78,49 +78,83 @@ def load(path: Path) -> Any:
 
 
 RECEIPT_SCHEMA = "l9.pr-audit.verification-run-receipt/v1"
-RECEIPT_GLOB = ("runs", "*", "receipt.json")
+RECEIPT_REL = Path("runs") / "verification" / "receipt.json"
+_SELF_PROVENANCE = {"self", "author", "lane", "semantic-lane", "l9-pr-audit"}
 
 
-def _receipt_documents(run: Path) -> list[dict[str, Any]]:
-    docs = []
-    for path in sorted((run / "runs").glob("*/receipt.json")) if (run / "runs").is_dir() else []:
-        try:
-            doc = json.loads(path.read_text())
-        except (OSError, json.JSONDecodeError):
-            continue
-        if isinstance(doc, dict) and doc.get("schema") == RECEIPT_SCHEMA:
-            docs.append(doc)
-    return docs
+def _string_list(value: Any) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) and item.strip() for item in value)
+
+
+def _command_rejection(item: Any, frozen_head_set: set[str]) -> str | None:
+    """Why this command record is not executed evidence, or None when it is."""
+    if not isinstance(item, dict):
+        return "is not an execution record"
+    command = item.get("command")
+    head = item.get("head_sha")
+    exit_code = item.get("exit_code")
+    measured = item.get("measured_result")
+    provenance = item.get("provenance")
+    if not isinstance(command, str) or not command.strip():
+        return "has no command"
+    if not isinstance(head, str) or head not in frozen_head_set:
+        return "is not bound to a frozen head"
+    if type(exit_code) is not int:
+        return "has no integer exit_code"
+    if not isinstance(measured, str) or not measured.strip():
+        return "has no measured_result"
+    if not isinstance(provenance, str) or not provenance.strip():
+        return "has no independent provenance"
+    if provenance.strip().lower() in _SELF_PROVENANCE:
+        return "provenance is not independent"
+    return None
 
 
 def load_verification_receipt(run: Path, frozen_heads: dict[str, str]) -> tuple[dict | None, str]:
-    """The separate run-directory receipt bound to the frozen heads, or why not.
+    """The verification-run receipt at its exact path, or why it cannot attest.
 
-    A verification run writes ``runs/verification/receipt.json`` (its own run
-    directory) declaring the frozen per-PR heads it executed against plus the
-    claim, obligation and probe ids it observed. Lane prose alone is not a
-    receipt: SURVIVED, validation_result PASS, VERIFICATION and CONVERGED all
-    require this document.
+    Only ``runs/verification/receipt.json`` is read. A receipt in another run
+    folder is not this verification. The document must bind the frozen heads
+    and carry a non-empty list of executed commands, each with the command,
+    a frozen head, an integer exit code, a measured result, and independent
+    provenance. Lane prose and a schema string are not execution evidence.
     """
-    docs = _receipt_documents(run)
-    if not docs:
-        return None, "no runs/*/receipt.json in the run directory"
-    doc = docs[0]
-    head_by_pr = doc.get("head_by_pr") or {}
+    path = run / RECEIPT_REL
+    if not path.is_file():
+        return None, f"no {RECEIPT_REL.as_posix()} in the run directory"
+    try:
+        doc = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, f"{RECEIPT_REL.as_posix()} is not JSON: {exc}"
+    if not isinstance(doc, dict) or doc.get("schema") != RECEIPT_SCHEMA:
+        return None, f"{RECEIPT_REL.as_posix()} schema is not {RECEIPT_SCHEMA}"
+    head_by_pr = doc.get("head_by_pr")
     if (
         not isinstance(head_by_pr, dict)
         or {str(k): str(v) for k, v in head_by_pr.items()} != frozen_heads
     ):
+        shown = sorted(head_by_pr.items()) if isinstance(head_by_pr, dict) else head_by_pr
         return None, (
-            f"receipt head_by_pr {sorted(head_by_pr.items())} does not bind the frozen heads "
+            f"receipt head_by_pr {shown} does not bind the frozen heads "
             f"{sorted(frozen_heads.items())}"
         )
     for field in ("claim_ids", "obligation_ids"):
-        if not isinstance(doc.get(field), list):
-            return None, f"receipt {field} is not a list"
-    if not isinstance(doc.get("probe_ids") or {}, dict):
-        return None, "receipt probe_ids is not a per-PR map"
-    return doc, "present and head-bound"
+        if not _string_list(doc.get(field)):
+            return None, f"receipt {field} is not a list of ids"
+    probe_ids = doc.get("probe_ids")
+    if not isinstance(probe_ids, dict) or not all(
+        _string_list(value) for value in probe_ids.values()
+    ):
+        return None, "receipt probe_ids is not a per-PR map of probe ids"
+    commands = doc.get("commands")
+    if not isinstance(commands, list) or not commands:
+        return None, "receipt commands missing"
+    frozen_head_set = set(frozen_heads.values())
+    for index, item in enumerate(commands):
+        reason = _command_rejection(item, frozen_head_set)
+        if reason:
+            return None, f"receipt commands[{index}] {reason}"
+    return doc, "present, head-bound, and executed"
 
 
 def _probe_coverage(receipt: dict | None, n: int) -> bool:
@@ -134,6 +168,27 @@ def _id_coverage(receipt: dict | None, field: str, ids: set[str]) -> bool:
     if receipt is None:
         return False
     return ids <= {str(k) for k in receipt.get(field) or []}
+
+
+def _projected_obligation_ids(
+    machine: dict[str, Any], prs: list[int], judgment: dict[str, Any]
+) -> set[str]:
+    """Obligation ids assemble will emit, known before PASS and READY are stamped."""
+    ids = {
+        str(row["obligation_id"])
+        for row in machine.get("audit_obligation_ledger", [])
+        if isinstance(row, dict) and row.get("obligation_id")
+    }
+    for n in prs:
+        ids.add(f"OB-O-{n}")
+        ids.add(f"OB-TD-{n}")
+        for boundary in judgment.get("boundaries") or []:
+            if not isinstance(boundary, dict) or boundary.get("kind") not in CONTROL_KINDS:
+                continue
+            if boundary.get("control") is None or not boundary.get("boundary_id"):
+                continue
+            ids.add(f"OB-CA-{boundary['boundary_id']}-{n}")
+    return ids
 
 
 def schema_check(doc: Any, schema_name: str, label: str) -> None:
@@ -217,6 +272,14 @@ def assemble(run: Path) -> dict[str, Any]:
         receipt,
         "claim_ids",
         {str(c["claim_id"]) for c in machine["claim_validation_matrix"]},
+    )
+    projected_obligations = _projected_obligation_ids(machine, prs, judgment)
+    obligations_covered = _id_coverage(receipt, "obligation_ids", projected_obligations)
+    probes_covered_all = all(_probe_coverage(receipt, n) for n in prs)
+    # Complete means bound, executed, and covering claims, obligations, and probes.
+    # PASS, SURVIVED, and READY below all read this flag; they do not re-derive it later.
+    receipt_complete = (
+        receipt_bound and claims_covered and obligations_covered and probes_covered_all
     )
 
     # Lane PR records: several lanes may judge one PR; lists merge, the most severe readiness wins.
@@ -402,7 +465,7 @@ def assemble(run: Path) -> dict[str, Any]:
             on_head = run_["tested_revision"] == head
             # A lane's claim that a command passed is prose until the head-bound
             # verification-run receipt proves a separate run executed it on the head.
-            proven_pass = on_head and run_["result"] == "PASS" and receipt_bound
+            proven_pass = on_head and run_["result"] == "PASS" and receipt_complete
             props = ["closure_property"] + (["mandatory_validation"] if proven_pass else [])
             vids.append(
                 add(
@@ -456,9 +519,7 @@ def assemble(run: Path) -> dict[str, Any]:
                 source_head_sha=head,
                 tested_revision_sha=head,
                 validation_result=(
-                    "PASS"
-                    if not probe_gaps[n] and receipt_bound and _probe_coverage(receipt, n)
-                    else "NOT_EXECUTED"
+                    "PASS" if not probe_gaps[n] and receipt_complete else "NOT_EXECUTED"
                 ),
             )
         )
@@ -466,7 +527,9 @@ def assemble(run: Path) -> dict[str, Any]:
             "beyond-CI probes complete ("
             + ", ".join(probe_gaps[n] or ["all done"])
             + ")": not probe_gaps[n],
-            "head-bound verification receipt present": receipt_bound,
+            "complete verification receipt (heads, commands, claims, obligations, probes)": (
+                receipt_complete
+            ),
             "classic branch protection resolved (or proven absent)": classic_status != "UNKNOWN",
             "merge rules readable for the base branch": rules_known,
             "required checks green on head": required_green,
@@ -1217,16 +1280,15 @@ def assemble(run: Path) -> dict[str, Any]:
             "VALIDATION_ONLY",
         )
 
-    # SURVIVED, validation_result PASS, VERIFICATION and CONVERGED are never
-    # projected from a READY lane or from prose DONE: they require the separate
-    # run-directory receipt covering the claim, obligation and probe ids.
-    obligations_covered = _id_coverage(
-        receipt, "obligation_ids", {str(o["obligation_id"]) for o in obligations}
-    )
-    probes_covered_all = all(_probe_coverage(receipt, n) for n in prs)
-    receipt_complete = (
-        receipt_bound and claims_covered and obligations_covered and probes_covered_all
-    )
+    # The ids stamped above are the same set PASS and READY already required.
+    # A drift here is an assembler bug, not a soft gap.
+    built_obligations = {str(o["obligation_id"]) for o in obligations}
+    if built_obligations != projected_obligations:
+        raise InputError(
+            "obligation id projection drifted from the emitted ledger: "
+            f"missing={sorted(built_obligations - projected_obligations)} "
+            f"extra={sorted(projected_obligations - built_obligations)}"
+        )
     if not receipt_complete:
         gaps = []
         if not receipt_bound:
@@ -1242,7 +1304,7 @@ def assemble(run: Path) -> dict[str, Any]:
             "The verification-run receipt is missing or incomplete: " + "; ".join(gaps) + ".",
             prs,
             "claim, obligation and probe verification",
-            False,
+            True,
             "Produce runs/verification/receipt.json from a separate verification run bound to "
             "the frozen heads (references/semantic-lane.md), then re-run.",
             "VALIDATION_ONLY",
@@ -1540,7 +1602,7 @@ def assemble(run: Path) -> dict[str, Any]:
         ]
         if not cids:
             continue
-        if not claims_covered:
+        if not receipt_complete:
             continue
         add(
             evidence(
@@ -1569,7 +1631,7 @@ def assemble(run: Path) -> dict[str, Any]:
     # A PASSing CHANGE_DISCIPLINE domain mirrors SUPPORTED claims: their probes were attacked by
     # the per-file scope dispositions every lane must give, and survived. Attested only when the
     # verification-run receipt covers the claim ids.
-    if not by_domain["CHANGE_DISCIPLINE"] and claims_covered:
+    if not by_domain["CHANGE_DISCIPLINE"] and receipt_complete:
         for n in prs:
             cids = [
                 c
@@ -1635,9 +1697,13 @@ def assemble(run: Path) -> dict[str, Any]:
             "observed_closure_ids": closures,
             "new_information_count": len(judgment["reconcile"])
             + len(judgment.get("parent_findings", [])),
-            "measurable_result": f"{len(judgment['reconcile'])} lane verdicts reconciled; "
-            f"{len(judgment.get('parent_findings', []))} cross-lane findings added; "
-            f"verification-run receipt {receipt_state}.",
+            "measurable_result": (
+                f"{len(judgment['reconcile'])} lane verdicts reconciled; "
+                f"{len(judgment.get('parent_findings', []))} cross-lane findings added; "
+                f"verification executed: {len(receipt['commands'])} commands on the frozen heads."
+                if receipt_complete and receipt is not None
+                else f"verification not executed: {receipt_state}."
+            ),
             "next_pass_objective": None
             if not convergence_blocked
             else "Close residual Unknowns, then re-verify.",

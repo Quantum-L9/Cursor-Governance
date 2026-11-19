@@ -247,7 +247,16 @@ def run_dir(tmp_path: Path) -> Path:
             {
                 "schema": RECEIPT_SCHEMA,
                 "head_by_pr": {str(n): HEAD[n] for n in files},
-                "commands": ["pytest -q"],
+                "commands": [
+                    {
+                        "command": "pytest -q",
+                        "head_sha": HEAD[n],
+                        "exit_code": 0,
+                        "measured_result": "passed",
+                        "provenance": "independent-verifier",
+                    }
+                    for n in files
+                ],
                 "claim_ids": claim_ids,
                 "obligation_ids": sorted(set(obligation_ids)),
                 "probe_ids": {str(n): list(PROBES) for n in files},
@@ -340,6 +349,9 @@ def test_clean_pr_is_ready_beside_a_blocked_pr(run_dir: Path) -> None:
     verdicts = {v["pr_number"]: v for v in audit["per_pr_verdicts"]}
     assert verdicts[1]["merge_readiness"] == "READY"
     assert verdicts[2]["merge_readiness"] == "NOT_READY"
+    verification = audit["audit_passes"][-1]
+    assert verification["pass_type"] == "VERIFICATION"
+    assert "verification executed" in verification["measurable_result"]
     assert verdicts[2]["blocking_finding_ids"] == ["F-2-1"]
     # Derive recorded the refutation of PR 2's mirrored readiness claim on a probe.
     refuted = [f for f in audit["falsification_ledger"] if f["result"] == "FALSIFIED"]
@@ -609,9 +621,13 @@ def test_prose_done_without_receipt_does_not_project_survived_or_converged(run_d
     audit = assembled(run_dir)
     ledger = audit["falsification_ledger"]
     assert ledger and all(f["result"] != "SURVIVED" for f in ledger)
-    assert "U-RECEIPT" in {u["unknown_id"] for u in audit["residual_unknowns"]}
+    receipt_unknown = next(u for u in audit["residual_unknowns"] if u["unknown_id"] == "U-RECEIPT")
+    assert receipt_unknown["blocks_readiness"] is True
+    assert receipt_unknown["blocks_convergence"] is True
     assert audit["executive_verdict"]["convergence_status"] == "NOT_CONVERGED"
-    assert "verification-run receipt" in audit["audit_passes"][-1]["measurable_result"]
+    measured = audit["audit_passes"][-1]["measurable_result"]
+    assert measured.startswith("verification not executed")
+    assert "verification executed" not in measured
     verdict = next(v for v in audit["per_pr_verdicts"] if v["pr_number"] == 1)
     assert verdict["merge_readiness"] == "UNKNOWN"
     probes = next(e for e in audit["shared_evidence_index"] if e["evidence_id"] == "E-PROBES-1")
@@ -751,3 +767,221 @@ def test_classic_protection_200_merges_required_checks() -> None:
     )
     assert result["status"] == "PRESENT"
     assert result["required_status_checks"] == ["ci", "org-ci"]
+
+
+def _receipt(run_dir: Path) -> dict:
+    return json.loads((run_dir / "runs" / "verification" / "receipt.json").read_text())
+
+
+def _write_receipt(run_dir: Path, doc: dict) -> None:
+    (run_dir / "runs" / "verification" / "receipt.json").write_text(json.dumps(doc))
+
+
+def _assert_receipt_withholds_ready(audit: dict) -> None:
+    verdict = next(v for v in audit["per_pr_verdicts"] if v["pr_number"] == 1)
+    assert verdict["merge_readiness"] not in {"READY", "READY_WITH_NON_BLOCKING_NOTES"}
+    unknown = next(u for u in audit["residual_unknowns"] if u["unknown_id"] == "U-RECEIPT")
+    assert unknown["blocks_readiness"] is True
+    assert unknown["blocks_convergence"] is True
+    assert audit["executive_verdict"]["convergence_status"] == "NOT_CONVERGED"
+    measured = audit["audit_passes"][-1]["measurable_result"]
+    assert measured.startswith("verification not executed")
+    assert "verification executed" not in measured
+    probes = next(e for e in audit["shared_evidence_index"] if e["evidence_id"] == "E-PROBES-1")
+    assert probes["validation_result"] == "NOT_EXECUTED"
+    vals = [e for e in audit["shared_evidence_index"] if e["evidence_id"].startswith("E-VAL-")]
+    assert vals and all(e["validation_result"] != "PASS" for e in vals)
+    assert all(row["result"] != "SURVIVED" for row in audit["falsification_ledger"])
+
+
+def test_receipt_in_the_wrong_run_folder_is_not_verification(run_dir: Path) -> None:
+    source = run_dir / "runs" / "verification" / "receipt.json"
+    other = run_dir / "runs" / "discovery"
+    other.mkdir()
+    source.rename(other / "receipt.json")
+    _assert_receipt_withholds_ready(assembled(run_dir))
+
+
+@pytest.mark.parametrize(
+    "commands",
+    [
+        [],
+        ["pytest -q"],
+        [
+            {
+                "command": "pytest -q",
+                "head_sha": "f" * 40,
+                "exit_code": 0,
+                "measured_result": "passed",
+                "provenance": "independent-verifier",
+            }
+        ],
+        [
+            {
+                "command": "pytest -q",
+                "head_sha": HEAD[1],
+                "exit_code": True,
+                "measured_result": "passed",
+                "provenance": "independent-verifier",
+            }
+        ],
+        [
+            {
+                "command": "pytest -q",
+                "head_sha": HEAD[1],
+                "exit_code": 0,
+                "measured_result": "",
+                "provenance": "independent-verifier",
+            }
+        ],
+        [
+            {
+                "command": "pytest -q",
+                "head_sha": HEAD[1],
+                "exit_code": 0,
+                "measured_result": "passed",
+                "provenance": "lane",
+            }
+        ],
+    ],
+)
+def test_missing_or_fake_commands_do_not_attest_execution(run_dir: Path, commands: object) -> None:
+    doc = _receipt(run_dir)
+    doc["commands"] = commands
+    _write_receipt(run_dir, doc)
+    _assert_receipt_withholds_ready(assembled(run_dir))
+
+
+def test_omitted_claim_obligation_or_probe_blocks_ready(run_dir: Path) -> None:
+    original = _receipt(run_dir)
+    assert original["claim_ids"] and original["obligation_ids"]
+    cases = []
+    missing_claim = json.loads(json.dumps(original))
+    missing_claim["claim_ids"] = missing_claim["claim_ids"][1:]
+    cases.append(missing_claim)
+    missing_obligation = json.loads(json.dumps(original))
+    missing_obligation["obligation_ids"] = [
+        item for item in missing_obligation["obligation_ids"] if item != "OB-O-1"
+    ]
+    cases.append(missing_obligation)
+    missing_probe = json.loads(json.dumps(original))
+    missing_probe["probe_ids"]["1"] = [
+        item for item in missing_probe["probe_ids"]["1"] if item != "adversarial_input"
+    ]
+    cases.append(missing_probe)
+    for doc in cases:
+        _write_receipt(run_dir, doc)
+        _assert_receipt_withholds_ready(assembled(run_dir))
+        _write_receipt(run_dir, original)
+
+
+def test_graphql_database_id_retrieves_the_rest_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    collect = load_script("collect_snapshot")
+    body = "GraphQL id is not a REST comment id"
+    payload = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "nodes": [
+                            {
+                                "isResolved": False,
+                                "isOutdated": False,
+                                "path": "skills/l9-pr-audit/scripts/collect_snapshot.py",
+                                "line": 119,
+                                "comments": {
+                                    "nodes": [
+                                        {
+                                            "id": "PRRC_kwDOABCDEF123",
+                                            "databaseId": 4632860357,
+                                            "body": body,
+                                        }
+                                    ]
+                                },
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+    }
+
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 0, stdout=json.dumps(payload), stderr="")
+
+    monkeypatch.setattr(collect.subprocess, "run", fake_run)
+
+    def rest(repo: str, n: int) -> list[dict]:
+        raise AssertionError(f"successful GraphQL must not fall back ({repo}#{n})")
+
+    threads = collect.review_threads("o/r", 1052, rest=rest, selector=lambda: False)
+    assert threads[0]["comment_ids"] == ["4632860357"]
+    assert threads[0]["comment_bodies"] == [body]
+    seen: list[str] = []
+
+    def fake_gh(path: str) -> dict:
+        seen.append(path)
+        return {"body": body}
+
+    monkeypatch.setattr(collect, "gh", fake_gh)
+    assert collect.comment_body("o/r", threads[0]["comment_ids"][0]) == body
+    assert seen == ["repos/o/r/pulls/comments/4632860357"]
+
+
+def test_malformed_graphql_200_falls_back_once_and_does_not_succeed_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collect = load_script("collect_snapshot")
+    envelope = json.dumps({"errors": [{"message": "denied"}], "data": {"repository": None}})
+
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 0, stdout=envelope, stderr="")
+
+    monkeypatch.setattr(collect.subprocess, "run", fake_run)
+    seen: list[tuple[str, int]] = []
+
+    def rest(repo: str, n: int) -> list[dict]:
+        seen.append((repo, n))
+        return [{"resolved": False, "comment_ids": ["7"]}]
+
+    threads = collect.review_threads("o/r", 5, rest=rest, selector=lambda: False)
+    assert seen == [("o/r", 5)]
+    assert threads == [{"resolved": False, "comment_ids": ["7"]}]
+
+    def rest_down(repo: str, n: int) -> list[dict]:
+        seen.append((repo, n))
+        raise collect.ThreadsUnavailable("rest down")
+
+    seen.clear()
+    with pytest.raises(collect.ThreadsUnavailable):
+        collect.review_threads("o/r", 5, rest=rest_down, selector=lambda: False)
+    assert seen == [("o/r", 5)]
+
+
+def test_genuine_empty_graphql_thread_list_does_not_fall_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collect = load_script("collect_snapshot")
+    payload = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "nodes": [],
+                    }
+                }
+            }
+        }
+    }
+
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 0, stdout=json.dumps(payload), stderr="")
+
+    monkeypatch.setattr(collect.subprocess, "run", fake_run)
+
+    def rest(repo: str, n: int) -> list[dict]:
+        raise AssertionError(f"empty success must not fall back ({repo}#{n})")
+
+    assert collect.review_threads("o/r", 5, rest=rest, selector=lambda: False) == []
