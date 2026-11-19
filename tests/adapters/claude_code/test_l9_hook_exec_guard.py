@@ -87,9 +87,9 @@ def _home() -> str:
         "#!/usr/bin/env bash\n"
         "# Stub interpreter: record what the launcher dispatched, play the\n"
         "# decision the test configured, and pass the exit code through.\n"
-        "printf '%s\\n' \"${1:?}\" >> \"${L9_FIXTURE_RUN_LOG:?}\"\n"
-        "if [ -n \"${L9_FIXTURE_STDOUT:-}\" ]; then printf '%s\\n' \"$L9_FIXTURE_STDOUT\"; fi\n"
-        "exit \"${L9_FIXTURE_EXIT:-0}\"\n",
+        'printf \'%s\\n\' "${1:?}" >> "${L9_FIXTURE_RUN_LOG:?}"\n'
+        'if [ -n "${L9_FIXTURE_STDOUT:-}" ]; then printf \'%s\\n\' "$L9_FIXTURE_STDOUT"; fi\n'
+        'exit "${L9_FIXTURE_EXIT:-0}"\n',
         encoding="utf-8",
     )
     py.chmod(0o755)
