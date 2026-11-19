@@ -359,6 +359,12 @@ class PeerExecutionContractTests(unittest.TestCase):
         self.assertIn("changed_files MUST be a JSON array", instruction)
         self.assertIn("candidate_sha MUST be JSON null", instruction)
 
+    def test_worker_instruction_excludes_pre_existing_wiring_from_changed_files(self) -> None:
+        """The worker must not claim the untracked wiring links as its changes."""
+        instruction = str(build_context_manifest(self._context_contract())["worker_instruction"])
+        self.assertIn("Pre-existing untracked worktree wiring", instruction)
+        self.assertIn("changed_files MUST be []", instruction)
+
     def _attempt_adapter(self, worktree: Path) -> PeerExecutionAdapter:
         descriptor = {
             "adapter_id": "synthetic-a",

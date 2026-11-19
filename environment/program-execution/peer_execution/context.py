@@ -186,6 +186,11 @@ def build_context_manifest(
             "Execute this exact Program Execution Rendered Contract.",
             "Stay inside its worktree, requested actions, writable paths, and stop conditions.",
             "Return only JSON. changed_files MUST be a JSON array of repo-relative paths.",
+            (
+                "changed_files lists ONLY paths this window created or modified. "
+                "Pre-existing untracked worktree wiring (.cursor-commands, .cursor/, .l9/) "
+                "is not a change; when nothing else changed, changed_files MUST be []."
+            ),
             "candidate_sha MUST be JSON null — do not git add or git commit; PE commits later.",
             "Also include validation_results (array) and residual_unknowns (array of strings).",
             (
