@@ -685,6 +685,42 @@ class SubordinateLifecycleTests(unittest.TestCase):
             for claim in claims:
                 self.assertNotEqual(claim["status"], "HELD")
 
+    def test_recon_grant_submits_a_recon_report_and_releases_its_lease(self) -> None:
+        """A read-only task's action expects a ReconReport, not an ExecutionResult."""
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            contract = _mutating_contract()
+            contract["requested_actions"] = ["inspect"]
+            contract["writable_paths"] = []
+            contract["task_id"] = "TASK-RO"
+            contract["contract_digest"] = "digest-ro"
+            module, grant = self._granted(workspace, contract)
+            self.assertFalse(grant["mutation"])
+            result = module.submit_task_result(
+                grant,
+                changed_files=[],
+                candidate_sha=None,
+                contract_digest="digest-ro",
+                evidence={"attempt_receipt_path": "/tmp/attempt-receipt.json"},
+                status="PASS",
+            )
+            self.assertTrue(result["submitted"])
+            self.assertEqual(result["lease_status"], "RELEASED")
+            connection = sqlite3.connect(str(grant["runtime_database"]))
+            try:
+                connection.row_factory = sqlite3.Row
+                artifact = connection.execute(
+                    "SELECT kind, status, payload_json FROM artifacts WHERE artifact_id = ?",
+                    (result["artifact_id"],),
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual(artifact["kind"], "ReconReport")
+            self.assertEqual(artifact["status"], "VALID")
+            payload = json.loads(artifact["payload_json"])
+            self.assertEqual(payload["status"], "PASS")
+            self.assertIn("attempt_receipt_path", payload["evidence"])
+
     def test_terminal_result_is_bound_to_the_rendered_contract_digest(self) -> None:
         """An empty or foreign digest must not release this lease."""
         with tempfile.TemporaryDirectory() as raw:
