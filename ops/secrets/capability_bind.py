@@ -15,17 +15,16 @@ Resolution order:
    secret — or an operator's ``~/.infisical/l9-machine.json``.
 
 AWS is not on this path at all. ``source=aws`` is a fault.
-Only names listed in ``infisical-cursor-governance.yaml`` ``root_env_keys``
-(plus the documented aliases ``GH_TOKEN`` / ``SONARCLOUD_TOKEN``) are accepted.
-``INFISICAL_CLIENT_SECRET`` and the bootstrap ``L9_INFISICAL_CLIENT_SECRET`` are
-refused even if asked: the identity is used, never handed out.
+A name is accepted when it is in ``infisical-cursor-governance.yaml``
+``root_env_keys`` (plus the aliases ``GH_TOKEN`` / ``SONARCLOUD_TOKEN``) or in
+the live prod ``/`` listing (``viewSecretValue=false``). A listing failure
+falls back to that committed mirror. ``CLAUDE_INFISICAL_CLIENT_SECRET``,
+``INFISICAL_CLIENT_SECRET`` and the bootstrap ``L9_INFISICAL_CLIENT_SECRET``
+are refused even when the vault holds them: the identity is used, never
+re-issued.
 
-Names in ``operator_only_keys`` bind only on the operator workstation: the
-machine identity came from the workstation profile (not the environment) and
-``CLAUDE_CODE_REMOTE`` is unset. Anywhere else they report
-``source=operator-only-refused``, whatever the environment holds. A hosted
-process controls both inputs, so this is defense in depth; the boundary is the
-Infisical forbid privilege that ``operator_only_iam.py`` gives every hosted identity.
+``operator_only_keys`` is empty. Presence in the vault authorizes a bind on
+Cursor and Claude. Values stay in this process.
 
 Usage:
   capability_bind.py --check SEMGREP_APP_TOKEN   # names + source only
@@ -37,6 +36,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 import urllib.parse
 from collections.abc import Callable, Mapping
@@ -59,6 +59,7 @@ REFUSED_NAMES = frozenset(
     {
         "INFISICAL_CLIENT_SECRET",
         "L9_INFISICAL_CLIENT_SECRET",
+        "CLAUDE_INFISICAL_CLIENT_SECRET",
         "INFISICAL_TOKEN",
         "INFISICAL_PASSWORD",
         "AWS_SECRET_ACCESS_KEY",
@@ -92,6 +93,10 @@ _CONTEXT_FINGERPRINT: str | None = None
 #: ~1.1 s, four of them per SessionStart, inside a 30 s hook budget. Cleared only
 #: by ``reset_cache`` or an environment context change.
 _LOGIN_STATE: dict[str, bool] = {"failed": False}
+#: ``None`` means the next allow-list read lists prod ``/`` once. A frozenset,
+#: including an empty one, is the cached or injected listing and is not fetched.
+_VAULT_NAMES: frozenset[str] | None = None
+_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,80}$")
 
 InfisicalFn = Callable[[str], str | None]
 
@@ -103,10 +108,64 @@ def _inventory() -> dict:
     return raw if isinstance(raw, dict) else {}
 
 
-def allowed_names() -> frozenset[str]:
+def remember_vault_names(names: frozenset[str] | None) -> None:
+    """Pin the values-off listing. ``None`` lists again on the next allow-list read."""
+    global _VAULT_NAMES
+    _VAULT_NAMES = names
+
+
+def _listed_vault_names(env: Mapping[str, str] | None = None) -> frozenset[str]:
+    """Prod ``/`` secret keys only. Failure caches an empty set and uses the mirror.
+
+    The listing uses the caller's context. A bind that passed an explicit mapping
+    must not drop into the process environment here: that switch resets the
+    context and discards the value just resolved for that mapping.
+    """
+    global _VAULT_NAMES
+    if _VAULT_NAMES is not None:
+        return _VAULT_NAMES
+    listed: set[str] = set()
+    try:
+        profile = _machine_profile() if env is None else _machine_profile(env)
+        if profile is None:
+            token = None
+        elif env is None:
+            token = _ua_token(profile)
+        else:
+            token = _ua_token(profile, env)
+        if profile and token:
+            from infisical_http import infisical_req
+
+            query = urllib.parse.urlencode(
+                {
+                    "workspaceId": profile["project_id"],
+                    "environment": profile["environment"],
+                    "secretPath": "/",
+                    "viewSecretValue": "false",
+                    "include_imports": "false",
+                    "expandSecretReferences": "false",
+                    "recursive": "false",
+                }
+            )
+            status, payload = infisical_req(
+                profile["host"], "GET", f"/api/v3/secrets/raw?{query}", token, retries=1
+            )
+            if status == 200:
+                for item in (payload or {}).get("secrets") or []:
+                    key = str((item or {}).get("secretKey") or "")
+                    if _NAME_RE.fullmatch(key):
+                        listed.add(key)
+    except Exception:
+        listed = set()
+    _VAULT_NAMES = frozenset(listed)
+    return _VAULT_NAMES
+
+
+def allowed_names(env: Mapping[str, str] | None = None) -> frozenset[str]:
     inv = _inventory()
     keys = {str(name) for name in (inv.get("root_env_keys") or []) if name}
     keys.update({"GH_TOKEN", "SONARCLOUD_TOKEN"})
+    keys.update(_listed_vault_names(env))
     return frozenset(keys)
 
 
@@ -286,7 +345,7 @@ def _resolve(
     kwargs = {} if env is None else {"env": env}
     if name in REFUSED_NAMES:
         source, value = SOURCE_REFUSED, None
-    elif name not in allowed_names():
+    elif name not in allowed_names(**kwargs):
         source, value = SOURCE_UNBOUND, None
     elif name in operator_only_names() and not _operator_surface(**kwargs):
         source, value = SOURCE_OPERATOR_ONLY_REFUSED, None

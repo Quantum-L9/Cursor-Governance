@@ -11,7 +11,7 @@ repository_access:
 
 # F: reconcile intended policy with active platform controls and prove cutover
 
-**Executor:** the activating CTO session, same single `.github` writer slot, after A and B. A pool agent must not clone, branch, or push this repository. **Dependencies mean a recorded disposition for C, M, and E,** including `BLOCKED` with an owner and one next action. A blocked predecessor does not become `PASS`. The 2026-11-18 ruleset read is in `09_EXECUTION_BINDING.md`. Refresh it again before changing ruleset source. Do not treat that read as proof that a bad pull request cannot merge.
+**Executor:** the activating CTO session, stacked on B's open head. A pool agent must not clone, branch, or push this repository. **Dependencies mean a recorded disposition for C, M, and E,** including an open stacked pull request or `BLOCKED` with an owner and one next action. A blocked predecessor does not become `PASS`, and it does not pause F. The CTO does not merge F. The 2026-11-18 ruleset read is in `09_EXECUTION_BINDING.md`. Refresh it again before changing ruleset source. Do not treat that read as proof that a bad pull request cannot merge.
 
 ## Work contract
 
