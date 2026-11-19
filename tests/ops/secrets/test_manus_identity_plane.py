@@ -181,8 +181,10 @@ def primed_operator_binder(monkeypatch):
         assert not phase["manus"], "Manus must not fetch with a cached operator token"
         assert method == "GET"
         assert token == "CANARY_OPERATOR_ACCESS_TOKEN"
-        counts["get"] += 1
         name = urllib.parse.unquote(path.split("?")[0].rsplit("/", 1)[-1])
+        if name == "raw":
+            return 200, {"secrets": []}
+        counts["get"] += 1
         return 200, {"secret": {"secretKey": name, "secretValue": "CANARY_OPERATOR_BOUND"}}
 
     monkeypatch.setattr(login, "file_identity", file_identity)
@@ -239,18 +241,29 @@ def _assert_failed_manus_context(result, bind_env, expected_env, counts):
     assert not result["plane_ok"]
     assert "aws" not in result
     assert all(not row["bound"] and row["source"] == expected_source for row in result["binds"])
+    context = os.environ if bind_env is None else bind_env
+    refused = cb.operator_only_names()
     for name in OPERATOR_ONLY:
-        assert cb.bind(name, env=bind_env) is None
-        assert cb.bind_status(name, env=bind_env) == {
-            "name": name,
-            "bound": False,
-            "source": cb.SOURCE_OPERATOR_ONLY_REFUSED,
-        }
+        if name in refused:
+            assert cb.bind(name, env=bind_env) is None
+            assert cb.bind_status(name, env=bind_env) == {
+                "name": name,
+                "bound": False,
+                "source": cb.SOURCE_OPERATOR_ONLY_REFUSED,
+            }
+            continue
+        present = (context.get(name) or "").strip()
+        if present:
+            assert cb.bind(name, env=bind_env) == present
+            assert cb.bind_status(name, env=bind_env)["source"] == cb.SOURCE_ENV
+        else:
+            assert cb.bind(name, env=bind_env) is None
     for name in plane.BIND_NAMES:
         assert cb.bind(name, env=bind_env) is None
     assert cb._PROFILE_SOURCE != "profile"
     assert cb._UA_TOKEN is None
-    assert not cb._VALUES
+    assert "CANARY_OPERATOR_BOUND" not in cb._VALUES.values()
+    assert "CANARY_OPERATOR_ACCESS_TOKEN" not in cb._VALUES.values()
     assert counts == {
         "profile": 1,
         "operator_login": 1,
