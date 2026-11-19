@@ -48,9 +48,13 @@ def test_a_record_naming_another_session_is_ignored(roles: Path) -> None:
     assert session_role.is_child() is False
 
 
+def test_session_envs_match_the_mode_resolver() -> None:
+    assert session_role.SESSION_ENVS == projection_mode.SESSION_ENVS
+
+
 def test_unresolved_session_cannot_register(roles: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("CLAUDE_CODE_SESSION_ID")
-    monkeypatch.delenv("CLAUDE_SESSION_ID", raising=False)
+    for name in session_role.SESSION_ENVS:
+        monkeypatch.delenv(name, raising=False)
     with pytest.raises(ValueError, match="SESSION_UNRESOLVED"):
         session_role.register_child("session_cto_1")
 
