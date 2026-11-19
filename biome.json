@@ -30,6 +30,8 @@
       "!**/docs/plans/**/*.json",
       "!schemas/org-invariants.schema.json",
       "!governance-health-report.json",
+      "!.claude/settings.json",
+      "!rules/RULES-MANIFEST.json",
       "!.harvest_executor_state.json",
       "!.mcp.json",
       "!**/package-lock.json",
