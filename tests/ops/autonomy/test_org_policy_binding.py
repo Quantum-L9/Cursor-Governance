@@ -66,3 +66,11 @@ def test_local_admission_text_does_not_authorize_a_claim(tmp_path: Path) -> None
     assert govern("make_pr", "session", tmp_path)["allowed"] is True
     assert main(["--action", "claim_admission", "--root", str(tmp_path)]) == 1
     assert main(["--format", "markdown", "--root", str(ROOT)]) == 0
+
+
+def test_mode_status_denies_every_authority_claim() -> None:
+    from ops.autonomy.projection_mode import _policy_denials
+
+    denials = _policy_denials("cto")
+    assert [item["action"] for item in denials] == list(AUTHORITY_CLAIMS)
+    assert all(item["allowed"] is False for item in denials)
