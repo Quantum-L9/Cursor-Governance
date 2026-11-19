@@ -4763,15 +4763,23 @@ def _finish_peer_unit(
             f"incomplete gates={json.dumps(incomplete_gates(verification), sort_keys=True)}"
         )
     # Commit only the exact work the Controller just verified. Provider execution
-    # owns mutation; PE retains the local commit boundary.
-    candidate = write_and_commit_output(
-        worktree,
-        unit["rel"],
-        unit["title"],
-        writable=writable,
-        commit_authorized=contract_allows_commit(contract),
-        observed=[str(path) for path in (verification.get("observed_changed_files") or [])],
-    )
+    # owns mutation; PE retains the local commit boundary. A read-only contract
+    # whose verdict observed no changes has nothing to commit and skips the
+    # boundary: `local_write` is not commit authority, so the commit step runs
+    # only when the contract requests commit or the verdict observed work.
+    observed_paths = [str(path) for path in (verification.get("observed_changed_files") or [])]
+    if contract_allows_commit(contract) or observed_paths:
+        candidate = write_and_commit_output(
+            worktree,
+            unit["rel"],
+            unit["title"],
+            writable=writable,
+            commit_authorized=contract_allows_commit(contract),
+            observed=observed_paths,
+        )
+    else:
+        candidate = target_head_sha(worktree)
+        log(f"{task_id}: read-only verdict observed no changes; nothing to commit")
     emit(
         trace,
         "TASK_LOCAL_COMMIT",
