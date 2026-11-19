@@ -181,8 +181,10 @@ def primed_operator_binder(monkeypatch):
         assert not phase["manus"], "Manus must not fetch with a cached operator token"
         assert method == "GET"
         assert token == "CANARY_OPERATOR_ACCESS_TOKEN"
-        counts["get"] += 1
         name = urllib.parse.unquote(path.split("?")[0].rsplit("/", 1)[-1])
+        if name == "raw":
+            return 200, {"secrets": []}
+        counts["get"] += 1
         return 200, {"secret": {"secretKey": name, "secretValue": "CANARY_OPERATOR_BOUND"}}
 
     monkeypatch.setattr(login, "file_identity", file_identity)
