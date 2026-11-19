@@ -3,13 +3,7 @@
   "title": "DPKManifest",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "repository",
-    "ownership",
-    "boundaries",
-    "interfaces"
-  ],
+  "required": ["schema_version", "repository", "ownership", "boundaries", "interfaces"],
   "properties": {
     "schema_version": {
       "type": "string"
@@ -17,13 +11,7 @@
     "repository": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "name",
-        "type",
-        "lifecycle",
-        "criticality"
-      ],
+      "required": ["id", "name", "type", "lifecycle", "criticality"],
       "properties": {
         "id": {
           "type": "string"
@@ -36,20 +24,11 @@
         },
         "lifecycle": {
           "type": "string",
-          "enum": [
-            "experimental",
-            "beta",
-            "production",
-            "deprecated"
-          ]
+          "enum": ["experimental", "beta", "production", "deprecated"]
         },
         "criticality": {
           "type": "string",
-          "enum": [
-            "tier-1",
-            "tier-2",
-            "tier-3"
-          ]
+          "enum": ["tier-1", "tier-2", "tier-3"]
         },
         "description": {
           "type": "string"
@@ -59,10 +38,7 @@
     "ownership": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "accountable_team",
-        "operational_owner"
-      ],
+      "required": ["accountable_team", "operational_owner"],
       "properties": {
         "accountable_team": {
           "type": "string"
@@ -78,10 +54,7 @@
     "boundaries": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "owns",
-        "does_not_own"
-      ],
+      "required": ["owns", "does_not_own"],
       "properties": {
         "owns": {
           "type": "array",

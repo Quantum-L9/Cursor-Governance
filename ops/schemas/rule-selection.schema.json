@@ -3,13 +3,7 @@
   "$id": "https://quantum-l9.invalid/schemas/rule-selection.schema.json",
   "title": "Repository shared-rule selection",
   "type": "object",
-  "required": [
-    "schema",
-    "enabled",
-    "shared",
-    "local",
-    "delivery"
-  ],
+  "required": ["schema", "enabled", "shared", "local", "delivery"],
   "properties": {
     "schema": {
       "const": "l9.cursor-rules-selection/v1"
@@ -19,10 +13,7 @@
     },
     "shared": {
       "type": "object",
-      "required": [
-        "required",
-        "optional"
-      ],
+      "required": ["required", "optional"],
       "properties": {
         "required": {
           "type": "array",
@@ -45,9 +36,7 @@
     },
     "local": {
       "type": "object",
-      "required": [
-        "preserve_unknown_files"
-      ],
+      "required": ["preserve_unknown_files"],
       "properties": {
         "preserve_unknown_files": {
           "const": true
@@ -57,10 +46,7 @@
     },
     "delivery": {
       "type": "object",
-      "required": [
-        "mode",
-        "collision_policy"
-      ],
+      "required": ["mode", "collision_policy"],
       "properties": {
         "mode": {
           "const": "individual_symlink"

@@ -5,10 +5,7 @@
   "description": "Written by a verifier lane that did not author the findings it checks. Every merge-blocking finding needs a REPRODUCED verdict here before it can block a merge in the assembled audit.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "verifier_lane",
-    "verifications"
-  ],
+  "required": ["verifier_lane", "verifications"],
   "properties": {
     "verifier_lane": {
       "type": "string",
@@ -20,24 +17,14 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "finding_id",
-          "verdict",
-          "evidence",
-          "rationale",
-          "pr_heads"
-        ],
+        "required": ["finding_id", "verdict", "evidence", "rationale", "pr_heads"],
         "properties": {
           "finding_id": {
             "type": "string",
             "pattern": "^F-[A-Za-z0-9]+-[0-9]+$"
           },
           "verdict": {
-            "enum": [
-              "REPRODUCED",
-              "NOT_REPRODUCED",
-              "INCONCLUSIVE"
-            ]
+            "enum": ["REPRODUCED", "NOT_REPRODUCED", "INCONCLUSIVE"]
           },
           "evidence": {
             "type": "array",
@@ -59,10 +46,7 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "pr",
-                "head_sha"
-              ],
+              "required": ["pr", "head_sha"],
               "properties": {
                 "pr": {
                   "type": "integer",

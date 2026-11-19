@@ -24,14 +24,8 @@
     "_note": "CLI subcommands the bound release ships for the hook lane but does not advertise in capabilities.transports[cli].operations, verified against the merged source at the bound ref. runtime_binding cannot require them through the capabilities receipt; tests/ops/memory/test_cross_repo_lifecycle.py proves each against the real runtime. When upstream advertises one, move it into required_cli_operations.",
     "distill": {
       "subcommand": "distill",
-      "positional": [
-        "path"
-      ],
-      "options": [
-        "--group-id",
-        "--repository",
-        "--dry-run"
-      ],
+      "positional": ["path"],
+      "options": ["--group-id", "--repository", "--dry-run"],
       "record_bound": "preflight-dry-run",
       "record_bound_note": "The bound parser defines no input record cap (no --max-records at e3a79626). The hook lane bounds max_records by running the same deterministic distill with --dry-run first — memory extracts and counts, nothing persists — and refuses the committing pass before any write when candidate_count exceeds the surface's remaining allowance. Emitting an option outside `options` is a contract break (audit F-604-DISTILL-CAP); ops/memory/control_plane_client.py DISTILL_CLI_OPTIONS mirrors this list and tests/ops/memory/test_cross_repo_lifecycle.py proves it against the exact bound parser."
     }
@@ -92,27 +86,13 @@
   },
   "contract_model_aliases": {
     "_note": "Cursor view name -> the model names the bound release actually exports, discovered from the schema probe's `available` list in the memory-cross-repo job. Cursor requests its own name; the probe accepts any alias, and the schema is keyed by the Cursor name so validation lookup is unchanged. A name this side guessed is not a contract the release owes.",
-    "HealthReceipt": [
-      "HealthReport"
-    ],
-    "HydrationReceipt": [
-      "HydrationResult"
-    ],
-    "CapabilitiesReceipt": [
-      "ControlPlaneCapabilities"
-    ],
-    "ConflictsReceipt": [
-      "ConflictReport"
-    ],
-    "CandidateReceipt": [
-      "MemoryCandidateIngestionResult"
-    ],
-    "PhaseLockVerificationReceipt": [
-      "PhaseLockVerification"
-    ],
-    "ResolveReceipt": [
-      "GroupResolution"
-    ],
+    "HealthReceipt": ["HealthReport"],
+    "HydrationReceipt": ["HydrationResult"],
+    "CapabilitiesReceipt": ["ControlPlaneCapabilities"],
+    "ConflictsReceipt": ["ConflictReport"],
+    "CandidateReceipt": ["MemoryCandidateIngestionResult"],
+    "PhaseLockVerificationReceipt": ["PhaseLockVerification"],
+    "ResolveReceipt": ["GroupResolution"],
     "_verified": "All five aliases plus PhaseLockVerification and GroupResolution were read from the merged source at ref 7691c076, then proved end to end: the schema probe resolves 11 of 11 CANONICAL_RECEIPT_MODELS against the installed 2.3.1 wheel."
   },
   "contract_model_modules": [

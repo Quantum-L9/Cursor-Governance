@@ -25,16 +25,10 @@
       "format": "date-time"
     },
     "contract_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "status": {
-      "enum": [
-        "passed",
-        "failed"
-      ]
+      "enum": ["passed", "failed"]
     },
     "errors": {
       "type": "array",

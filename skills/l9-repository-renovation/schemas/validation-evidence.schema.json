@@ -28,10 +28,7 @@
       "type": "string"
     },
     "status": {
-      "enum": [
-        "passed",
-        "failed"
-      ]
+      "enum": ["passed", "failed"]
     },
     "required_failures": {
       "type": "array",
@@ -88,10 +85,7 @@
             "type": "integer"
           },
           "status": {
-            "enum": [
-              "passed",
-              "failed"
-            ]
+            "enum": ["passed", "failed"]
           },
           "output": {
             "type": "string"

@@ -33,10 +33,7 @@
     },
     "autoremediate": {
       "type": "integer",
-      "enum": [
-        0,
-        1
-      ]
+      "enum": [0, 1]
     },
     "audit_id": {
       "type": "string",
@@ -139,11 +136,7 @@
             "minLength": 1
           },
           "root_cause_state": {
-            "enum": [
-              "CONFIRMED",
-              "INFERENCE",
-              "UNKNOWN"
-            ]
+            "enum": ["CONFIRMED", "INFERENCE", "UNKNOWN"]
           },
           "merge_blocking": {
             "type": "boolean"
@@ -234,11 +227,7 @@
                   "minLength": 1
                 },
                 "execution_kind": {
-                  "enum": [
-                    "COMMAND",
-                    "CHECK",
-                    "MANUAL"
-                  ]
+                  "enum": ["COMMAND", "CHECK", "MANUAL"]
                 },
                 "authority_id": {
                   "type": "string",
@@ -318,35 +307,18 @@
             }
           },
           "origin": {
-            "enum": [
-              "PR_INTRODUCED",
-              "PR_EXPOSED",
-              "PRE_EXISTING",
-              "UNKNOWN"
-            ]
+            "enum": ["PR_INTRODUCED", "PR_EXPOSED", "PRE_EXISTING", "UNKNOWN"]
           },
           "merge_blocking_basis": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "status",
-              "authority_id",
-              "rationale",
-              "evidence_ids"
-            ],
+            "required": ["status", "authority_id", "rationale", "evidence_ids"],
             "properties": {
               "status": {
-                "enum": [
-                  "BLOCKING",
-                  "NON_BLOCKING",
-                  "UNKNOWN"
-                ]
+                "enum": ["BLOCKING", "NON_BLOCKING", "UNKNOWN"]
               },
               "authority_id": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "rationale": {
                 "type": "string",
@@ -459,10 +431,7 @@
           "minItems": 2,
           "uniqueItems": true,
           "items": {
-            "enum": [
-              "RESOLVE_CURRENT_CI_FAILURES",
-              "RESOLVE_ALL_CURRENT_CODE_REVIEW_THREADS"
-            ]
+            "enum": ["RESOLVE_CURRENT_CI_FAILURES", "RESOLVE_ALL_CURRENT_CODE_REVIEW_THREADS"]
           },
           "allOf": [
             {
@@ -573,38 +542,22 @@
           ]
         },
         "load_status": {
-          "enum": [
-            "NOT_LOADED",
-            "LOADED",
-            "LOADED_AS_CANDIDATE"
-          ]
+          "enum": ["NOT_LOADED", "LOADED", "LOADED_AS_CANDIDATE"]
         },
         "authoritative": {
           "type": "boolean"
         },
         "authority_repository": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "authority_revision": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "projection_profile": {
-          "type": [
-            "object",
-            "null"
-          ]
+          "type": ["object", "null"]
         },
         "composition_digest": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "verifier": {
           "const": "scripts/verify_canonical_authority.py"

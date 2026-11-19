@@ -63,10 +63,7 @@
     "gar_upstream": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "invoked",
-        "skill_ref"
-      ],
+      "required": ["invoked", "skill_ref"],
       "properties": {
         "invoked": {
           "type": "boolean"
@@ -75,16 +72,10 @@
           "const": "skills/l9-global-architect"
         },
         "run_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "run_path": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "run_sha256": {
           "anyOf": [
@@ -116,15 +107,7 @@
     "frontmatter": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "name",
-        "overview",
-        "todos",
-        "isProject",
-        "kind",
-        "execute_via",
-        "status"
-      ],
+      "required": ["name", "overview", "todos", "isProject", "kind", "execute_via", "status"],
       "properties": {
         "name": {
           "type": "boolean"
@@ -150,19 +133,12 @@
       }
     },
     "handoff_mode": {
-      "enum": [
-        "cursor-build",
-        "embedded"
-      ]
+      "enum": ["cursor-build", "embedded"]
     },
     "execute_swap": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "handoff_heading",
-        "live_pe_heading",
-        "live_make_campaign"
-      ],
+      "required": ["handoff_heading", "live_pe_heading", "live_make_campaign"],
       "properties": {
         "handoff_heading": {
           "type": "boolean"
@@ -185,10 +161,7 @@
       "uniqueItems": true
     },
     "status": {
-      "enum": [
-        "pass",
-        "fail"
-      ]
+      "enum": ["pass", "fail"]
     }
   }
 }

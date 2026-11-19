@@ -265,12 +265,7 @@
       "activation": "agent_requested",
       "activation_source": "explicit",
       "always_apply": false,
-      "globs": [
-        "**/*.ts",
-        "**/*.tsx",
-        "!**/*.test.ts",
-        "!**/*.test.tsx"
-      ],
+      "globs": ["**/*.ts", "**/*.tsx", "!**/*.test.ts", "!**/*.test.tsx"],
       "first_heading": "TypeScript/React Language Rules for L9 OS Frontend",
       "has_yaml_frontmatter": true,
       "line_count": 182,
@@ -294,10 +289,7 @@
       "activation": "agent_requested",
       "activation_source": "explicit",
       "always_apply": false,
-      "globs": [
-        "src/**/*.py",
-        "!**/migrations/*.py"
-      ],
+      "globs": ["src/**/*.py", "!**/migrations/*.py"],
       "first_heading": "Python Language Rules for L9 OS Core Runtime",
       "has_yaml_frontmatter": true,
       "line_count": 190,
@@ -553,11 +545,7 @@
       "activation": "agent_requested",
       "activation_source": "explicit",
       "always_apply": false,
-      "globs": [
-        "**/*.plan.md",
-        "environment/program-execution/**",
-        "AGENTS.md"
-      ],
+      "globs": ["**/*.plan.md", "environment/program-execution/**", "AGENTS.md"],
       "first_heading": "KERNEL pack landing branch default",
       "has_yaml_frontmatter": true,
       "line_count": 36,
@@ -653,13 +641,7 @@
       "activation": "auto_attached",
       "activation_source": "explicit",
       "always_apply": false,
-      "globs": [
-        "**/test_*.py",
-        "**/*_test.py",
-        "**/tests/**",
-        "**/*.test.*",
-        "**/*.spec.*"
-      ],
+      "globs": ["**/test_*.py", "**/*_test.py", "**/tests/**", "**/*.test.*", "**/*.spec.*"],
       "first_heading": "Testing & QA Rules for L9 OS",
       "has_yaml_frontmatter": true,
       "line_count": 207,
@@ -1087,11 +1069,7 @@
       "activation": "agent_requested",
       "activation_source": "explicit",
       "always_apply": false,
-      "globs": [
-        ".github/PULL_REQUEST_TEMPLATE*",
-        ".github/ISSUE_TEMPLATE*",
-        "**/*.md"
-      ],
+      "globs": [".github/PULL_REQUEST_TEMPLATE*", ".github/ISSUE_TEMPLATE*", "**/*.md"],
       "first_heading": "Review ergonomics (L9)",
       "has_yaml_frontmatter": true,
       "line_count": 146,
@@ -1115,12 +1093,7 @@
       "activation": "agent_requested",
       "activation_source": "explicit",
       "always_apply": false,
-      "globs": [
-        "config/kernels/**/*",
-        "config/prompts/**/*",
-        "evals/**/*",
-        "scripts/eval_*.py"
-      ],
+      "globs": ["config/kernels/**/*", "config/prompts/**/*", "evals/**/*", "scripts/eval_*.py"],
       "first_heading": "Prompts and evals (L9)",
       "has_yaml_frontmatter": true,
       "line_count": 37,
@@ -1144,11 +1117,7 @@
       "activation": "agent_requested",
       "activation_source": "explicit",
       "always_apply": false,
-      "globs": [
-        "config/kernels/**/*",
-        "config/prompts/**/*",
-        "policy/**/*"
-      ],
+      "globs": ["config/kernels/**/*", "config/prompts/**/*", "policy/**/*"],
       "first_heading": "AI safety policy (L9)",
       "has_yaml_frontmatter": true,
       "line_count": 44,
@@ -1346,13 +1315,7 @@
       "activation": "agent_requested",
       "activation_source": "explicit",
       "always_apply": false,
-      "globs": [
-        "docker-compose.yml",
-        "deploy/**/*",
-        "infra/**/*",
-        "kubernetes/**/*",
-        "helm/**/*"
-      ],
+      "globs": ["docker-compose.yml", "deploy/**/*", "infra/**/*", "kubernetes/**/*", "helm/**/*"],
       "first_heading": "Deployment & orchestrator manifests (L9)",
       "has_yaml_frontmatter": true,
       "line_count": 72,

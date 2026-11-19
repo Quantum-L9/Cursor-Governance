@@ -209,9 +209,7 @@
     ]
   },
   "permissions": {
-    "additionalDirectories": [
-      "~/.cursor-governance"
-    ],
+    "additionalDirectories": ["~/.cursor-governance"],
     "allow": [
       "Read",
       "Grep",

@@ -284,9 +284,7 @@
   "agent_self_approval_forbidden": true,
   "promotion_ready": false,
   "handoff": {
-    "next_session_may_assume_green": [
-      "CG-PE-REMEDIATION-PR-001-v2.7.0 committed_and_validated"
-    ],
+    "next_session_may_assume_green": ["CG-PE-REMEDIATION-PR-001-v2.7.0 committed_and_validated"],
     "next_contract": "CG-PE-REMEDIATION-PR-002-v2.7.0",
     "chain_digest": "sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3"
   },
@@ -307,9 +305,7 @@
         "operational_owner": "Quantum-L9"
       },
       "boundaries": {
-        "owns": [
-          "environment/program-execution/**"
-        ],
+        "owns": ["environment/program-execution/**"],
         "does_not_own": [
           "all memory-related Program Execution content or dependencies",
           "root autonomy implementation",
@@ -359,8 +355,6 @@
     "estimated_modified_files": 3,
     "estimated_test_cases": 8,
     "fits_one_session": true,
-    "source_commits": [
-      1
-    ]
+    "source_commits": [1]
   }
 }

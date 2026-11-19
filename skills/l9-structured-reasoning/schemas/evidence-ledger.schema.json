@@ -17,14 +17,7 @@
       "minLength": 1
     },
     "task_kind": {
-      "enum": [
-        "plan",
-        "review",
-        "architecture",
-        "debug",
-        "decision",
-        "corpus"
-      ]
+      "enum": ["plan", "review", "architecture", "debug", "decision", "corpus"]
     },
     "claims": {
       "type": "array"
@@ -33,57 +26,30 @@
       "type": "array"
     },
     "selected_option": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "selection_rationale": {
       "type": "string"
     },
     "action": {
-      "enum": [
-        "proceed",
-        "proceed_with_validation",
-        "bounded_probe",
-        "block"
-      ]
+      "enum": ["proceed", "proceed_with_validation", "bounded_probe", "block"]
     },
     "evidence_quality": {
-      "enum": [
-        "high",
-        "medium",
-        "low",
-        "unknown"
-      ]
+      "enum": ["high", "medium", "low", "unknown"]
     },
     "decision_risk": {
-      "enum": [
-        "reversible",
-        "guarded",
-        "irreversible"
-      ]
+      "enum": ["reversible", "guarded", "irreversible"]
     },
     "calibration_status": {
-      "enum": [
-        "none",
-        "uncalibrated",
-        "calibrated"
-      ]
+      "enum": ["none", "uncalibrated", "calibrated"]
     },
     "stated_probability": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "minimum": 0,
       "maximum": 1
     },
     "next_probe": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "stop_condition": {
       "type": "string",

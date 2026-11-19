@@ -66,9 +66,7 @@
     {
       "id": "todo-01-baseline-preflight",
       "task": "Create chore/skills-normalization from origin/main, lock full SHA, re-run nest dry-run and glob census on that tree, stop_and_replan on drift from this plan's apply/skip set",
-      "files": [
-        "skills-normalization-pack/PATHS-PROPOSAL.md"
-      ],
+      "files": ["skills-normalization-pack/PATHS-PROPOSAL.md"],
       "effort": "S",
       "risk": "medium",
       "dependencies": [],
@@ -87,9 +85,7 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": [
-        "todo-01-baseline-preflight"
-      ],
+      "dependencies": ["todo-01-baseline-preflight"],
       "operation": "Replace",
       "anchor": "SKILL.md YAML frontmatter only",
       "leverage_rank": 1,
@@ -106,9 +102,7 @@
       ],
       "effort": "S",
       "risk": "high",
-      "dependencies": [
-        "todo-02-archive-and-nest"
-      ],
+      "dependencies": ["todo-02-archive-and-nest"],
       "operation": "Replace",
       "anchor": "_frontmatter_status and compiler Required Fields examples",
       "leverage_rank": 3,
@@ -125,9 +119,7 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "todo-02-archive-and-nest"
-      ],
+      "dependencies": ["todo-02-archive-and-nest"],
       "operation": "Replace",
       "anchor": "archived SKILL.md frontmatter disable-model-invocation",
       "leverage_rank": 6
@@ -144,10 +136,7 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": [
-        "todo-02-archive-and-nest",
-        "todo-04-archived-lock"
-      ],
+      "dependencies": ["todo-02-archive-and-nest", "todo-04-archived-lock"],
       "operation": "Create",
       "anchor": "append-only Makefile and .pre-commit-config.yaml; new checker file",
       "leverage_rank": 4,
@@ -156,14 +145,10 @@
     {
       "id": "todo-06-paths-verify",
       "task": "Reconfirm tracked-file matches for all 17 PATHS-PROPOSAL globs on the execution SHA and freeze apply vs skip; abort Stage 4 if the apply/skip set differs from this plan",
-      "files": [
-        "skills-normalization-pack/PATHS-PROPOSAL.md"
-      ],
+      "files": ["skills-normalization-pack/PATHS-PROPOSAL.md"],
       "effort": "S",
       "risk": "high",
-      "dependencies": [
-        "todo-05-checker-inventory"
-      ],
+      "dependencies": ["todo-05-checker-inventory"],
       "operation": "Wrap",
       "anchor": "PATHS-PROPOSAL recommended-for-paths table",
       "leverage_rank": 5
@@ -187,9 +172,7 @@
       ],
       "effort": "L",
       "risk": "high",
-      "dependencies": [
-        "todo-06-paths-verify"
-      ],
+      "dependencies": ["todo-06-paths-verify"],
       "operation": "Insert",
       "anchor": "native paths field after description",
       "leverage_rank": 7
@@ -197,16 +180,10 @@
     {
       "id": "todo-08-prove",
       "task": "Run make skills-check and make pr-check; prove zero non-native keys, archived flags present, apply-set globs still non-empty, skip-set has no paths key",
-      "files": [
-        "ops/scripts/check_skills_standard.py",
-        "Makefile"
-      ],
+      "files": ["ops/scripts/check_skills_standard.py", "Makefile"],
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "todo-03-coupling-readers",
-        "todo-07-paths-apply"
-      ],
+      "dependencies": ["todo-03-coupling-readers", "todo-07-paths-apply"],
       "operation": "Wrap",
       "anchor": "skills-check and pr-check outputs",
       "leverage_rank": 8
@@ -214,15 +191,10 @@
     {
       "id": "todo-09-converge",
       "task": "Record kernels, authorize L4 release, open scoped PR with PULL_REQUEST_TEMPLATE.md, run l9-pr-remediation to green+mergeable, merge this stack after older open PRs",
-      "files": [
-        ".l9/pr/pr-remediation-handoff.json",
-        "PULL_REQUEST_TEMPLATE.md"
-      ],
+      "files": [".l9/pr/pr-remediation-handoff.json", "PULL_REQUEST_TEMPLATE.md"],
       "effort": "M",
       "risk": "medium",
-      "dependencies": [
-        "todo-08-prove"
-      ],
+      "dependencies": ["todo-08-prove"],
       "operation": "Create",
       "anchor": "make pr after l4_local authorize-release",
       "leverage_rank": 9
@@ -310,17 +282,13 @@
     {
       "surface": "Makefile",
       "action": "update",
-      "todo_ids": [
-        "todo-05-checker-inventory"
-      ],
+      "todo_ids": ["todo-05-checker-inventory"],
       "reason": "Append-only skills-check target. File is additive_only."
     },
     {
       "surface": ".pre-commit-config.yaml",
       "action": "update",
-      "todo_ids": [
-        "todo-05-checker-inventory"
-      ],
+      "todo_ids": ["todo-05-checker-inventory"],
       "reason": "Append-only local hook. File is additive_only."
     }
   ],
@@ -422,9 +390,7 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": [
-      "U-MAIN-DRIFT"
-    ],
+    "remaining_unknown_ids": ["U-MAIN-DRIFT"],
     "next_skill": "l9-ynp",
     "stop_reason": "Plan is executable after Build. U-MAIN-DRIFT is a probe at todo-01, not a planning blocker. Do not mark planning converged while final_validation is pending."
   },

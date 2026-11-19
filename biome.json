@@ -13,13 +13,15 @@
     "includes": [
       "**",
       "!**/*.jsonc",
-      "!!**/node_modules",
-      "!!**/.venv",
-      "!!**/venv",
-      "!!**/__pycache__",
-      "!!**/.git",
-      "!!**/.ruff_cache",
-      "!.l9",
+      "!**/node_modules",
+      "!**/.venv",
+      "!**/venv",
+      "!**/__pycache__",
+      "!**/.git",
+      "!**/.ruff_cache",
+      "!**/.l9",
+      "!**/dist",
+      "!**/coverage",
       "!**/reports",
       "!**/_archived",
       "!**/ops/generated",
@@ -84,7 +86,7 @@
       "trailingNewline": true,
       "trailingCommas": "none",
       "bracketSpacing": true,
-      "expand": "always",
+      "expand": "auto",
       "delimiterSpacing": false
     },
     "linter": {
@@ -159,10 +161,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "**/*.jsonc",
-        "**/.vscode"
-      ],
+      "includes": ["**/*.jsonc", "**/.vscode"],
       "json": {
         "parser": {
           "allowComments": true,

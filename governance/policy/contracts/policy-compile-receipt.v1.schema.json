@@ -20,10 +20,7 @@
       "const": "l9.policy-compile-receipt.v1"
     },
     "status": {
-      "enum": [
-        "PASS",
-        "BLOCKED"
-      ]
+      "enum": ["PASS", "BLOCKED"]
     },
     "compiler_version": {
       "type": "string",
@@ -53,11 +50,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "path",
-          "digest",
-          "current"
-        ],
+        "required": ["path", "digest", "current"],
         "properties": {
           "path": {
             "type": "string",

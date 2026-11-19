@@ -19,11 +19,7 @@
       "compounding": 4,
       "description": "Per-document README metadata may be evidence, but the recipient's doc-surface policy and root-file protection remain the only active topology and mutation authorities.",
       "disposition": "MERGE_WITH_EXISTING",
-      "evidence_ids": [
-        "ev-meta-contract",
-        "ev-recipient-topology",
-        "ev-recipient-root-guard"
-      ],
+      "evidence_ids": ["ev-meta-contract", "ev-recipient-topology", "ev-recipient-root-guard"],
       "id": "c-metadata-policy-boundary",
       "leverage": 5,
       "name": "Metadata-policy authority stays recipient-native",
@@ -62,10 +58,7 @@
       "compounding": 4,
       "description": "Validate required root-document headings only from the recipient pointer map, preserving recipient-specific roles rather than donor section names.",
       "disposition": "MERGE_WITH_EXISTING",
-      "evidence_ids": [
-        "ev-validator",
-        "ev-recipient-pointer-validation"
-      ],
+      "evidence_ids": ["ev-validator", "ev-recipient-pointer-validation"],
       "id": "c-required-section-validation",
       "leverage": 4,
       "name": "Required root-document headings validate against recipient policy",
@@ -147,10 +140,7 @@
       "compounding": 4,
       "description": "Repo Docs must not replicate donor secret regexes; the recipient's gitleaks-based security owner remains responsible for detecting changed-file secret exposure.",
       "disposition": "MERGE_WITH_EXISTING",
-      "evidence_ids": [
-        "ev-validator",
-        "ev-recipient-security"
-      ],
+      "evidence_ids": ["ev-validator", "ev-recipient-security"],
       "id": "c-document-secret-scanning",
       "leverage": 4,
       "name": "Documentation secrets stay in the central security scan",
@@ -189,11 +179,7 @@
       "compounding": 3,
       "description": "Use recipient topology, named execution owner, and root-file mutation guard to determine admissible writes; donor scope strings are non-authoritative evidence only.",
       "disposition": "MERGE_WITH_EXISTING",
-      "evidence_ids": [
-        "ev-validator",
-        "ev-recipient-topology",
-        "ev-recipient-root-guard"
-      ],
+      "evidence_ids": ["ev-validator", "ev-recipient-topology", "ev-recipient-root-guard"],
       "id": "c-forbidden-scope-boundary",
       "leverage": 4,
       "name": "Documentation mutation scope stays governed by existing guards",
@@ -332,13 +318,8 @@
     {
       "action": "keep",
       "classification": "active",
-      "consumers": [
-        "validator.py",
-        "tests/unit/test_validator.py"
-      ],
-      "evidence_ids": [
-        "ev-meta-contract"
-      ],
+      "consumers": ["validator.py", "tests/unit/test_validator.py"],
+      "evidence_ids": ["ev-meta-contract"],
       "importance": 5,
       "owner": "constellation_readme_validator",
       "path": "README.meta.yaml",
@@ -347,12 +328,8 @@
     {
       "action": "keep",
       "classification": "active",
-      "consumers": [
-        "tests/unit/test_validator.py"
-      ],
-      "evidence_ids": [
-        "ev-validator"
-      ],
+      "consumers": ["tests/unit/test_validator.py"],
+      "evidence_ids": ["ev-validator"],
       "importance": 5,
       "owner": "constellation_readme_validator",
       "path": "src/constellation_readme_validator/validator.py",
@@ -361,12 +338,8 @@
     {
       "action": "keep",
       "classification": "active",
-      "consumers": [
-        "CI"
-      ],
-      "evidence_ids": [
-        "ev-tests"
-      ],
+      "consumers": ["CI"],
+      "evidence_ids": ["ev-tests"],
       "importance": 4,
       "owner": "constellation_readme_validator",
       "path": "tests/unit/test_validator.py",
@@ -375,12 +348,8 @@
     {
       "action": "keep",
       "classification": "active",
-      "consumers": [
-        "GitHub Actions"
-      ],
-      "evidence_ids": [
-        "ev-ci"
-      ],
+      "consumers": ["GitHub Actions"],
+      "evidence_ids": ["ev-ci"],
       "importance": 3,
       "owner": "donor CI",
       "path": ".github/workflows/ci-l9-aligned.yml",
@@ -425,12 +394,8 @@
   "status": "PASS",
   "surfaces": [
     {
-      "dependencies": [
-        "validator.py"
-      ],
-      "evidence_ids": [
-        "ev-meta-contract"
-      ],
+      "dependencies": ["validator.py"],
+      "evidence_ids": ["ev-meta-contract"],
       "is_wrapper": false,
       "item": "per-README metadata contract",
       "mutations": [],
@@ -439,14 +404,8 @@
       "visibility": "repository"
     },
     {
-      "dependencies": [
-        "README.meta.yaml",
-        "PyYAML",
-        "Python AST"
-      ],
-      "evidence_ids": [
-        "ev-validator"
-      ],
+      "dependencies": ["README.meta.yaml", "PyYAML", "Python AST"],
+      "evidence_ids": ["ev-validator"],
       "is_wrapper": false,
       "item": "deterministic validation engine",
       "mutations": [],
@@ -455,13 +414,8 @@
       "visibility": "package"
     },
     {
-      "dependencies": [
-        "pytest"
-      ],
-      "evidence_ids": [
-        "ev-tests",
-        "ev-ci"
-      ],
+      "dependencies": ["pytest"],
+      "evidence_ids": ["ev-tests", "ev-ci"],
       "is_wrapper": false,
       "item": "focused regressions",
       "mutations": [],

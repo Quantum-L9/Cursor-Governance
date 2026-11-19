@@ -24,12 +24,7 @@
     "baseline_state": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "files",
-        "lines",
-        "known_defects",
-        "scorecard"
-      ],
+      "required": ["files", "lines", "known_defects", "scorecard"],
       "properties": {
         "files": {
           "type": "integer"
@@ -68,11 +63,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "description",
-          "priority_class"
-        ],
+        "required": ["id", "description", "priority_class"],
         "properties": {
           "id": {
             "type": "string"
@@ -101,13 +92,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "change_id",
-          "target_artifact",
-          "defect_id",
-          "action",
-          "improvement_class"
-        ],
+        "required": ["change_id", "target_artifact", "defect_id", "action", "improvement_class"],
         "properties": {
           "change_id": {
             "type": "string"
@@ -145,12 +130,7 @@
     },
     "regression_check": {
       "type": "string",
-      "enum": [
-        "PASS",
-        "FAIL",
-        "UNKNOWN",
-        "NOT_APPLICABLE"
-      ]
+      "enum": ["PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"]
     },
     "remaining_gaps": {
       "type": "array",

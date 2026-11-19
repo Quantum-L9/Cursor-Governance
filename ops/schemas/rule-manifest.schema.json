@@ -3,13 +3,7 @@
   "$id": "https://quantum-l9.invalid/schemas/rule-manifest.schema.json",
   "title": "L9 Cursor rules manifest",
   "type": "object",
-  "required": [
-    "$schema",
-    "generated_utc",
-    "rules_directory",
-    "summary",
-    "rules"
-  ],
+  "required": ["$schema", "generated_utc", "rules_directory", "summary", "rules"],
   "properties": {
     "$schema": {
       "const": "l9.cursor-rules-manifest/v2"

@@ -26,11 +26,6 @@
       "other_pointer": "/priority"
     }
   ],
-  "must_remain_unchanged": [
-    "protected.json"
-  ],
-  "allowed_changed_paths": [
-    "graph.json",
-    "dashboard.json"
-  ]
+  "must_remain_unchanged": ["protected.json"],
+  "allowed_changed_paths": ["graph.json", "dashboard.json"]
 }
