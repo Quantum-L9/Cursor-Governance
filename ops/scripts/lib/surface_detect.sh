@@ -4,9 +4,11 @@
 # shellcheck shell=bash
 
 # Detect the agent surface from the environment.
-# A Cursor host marker overrides a projected Claude explicit surface. Other
-# known explicit ids still win. Otherwise markers break ties. unknown = do
-# not skip.
+# A Cursor host marker overrides a projected Claude explicit surface only
+# while no live Claude runtime marker is set: the claude-vscode extension
+# runs the real CLI inside Cursor, so its runtime markers win. Other known
+# explicit ids still win. Otherwise markers break ties. unknown = do not
+# skip.
 # Cursor host markers: CURSOR_AGENT, CURSOR_CONVERSATION_ID,
 # CURSOR_EXTENSION_HOST_ROLE. The last two stay set when a hook child does
 # not receive CURSOR_AGENT.
@@ -20,7 +22,7 @@ l9_cursor_host_present() {
 l9_detect_surface() {
   local explicit
   explicit="$(printf '%s' "${L9_GOVERNANCE_SURFACE:-}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
-  if l9_cursor_host_present; then
+  if l9_cursor_host_present && ! l9_claude_runtime_present; then
     case "$explicit" in
       claude-code|claude-code-remote)
         printf '%s\n' "cursor"
@@ -57,7 +59,9 @@ l9_detect_surface() {
 }
 
 # True for a live Claude process. A projected L9_GOVERNANCE_SURFACE value is
-# not a runtime; Cursor loads that string from .claude/settings.json.
+# not a runtime; Cursor loads that string from .claude/settings.json. The
+# claude-vscode extension launches the real CLI, so in l9_detect_surface its
+# runtime beats a Cursor host-marker override.
 l9_claude_runtime_present() {
   case "${CLAUDE_CODE_REMOTE:-}" in
     true|TRUE|True) return 0 ;;

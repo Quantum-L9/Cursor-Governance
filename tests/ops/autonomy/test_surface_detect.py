@@ -32,6 +32,50 @@ MATRIX = [
         },
         "cursor",
     ),
+    # The claude-vscode extension environment: the extension launches the
+    # real Claude Code CLI inside Cursor (a VS Code fork, so the host markers
+    # stay set). A live runtime beats the projected explicit surface; the
+    # cursor override applies only while no runtime marker is present.
+    (
+        {
+            "L9_GOVERNANCE_SURFACE": "claude-code",
+            "CURSOR_AGENT": "1",
+            "CLAUDECODE": "1",
+        },
+        "claude-code",
+    ),
+    (
+        {
+            "L9_GOVERNANCE_SURFACE": "claude-code",
+            "CURSOR_AGENT": "1",
+            "CLAUDE_CODE_ENTRYPOINT": "cli",
+        },
+        "claude-code",
+    ),
+    (
+        {
+            "L9_GOVERNANCE_SURFACE": "claude-code",
+            "CURSOR_AGENT": "1",
+            "CLAUDE_CODE_SESSION_ID": "abc",
+        },
+        "claude-code",
+    ),
+    (
+        {
+            "L9_GOVERNANCE_SURFACE": "claude-code",
+            "CURSOR_CONVERSATION_ID": "conv",
+            "CLAUDECODE": "1",
+        },
+        "claude-code",
+    ),
+    (
+        {
+            "L9_GOVERNANCE_SURFACE": "claude-code-remote",
+            "CURSOR_AGENT": "1",
+            "CLAUDE_CODE_REMOTE": "true",
+        },
+        "claude-code-remote",
+    ),
     ({"L9_GOVERNANCE_SURFACE": "codex", "CURSOR_CONVERSATION_ID": "conv"}, "codex"),
     ({"CLAUDE_CODE_REMOTE": "true"}, "claude-code-remote"),
     ({"CLAUDECODE": "1"}, "claude-code"),
@@ -100,6 +144,14 @@ def test_claude_gate_helpers() -> None:
     assert is_claude_gate_surface({"CLAUDECODE": "1"}) is True
     assert is_claude_gate_surface({"CURSOR_AGENT": "1"}) is False
     assert is_claude_gate_surface({}) is False  # unknown → not a Claude gate surface
+    # The claude-vscode extension inside Cursor: the live runtime makes this a
+    # Claude gate surface even though a Cursor host marker is present.
+    assert (
+        is_claude_gate_surface(
+            {"L9_GOVERNANCE_SURFACE": "claude-code", "CURSOR_AGENT": "1", "CLAUDECODE": "1"}
+        )
+        is True
+    )
     assert claude_runtime_present({"CLAUDECODE": "1"}) is True
     assert claude_runtime_present({"L9_GOVERNANCE_SURFACE": "claude-code"}) is False
     assert claude_runtime_present({"CURSOR_EXTENSION_HOST_ROLE": "agent-exec"}) is False
