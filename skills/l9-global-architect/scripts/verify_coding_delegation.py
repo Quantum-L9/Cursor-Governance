@@ -569,9 +569,12 @@ def _divergence_detail(
             f"returned diff indents an added line: {submitted_line!r} vs "
             f"git {base}..{delivered} {canonical_line!r}"
         )
-    if bool(submitted_line) and bool(canonical_line) and submitted_line.startswith(
-        "@@"
-    ) and canonical_line.startswith("@@"):
+    if (
+        bool(submitted_line)
+        and bool(canonical_line)
+        and submitted_line.startswith("@@")
+        and canonical_line.startswith("@@")
+    ):
         return (
             f"returned diff shifts a hunk header: {submitted_line!r} vs "
             f"git {base}..{delivered} {canonical_line!r}"

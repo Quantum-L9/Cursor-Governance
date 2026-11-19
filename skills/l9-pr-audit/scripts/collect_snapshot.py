@@ -25,8 +25,9 @@ import json
 import re
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 # protocol.rest_only is the transport selector for review threads. It lives in the
 # remediation skill and is imported, never copied: one definition, one surface contract.
@@ -110,7 +111,7 @@ def _threads_graphql(repo: str, n: int) -> list[dict[str, Any]]:
             payload = json.loads(proc.stdout)
         except json.JSONDecodeError as exc:
             raise ThreadsUnavailable(f"reviewThreads query returned no JSON: {exc}") from exc
-        window = ((((payload.get("data") or {}).get("repository")) or {}).get("pullRequest") or {})
+        window = (((payload.get("data") or {}).get("repository")) or {}).get("pullRequest") or {}
         window = window.get("reviewThreads") or {}
         for node in window.get("nodes") or []:
             comments = ((node.get("comments") or {}).get("nodes")) or []
@@ -313,7 +314,9 @@ def snapshot(repo: str, clone: Path, pr: dict[str, Any]) -> dict[str, Any]:
 _RULES_CACHE: dict[tuple[str, str], dict[str, Any]] = {}
 
 
-def _classic_protection_result(returncode: int, stdout: str, stderr: str, source: str) -> dict[str, Any]:
+def _classic_protection_result(
+    returncode: int, stdout: str, stderr: str, source: str
+) -> dict[str, Any]:
     """Classic branch protection verdict from a probe's raw result, evidence-bound.
 
     ABSENT only for the exact 404 body ``Branch not protected``. A 200 merges its

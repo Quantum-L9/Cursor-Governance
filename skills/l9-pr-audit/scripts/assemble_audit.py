@@ -107,9 +107,10 @@ def load_verification_receipt(run: Path, frozen_heads: dict[str, str]) -> tuple[
         return None, "no runs/*/receipt.json in the run directory"
     doc = docs[0]
     head_by_pr = doc.get("head_by_pr") or {}
-    if not isinstance(head_by_pr, dict) or {
-        str(k): str(v) for k, v in head_by_pr.items()
-    } != frozen_heads:
+    if (
+        not isinstance(head_by_pr, dict)
+        or {str(k): str(v) for k, v in head_by_pr.items()} != frozen_heads
+    ):
         return None, (
             f"receipt head_by_pr {sorted(head_by_pr.items())} does not bind the frozen heads "
             f"{sorted(frozen_heads.items())}"
@@ -1223,7 +1224,9 @@ def assemble(run: Path) -> dict[str, Any]:
         receipt, "obligation_ids", {str(o["obligation_id"]) for o in obligations}
     )
     probes_covered_all = all(_probe_coverage(receipt, n) for n in prs)
-    receipt_complete = receipt_bound and claims_covered and obligations_covered and probes_covered_all
+    receipt_complete = (
+        receipt_bound and claims_covered and obligations_covered and probes_covered_all
+    )
     if not receipt_complete:
         gaps = []
         if not receipt_bound:
