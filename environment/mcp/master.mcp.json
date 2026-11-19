@@ -54,23 +54,38 @@
     },
     "perplexity": {
       "command": "bash",
-      "args": ["-lc", "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn perplexity"]
+      "args": [
+        "-lc",
+        "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn perplexity"
+      ]
     },
     "Notion": {
       "command": "bash",
-      "args": ["-lc", "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn notion"]
+      "args": [
+        "-lc",
+        "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn notion"
+      ]
     },
     "n8n-mcp": {
       "command": "bash",
-      "args": ["-lc", "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn n8n"]
+      "args": [
+        "-lc",
+        "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn n8n"
+      ]
     },
     "semgrep": {
       "command": "bash",
-      "args": ["-lc", "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn semgrep"]
+      "args": [
+        "-lc",
+        "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn semgrep"
+      ]
     },
     "GitHub": {
       "command": "bash",
-      "args": ["-lc", "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn github"]
+      "args": [
+        "-lc",
+        "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn github"
+      ]
     }
   }
 }

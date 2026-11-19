@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -52,6 +53,9 @@ RECEIPT_SCHEMA = "cursor.mcp-instantiation/v1"
 ENV_MEMORY_INTERPRETER = "L9_MEMORY_INTERPRETER"
 #: Retired stdio launcher override. Never forward it to a native HTTP client.
 ENV_MCP_LAUNCHER = "L9_MEMORY_MCP_COMMAND"
+#: The whole value must be one ``${NAME}`` reference: a prefix test accepts
+#: ``${NAME}literal`` and ``${``, which persist an embedded literal credential.
+_ENV_PLACEHOLDER_RE = re.compile(r"\$\{[A-Za-z_][A-Za-z0-9_]*\}")
 
 Runner = Callable[..., "subprocess.CompletedProcess[str]"]
 
@@ -107,7 +111,7 @@ def _require_placeholder_env(name: str, spec: Mapping[str, Any]) -> None:
         return
     for key, value in env.items():
         text = "" if value is None else str(value)
-        if text and not text.startswith("${"):
+        if text and not _ENV_PLACEHOLDER_RE.fullmatch(text):
             raise ValueError(f"{name} env {key} must be a ${{NAME}} placeholder")
 
 

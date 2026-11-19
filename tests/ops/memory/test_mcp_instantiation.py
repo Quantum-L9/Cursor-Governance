@@ -13,6 +13,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from ops.memory import mcp_instantiation as inst
 from ops.memory.runtime_binding import RuntimeBinding
 
@@ -184,13 +186,30 @@ def test_exact_native_memory_entry_is_preserved_only_with_package_evidence() -> 
 
 
 def test_render_refuses_a_raw_env_value() -> None:
-    import pytest
-
     with pytest.raises(ValueError, match="placeholder"):
         inst.render_machine_config(
             _master(bad={"command": "npx", "env": {"TOKEN": "raw-secret-value"}}),
             None,
         )
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["${TOKEN}literal", "${TOKEN:-literal}", "${", "${}", "${1TOKEN}", "${TO-KEN}"],
+)
+def test_render_refuses_a_value_that_is_not_one_whole_placeholder(value: str) -> None:
+    with pytest.raises(ValueError, match="placeholder"):
+        inst.render_machine_config(
+            _master(bad={"command": "npx", "env": {"TOKEN": value}}),
+            None,
+        )
+
+
+def test_render_accepts_a_whole_placeholder() -> None:
+    config, _, _ = inst.render_machine_config(
+        _master(good={"command": "npx", "env": {"TOKEN": "${TOKEN}"}}), None
+    )
+    assert config["mcpServers"]["good"]["env"] == {"TOKEN": "${TOKEN}"}
 
 
 def test_render_from_nothing_has_no_memory_entry_and_no_private_keys() -> None:
