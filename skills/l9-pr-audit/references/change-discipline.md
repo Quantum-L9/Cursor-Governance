@@ -17,7 +17,7 @@ The model does semantic adjudication. Deterministic code owns enumeration wherev
 
 ## Donor boundary
 
-This pack harvests read-only signal-census patterns from `l9-pr-remediation` and scope/expansion detectors from `l9-pr-digest`. It does not call either skill at runtime and does not inherit mutation, convergence, merge, or campaign behavior from them. `l9-pr-audit` is self-contained.
+This pack harvests read-only signal-census patterns from `l9-pr-remediation` and scope/expansion detectors from `l9-pr-digest`. It does not inherit mutation, convergence, merge, or campaign behavior from them. One runtime coupling is admitted: `scripts/collect_snapshot.py` imports `protocol.rest_only` from `l9-pr-remediation` and does not copy that selector (see [semantic-lane.md](semantic-lane.md)). A standalone audit pack that is not shipped beside that skill cannot select the review-thread transport. Every other audit path stays self-contained.
 
 ## Original PR prompt
 

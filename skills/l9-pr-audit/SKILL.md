@@ -270,7 +270,7 @@ If a PR head moves before completion, that PR audit is stale. Rebind and re-audi
 - Never mark a material claim `SUPPORTED` when any applicable falsification probe is `FALSIFIED` or `INCONCLUSIVE`.
 - Never use LLM judgment as a substitute for available deterministic/static/executable proof; judgment-required probes must explain why semantic interpretation is necessary.
 - Never prescribe one implementation when multiple valid implementations satisfy the same closure condition.
-- Never depend on `l9-pr-digest` or `l9-pr-remediation` at runtime to make this audit complete; donor intelligence must be compiled into this pack.
+- Never depend on `l9-pr-digest` at runtime. The one admitted `l9-pr-remediation` runtime coupling is `scripts/collect_snapshot.py` importing `protocol.rest_only` (see `references/semantic-lane.md`); do not copy that selector, and do not take any other remediation behavior. Donor intelligence must otherwise be compiled into this pack.
 - Never cite a canonical global invariant or contract from memory, from repository file reads, or from `references/harvested-invariants.md` when `canonical_authority_binding` is not `ADMITTED_AND_CURRENT`; the global layer is then a typed Unknown.
 - Never declare audit convergence while the obligation ledger contains undisposed or unrepresented `UNKNOWN` work.
 - Never use diff size, file count, or the mere presence of a new abstraction as proof of overengineering; require objective/owner evidence.

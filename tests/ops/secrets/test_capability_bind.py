@@ -103,29 +103,47 @@ def test_bind_rejects_unknown_name() -> None:
 AUTH0_NAMES = ("AUTH0_CLIENT_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET")
 
 
-def test_operator_only_names_are_gated_inventory_names() -> None:
-    operator_only = cb.operator_only_names()
-    assert set(AUTH0_NAMES) <= operator_only
-    assert operator_only <= cb.allowed_names()
+@pytest.fixture(autouse=True)
+def _pin_vault_list_empty() -> None:
+    cb.remember_vault_names(frozenset())
+    yield
+    cb.remember_vault_names(None)
+
+
+def test_operator_only_names_are_empty() -> None:
+    assert cb.operator_only_names() == frozenset()
+    assert cb.operator_only_names() <= cb.allowed_names()
 
 
 @pytest.mark.parametrize("name", AUTH0_NAMES)
-def test_operator_only_name_refused_for_an_environment_identity(
+def test_auth0_binds_for_an_environment_identity(
     monkeypatch: pytest.MonkeyPatch, name: str
 ) -> None:
     monkeypatch.delenv("CLAUDE_CODE_REMOTE", raising=False)
     monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(cb, "_identity_source", lambda: "env")
-    assert cb.bind(name, infisical_cli=lambda _: "CANARY_OPERATOR_ONLY") is None
-    assert cb.bind_status(name) == {"name": name, "bound": False, "source": "operator-only-refused"}
+    assert cb.bind(name, infisical_cli=lambda _: "CANARY_AUTH0") == "CANARY_AUTH0"
+    assert cb.bind_status(name)["source"] == "infisical"
+    assert _env_lacks(name)
 
 
-def test_operator_only_name_refused_on_a_hosted_surface(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_auth0_binds_on_a_hosted_surface(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CLAUDE_CODE_REMOTE", "1")
-    monkeypatch.setenv("AUTH0_CLIENT_SECRET", "CANARY_HOSTED_ENV")
-    monkeypatch.setattr(cb, "_identity_source", lambda: "profile")
-    assert cb.bind("AUTH0_CLIENT_SECRET", infisical_cli=lambda _: "CANARY_OPERATOR_ONLY") is None
-    assert cb.bind_status("AUTH0_CLIENT_SECRET")["source"] == "operator-only-refused"
+    monkeypatch.delenv("AUTH0_CLIENT_SECRET", raising=False)
+    monkeypatch.setattr(cb, "_identity_source", lambda: "env")
+    assert cb.bind("AUTH0_CLIENT_SECRET", infisical_cli=lambda _: "CANARY_AUTH0") == "CANARY_AUTH0"
+    assert cb.bind_status("AUTH0_CLIENT_SECRET")["source"] == "infisical"
+
+
+def test_claude_identity_secret_is_refused_and_a_listed_name_binds() -> None:
+    cb.remember_vault_names(frozenset({"CLAUDE_INFISICAL_CLIENT_SECRET", "FIXTURE_VAULT_ONLY"}))
+    assert "CLAUDE_INFISICAL_CLIENT_SECRET" in cb.allowed_names()
+    assert cb.bind("CLAUDE_INFISICAL_CLIENT_SECRET", infisical_cli=lambda _: "CANARY") is None
+    assert cb.bind_status("CLAUDE_INFISICAL_CLIENT_SECRET")["source"] == "refused"
+    assert "FIXTURE_VAULT_ONLY" in cb.allowed_names()
+    bound = cb.bind("FIXTURE_VAULT_ONLY", infisical_cli=lambda _: "CANARY_FIXTURE")
+    assert bound == "CANARY_FIXTURE"
+    assert _env_lacks("FIXTURE_VAULT_ONLY")
 
 
 def test_operator_only_name_binds_on_the_workstation_profile(

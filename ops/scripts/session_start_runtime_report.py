@@ -663,6 +663,29 @@ def classify_bind_line(
     return _line("secrets-bind", OK, summary)
 
 
+def classify_authorized_catalog(names: list[str] | None) -> dict[str, Any]:
+    """Names an agent may bind. Printed tokens come from the allow-list, never the receipt."""
+    owner = Path(__file__).resolve().parents[1] / "secrets"
+    if str(owner) not in sys.path:
+        sys.path.insert(0, str(owner))
+    try:
+        import capability_bind as bind  # noqa: PLC0415
+    except Exception:  # noqa: BLE001 - the reporter never fails on an import
+        return _line("secrets-authorized", DEGRADED, "allow-list unread")
+    known = sorted(name for name in bind.allowed_names() if name not in bind.REFUSED_NAMES)
+    if names is None:
+        shown = known
+    else:
+        claimed = {str(name) for name in names}
+        shown = [name for name in known if name in claimed]
+    summary = (
+        "authorized: "
+        + " ".join(shown)
+        + " — a listed name is authorized to bind when the task needs that system"
+    )
+    return _line("secrets-authorized", OK, summary)
+
+
 def load_secrets_plane_receipt(workspace: str) -> dict[str, Any] | None:
     """Read the plane receipt. Never probe. Invalid/absent is unread."""
     if not workspace:
@@ -827,6 +850,7 @@ def collect(
     identity: dict[str, Any] | None = None,
     aws_cli: dict[str, Any] | None = None,
     secrets_bind: list[dict[str, Any]] | None = None,
+    authorized_names: list[str] | None = None,
     write_receipt: bool = True,
     plane_state: str = "",
 ) -> list[dict[str, Any]]:
@@ -842,6 +866,7 @@ def collect(
         classify_infisical_identity(identity),
         *([line] if (line := classify_aws_cli(aws_cli)) is not None else []),
         classify_bind_line(secrets_bind, plane_state),
+        classify_authorized_catalog(authorized_names),
         classify_skill_usage(skill_note),
     ]
     receipt = read_claude_receipt(path=root / ".l9" / "claude" / "bootstrap-state.json")
@@ -1030,6 +1055,12 @@ def main(argv: list[str] | None = None) -> int:
         identity=identity,
         aws_cli=secrets_receipt_aws(plane_receipt),
         secrets_bind=secrets_bind,
+        authorized_names=(
+            plane_receipt.get("authorized_names")
+            if isinstance(plane_receipt, dict)
+            and isinstance(plane_receipt.get("authorized_names"), list)
+            else None
+        ),
         plane_state=secrets_plane_state(plane_receipt),
     )
     identity_failed = any(
