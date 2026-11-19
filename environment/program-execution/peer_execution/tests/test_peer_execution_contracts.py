@@ -362,8 +362,15 @@ class PeerExecutionContractTests(unittest.TestCase):
     def test_worker_instruction_excludes_pre_existing_wiring_from_changed_files(self) -> None:
         """The worker must not claim the untracked wiring links as its changes."""
         instruction = str(build_context_manifest(self._context_contract())["worker_instruction"])
-        self.assertIn("Pre-existing untracked worktree wiring", instruction)
+        self.assertIn("pre-existing untracked wiring", instruction)
         self.assertIn("changed_files MUST be []", instruction)
+
+    def test_worker_instruction_forbids_composed_bash_commands(self) -> None:
+        """The authority hook refuses composed commands; the worker must run each alone."""
+        instruction = str(build_context_manifest(self._context_contract())["worker_instruction"])
+        self.assertIn("no `;`, `&&`, pipes", instruction)
+        self.assertIn("run it again alone", instruction)
+        self.assertIn("`git status --porcelain` run alone", instruction)
 
     def _attempt_adapter(self, worktree: Path) -> PeerExecutionAdapter:
         descriptor = {
