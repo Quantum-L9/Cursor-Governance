@@ -17,20 +17,10 @@
       "minLength": 1
     },
     "scope": {
-      "enum": [
-        "global",
-        "repository",
-        "subtree",
-        "personal"
-      ]
+      "enum": ["global", "repository", "subtree", "personal"]
     },
     "activation": {
-      "enum": [
-        "always",
-        "auto_attached",
-        "agent_requested",
-        "manual"
-      ]
+      "enum": ["always", "auto_attached", "agent_requested", "manual"]
     },
     "domain": {
       "enum": [
@@ -60,11 +50,7 @@
       ]
     },
     "context_cost": {
-      "enum": [
-        "minimal",
-        "moderate",
-        "high"
-      ]
+      "enum": ["minimal", "moderate", "high"]
     },
     "alwaysApply": {
       "type": "boolean"
@@ -119,14 +105,10 @@
             "const": "agent_requested"
           }
         },
-        "required": [
-          "activation"
-        ]
+        "required": ["activation"]
       },
       "then": {
-        "required": [
-          "description"
-        ]
+        "required": ["description"]
       }
     },
     {
@@ -136,14 +118,10 @@
             "const": "auto_attached"
           }
         },
-        "required": [
-          "activation"
-        ]
+        "required": ["activation"]
       },
       "then": {
-        "required": [
-          "globs"
-        ]
+        "required": ["globs"]
       }
     },
     {
@@ -153,21 +131,15 @@
             "const": true
           }
         },
-        "required": [
-          "deprecated"
-        ]
+        "required": ["deprecated"]
       },
       "then": {
         "anyOf": [
           {
-            "required": [
-              "replacement"
-            ]
+            "required": ["replacement"]
           },
           {
-            "required": [
-              "removal_plan"
-            ]
+            "required": ["removal_plan"]
           }
         ]
       }

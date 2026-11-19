@@ -1,10 +1,7 @@
 {
   "target": "demo-capability",
   "expected_ulp": "owner",
-  "intended_consumers": [
-    "consumer-a",
-    "consumer-b"
-  ],
+  "intended_consumers": ["consumer-a", "consumer-b"],
   "nodes": [
     {
       "id": "owner",
@@ -23,14 +20,5 @@
       "role": "consumer"
     }
   ],
-  "edges": [
-    [
-      "owner",
-      "registry"
-    ],
-    [
-      "registry",
-      "consumer-a"
-    ]
-  ]
+  "edges": [["owner", "registry"], ["registry", "consumer-a"]]
 }

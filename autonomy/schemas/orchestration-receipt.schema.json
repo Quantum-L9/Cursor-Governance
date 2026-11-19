@@ -37,22 +37,13 @@
       "minLength": 1
     },
     "action_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "lease_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "artifact_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "event": {
       "type": "object"
@@ -66,10 +57,7 @@
       "pattern": "^[a-f0-9]{64}$"
     },
     "signature": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "created_at": {
       "type": "string",

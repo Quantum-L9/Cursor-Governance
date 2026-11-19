@@ -39,10 +39,7 @@
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
     "status": {
-      "enum": [
-        "PASS",
-        "BLOCKED"
-      ]
+      "enum": ["PASS", "BLOCKED"]
     },
     "invariants": {
       "type": "array",
@@ -67,10 +64,7 @@
             "pattern": "^L9-(ORG|REPO)-[0-9]{3,}$"
           },
           "scope": {
-            "enum": [
-              "organization",
-              "repository"
-            ]
+            "enum": ["organization", "repository"]
           },
           "requirement": {
             "type": "string",
@@ -91,19 +85,10 @@
           "implementation": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "status",
-              "evidence_ids"
-            ],
+            "required": ["status", "evidence_ids"],
             "properties": {
               "status": {
-                "enum": [
-                  "VERIFIED",
-                  "IMPLEMENTED",
-                  "MISSING",
-                  "UNKNOWN",
-                  "CONFLICT"
-                ]
+                "enum": ["VERIFIED", "IMPLEMENTED", "MISSING", "UNKNOWN", "CONFLICT"]
               },
               "evidence_ids": {
                 "type": "array",
@@ -117,11 +102,7 @@
           "projection": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "invariants",
-              "agents",
-              "providers"
-            ],
+            "required": ["invariants", "agents", "providers"],
             "properties": {
               "invariants": {
                 "type": "boolean"
@@ -150,13 +131,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "adapter",
-          "source",
-          "digest",
-          "claim"
-        ],
+        "required": ["id", "adapter", "source", "digest", "claim"],
         "properties": {
           "id": {
             "type": "string",

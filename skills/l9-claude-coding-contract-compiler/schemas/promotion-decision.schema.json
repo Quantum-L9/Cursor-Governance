@@ -21,19 +21,11 @@
     },
     "risk_tier": {
       "type": "string",
-      "enum": [
-        "low",
-        "standard",
-        "high",
-        "regulated"
-      ]
+      "enum": ["low", "standard", "high", "regulated"]
     },
     "decision": {
       "type": "string",
-      "enum": [
-        "passed",
-        "blocked"
-      ]
+      "enum": ["passed", "blocked"]
     },
     "merge_meaning": {
       "type": "string",

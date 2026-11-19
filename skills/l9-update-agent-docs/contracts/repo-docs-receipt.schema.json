@@ -31,12 +31,7 @@
       "const": "l9.repo-docs.receipt.v4"
     },
     "final_status": {
-      "enum": [
-        "PASS",
-        "PARTIAL",
-        "BLOCKED",
-        "FAIL"
-      ]
+      "enum": ["PASS", "PARTIAL", "BLOCKED", "FAIL"]
     },
     "revision": {
       "$ref": "#/$defs/revision"
@@ -44,34 +39,20 @@
     "adapter": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "path",
-        "resolution"
-      ],
+      "required": ["path", "resolution"],
       "properties": {
         "path": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "resolution": {
-          "enum": [
-            "EXPLICIT",
-            "DISCOVERED",
-            "NONE",
-            "BLOCKED"
-          ]
+          "enum": ["EXPLICIT", "DISCOVERED", "NONE", "BLOCKED"]
         }
       }
     },
     "changes": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "changed_files",
-        "run_mutations"
-      ],
+      "required": ["changed_files", "run_mutations"],
       "properties": {
         "changed_files": {
           "type": "array",
@@ -92,10 +73,7 @@
     "impact": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "impacted_surfaces",
-        "matched_rules"
-      ],
+      "required": ["impacted_surfaces", "matched_rules"],
       "properties": {
         "impacted_surfaces": {
           "type": "array",
@@ -137,10 +115,7 @@
         "revision": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "repository",
-            "tested_revision_sha"
-          ],
+          "required": ["repository", "tested_revision_sha"],
           "properties": {
             "repository": {
               "type": "string"
@@ -200,18 +175,10 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "action",
-          "kind",
-          "path",
-          "evidence_id"
-        ],
+        "required": ["action", "kind", "path", "evidence_id"],
         "properties": {
           "action": {
-            "enum": [
-              "change",
-              "unknown"
-            ]
+            "enum": ["change", "unknown"]
           },
           "kind": {
             "type": "string"
@@ -242,12 +209,7 @@
           "const": "l9.repo-docs.adr-catalog.v1"
         },
         "status": {
-          "enum": [
-            "PASS",
-            "PARTIAL",
-            "FAIL",
-            "NotApplicable"
-          ]
+          "enum": ["PASS", "PARTIAL", "FAIL", "NotApplicable"]
         },
         "conventions": {
           "type": "object"
@@ -282,22 +244,13 @@
                 "minLength": 3
               },
               "title": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "status": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "date": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "headings": {
                 "type": "array",
@@ -306,10 +259,7 @@
                 }
               },
               "content_digest": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "active": {
                 "type": "boolean"
@@ -317,17 +267,10 @@
               "validation": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "status",
-                  "findings"
-                ],
+                "required": ["status", "findings"],
                 "properties": {
                   "status": {
-                    "enum": [
-                      "PASS",
-                      "NEEDS_IMPROVEMENT",
-                      "BLOCKED"
-                    ]
+                    "enum": ["PASS", "NEEDS_IMPROVEMENT", "BLOCKED"]
                   },
                   "findings": {
                     "type": "array",
@@ -446,14 +389,7 @@
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "total",
-        "terminal",
-        "open",
-        "blocked",
-        "awaiting_qualification",
-        "by_status"
-      ],
+      "required": ["total", "terminal", "open", "blocked", "awaiting_qualification", "by_status"],
       "properties": {
         "total": {
           "type": "integer",
@@ -504,13 +440,7 @@
           "minLength": 1
         },
         "status": {
-          "enum": [
-            "PASS",
-            "PARTIAL",
-            "BLOCKED",
-            "FAIL",
-            "NotApplicable"
-          ]
+          "enum": ["PASS", "PARTIAL", "BLOCKED", "FAIL", "NotApplicable"]
         },
         "required_surfaces": {
           "type": "array",
@@ -520,19 +450,13 @@
           "uniqueItems": true
         },
         "input": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "discovered": {
           "type": "boolean"
         },
         "request": {
-          "type": [
-            "object",
-            "null"
-          ],
+          "type": ["object", "null"],
           "additionalProperties": false,
           "properties": {
             "request_id": {
@@ -559,10 +483,7 @@
           }
         },
         "semantic_source_digest": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "source_paths": {
           "type": "array",
@@ -582,9 +503,7 @@
     "capabilities": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "module_readmes"
-      ],
+      "required": ["module_readmes"],
       "properties": {
         "module_readmes": {
           "type": "object",
@@ -599,12 +518,7 @@
           ],
           "properties": {
             "status": {
-              "enum": [
-                "AVAILABLE",
-                "PARTIAL",
-                "BLOCKED",
-                "NotApplicable"
-              ]
+              "enum": ["AVAILABLE", "PARTIAL", "BLOCKED", "NotApplicable"]
             },
             "owner": {
               "type": "string"
@@ -616,10 +530,7 @@
               }
             },
             "partial_repair_route": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "polyglot_extension_owner": {
               "type": "string"
@@ -635,14 +546,7 @@
               "description": "README reconciliation histogram for this run. Diagnostic evidence attached to the capability, never a second obligation ledger.",
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "create",
-                "refresh",
-                "unchanged",
-                "preserve",
-                "retire",
-                "conflict"
-              ],
+              "required": ["create", "refresh", "unchanged", "preserve", "retire", "conflict"],
               "properties": {
                 "create": {
                   "type": "integer",
@@ -689,11 +593,7 @@
                     "type": "string"
                   },
                   "completeness": {
-                    "enum": [
-                      "complete",
-                      "partial",
-                      "minimal-by-design"
-                    ]
+                    "enum": ["complete", "partial", "minimal-by-design"]
                   },
                   "eligible_source_count": {
                     "type": "integer",
@@ -716,10 +616,7 @@
                     "items": {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": [
-                        "source",
-                        "kind"
-                      ],
+                      "required": ["source", "kind"],
                       "properties": {
                         "source": {
                           "type": "string"
@@ -728,10 +625,7 @@
                           "type": "string"
                         },
                         "detail": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
+                          "type": ["string", "null"]
                         }
                       }
                     }
@@ -741,10 +635,7 @@
                     "items": {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": [
-                        "rule_id",
-                        "message"
-                      ],
+                      "required": ["rule_id", "message"],
                       "properties": {
                         "rule_id": {
                           "type": "string"
@@ -779,13 +670,7 @@
       ],
       "properties": {
         "status": {
-          "enum": [
-            "PASS",
-            "PARTIAL",
-            "FAIL",
-            "BLOCKED",
-            "NotApplicable"
-          ]
+          "enum": ["PASS", "PARTIAL", "FAIL", "BLOCKED", "NotApplicable"]
         },
         "enabled": {
           "type": "boolean"
@@ -803,13 +688,7 @@
           "type": "boolean"
         },
         "admission": {
-          "enum": [
-            "create",
-            "refresh",
-            "preserve",
-            "unchanged",
-            "skipped"
-          ]
+          "enum": ["create", "refresh", "preserve", "unchanged", "skipped"]
         },
         "findings": {
           "type": "array",
@@ -822,23 +701,10 @@
     "filetree": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "status",
-        "path",
-        "written",
-        "module_count",
-        "missing_readme_count",
-        "findings"
-      ],
+      "required": ["status", "path", "written", "module_count", "missing_readme_count", "findings"],
       "properties": {
         "status": {
-          "enum": [
-            "PASS",
-            "PARTIAL",
-            "FAIL",
-            "BLOCKED",
-            "NotApplicable"
-          ]
+          "enum": ["PASS", "PARTIAL", "FAIL", "BLOCKED", "NotApplicable"]
         },
         "path": {
           "const": "filetree.md"
@@ -847,13 +713,7 @@
           "type": "boolean"
         },
         "admission": {
-          "enum": [
-            "create",
-            "refresh",
-            "preserve",
-            "unchanged",
-            "skipped"
-          ]
+          "enum": ["create", "refresh", "preserve", "unchanged", "skipped"]
         },
         "module_count": {
           "type": "integer",
@@ -876,23 +736,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "name",
-          "status",
-          "findings"
-        ],
+        "required": ["name", "status", "findings"],
         "properties": {
           "name": {
             "type": "string"
           },
           "status": {
-            "enum": [
-              "PASS",
-              "PARTIAL",
-              "BLOCKED",
-              "FAIL",
-              "NotApplicable"
-            ]
+            "enum": ["PASS", "PARTIAL", "BLOCKED", "FAIL", "NotApplicable"]
           },
           "findings": {
             "type": "array",
@@ -915,20 +765,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "code",
-          "severity",
-          "detail"
-        ],
+        "required": ["code", "severity", "detail"],
         "properties": {
           "code": {
             "type": "string"
           },
           "severity": {
-            "enum": [
-              "FAIL",
-              "BLOCKED"
-            ]
+            "enum": ["FAIL", "BLOCKED"]
           },
           "detail": {
             "type": "string"
@@ -964,10 +807,7 @@
           "minLength": 1
         },
         "severity": {
-          "enum": [
-            "material",
-            "blocking"
-          ]
+          "enum": ["material", "blocking"]
         },
         "property": {
           "type": "string",
@@ -984,10 +824,7 @@
           "minLength": 1
         },
         "line": {
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "minimum": 1
         },
         "remediation_class": {
@@ -1012,16 +849,10 @@
           "minLength": 1
         },
         "base_ref": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "base_sha": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "source_head_sha": {
           "type": "string",
@@ -1032,12 +863,7 @@
           "minLength": 1
         },
         "comparison_mode": {
-          "enum": [
-            "merge_base_to_head",
-            "worktree_to_head",
-            "snapshot",
-            "unknown"
-          ]
+          "enum": ["merge_base_to_head", "worktree_to_head", "snapshot", "unknown"]
         }
       }
     }

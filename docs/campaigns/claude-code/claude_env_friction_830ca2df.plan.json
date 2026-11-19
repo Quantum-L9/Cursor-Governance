@@ -142,10 +142,7 @@
       ],
       "effort": "L",
       "risk": "medium",
-      "dependencies": [
-        "U1",
-        "U3"
-      ],
+      "dependencies": ["U1", "U3"],
       "operation": "Replace",
       "anchor": "install_repo / _run_locked_ruff_writer / run_gitleaks",
       "leverage_rank": 5,
@@ -181,25 +178,12 @@
       "files": [],
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "U1",
-        "U2",
-        "U3",
-        "U4",
-        "U5",
-        "U6"
-      ],
+      "dependencies": ["U1", "U2", "U3", "U4", "U5", "U6"],
       "blocker": "none",
       "leverage_rank": 7
     }
   ],
-  "critical_path": [
-    "U1",
-    "U3",
-    "U5",
-    "U6",
-    "PUB"
-  ],
+  "critical_path": ["U1", "U3", "U5", "U6", "PUB"],
   "milestones": [
     {
       "id": "M1",
@@ -241,17 +225,13 @@
     {
       "surface": "docs/DEGRADED_MODE_CONTRACT.md",
       "action": "update",
-      "todo_ids": [
-        "U6"
-      ],
+      "todo_ids": ["U6"],
       "reason": "rule 62: contradicting container observation needs a dated row"
     },
     {
       "surface": "ops/scripts/lib/README.md",
       "action": "update",
-      "todo_ids": [
-        "U6"
-      ],
+      "todo_ids": ["U6"],
       "reason": "document gh_capability_probe"
     },
     {
@@ -276,15 +256,7 @@
     "rollback": "each unit is one commit; revert a unit via a new corrective PR, never git revert on a shared clone"
   },
   "leverage": {
-    "ranked_todo_ids": [
-      "U1",
-      "U2",
-      "U3",
-      "U4",
-      "U5",
-      "U6",
-      "PUB"
-    ],
+    "ranked_todo_ids": ["U1", "U2", "U3", "U4", "U5", "U6", "PUB"],
     "shared_causes": [
       "second predicate or list diverging from the declared owner (U1, U3, U4, U5)",
       "late or coarse capability claims (U6)"
@@ -351,17 +323,12 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": [
-      "K1",
-      "K2"
-    ],
+    "remaining_unknown_ids": ["K1", "K2"],
     "next_skill": "l9-pr-remediation",
     "stop_reason": "plan approved; pre_validation P1 and final_validation F1-F4 execute during Build and publish"
   },
   "gmp_handoff": {
-    "may_modify": [
-      "files listed in todos"
-    ],
+    "may_modify": ["files listed in todos"],
     "must_not_modify": [
       "AGENTS.md",
       "CANONICAL_LAW.md",

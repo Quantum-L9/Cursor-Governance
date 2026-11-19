@@ -3,24 +3,17 @@
     {
       "prompt": "Review PR 72 and identify merge blockers and unresolved review comments",
       "expected_primary": "l9-pr-remediation",
-      "expected_supporting": [
-        "l9-pr-digest"
-      ]
+      "expected_supporting": ["l9-pr-digest"]
     },
     {
       "prompt": "Implement the review fixes, push commits, and merge the PR",
       "expected_primary": null,
-      "forbidden": [
-        "l9-pr-remediation",
-        "l9-pr-analysis"
-      ]
+      "forbidden": ["l9-pr-remediation", "l9-pr-analysis"]
     },
     {
       "prompt": "Audit this unfamiliar repository architecture and map the code flows",
       "expected_primary": "l9-code-analysis",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ]
+      "expected_supporting": ["l9-structured-reasoning"]
     },
     {
       "prompt": "Evaluate this architecture and compare the trade-offs",
@@ -30,46 +23,32 @@
     {
       "prompt": "Turn this operating procedure into an installable skill pack",
       "expected_primary": "l9-skill-compiler",
-      "expected_supporting": [
-        "l9-prompt-engineering"
-      ]
+      "expected_supporting": ["l9-prompt-engineering"]
     },
     {
       "prompt": "Use the current Next.js SDK documentation to implement middleware correctly",
       "expected_primary": "l9-context7-docs",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ]
+      "expected_supporting": ["l9-structured-reasoning"]
     },
     {
       "prompt": "The API endpoint returns 500 after the change; smoke test the routes",
       "expected_primary": "l9-api-smoke-testing",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ]
+      "expected_supporting": ["l9-structured-reasoning"]
     },
     {
       "prompt": "Set up GitHub Actions CI with lint, type checking, and tests",
       "expected_primary": null,
-      "forbidden": [
-        "l9-setting-up-ci",
-        "l9-ci-ops"
-      ]
+      "forbidden": ["l9-setting-up-ci", "l9-ci-ops"]
     },
     {
       "prompt": "Activate l9-ci-core and stamp biome.json, do not invent a ci.yml",
       "expected_primary": null,
-      "forbidden": [
-        "l9-setting-up-ci",
-        "l9-ci-ops"
-      ]
+      "forbidden": ["l9-setting-up-ci", "l9-ci-ops"]
     },
     {
       "prompt": "We have an active production incident and need coordinated mitigation",
       "expected_primary": "l9-incident-response",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ]
+      "expected_supporting": ["l9-structured-reasoning"]
     },
     {
       "prompt": "What should I do next now that this work is complete?",
@@ -79,58 +58,40 @@
     {
       "prompt": "Debug the Graphiti memory prefetch and MCP health failure",
       "expected_primary": "l9-graphiti-memory",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ]
+      "expected_supporting": ["l9-structured-reasoning"]
     },
     {
       "prompt": "Profile the slow application and find the performance bottleneck",
       "expected_primary": "l9-auditing-performance",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ]
+      "expected_supporting": ["l9-structured-reasoning"]
     },
     {
       "prompt": "Audit the code for exposed secrets and security vulnerabilities",
       "expected_primary": "l9-auditing-security",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ]
+      "expected_supporting": ["l9-structured-reasoning"]
     },
     {
       "prompt": "Assess what is missing, readiness gaps, and percent complete",
       "expected_primary": "l9-gap-analysis",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ]
+      "expected_supporting": ["l9-structured-reasoning"]
     },
     {
       "prompt": "Create an execution plan before building this feature",
       "expected_primary": "l9-plan-simple",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ],
+      "expected_supporting": ["l9-structured-reasoning"],
       "expected_source": "route"
     },
     {
       "prompt": "Prepare a PE campaign plan with a program lock for this brief",
       "expected_primary": null,
-      "forbidden": [
-        "l9-plan",
-        "l9-plan-simple",
-        "l9-pe-campaign-activate"
-      ]
+      "forbidden": ["l9-plan", "l9-plan-simple", "l9-pe-campaign-activate"]
     },
     {
       "prompt": "Plan mode is on: decompose the requirements for the billing feature",
       "expected_primary": "l9-plan-simple",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ],
+      "expected_supporting": ["l9-structured-reasoning"],
       "expected_source": "route",
-      "forbidden": [
-        "l9-plan"
-      ]
+      "forbidden": ["l9-plan"]
     },
     {
       "prompt": "Wire the skill into the repo discovery tables after compiling it",
@@ -140,23 +101,17 @@
     {
       "prompt": "Improve the skills so agents proactively use skills more",
       "expected_primary": "l9-recursive-optimization",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ]
+      "expected_supporting": ["l9-structured-reasoning"]
     },
     {
       "prompt": "improe the skills and proactiffely use skills more; find it wire it test it",
       "expected_primary": "l9-recursive-optimization",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ]
+      "expected_supporting": ["l9-structured-reasoning"]
     },
     {
       "prompt": "Write an ADR for this architecture decision",
       "expected_primary": "l9-architecture-decision-records",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ]
+      "expected_supporting": ["l9-structured-reasoning"]
     },
     {
       "prompt": "Fix the typo in README",
@@ -165,45 +120,31 @@
     {
       "prompt": "Deploy this Kubernetes application to production",
       "expected_primary": null,
-      "forbidden": [
-        "l9-kubernetes-deploying"
-      ]
+      "forbidden": ["l9-kubernetes-deploying"]
     },
     {
       "prompt": "plan this before coding",
       "expected_primary": "l9-plan-simple",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ],
+      "expected_supporting": ["l9-structured-reasoning"],
       "expected_source": "route",
-      "forbidden": [
-        "l9-plan"
-      ]
+      "forbidden": ["l9-plan"]
     },
     {
       "prompt": "Run e2e and clear the e2e blockers in this repo",
       "expected_primary": "l9-e2e-blocker-resolution",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ],
+      "expected_supporting": ["l9-structured-reasoning"],
       "expected_source": "explicit_hint"
     },
     {
       "prompt": "Start a bounded autonomy campaign with background PR poll while continuing",
       "expected_primary": "l9-bounded-autonomy",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ],
+      "expected_supporting": ["l9-structured-reasoning"],
       "expected_source": "explicit_hint"
     },
     {
       "prompt": "Run make campaign INTENT=brief.md and take this brief through completed",
       "expected_primary": null,
-      "forbidden": [
-        "l9-pe-campaign-activate",
-        "l9-plan",
-        "l9-plan-simple"
-      ]
+      "forbidden": ["l9-pe-campaign-activate", "l9-plan", "l9-plan-simple"]
     },
     {
       "prompt": "Configure GitHub Packages access via the admin UI cartridge when the API is insufficient",
@@ -214,54 +155,39 @@
     {
       "prompt": "Run full-throttle cli optimization and flip all off-by-default flags",
       "expected_primary": null,
-      "forbidden": [
-        "l9-cli-optimization"
-      ]
+      "forbidden": ["l9-cli-optimization"]
     },
     {
       "prompt": "Run /l9-idea-execute to route this ideaos decision into governed execution",
       "expected_primary": "l9-idea-execute",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ],
+      "expected_supporting": ["l9-structured-reasoning"],
       "expected_source": "explicit_hint"
     },
     {
       "prompt": "Use /l9-repo-birth to package this verified PEC commit for local factory validation",
       "expected_primary": "l9-repo-birth",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ],
+      "expected_supporting": ["l9-structured-reasoning"],
       "expected_source": "explicit_hint"
     },
     {
       "prompt": "Brainstorm and refine the idea only, do not execute",
       "expected_primary": null,
-      "forbidden": [
-        "l9-idea-execute",
-        "l9-repo-birth"
-      ]
+      "forbidden": ["l9-idea-execute", "l9-repo-birth"]
     },
     {
       "prompt": "Infisical should be the primary secret store, not AWS. New secrets for context 7, sonarcloud and semgrep go there.",
       "expected_primary": null,
-      "forbidden": [
-        "l9-secrets"
-      ]
+      "forbidden": ["l9-secrets"]
     },
     {
       "prompt": "Agent report: I checked the project files. The audit does not need any credentials or secret values; the registry check passed without changes.",
       "expected_primary": null,
-      "forbidden": [
-        "l9-secrets"
-      ]
+      "forbidden": ["l9-secrets"]
     },
     {
       "prompt": "Bind the SONAR_TOKEN from Infisical with capability_bind before running the scan",
       "expected_primary": "l9-secrets",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ]
+      "expected_supporting": ["l9-structured-reasoning"]
     }
   ]
 }

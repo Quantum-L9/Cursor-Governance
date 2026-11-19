@@ -10,9 +10,7 @@
   "focal_beneficiary_ref": "actor:A",
   "counterfactual_identification_ref": "study:intervention-vs-control",
   "feasibility": "admissible",
-  "feasibility_evidence_refs": [
-    "formal:constraints-pass"
-  ],
+  "feasibility_evidence_refs": ["formal:constraints-pass"],
   "effects": [
     {
       "effect_id": "future-gross",
@@ -20,9 +18,7 @@
       "economic_class": "SFV",
       "accounting_home": "SFV",
       "amount": "100",
-      "evidence_refs": [
-        "source:counterfactual-gross"
-      ]
+      "evidence_refs": ["source:counterfactual-gross"]
     },
     {
       "effect_id": "cost-20",
@@ -30,9 +26,7 @@
       "economic_class": "DC",
       "accounting_home": "DC",
       "amount": "20",
-      "evidence_refs": [
-        "source:cost-estimate"
-      ]
+      "evidence_refs": ["source:cost-estimate"]
     }
   ],
   "declared_components": {
