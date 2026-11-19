@@ -167,6 +167,12 @@ def is_pure_file_edit(seed: dict[str, Any], inferred: list[dict[str, str]]) -> b
 def _default_bind() -> str | None:
     """Primary key source: bind CONTEXT7_API_KEY in-process from Infisical.
 
+    ``capability_bind.bind`` resolves a populated process-environment value
+    before it queries Infisical, so the bind context here omits
+    ``CONTEXT7_API_KEY``: the vault is always queried first and a stale
+    operator export cannot shadow a rotated vault key. The environment stays
+    the secondary source in ``_context7_key``.
+
     The value is returned to the caller and never printed, exported or
     written anywhere. Mirrors the governed vault-MCP bridge
     (``ops/secrets/vault_mcp_bridge.py``): the key lives in runner-owned
@@ -176,7 +182,10 @@ def _default_bind() -> str | None:
         sys.path.insert(0, str(_OPS_SECRETS))
     import capability_bind  # noqa: PLC0415
 
-    return capability_bind.bind("CONTEXT7_API_KEY")
+    vault_context = {
+        name: value for name, value in os.environ.items() if name != "CONTEXT7_API_KEY"
+    }
+    return capability_bind.bind("CONTEXT7_API_KEY", env=vault_context)
 
 
 def _context7_key(bind: BindFn | None) -> str:

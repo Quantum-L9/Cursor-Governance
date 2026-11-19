@@ -3,11 +3,13 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import sys
 import tempfile
 import unittest
 import urllib.request
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 PE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PE_ROOT / "scripts/context7_stack_proof.py"
@@ -223,6 +225,45 @@ class Context7StackProofTests(unittest.TestCase):
         )
         self.assertEqual(receipt["status"], "pass")
         self.assertEqual(seen_headers.get("Authorization"), "Bearer test-key-not-a-secret")
+
+    def _capability_bind(self):
+        secrets = Path(__file__).resolve().parents[4] / "ops" / "secrets"
+        if str(secrets) not in sys.path:
+            sys.path.insert(0, str(secrets))
+        import capability_bind
+
+        return capability_bind
+
+    def test_default_bind_queries_the_vault_before_the_environment_key(self) -> None:
+        capability_bind = self._capability_bind()
+        os.environ["CONTEXT7_API_KEY"] = "stale-env-key"
+        seen: dict[str, Any] = {}
+
+        def fake_bind(name, *, infisical_cli=None, env=None):
+            seen["name"] = name
+            seen["context"] = dict(env or {})
+            return "vault-key"
+
+        with mock.patch.object(capability_bind, "bind", fake_bind):
+            self.assertEqual(self.mod._default_bind(), "vault-key")
+
+        self.assertEqual(seen["name"], "CONTEXT7_API_KEY")
+        self.assertNotIn(
+            "CONTEXT7_API_KEY",
+            seen["context"],
+            "the bind context must not carry the stale environment key",
+        )
+        self.assertEqual(os.environ.get("CONTEXT7_API_KEY"), "stale-env-key")
+
+    def test_default_bind_env_key_is_only_the_fallback(self) -> None:
+        capability_bind = self._capability_bind()
+        os.environ["CONTEXT7_API_KEY"] = "stale-env-key"
+
+        def empty_vault(name, *, infisical_cli=None, env=None):
+            return None
+
+        with mock.patch.object(capability_bind, "bind", empty_vault):
+            self.assertEqual(self.mod._context7_key(None), "stale-env-key")
 
     def test_missing_key_refuses_on_live_fetch(self) -> None:
         os.environ.pop("CONTEXT7_API_KEY", None)
