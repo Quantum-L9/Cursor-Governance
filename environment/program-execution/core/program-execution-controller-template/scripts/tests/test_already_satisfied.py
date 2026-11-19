@@ -97,6 +97,52 @@ class AlreadySatisfiedTests(unittest.TestCase):
             self.assertEqual(verification["observed_changed_files"], [])
             _release(repo, workspace)
 
+    def test_preexisting_untracked_wiring_does_not_block_already_satisfied(self) -> None:
+        """The wiring links are not repository changes and never break at-base."""
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            _commit_output(repo)
+            run_cli("reconcile", "--workspace", str(workspace), "--repository", f"repo-a={repo}")
+            register_contract(temp, workspace, output=OUTPUT)
+            run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker")
+            run_cli("prepare", "TASK-001", "--workspace", str(workspace))
+            # The runner links wiring into every task worktree; simulate it.
+            worktree = workspace / "worktrees" / "TASK-001"
+            (worktree / ".cursor-commands").mkdir()
+            (worktree / ".cursor-commands" / "gov").touch()
+            (worktree / ".cursor").mkdir()
+            (worktree / ".l9").mkdir()
+            rendered = run_cli("render-contract", "TASK-001", "--workspace", str(workspace))
+            run_cli("start", "TASK-001", "--workspace", str(workspace), "--actor", "worker")
+            contract = json.loads(Path(rendered["contract"]).read_text(encoding="utf-8"))
+            receipt = {
+                "schema": "program-execution-controller.attempt-receipt.v2",
+                "task_id": "TASK-001",
+                "contract_digest": contract["contract_digest"],
+                "program_digest": contract["program_digest"],
+                "base_sha": contract["base_sha"],
+                "candidate_sha": None,
+                "changed_files": [],
+                "validation_results": [
+                    {"command": command, "status": "PASS", "exit_code": 0, "evidence": "x"}
+                    for command in contract["validation_commands"]
+                ],
+                "produced_evidence": [],
+                "residual_unknowns": [],
+                "claimed_status": "completed",
+            }
+            path = write_json(temp / "TASK-001.attempt.json", receipt)
+            run_cli(
+                "record-attempt", "TASK-001", "--workspace", str(workspace), "--receipt", str(path)
+            )
+            verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
+            self.assertEqual(verification["verdict"], "PASSED_LOCAL", verification["gates"])
+            self.assertEqual(verification["outcome"], "already_satisfied")
+            self.assertEqual(verification["gates"]["scope"], "PASS")
+            self.assertEqual(verification["gates"]["no_change_required"], "PASS")
+            _release(repo, workspace)
+
     def test_a_worker_that_does_nothing_on_needed_work_still_fails_scope(self) -> None:
         with TemporaryDirectory() as raw:
             temp = Path(raw)

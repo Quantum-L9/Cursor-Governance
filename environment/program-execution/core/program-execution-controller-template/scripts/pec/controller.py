@@ -2650,6 +2650,35 @@ def _wiring_gate(contract: dict[str, Any], task: dict[str, Any]) -> str:
     return "INCOMPLETE"
 
 
+_WIRING_SEGMENTS = (".cursor-commands", ".cursor", ".l9")
+
+
+def _is_wiring_path(path: str) -> bool:
+    """The pre-existing untracked wiring is not a repository change."""
+    return path.split("/", 1)[0] in _WIRING_SEGMENTS
+
+
+def _status_excluding_wiring(worktree: Path) -> str:
+    """`git status --porcelain` minus the pre-existing untracked wiring.
+
+    The runner links .cursor-commands / .cursor / .l9 into every task
+    worktree; the rendered contract defines them as not changes, so the
+    at-base judgment must not see them as dirt.
+    """
+    raw = run_git(
+        worktree, "status", "--porcelain", "--untracked-files=all", check=False
+    ).stdout
+    kept: list[str] = []
+    for line in raw.splitlines():
+        path = line[3:] if len(line) >= 4 else ""
+        candidates = path.split(" -> ") if " -> " in path else [path]
+        if path and all(_is_wiring_path(item) for item in candidates if item):
+            continue
+        if line.strip():
+            kept.append(line)
+    return "\n".join(kept)
+
+
 def _kernel_and_pec_verdict(gates: dict[str, str]) -> tuple[str, str]:
     values = list(gates.values())
     if "STALE" in values:
@@ -3083,9 +3112,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 at_base = (
                     run_git(worktree, "rev-parse", "HEAD", check=False).stdout.strip()
                     == str(task["base_sha"])
-                    and not run_git(
-                        worktree, "status", "--porcelain", "--untracked-files=all", check=False
-                    ).stdout.strip()
+                    and not _status_excluding_wiring(worktree).strip()
                 )
                 satisfied = (
                     at_base
