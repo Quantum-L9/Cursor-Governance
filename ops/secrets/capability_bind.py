@@ -114,15 +114,25 @@ def remember_vault_names(names: frozenset[str] | None) -> None:
     _VAULT_NAMES = names
 
 
-def _listed_vault_names() -> frozenset[str]:
-    """Prod ``/`` secret keys only. Failure caches an empty set and uses the mirror."""
+def _listed_vault_names(env: Mapping[str, str] | None = None) -> frozenset[str]:
+    """Prod ``/`` secret keys only. Failure caches an empty set and uses the mirror.
+
+    The listing uses the caller's context. A bind that passed an explicit mapping
+    must not drop into the process environment here: that switch resets the
+    context and discards the value just resolved for that mapping.
+    """
     global _VAULT_NAMES
     if _VAULT_NAMES is not None:
         return _VAULT_NAMES
     listed: set[str] = set()
     try:
-        profile = _machine_profile()
-        token = _ua_token(profile) if profile else None
+        profile = _machine_profile() if env is None else _machine_profile(env)
+        if profile is None:
+            token = None
+        elif env is None:
+            token = _ua_token(profile)
+        else:
+            token = _ua_token(profile, env)
         if profile and token:
             from infisical_http import infisical_req
 
@@ -151,11 +161,11 @@ def _listed_vault_names() -> frozenset[str]:
     return _VAULT_NAMES
 
 
-def allowed_names() -> frozenset[str]:
+def allowed_names(env: Mapping[str, str] | None = None) -> frozenset[str]:
     inv = _inventory()
     keys = {str(name) for name in (inv.get("root_env_keys") or []) if name}
     keys.update({"GH_TOKEN", "SONARCLOUD_TOKEN"})
-    keys.update(_listed_vault_names())
+    keys.update(_listed_vault_names(env))
     return frozenset(keys)
 
 
@@ -335,7 +345,7 @@ def _resolve(
     kwargs = {} if env is None else {"env": env}
     if name in REFUSED_NAMES:
         source, value = SOURCE_REFUSED, None
-    elif name not in allowed_names():
+    elif name not in allowed_names(**kwargs):
         source, value = SOURCE_UNBOUND, None
     elif name in operator_only_names() and not _operator_surface(**kwargs):
         source, value = SOURCE_OPERATOR_ONLY_REFUSED, None
