@@ -359,6 +359,19 @@ class PeerExecutionContractTests(unittest.TestCase):
         self.assertIn("changed_files MUST be a JSON array", instruction)
         self.assertIn("candidate_sha MUST be JSON null", instruction)
 
+    def test_worker_instruction_excludes_pre_existing_wiring_from_changed_files(self) -> None:
+        """The worker must not claim the untracked wiring links as its changes."""
+        instruction = str(build_context_manifest(self._context_contract())["worker_instruction"])
+        self.assertIn("pre-existing untracked wiring", instruction)
+        self.assertIn("changed_files MUST be []", instruction)
+
+    def test_worker_instruction_forbids_composed_bash_commands(self) -> None:
+        """The authority hook refuses composed commands; the worker must run each alone."""
+        instruction = str(build_context_manifest(self._context_contract())["worker_instruction"])
+        self.assertIn("no `;`, `&&`, pipes", instruction)
+        self.assertIn("run it again alone", instruction)
+        self.assertIn("`git status --porcelain` run alone", instruction)
+
     def _attempt_adapter(self, worktree: Path) -> PeerExecutionAdapter:
         descriptor = {
             "adapter_id": "synthetic-a",
@@ -430,6 +443,7 @@ class PeerExecutionContractTests(unittest.TestCase):
                 "contract_digest": "b" * 64,
                 "base_sha": "c" * 40,
                 "worktree": str(root),
+                "requested_actions": ["inspect", "local_write"],
             }
             result = CanonicalProviderResult(
                 execution_id="exec-1",
@@ -442,6 +456,37 @@ class PeerExecutionContractTests(unittest.TestCase):
             receipt = adapter._attempt_receipt(contract, result)
         self.assertIn("edited.py", receipt["changed_files"])
         self.assertIn("changed_files_recovered_from_worktree", receipt["residual_unknowns"])
+
+    def test_read_only_claim_stays_empty_despite_worktree_wiring(self) -> None:
+        """An inspect-only worker's honest [] is never replaced with observed files."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+            for entry in (".cursor-commands", ".cursor", ".l9"):
+                (root / entry).mkdir()
+                (root / entry / "probe").touch()
+            adapter = self._attempt_adapter(root)
+            contract = {
+                "task_id": "TASK-RO",
+                "program_digest": "a" * 64,
+                "contract_digest": "b" * 64,
+                "base_sha": "c" * 40,
+                "worktree": str(root),
+                "requested_actions": ["inspect"],
+            }
+            result = CanonicalProviderResult(
+                execution_id="exec-ro",
+                status="PASS",
+                structured_payload={
+                    "candidate_sha": None,
+                    "claimed_status": "completed",
+                    "changed_files": [],
+                    "residual_unknowns": [],
+                },
+            )
+            receipt = adapter._attempt_receipt(contract, result)
+        self.assertEqual(receipt["changed_files"], [])
+        self.assertEqual(receipt["residual_unknowns"], [])
 
 
 if __name__ == "__main__":

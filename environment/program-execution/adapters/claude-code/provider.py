@@ -58,6 +58,16 @@ WORKER_SETTING_SOURCES = "project,local"
 #: instruction's: providers that hand over the request as a file have none.
 MAX_ARGV_INSTRUCTION_BYTES = 100_000
 
+#: The pre-existing untracked wiring a worker worktree carries. The rendered
+#: contract defines these as not changes, but a worker derives its
+#: changed_files claim from `git status`, where the links appear as untracked
+#: files and get claimed. The worker's process therefore carries a
+#: command-scope `core.excludesfile` (GIT_CONFIG_*) naming a file with these
+#: entries, written in the worktree's own gitdir — no repository file, no
+#: common-config mutation, no other checkout affected.
+WORKER_GIT_EXCLUDES_CONTENT = ".cursor-commands\n.cursor/\n.l9/\n"
+WORKER_GIT_EXCLUDES_NAME = "worker-git-excludes"
+
 #: Authority fields the live hook needs, and nothing else. The sidecar carries
 #: more (campaign/graph/action ids, capabilities, the peer binding); exporting
 #: those into a worker's environment would widen what a compromised worker can
@@ -202,6 +212,57 @@ class ClaudeCodeProvider:
             )
         return request.worker_instruction
 
+    @staticmethod
+    def _worker_git_excludes(worktree: Path) -> tuple[Path, dict[str, str]] | None:
+        """Write a worker-scoped git excludes file and return its env binding.
+
+        Returns ``(path, env)`` where ``env`` injects ``core.excludesfile``
+        through GIT_CONFIG_* command scope, so only this worker's own git
+        processes (and nothing the runner or the Controller observes) see the
+        wiring excluded. ``None`` when the worktree's gitdir cannot be
+        resolved — the window still runs, without the excludes.
+        """
+        try:
+            resolved = run_argv(
+                [
+                    "git",
+                    "-C",
+                    str(worktree),
+                    "rev-parse",
+                    "--path-format=absolute",
+                    "--git-path",
+                    ".",
+                ],
+                cwd=worktree,
+                timeout_seconds=10,
+                environment={},
+            )
+        except (OSError, ValueError):
+            return None
+        text = (resolved.stdout or "").strip()
+        if not text or resolved.exit_code != 0:
+            return None
+        try:
+            # `--path-format=absolute` names the gitdir outright; a git that
+            # predates it yields a cwd-relative path, which must resolve
+            # against the worktree — never the provider's own cwd.
+            raw = Path(text)
+            gitdir = raw.resolve() if raw.is_absolute() else (worktree / raw).resolve()
+            if not gitdir.is_dir():
+                return None
+            target = gitdir / WORKER_GIT_EXCLUDES_NAME
+            target.write_text(WORKER_GIT_EXCLUDES_CONTENT, encoding="utf-8")
+        except OSError:
+            return None
+        return (
+            target,
+            {
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": "core.excludesfile",
+                "GIT_CONFIG_VALUE_0": str(target),
+            },
+        )
+
     def invoke(self, request: CanonicalExecutionRequest) -> ProviderInvocation:
         permission_profile = dict(request.permission_profile)
         renderer = load_module(
@@ -231,16 +292,20 @@ class ClaudeCodeProvider:
         authority_environment = self._authority_environment(request)
         if authority_environment:
             argv.extend(["--settings", self._worker_settings()])
+        environment = {
+            "L9_AUTONOMY_REQUIRED": "1",
+            "L9_PE_WORKER": "1",
+            "L9_PROGRAM_LOCK_DIGEST": request.program_lock_digest,
+            **authority_environment,
+        }
+        excludes = self._worker_git_excludes(Path(request.worktree_ref).resolve())
+        if excludes is not None:
+            environment.update(excludes[1])
         result = run_argv(
             argv,
             cwd=Path(request.worktree_ref).resolve(),
             timeout_seconds=int(request.timeout_budget["dispatch_seconds"]),
-            environment={
-                "L9_AUTONOMY_REQUIRED": "1",
-                "L9_PE_WORKER": "1",
-                "L9_PROGRAM_LOCK_DIGEST": request.program_lock_digest,
-                **authority_environment,
-            },
+            environment=environment,
         )
         excerpts = load_module(
             Path(__file__).with_name("excerpts.py"),

@@ -3222,6 +3222,11 @@ def _peer_identity() -> tuple[str, str, str | None]:
     claude_env = {k: v for k, v in os.environ.items() if k != "CURSOR_AGENT"}
     claude_surface = identity.resolve_surface_id({**claude_env, "CLAUDECODE": "1"})
     claude_here = (claude_actor, claude_surface) if claude_surface else None
+    if str(GOV_ROOT) not in sys.path:
+        sys.path.append(str(GOV_ROOT))
+    from ops.autonomy.surface_detect import detect_surface  # noqa: PLC0415
+
+    coarse = detect_surface(os.environ)
     aliases = {
         "claude-cli": (claude_actor, identity.CLAUDE_CLI_SURFACE),
         "claude-mobile": (claude_actor, identity.CLAUDE_MOBILE_SURFACE),
@@ -3234,6 +3239,13 @@ def _peer_identity() -> tuple[str, str, str | None]:
     if claude_here is not None:
         aliases["claude-code"] = claude_here
     binding = aliases.get(governance_surface)
+    entrypoint = os.environ.get("CLAUDE_CODE_ENTRYPOINT", "").strip().lower()
+    if binding is None and entrypoint == "claude-vscode":
+        binding = (claude_actor, identity.CLAUDE_CLI_SURFACE)
+    elif binding is None and coarse == "cursor":
+        binding = aliases["cursor"]
+        if provider_ref is None:
+            provider_ref = "cursor-foreground"
     if binding is None:
         raise CampaignError(
             "Peer Execution requires a canonical runtime binding. Set L9_PE_AGENT_REF and "
@@ -3938,13 +3950,16 @@ def _terminalize_root_authority(
     contract: dict[str, Any],
     changed: list[str],
     candidate_sha: str | None,
+    status: str | None = None,
 ) -> str | None:
     """Hand the root executor lease its terminal result, or leave it revoked.
 
     Root autonomy does not get to say the Program task passed — the Controller
     does that next, independently. What this closes is the child authority: a
     completed executor action releases the lease and its resource claims, so a
-    finished worker keeps no live mutation authority.
+    finished worker keeps no live mutation authority. A recon grant's action
+    contract expects a ReconReport, so the subordinate's own outcome status
+    travels with the result instead of a mutation payload.
     """
     grant = unit.get("grant")
     if not grant:
@@ -3957,6 +3972,7 @@ def _terminalize_root_authority(
             candidate_sha=candidate_sha,
             contract_digest=str(contract.get("contract_digest") or ""),
             evidence={"attempt_receipt_path": str(contract.get("attempt_receipt_path") or "")},
+            status=status,
         )
     except Exception as exc:  # noqa: BLE001 — a failed handoff must revoke, not linger
         grants.revoke_task_grant(
@@ -4701,6 +4717,7 @@ def _finish_peer_unit(
             contract=contract,
             changed=actual_changed,
             candidate_sha=receipt.get("candidate_sha"),
+            status=outcome.get("status"),
         )
         emit(
             trace,
@@ -4746,15 +4763,23 @@ def _finish_peer_unit(
             f"incomplete gates={json.dumps(incomplete_gates(verification), sort_keys=True)}"
         )
     # Commit only the exact work the Controller just verified. Provider execution
-    # owns mutation; PE retains the local commit boundary.
-    candidate = write_and_commit_output(
-        worktree,
-        unit["rel"],
-        unit["title"],
-        writable=writable,
-        commit_authorized=contract_allows_commit(contract),
-        observed=[str(path) for path in (verification.get("observed_changed_files") or [])],
-    )
+    # owns mutation; PE retains the local commit boundary. A read-only contract
+    # whose verdict observed no changes has nothing to commit and skips the
+    # boundary: `local_write` is not commit authority, so the commit step runs
+    # only when the contract requests commit or the verdict observed work.
+    observed_paths = [str(path) for path in (verification.get("observed_changed_files") or [])]
+    if contract_allows_commit(contract) or observed_paths:
+        candidate = write_and_commit_output(
+            worktree,
+            unit["rel"],
+            unit["title"],
+            writable=writable,
+            commit_authorized=contract_allows_commit(contract),
+            observed=observed_paths,
+        )
+    else:
+        candidate = target_head_sha(worktree)
+        log(f"{task_id}: read-only verdict observed no changes; nothing to commit")
     emit(
         trace,
         "TASK_LOCAL_COMMIT",

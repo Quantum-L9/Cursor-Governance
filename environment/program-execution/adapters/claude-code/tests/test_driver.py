@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -103,6 +105,38 @@ class ClaudeProviderSourceTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
+
+    def test_worker_git_excludes_lands_in_the_gitdir_and_hides_the_wiring(self) -> None:
+        """The worker's git status must not show the pre-existing wiring as changes."""
+        with tempfile.TemporaryDirectory() as raw:
+            worktree = Path(raw) / "task-wt"
+            worktree.mkdir()
+            subprocess.run(["git", "init", "-q", str(worktree)], check=True)
+            for entry in (".cursor-commands", ".cursor", ".l9"):
+                (worktree / entry).mkdir()
+                (worktree / entry / "probe").touch()
+            module = self._provider()
+            binding = module.ClaudeCodeProvider._worker_git_excludes(worktree)
+            self.assertIsNotNone(binding)
+            path, env = binding
+            self.assertTrue(path.is_file())
+            self.assertEqual(
+                path.read_text(encoding="utf-8"),
+                ".cursor-commands\n.cursor/\n.l9/\n",
+            )
+            self.assertEqual(env["GIT_CONFIG_COUNT"], "1")
+            self.assertEqual(env["GIT_CONFIG_KEY_0"], "core.excludesfile")
+            self.assertEqual(env["GIT_CONFIG_VALUE_0"], str(path))
+            environs = {**os.environ, **env}
+            status = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=worktree,
+                env=environs,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            self.assertEqual(status.stdout, "")
 
     def test_binding_probe_blocks_without_claude_executable(self) -> None:
         module = self._provider()

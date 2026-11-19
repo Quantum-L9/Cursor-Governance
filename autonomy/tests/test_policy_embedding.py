@@ -75,6 +75,21 @@ class PolicyEmbeddingTests(unittest.TestCase):
         self.assertGreater(budgets["max_mutation_agents"], 1)
         self.assertGreater(budgets["max_poll_agents"], 3)
 
+    def test_recon_role_admits_validation_commands_without_mutation(self) -> None:
+        """The read-only role runs its contract's validation commands, and nothing more.
+
+        A recon worker's Bash calls map to test.run through the canonical
+        validation grammar; without it in the role policy the gateway denies
+        every validation command with ROLE_CAPABILITY_DENIED and the attempt
+        can never claim honest validations. The role stays non-mutating.
+        """
+        policy = load_policy("role-capabilities")
+        recon = policy["roles"]["recon"]
+        self.assertIn("test.run", recon["capabilities"])
+        self.assertFalse(recon["mutation_allowed"])
+        self.assertNotIn("repository.write_scoped", recon["capabilities"])
+        self.assertNotIn("git.commit_local", recon["capabilities"])
+
     def test_role_maxima_allow_swarm_cardinality(self) -> None:
         roles = load_example("w7-deployment.json")["required_roles"]
         self.assertGreaterEqual(roles["recon"]["max"], 320)

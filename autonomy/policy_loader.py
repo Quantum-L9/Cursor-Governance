@@ -363,6 +363,7 @@ _POLICIES: dict[str, Any] = json.loads(
           "repository.read",
           "repository.search",
           "graphiti.read",
+          "test.run",
           "artifact.write_recon_report"
         ],
         "mutation_allowed": false
