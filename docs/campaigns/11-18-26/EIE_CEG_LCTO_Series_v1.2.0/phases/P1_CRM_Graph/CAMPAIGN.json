@@ -1,0 +1,569 @@
+{
+  "authorization": {
+    "implementation": "authorized_bounded_single_LCTO_series_after_one_operator_activation",
+    "merge": "requires_current_operator_authority",
+    "production": "not_authorized",
+    "publication": "governed_make_pr_after_owner_verification",
+    "secrets": "operator_authorized_read_of_available_Infisical_credentials_for_bounded_test_integration_only_no_production_mutation_or_disclosure"
+  },
+  "campaign": {
+    "id": "EIE_CEG_P1_LCTO",
+    "objective": "Build the first usable graph from sparse CRM records using existing CRM clients, source-aware schema mapping and tenant-declared CEG typed nodes and association endpoints; implement readback/replay test coverage for the terminal P4 rail. This is an implementation campaign in a single persistent CTO program: published stacked PRs and green code, not contracts only.",
+    "observable_done": "Pre-integration phase exit: all in-scope code/docs changes are published in verified per-repository stacked PRs, all required native unit/contract/CI checks are green at exact PR heads, owner remediation complete, and the next phase has compatible contract evidence. Complete Docker/runtime graph proof remains deferred to P4 after all PRs publish. Non-Docker source-shaped CRM fixtures demonstrate domain-typed stable node identities, admitted association mapping, authorized Gate sync payloads and negative replay behavior. Actual CEG Neo4j node/edge persistence and readback are exclusively verified at final P4 G_RAIL.",
+    "priority_zero": "Single-CTO series continuation: no phase restarts or separate operator activation. Require P0 dual-spec/route/doc receipts; map source record identifiers to graph identities before any bulk node or edge seed.",
+    "status": "DRAFT_NOT_ACTIVATED",
+    "title": "P1 | CRM-to-typed-graph bootstrap and relationship hydration",
+    "version": "1.3.0"
+  },
+  "critical_path": [
+    {
+      "blocking_cause": "P0 spec and Gate compatibility are required for safe identity mapping.",
+      "id": "CP10",
+      "owner_lane": "BASE",
+      "prerequisite_gates": [],
+      "proof_to_unlock": "Verify complete predecessor receipt and tenant pack; do not substitute snapshot.",
+      "unlocks_gates": [
+        "G0"
+      ]
+    },
+    {
+      "blocking_cause": "Existing scan accepts a supplied field list but lacks integrated customer record mapping and stable graph identities.",
+      "id": "CP11",
+      "owner_lane": "CRM",
+      "prerequisite_gates": [
+        "G0"
+      ],
+      "proof_to_unlock": "Two resource-specific source IDs map to typed ontology nodes without collision.",
+      "unlocks_gates": [
+        "G1"
+      ]
+    },
+    {
+      "blocking_cause": "Node graph must exist before association evidence can be linked.",
+      "id": "CP12",
+      "owner_lane": "GRAPH",
+      "prerequisite_gates": [
+        "G1",
+        "G2"
+      ],
+      "proof_to_unlock": "Publish green unit-tested source-shaped projection/edge PRs; actual signed graph readback deferred until final program rail.",
+      "unlocks_gates": [
+        "G3",
+        "G4"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "grade": "OBSERVED",
+      "id": "F_SNAPSHOTS",
+      "revalidate_when": "On activation, if target HEAD or applicable contract changes",
+      "source_ids": [
+        "SRC_EIE",
+        "SRC_CEG",
+        "SRC_GATE"
+      ],
+      "statement": "Sources are checked source snapshots, not live runtime or production release evidence."
+    },
+    {
+      "grade": "OBSERVED",
+      "id": "F_GOVERNANCE",
+      "revalidate_when": "On activation, if target HEAD or applicable contract changes",
+      "source_ids": [
+        "SRC_GOV",
+        "SRC_LAW"
+      ],
+      "statement": "The current LCTO mode selects required projections, a bounded reusable child pool, transcript-only reports and CTO integration; the documentation pack never supplies child system prompts."
+    },
+    {
+      "grade": "OBSERVED",
+      "id": "F_NO_PERMISSIONS",
+      "revalidate_when": "On activation, if target HEAD or applicable contract changes",
+      "source_ids": [
+        "SRC_TMPL",
+        "SRC_GOV"
+      ],
+      "statement": "Template packaging and successful CI do not authorize merges, deployments, secret reads or global-law admission."
+    },
+    {
+      "grade": "UNKNOWN",
+      "id": "F_PREDECESSOR",
+      "revalidate_when": "On CTO phase handoff, check exact preceding PR URLs, source heads and required CI, not a simulated merged receipt.",
+      "source_ids": [
+        "SRC_PREDECESSOR"
+      ],
+      "statement": "P1 code work requires P0 green published stacked PR heads and compatible source/contract receipts; previous full Docker integration and merge are deliberately not prerequisites."
+    },
+    {
+      "grade": "REPORTED",
+      "id": "F_SINGLE_CTO",
+      "revalidate_when": "At series activation confirm the active host LCTO binding and pool; on session resumption adopt state.",
+      "source_ids": [
+        "SRC_OPERATOR",
+        "SRC_GOV"
+      ],
+      "statement": "The operator selected one persistent CTO driving all five phases; each child agent remediates its own current-head PR and CTO never patches another agent branch. Phase gates before P4 represent code readiness, not executed five-service proof."
+    },
+    {
+      "grade": "OBSERVED",
+      "id": "F_STACK_SSOT",
+      "revalidate_when": "Before each publication and whenever GitHub open PR topology changes.",
+      "source_ids": [
+        "SRC_STACK",
+        "SRC_EIE"
+      ],
+      "statement": "Every same-repository campaign PR must be explicitly stacked. Auto tip resolution can fall back on telemetry failure; therefore use current governed make pr with a verified explicit PR_BASE and check the PR returned base/head before proceeding. GitHub PR bases cannot cross repositories."
+    },
+    {
+      "grade": "REPORTED",
+      "id": "F_OPERATOR_OVERRIDES",
+      "revalidate_when": "If target-enforced protections, authorization or secret scope differ at execution.",
+      "source_ids": [
+        "SRC_OPERATOR"
+      ],
+      "statement": "Bounded test secret consumption from available Infisical is authorized, and extra local AGENT.md/AGENTS.md human-review protection is suspended only for this documentation scope; Makefile/Repo.mk edits remain excluded."
+    },
+    {
+      "grade": "REPORTED",
+      "id": "F_DOCKER_BARRIER",
+      "revalidate_when": "If platform mandated CI requires Docker or P4 scope changes materially; report exact conflict.",
+      "source_ids": [
+        "SRC_OPERATOR"
+      ],
+      "statement": "User requires Docker integration only after the complete P0-P4 PR train is published; required existing per-PR CI and cheap native tests still run and must pass. Actual integrated acceptance remains P4 G_RAIL."
+    }
+  ],
+  "findings": [
+    {
+      "id": "B01",
+      "owner_lane": "CRM",
+      "receipt_refs": [],
+      "source_ids": [
+        "SRC_EIE"
+      ],
+      "statement": "Live CRM metadata/record intake is not yet connected to a comprehensive graph seeding flow.",
+      "status": "OPEN"
+    },
+    {
+      "id": "B02",
+      "owner_lane": "GRAPH",
+      "receipt_refs": [],
+      "source_ids": [
+        "SRC_CEG"
+      ],
+      "statement": "CEG graph sync primitives need an integrated source-aware node/relationship fixture and typed readback.",
+      "status": "OPEN"
+    },
+    {
+      "id": "B03",
+      "owner_lane": "ASSOC",
+      "receipt_refs": [],
+      "source_ids": [
+        "SRC_EIE"
+      ],
+      "statement": "Observed associations need source-specific namespace and existing node dependencies enforced end to end.",
+      "status": "OPEN"
+    },
+    {
+      "id": "B04",
+      "owner_lane": "QA",
+      "receipt_refs": [],
+      "source_ids": [
+        "SRC_RUNTIME"
+      ],
+      "statement": "CRM bootstrap graph is not proven in running Neo4j/Gate rail.",
+      "status": "OPEN"
+    }
+  ],
+  "gates": [
+    {
+      "claim": "P0 code and docs PRs are published and green at pinned stacked heads, with compatible test-domain contracts; no Docker or merge required.",
+      "depends_on": [],
+      "id": "G0",
+      "name": "predecessor_and_schema_bound",
+      "negative_controls": [
+        "Do not require previous phase full five-service execution."
+      ],
+      "owner_lane": "BASE",
+      "receipt_refs": [],
+      "required_proof": "Verify P0 PR URLs, parent refs, unit/contract CI on exact heads and current spec source; parent stack basis in P1 ledger.",
+      "status": "NOT_RUN"
+    },
+    {
+      "claim": "CRM metadata and records map to declared ontology fields with stable provider/resource/record identities.",
+      "depends_on": [
+        "G0"
+      ],
+      "id": "G1",
+      "name": "crm_records_mapped",
+      "negative_controls": [
+        "Different CRM resources sharing name/id cannot collide."
+      ],
+      "owner_lane": "CRM",
+      "receipt_refs": [],
+      "required_proof": "Source-shaped CRM fixture with company/facility distinction and separate association, rejected ambiguity, original source provenance.",
+      "status": "NOT_RUN"
+    },
+    {
+      "claim": "CEG graph node/child projection generates correct typed idempotent operations in isolated handler/unit tests; live Neo4j readback deferred to P4.",
+      "depends_on": [
+        "G0"
+      ],
+      "id": "G2",
+      "name": "ceg_typed_nodes",
+      "negative_controls": [
+        "In-memory or fake graph result must never be reported as an actual database write."
+      ],
+      "owner_lane": "GRAPH",
+      "receipt_refs": [],
+      "required_proof": "Run existing CEG tests with fake/mock graph driver and expected Cypher/typed node/edge operations, including idempotency and tenant negatives.",
+      "status": "NOT_RUN"
+    },
+    {
+      "claim": "CRM association maps to a spec-declared evidence edge with correct identity, source and endpoint preconditions in non-Docker tests.",
+      "depends_on": [
+        "G1",
+        "G2"
+      ],
+      "id": "G3",
+      "name": "declared_edges",
+      "negative_controls": [
+        "No inferred commercial relevance from observed association membership."
+      ],
+      "owner_lane": "ASSOC",
+      "receipt_refs": [],
+      "required_proof": "Unit/contract fixture with known endpoints and missing endpoint negative, CEG row type/ref checks and exact evidence identifiers.",
+      "status": "NOT_RUN"
+    },
+    {
+      "claim": "P1 CRM bootstrap graph hydration code is published on green stacked PRs; source-shaped projection/relationship assertions are proven without claiming live graph state.",
+      "depends_on": [
+        "G1",
+        "G2",
+        "G3"
+      ],
+      "id": "G4",
+      "name": "graph_bootstrap_done",
+      "negative_controls": [
+        "No premature Docker/Neo4j runtime claim or CRM auto-write."
+      ],
+      "owner_lane": "QA",
+      "receipt_refs": [],
+      "required_proof": "Current-head green P1 PRs + fixture path from CRM record/field metadata through EIE mapping to CEG typed sync and relationship contracts; final Neo4j readback in P4.",
+      "status": "NOT_RUN"
+    }
+  ],
+  "lanes": [
+    {
+      "acceptance": [
+        "Reject stale P0, wrong runtime spec and identity ambiguity before code/graph mutation.",
+        "Assure only exact source and PR-head facts; do not use a partial code-ready phase receipt as final Docker integration evidence."
+      ],
+      "depends_on_lanes": [],
+      "exclusions": [
+        "No repository modifications or publication",
+        "No fictional evidence, release claim, or approval",
+        "No edits to Makefile or Repo.mk in any repository."
+      ],
+      "id": "BASE",
+      "kind": "assurance",
+      "objective": "Read previous receipts and current source; map exact input/output identity and tenant packet contract. Maintain ONE CTO program stack ledger across all phases; verify real agent-owned PR statuses and final Docker embargo.",
+      "read_only_repositories": [
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine",
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs",
+        "https://github.com/Quantum-L9/Constellation.Gate",
+        "https://github.com/Quantum-L9/Cursor-Governance"
+      ],
+      "title": "P0 receipt and identity assurance",
+      "wait_for_gates": [],
+      "writable_repositories": [],
+      "write_paths": {}
+    },
+    {
+      "acceptance": [
+        "Two distinct source resources become unambiguous domain-aligned identity projections.",
+        "Unknown/unmapped fields retained visibly without inventing approved ontology properties.",
+        "Connector failures fail explicitly; empty RPC error result not reported as real no data.",
+        "Publish any substantive code changes only through current governed make pr with verified explicit same-repository stack parent. Record exact PR URL, parent and head; own required CI and reviewer remediation until green.",
+        "Do not run manual Docker/five-service integration before CTO verifies all campaign PRs are published and current-head green; use focused unit/contracts and existing mandated CI only."
+      ],
+      "depends_on_lanes": [],
+      "exclusions": [
+        "No raw Git push or unauthorized merge/deploy",
+        "No global-law or unauthorized out-of-scope repo edits",
+        "Makefile and Repo.mk are out of scope; no edits, generation, or workaround patches.",
+        "No direct git push/gh pr create; no approvals requested solely for AGENT.md/AGENTS.md protected-doc changes in this campaign.",
+        "No edits to Makefile or Repo.mk in any repository.",
+        "EIE PR #328 (open, rewrites app/services/crm/{base,hubspot,odoo,salesforce}_client.py and docs/contracts/*) must be sequenced or stacked by the CTO before this lane writes those files; no concurrent rewrite."
+      ],
+      "id": "CRM",
+      "kind": "writer",
+      "objective": "Connect native CRM adapters to generic spec-driven mapping and graph seed intake, preserving original source_system/resource/record id.",
+      "read_only_repositories": [
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs"
+      ],
+      "title": "EIE CRM field and entity projection",
+      "wait_for_gates": [
+        "G0"
+      ],
+      "writable_repositories": [
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine"
+      ],
+      "write_paths": {
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine": [
+          "app/services/crm/base.py",
+          "app/services/crm/hubspot_client.py",
+          "app/services/crm/odoo_client.py",
+          "app/services/crm/salesforce_client.py",
+          "app/services/crm_field_scanner.py",
+          "app/services/domain_spec_workflow.py",
+          "app/api/v1/converge.py",
+          "tests/test_crm_field_scanner.py",
+          "tests/contracts/test_crm_provider_parity.py"
+        ]
+      }
+    },
+    {
+      "acceptance": [
+        "Graph sync creates declared node and child/edge structures only; no missing edge invented.",
+        "Same source ID replays idempotently; other tenant/resource does not alias.",
+        "Typed CEG mock/injected-driver operations match expected node, child and edge contracts in unit tests; actual Neo4j readback is P4 G_RAIL.",
+        "Publish any substantive code changes only through current governed make pr with verified explicit same-repository stack parent. Record exact PR URL, parent and head; own required CI and reviewer remediation until green.",
+        "Do not run manual Docker/five-service integration before CTO verifies all campaign PRs are published and current-head green; use focused unit/contracts and existing mandated CI only."
+      ],
+      "depends_on_lanes": [],
+      "exclusions": [
+        "No raw Git push or unauthorized merge/deploy",
+        "No global-law or unauthorized out-of-scope repo edits",
+        "Makefile and Repo.mk are out of scope; no edits, generation, or workaround patches.",
+        "No direct git push/gh pr create; no approvals requested solely for AGENT.md/AGENTS.md protected-doc changes in this campaign.",
+        "No edits to Makefile or Repo.mk in any repository."
+      ],
+      "id": "GRAPH",
+      "kind": "writer",
+      "objective": "Use CEG native graph sync generator and tenant intake owner to materialize mapped entities/relations, enforcing tenant namespace and approved edge identities.",
+      "read_only_repositories": [
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine"
+      ],
+      "title": "CEG tenant node, child and relationship materialization",
+      "wait_for_gates": [
+        "G0"
+      ],
+      "writable_repositories": [
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs"
+      ],
+      "write_paths": {
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs": [
+          "engine/intake/crm_field_scanner.py",
+          "engine/intake/intake_compiler.py",
+          "engine/intake/impact_reporter.py",
+          "engine/sync/generator.py",
+          "engine/sync/row_contract.py",
+          "engine/handlers.py",
+          "tests/unit/test_domain_neutrality_acceptance.py"
+        ]
+      }
+    },
+    {
+      "acceptance": [
+        "One legitimate approved source association results in exactly one correct evidence edge.",
+        "Unsupported association rejected without fabricating an edge; replay keeps evidence ref stable.",
+        "Publish any substantive code changes only through current governed make pr with verified explicit same-repository stack parent. Record exact PR URL, parent and head; own required CI and reviewer remediation until green.",
+        "Do not run manual Docker/five-service integration before CTO verifies all campaign PRs are published and current-head green; use focused unit/contracts and existing mandated CI only."
+      ],
+      "depends_on_lanes": [],
+      "exclusions": [
+        "No raw Git push or unauthorized merge/deploy",
+        "No global-law or unauthorized out-of-scope repo edits",
+        "Makefile and Repo.mk are out of scope; no edits, generation, or workaround patches.",
+        "No direct git push/gh pr create; no approvals requested solely for AGENT.md/AGENTS.md protected-doc changes in this campaign.",
+        "No edits to Makefile or Repo.mk in any repository."
+      ],
+      "id": "ASSOC",
+      "kind": "writer",
+      "objective": "Bind actual CRM association evidence to domain-approved relationship assertions and CEG typed sync; defer until endpoint graph refs exist.",
+      "read_only_repositories": [
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs",
+        "https://github.com/Quantum-L9/Constellation.Gate"
+      ],
+      "title": "EIE observed CRM associations producer",
+      "wait_for_gates": [
+        "G0"
+      ],
+      "writable_repositories": [
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine"
+      ],
+      "write_paths": {
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine": [
+          "app/services/crm/observed_relationship_producer.py",
+          "tests/unit/test_observed_relationship_producer.py",
+          "tests/integration/test_observed_relationship_producer.py"
+        ]
+      }
+    },
+    {
+      "acceptance": [
+        "Check source-shaped typed graph/association fixtures and namespace refusals now; actual signed Gate-to-CEG Neo4j readback is deferred to P4 G_RAIL.",
+        "Assure only exact source and PR-head facts; do not use a partial code-ready phase receipt as final Docker integration evidence."
+      ],
+      "depends_on_lanes": [],
+      "exclusions": [
+        "No repository modifications or publication",
+        "No fictional evidence, release claim, or approval",
+        "No edits to Makefile or Repo.mk in any repository."
+      ],
+      "id": "QA",
+      "kind": "assurance",
+      "objective": "Verify EIE/CEG/Gate compatibility with a read-only source analysis and exact graph-state evidence; identify real test-rail blockers.",
+      "read_only_repositories": [
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine",
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs",
+        "https://github.com/Quantum-L9/Constellation.Gate"
+      ],
+      "title": "Cross-engine bootstrap integration",
+      "wait_for_gates": [
+        "G0"
+      ],
+      "writable_repositories": [],
+      "write_paths": {}
+    }
+  ],
+  "reserved_approvals": [
+    "The operator activates this complete P0-P4 series ONCE under the current /lcto session; each later phase advances on accepted predecessor code/PR receipts, without a fresh discretionary activation. If the host session changes, use its governed continuity/adoption rather than relaunching a parallel CTO.",
+    "PR publication is pre-authorized for in-scope branches through the verified current make pr SSOT; the same-repository parent branch must be explicit and verified. Coding agents require no individual publication approval. Never use raw push.",
+    "The operator suspends repository-local AGENT.md and AGENTS.md documentation protected-file extra human-review requirements for this campaign. Agents may edit these files in their declared DOC lanes without requesting an additional human reviewer; retained higher-authority security, actual GitHub protections and reserved merge controls are not waived.",
+    "Use already available Cursor/Infisical secrets for least-privilege test and signed integration calls without asking again. No raw material in prompts, commits, logs, PR bodies or artifacts; absent keys are a precise external blocker, not a fabricated success.",
+    "All PRs remain unmerged until actual current merge authorization permits it. Do not ask for merge permission on every coding agent PR; CTO consolidates the exact subject(s) when necessary. This approval does not authorize production deploy, data mutation or changing Makefile/Repo.mk.",
+    "Continue through source-proven corrections, PR publication and agent-owned remediation until all component PRs are green; conduct one combined Docker integration acceptance on the joined heads AFTER all are published. No per-PR Docker ceremony, but never bypass required CI."
+  ],
+  "schema": "l9.local.lcto-campaign-authoring/v2",
+  "scope": {
+    "exclude": [
+      "No high-volume production historical import, product-wide Odoo data reimport or CRM mutation.",
+      "No new graph writer, direct Neo4j driver in EIE, or ontology inference by guessing.",
+      "Do not implement P2/P3/P4 in this campaign.",
+      "Makefile and Repo.mk in every repository are strictly out of write scope; neither the generated make-v1 facade nor its repository-owned implementation can be edited or regenerated as a workaround.",
+      "No direct edits to Cursor-Governance publication machinery, GitHub .github global semantics, unrelated application modules or deployment/production resources.",
+      "No pre-publication heavy Docker integration runs, no suppression of existing required CI checks, no fake PRs when no code correction is needed.",
+      "No raw git push, ungoverned gh pr create, force-push, arbitrary rebases, permissions bypass or secret leakage."
+    ],
+    "include": [
+      "Use existing Odoo/HubSpot/Salesforce connector primitives to read record metadata and values; project onto approved domain node properties with original resource/id provenance.",
+      "Connect the existing crm_field_scanner and domain_spec_workflow to actual tenant records and stable CEG sync; keep unmapped fields visible.",
+      "Use CEG SyncGenerator and existing observed association producer; sync eligible associations only after both endpoints exist, with stable evidence_refs and idempotency.",
+      "Read actual seeded graph state from Neo4j under tenant and prove no client schema expansion/writeback was needed.",
+      "Update as-built README/architecture docs where P1 changes behavior; retain domain-neutral sentinel path.",
+      "A single persistent LCTO owns the complete P0-P4 program, integration and final disposition. One operator activation starts the series; later phases are gated continuation in that same session, not new operator approvals.",
+      "Preserve the same reusable CTO coding-agent pool, maximum five concurrent child agents or lower actual host capacity. Run independent disjoint work at once; keep each code writer as sole owner of its branch, affected files and PR remediation.",
+      "Stack every campaign PR on the verified previous campaign PR head within its own GitHub repository. Separate repositories have separate linear trains; bind cross-repository dependencies to pinned commit pairs in the CTO stack ledger.",
+      "Use the current Cursor-Governance governed make pr publication procedure exclusively. Verify the exact PR_BASE and resulting GitHub base/head, refuse ambiguous auto-stack/fallback, never raw push or direct PR creation.",
+      "Each coding agent owns its PR through native fast checks, required existing CI, reviewer comments, fixes and green current-head status. CTO schedules publication, evaluates integration and routes any defects back to the original writer.",
+      "No manual five-service Docker integration or repeated whole-system rail per PR or between phases. After ALL planned PRs in P0-P4 are published and green, test the final composite branch heads once; rerun only affected evidence and the final complete rail if integration defects require corrections.",
+      "Existing Infisical secrets available to Cursor are explicitly authorized for the bounded campaign test/integration need. Use the existing credential bindings, least-privilege scope and no logging/copying/committing secrets; availability is checked at use, not presumed.",
+      "For this campaign only, additional repository-local AGENT.md/AGENTS.md protected-file human-review ceremonies are waived for the declared documentation writer. Global policy, GitHub branch controls, security rules, and actual merge authority are not suspended."
+    ]
+  },
+  "sources": [
+    {
+      "coordinate": "AGENTS.md; docs/INVARIANTS.md; Repo.mk; app/engines/handlers.py; app/engines/convergence_controller.py; domains/plasticos/spec.yaml",
+      "grade": "OBSERVED",
+      "id": "SRC_EIE",
+      "kind": "code",
+      "observation": "Checked via GitHub connector against pinned current default-branch SHA on 2026-11-18.",
+      "owner": "https://github.com/Quantum-L9/Enrichment.Inference.Engine",
+      "revision": "29d4eb54942e446a9ac917d2ebe2d9733a4e7aec"
+    },
+    {
+      "coordinate": "engine/handlers.py; engine/config/loader.py; engine/sync/generator.py; engine/health/api.py; engine/gate_egress.py",
+      "grade": "OBSERVED",
+      "id": "SRC_CEG",
+      "kind": "code",
+      "observation": "Checked via GitHub connector against pinned current default-branch SHA on 2026-11-18.",
+      "owner": "https://github.com/Quantum-L9/Cognitive.Engine.Graphs",
+      "revision": "5d06649ed5587463c11b02594ce26b5ef4ad1733"
+    },
+    {
+      "coordinate": "constellation-gate/src/constellation_gate/routing/action_ownership.py; constellation-gate/src/constellation_gate/config/node_registry.yaml",
+      "grade": "OBSERVED",
+      "id": "SRC_GATE",
+      "kind": "code",
+      "observation": "Checked via GitHub connector against pinned current default-branch SHA on 2026-11-18.",
+      "owner": "https://github.com/Quantum-L9/Constellation.Gate",
+      "revision": "b451b68b98b315f57f0c4f9b99090a437e9dac23"
+    },
+    {
+      "coordinate": "commands/lcto.md; governance/cto-mode/MODE.yaml; Repo.mk; ops/autonomy/cto_mode.py",
+      "grade": "OBSERVED",
+      "id": "SRC_GOV",
+      "kind": "code",
+      "observation": "Checked via GitHub connector against pinned current default-branch SHA on 2026-11-18.",
+      "owner": "https://github.com/Quantum-L9/Cursor-Governance",
+      "revision": "59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd"
+    },
+    {
+      "coordinate": "semantics/invariants.yaml; semantics/projection_profiles.yaml; semantics/strategic_value_model.yaml",
+      "grade": "OBSERVED",
+      "id": "SRC_LAW",
+      "kind": "code",
+      "observation": "Checked via GitHub connector against pinned current default-branch SHA on 2026-11-18.",
+      "owner": "https://github.com/Quantum-L9/.github",
+      "revision": "00500268eb24de29a5e647a447d6f992d609f6f5"
+    },
+    {
+      "coordinate": "reference/EIE_CEG_Domain_Intelligence_DevPack_v1.3.0.zip",
+      "grade": "OBSERVED",
+      "id": "SRC_DEV",
+      "kind": "artifact",
+      "observation": "The exact local dev ZIP was read, CRC-checked and embedded; its code-source facts are snapshots, not deployment receipts.",
+      "owner": "Provided EIE + CEG development pack",
+      "revision": "d1d7a959b01094c25acc2a7925f32169fe7787aaaa04a8a246d6289d4845a0be"
+    },
+    {
+      "coordinate": "reference/L9_LCTO_Campaign_Compilation_Template_v2.0.0.zip",
+      "grade": "OBSERVED",
+      "id": "SRC_TMPL",
+      "kind": "artifact",
+      "observation": "Original user upload verified by ZIP CRC; the included template ZIP compiler passed its 13 bundled negative-control tests (tests/test_compiler.py).",
+      "owner": "User supplied LCTO template",
+      "revision": "356c6f1ca0c5a0b425db4c2c67f1a6dc1209e6eb975350462032af5210811f4d"
+    },
+    {
+      "coordinate": "Active approved EIE + CEG tenant pack revisions, Neo4j tenant database, signed Gate caller policies, live client credentials",
+      "grade": "UNKNOWN",
+      "id": "SRC_RUNTIME",
+      "kind": "runtime",
+      "observation": "No live deployed domain-pack admission, keys or Neo4j graph was examined; no synthetic source can prove it.",
+      "owner": "Operator deployment and native tenant pack authority",
+      "resolution_gate": "G0",
+      "revision": "UNKNOWN"
+    },
+    {
+      "coordinate": "P0 exact published stacked PR URLs/green current heads and typed handoff evidence",
+      "grade": "UNKNOWN",
+      "id": "SRC_PREDECESSOR",
+      "kind": "execution_receipt",
+      "observation": "Unknown until previous phase code-ready milestone; no live Docker, merge or production proof is implied by predecessor readiness.",
+      "owner": "LCTO Phase P0 integrator",
+      "resolution_gate": "G0",
+      "revision": "UNKNOWN"
+    },
+    {
+      "coordinate": "single CTO, stack all PRs, make pr SSOT, defer Docker until all published, Infisical authorized, AGENT protection suspended, Makefile out of scope",
+      "grade": "REPORTED",
+      "id": "SRC_OPERATOR",
+      "kind": "operator_decision",
+      "observation": "Explicit scoped operator direction to revise this campaign pack; it is not evidence that host permissions, credentials or runtime tests are already available.",
+      "owner": "Operator instruction in current conversation",
+      "revision": "2026-11-18-current-turn"
+    },
+    {
+      "coordinate": "ops/scripts/lib/resolve_pr_stack.sh; ops/scripts/pr_preflight.sh; ops/make/publish.mk; rules/53-pr-overlap-guardrail.mdc",
+      "grade": "OBSERVED",
+      "id": "SRC_STACK",
+      "kind": "code",
+      "observation": "PR_STACK=auto can preserve main on telemetry failures and may select ambiguous open PR chains; verified PR_BASE must be explicitly supplied and checked when every campaign PR is stacked.",
+      "owner": "https://github.com/Quantum-L9/Cursor-Governance",
+      "revision": "59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd"
+    }
+  ]
+}

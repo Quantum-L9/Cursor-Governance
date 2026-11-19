@@ -1,0 +1,32 @@
+{
+  "campaign_id": "EIE_CEG_P1_LCTO",
+  "files": {
+    "00-LCTO-LAUNCH.md": "4de0d57f9daf4f343ae0e4a8dd23d0c981778779ea0554f8ef9f3a94140ce47d",
+    "01-SOURCE-EVIDENCE.md": "10b3a01f28e0549a65b17bc4d6d2dfd41b3eff2c4a688c33c2e07f90968112d3",
+    "02-CRITICAL-PATH.md": "e287d569242f1724f47b23f2547a47a7d7096ed7685b402b3641f5f52f93315c",
+    "03-CONCURRENCY.md": "67ec71044798c6379defb87ec536d283428c5db03b26e45e51c2e446f1fd44e0",
+    "04-DEFINITION-OF-DONE.md": "bdd5c180dffa3881d6134d400818ed31ee84b9dfecbc349210fc614fddad6e0f",
+    "05-PUBLICATION-SECURITY.md": "08c9b83c9a8f80c50235983e96890d659cdaec04bb5e86ff5776d6b8a36ec99a",
+    "06-FINDING-REGISTER.md": "4b4347e3073b8cb17895cef9890b02be916715c3162aac83a12589e525829de0",
+    "07-RECONCILED-FACTS.md": "9137034a5ec00e9a61d8d133bb5e28a26fa4e0408a0540beffdd3734c4cac771",
+    "08-FINAL-RECEIPT.md": "89442e54bbe2be7cdcd7b4ca47d68ab2320ba6d31afbb9e087ccda5b338f86f6",
+    "09-SINGLE-CTO-CONTINUATION.md": "3b8af2ce9851e3054e2c819b9a29badfe77882e46e714c51b10025fc8ea008fe",
+    "CAMPAIGN.json": "da8b56f4de0d797db6f2a82632c36240451f1f930344508a56d6a3439e9167a8",
+    "README.md": "99554f64f49d6b4b593512e5ffc13c8993beaa16c88a7be7a18c6920f8815dcb",
+    "lanes/ASSOC.md": "09373291f7a6ed1c6c9909cdd04901bd2198746b028d6e8e86e1b83643e03b78",
+    "lanes/BASE.md": "9995adfdf41068cfa18502556b44c6a24f428ee7e561eb9b4440157773881633",
+    "lanes/CRM.md": "a941d6da116206a7df102a7122b1f2e56d911f514e64c26d1f3013f6be8eabca",
+    "lanes/GRAPH.md": "57cdb1486b281db826f54b6e89bd6d651c619ba27585bc1814474af0c44c2184",
+    "lanes/QA.md": "a955e65d9ae554c68cc0e3233b29e2bce971d3b85c997cdc4c0db9316c253700",
+    "reference/EIE_CEG_Domain_Intelligence_DevPack_v1.3.0.zip": "d1d7a959b01094c25acc2a7925f32169fe7787aaaa04a8a246d6289d4845a0be",
+    "reference/L9_LCTO_Campaign_Compilation_Template_v2.0.0.zip": "356c6f1ca0c5a0b425db4c2c67f1a6dc1209e6eb975350462032af5210811f4d",
+    "reference/ONE_CTO_STACK_AND_DOCKER_POLICY.md": "e85b27aa570cd4ff766b538b81cdd22937447ab91b13cda43c687d88596e10ab",
+    "reference/PHASE_IMPLEMENTATION_REFERENCE.md": "429c937504775fff43a19040610834b3b8ec7760e03c19acd4c43129809e6745",
+    "reference/PRODUCT_ARCHITECTURE.md": "37e266fbb1e26a36de72dc70fff7703526ebe359df5cfc4ad64b2debd2e76a16",
+    "validate_pack.py": "e0b48a4b92ab12b9466b66d59f852b0b526df9271eea2c9e6bbca97df5c6300a"
+  },
+  "limits": "Structural validation is not source, authority, CI, release, production or completion proof",
+  "manifest_schema": "l9.local.pack-digests/v1",
+  "source_spec_sha256": "da8b56f4de0d797db6f2a82632c36240451f1f930344508a56d6a3439e9167a8",
+  "status": "STRUCTURALLY_VALIDATED_NO_AUTHORITY_OR_RUNTIME_PROOF"
+}

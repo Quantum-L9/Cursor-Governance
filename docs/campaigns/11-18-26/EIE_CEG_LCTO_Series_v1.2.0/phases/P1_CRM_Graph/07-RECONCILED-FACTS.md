@@ -1,0 +1,14 @@
+# Current-state reconciliation and no-rework directives
+
+| Previously established fact | Grade | Evidence | Recheck only when |
+|---|---|---|---|
+| Sources are checked source snapshots, not live runtime or production release evidence. | OBSERVED | SRC_EIE, SRC_CEG, SRC_GATE | On activation, if target HEAD or applicable contract changes |
+| The current LCTO mode selects required projections, a bounded reusable child pool, transcript-only reports and CTO integration; the documentation pack never supplies child system prompts. | OBSERVED | SRC_GOV, SRC_LAW | On activation, if target HEAD or applicable contract changes |
+| Template packaging and successful CI do not authorize merges, deployments, secret reads or global-law admission. | OBSERVED | SRC_TMPL, SRC_GOV | On activation, if target HEAD or applicable contract changes |
+| P1 code work requires P0 green published stacked PR heads and compatible source/contract receipts; previous full Docker integration and merge are deliberately not prerequisites. | UNKNOWN | SRC_PREDECESSOR | On CTO phase handoff, check exact preceding PR URLs, source heads and required CI, not a simulated merged receipt. |
+| The operator selected one persistent CTO driving all five phases; each child agent remediates its own current-head PR and CTO never patches another agent branch. Phase gates before P4 represent code readiness, not executed five-service proof. | REPORTED | SRC_OPERATOR, SRC_GOV | At series activation confirm the active host LCTO binding and pool; on session resumption adopt state. |
+| Every same-repository campaign PR must be explicitly stacked. Auto tip resolution can fall back on telemetry failure; therefore use current governed make pr with a verified explicit PR_BASE and check the PR returned base/head before proceeding. GitHub PR bases cannot cross repositories. | OBSERVED | SRC_STACK, SRC_EIE | Before each publication and whenever GitHub open PR topology changes. |
+| Bounded test secret consumption from available Infisical is authorized, and extra local AGENT.md/AGENTS.md human-review protection is suspended only for this documentation scope; Makefile/Repo.mk edits remain excluded. | REPORTED | SRC_OPERATOR | If target-enforced protections, authorization or secret scope differ at execution. |
+| User requires Docker integration only after the complete P0-P4 PR train is published; required existing per-PR CI and cheap native tests still run and must pass. Actual integrated acceptance remains P4 G_RAIL. | REPORTED | SRC_OPERATOR | If platform mandated CI requires Docker or P4 scope changes materially; report exact conflict. |
+
+This ledger is a snapshot, not a magic truth override. Later independently verified, exact-subject evidence supersedes an earlier observation; conflicting claims must be reconciled and the affected gates invalidated. Do not rediscover already-closed facts every wave. Do recheck fast-changing dependencies at the defined hinge.

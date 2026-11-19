@@ -1,0 +1,273 @@
+audit_status: Succeeded
+readiness_status: Unknown
+convergence_status: Converged
+target_binding:
+  source_zip: L9_EIE_CEG_Domain_Intelligence_LCTO_Single_CTO_Stacked_v1.1.0.zip
+  source_sha256: f9aa4591c5c7599071dd8713f6cf3dccccc006a510d9f62fb2f81162670eee83
+  artifact_type: one-CTO five-phase multi-repository campaign ZIP
+  source_version: 1.1.0
+  revised_version: 1.2.0
+  kernel_file: Recursive Alignment(20261119-032949).md
+  kernel_sha256: 4ac4420c9dc7e738332efe8dc95a7744743b16ec3172b8b522a2843ac31509a2
+  kernel_sha256_original: ce9f7d2face6e7007c27313cbc885a5d11df85335877851e60ddb87b84adb639
+  kernel_normalization: governance pre-commit end-of-file-fixer added one trailing newline at publication (v1.3.0); the original upload digest is preserved as kernel_sha256_original.
+authorized_scope:
+  inspect: complete unpacked 128-file target and embedded local references, phase gates/lane boundaries, program policy, current
+    pinned GitHub source refs
+  modify: copy of campaign-pack files only; do not mutate EIE, CEG, Gate, governance repos
+  operator_overrides:
+  - one CTO all five waves
+  - up to five noncolliding coding agents
+  - per-repo stacked PRs
+  - governed make pr SSOT
+  - agent fixes own PR
+  - Docker final after all PRs green
+  - scoped available Infisical
+  - campaign-only AGENT.md/AGENTS.md additional reviewer waiver
+excluded_scope:
+- real code implementation or repository writes
+- real LCTO activation
+- Github PR publication and merge
+- runtime Docker and Neo4j
+- production deploy
+- Makefile/Repo.mk editing
+- global semantic law updates
+source_authority_used:
+- source: operator instructions 2026-11-18
+  scope: campaign operating constraints
+  precedence: explicit task intent, subordinate to current host and policy
+- source: Recursive Alignment(20261119-032949).md
+  sha256: ce9f7d2face6e7007c27313cbc885a5d11df85335877851e60ddb87b84adb639
+  scope: audit methodology, no L9 constitutional status
+- source: Quantum-L9/.github
+  revision: 00500268eb24de29a5e647a447d6f992d609f6f5
+  scope: canonical L9 semantic boundaries, source profile inspected but composed projection artifact not independently verified
+- source: Quantum-L9/Cursor-Governance
+  revision: 59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd
+  scope: LCTO, PR stacking and make pr control
+- source: EIE / CEG / Constellation.Gate
+  revisions:
+    eie: 29d4eb54942e446a9ac917d2ebe2d9733a4e7aec
+    ceg: 5d06649ed5587463c11b02594ce26b5ef4ad1733
+    gate: b451b68b98b315f57f0c4f9b99090a437e9dac23
+  scope: bounded source observations and candidate owner seams, not deployment
+architecture_adapters:
+- id: eie-ceg-current-owner
+  status: Applied
+  source: current EIE/CEG/Gate typed contracts
+  scope: domain graph and Gate seam
+- id: cursor-lcto-current
+  status: Applied
+  source: current Cursor-Governance mode and publish path
+  scope: CTO and PR train
+- id: recursive_kernel
+  status: Applied
+  source: Recursive Alignment(20261119-032949).md
+  scope: pack structural/semantic audit; advisory only
+- id: gar-composed-projection
+  status: Unknown
+  source: .github projection profile at pinned sha
+  scope: independently verified composed projection not produced in this audit
+normalized_context:
+  purpose: 'one CTO to deliver EIE+CEG product: 2D CRM data to enriched domain graph and graph-driven decisions'
+  phases:
+  - P0 domain/doc
+  - P1 CRM graph
+  - P2 bidirectional durability
+  - P3 inference mesh
+  - P4 scored graph feedback
+  artifact_state: not activated or executed
+artifact_inventory:
+  original_entries: 128
+  phase_count: 5
+  phase_manifest_count: 5
+  phase_campaign_json_count: 5
+  embedded_development_zip: EIE_CEG_Domain_Intelligence_DevPack_v1.3.0.zip
+  embedded_template_zip: L9_LCTO_Campaign_Compilation_Template_v2.0.0.zip
+  opaque_external:
+  - live deployed tenant pack
+  - future GitHub PRs
+  - signed runtime environment
+boundary_map:
+  eie: CRM read, source field resolution, domain-driven evidence/inference, research, proposed typed writes and durable feedback
+    state
+  ceg: Neo4j graph persistence, domain graph, scoring/matching, knowledge gap/feedback
+  gate: signed authorized transport, no own graph write or business ontology
+  governance: opt-in CTO/swarm and governed publication via make pr
+  tenant_specs: independent native spec owners with typed compatibility; no duplication of global domain authority
+alignment_summary: Revised audit found weak mechanical collision checking, phase activation ambiguity and early runtime proof
+  overclaim; repaired them and final publication/Docker dependency, preserving original design and no new graph architecture.
+alignment_score:
+  value: null
+  reason: 'No percentage assigned: package structural audit does not imply unexecuted CI, authorization, cryptographic Gate
+    or live graph readiness'
+  domain_statuses:
+    intent_and_scope: Passed
+    communication_contracts: Passed_on_documented_pack_scope
+    routing_and_integration: Passed_on_declared_pack_scope
+    ownership_and_authority: Passed_on_declared_pack_scope
+    structure_and_source_of_truth: Passed
+    schema_and_configuration: Passed_on_declared_pack_scope
+    security: Passed_on_declared_pack_scope
+    reliability_and_observability: Unknown_live
+    testing_and_validation: Passed_pack_only
+critical_violations: []
+high_violations:
+- id: RA-01
+  status: Resolved
+  severity: High
+  confidence: Confirmed
+  rule: No overlapping lane writers; test coverage must actually prove its claim
+  source: v1.1.0 tools/verify_series.py, phase CAMPAIGN.json
+  correction: validate_writer_ownership and negative tests
+  owner: pack tooling
+  blocking: true
+- id: RA-02
+  status: Resolved
+  severity: High
+  confidence: Confirmed
+  rule: One CTO activation
+  source: v1.1.0 phase 00-LCTO-LAUNCH.md
+  correction: template-rendered launch unchanged; add program-specific 09-SINGLE-CTO-CONTINUATION.md per phase and root precedence
+  owner: program handoff
+  blocking: true
+- id: RA-03
+  status: Resolved
+  severity: High
+  confidence: Confirmed
+  rule: Do not claim live graph outcome before G_RAIL
+  source: v1.1.0 P1/P2/P3 CAMPAIGN.json observable_done
+  correction: code-ready only and P4 execution separation
+  owner: phase spec
+  blocking: true
+- id: RA-04
+  status: Resolved
+  severity: High
+  confidence: Confirmed
+  rule: Docker after all including E2E + DOC PRs current-green
+  source: v1.1.0 P4 G_PUBLISH dependencies
+  correction: add G_E2E_CODE and G_DOC_PREP dependency edges
+  owner: P4 phase
+  blocking: true
+medium_violations:
+- id: RA-05
+  status: Resolved
+  severity: Medium
+  confidence: Confirmed
+  rule: No pre-PUBLISH signed-rail requirement
+  source: v1.1.0 P4 priority_zero
+  correction: prepare only, execute after G_PUBLISH
+  owner: P4 phase
+- id: RA-06
+  status: Resolved
+  severity: Medium
+  confidence: Confirmed
+  rule: traceable audit source and verifier negation
+  source: v1.1.0 lack of audit trace
+  correction: YAML kernel report with SHA, negative tests and exact source bindings
+  owner: pack tooling
+low_violations: []
+unknowns:
+- id: RA-07
+  reason: future active host session, exact GitHub branch PRs, active admitted tenant spec and Infisical keys not observed
+  affected_conclusion: runtime/production readiness
+  minimum_evidence: current host mode, GitHub PR receipts, native pack admission, credential binding, P4 signed rail evidence
+intent_and_scope_compliance:
+  status: Passed
+  evidence: all five specs and one-CTO program boundary
+communication_contract_compliance:
+  status: Passed
+  evidence: documented typed EIE-CEG and Gate source/gate boundary; no live probe claimed
+routing_and_integration_compliance:
+  status: Passed
+  evidence: governed make pr and EIE/CEG via Gate; current host rights Unknown
+authority_boundary_compliance:
+  status: Passed
+  evidence: no global law duplication, phase local waivers narrow, no repo mutation
+structure_and_source_of_truth_compliance:
+  status: Passed
+  evidence: source hashes and manifest inventories regenerated, kernel exact bytes copied
+schema_and_configuration_compliance:
+  status: Passed
+  evidence: phase gates validated, P4 Docker dependency
+security_compliance:
+  status: Passed
+  evidence: scoped secret read only, no plaintext, no permission grant
+reliability_observability_compliance:
+  status: Unknown
+  evidence: outbox/inbox and live crash recovery are campaign deliverables, not pack audit
+testing_validation_compliance:
+  status: Passed
+  evidence: pack validators and adversarial negative control run, runtime CI not run
+overbuilt_vs_underbuilt:
+  underbuilt:
+  - predecessor validator did not validate overlap
+  - P4 prepublication DOC/E2E readiness gate omitted
+  overbuilt: []
+  simplest_correction: strengthen source-owned package checker and P4 DAG without new pipeline or framework
+leverage_analysis:
+  highest_value: one proof-accurate P4 publication barrier and real collisions detection with cheap negative fixtures
+  deferred: run signed graph proof during CTO execution, not audit
+correction_roadmap:
+- order: 1
+  owner: package tooling
+  change: collision checker and adversarial fixtures
+  status: AppliedToPack
+- order: 2
+  owner: phase sources
+  change: single CTO activation and P1/P2/P3 truth labels
+  status: AppliedToPack
+- order: 3
+  owner: P4 phase source
+  change: explicit prereq gates before G_PUBLISH
+  status: AppliedToPack
+- order: 4
+  owner: execution CTO
+  change: resolve current mode, specs, PR train and run final signed Docker when G_PUBLISH passes
+  status: NotExecuted
+minimum_safe_next_action:
+  action: Activate the full revised v1.2.0 series through the actual supported LCTO host mode after the operator opts in;
+    first bind current source/spec and parallel P0 lanes.
+  rationale: P0 publication/document/spec foundation unlocks all later code work and preserves Docker embargo
+  evidence_expected: real host activation, current projection/source resolution and initial no-collision lane assignment
+validation_gates:
+  target_bound: Passed
+  authority_resolved: Passed_for_pack_policy; host projection Unknown
+  inventory_complete: Passed_for_unpacked_zip
+  boundary_map_complete: Passed_for_documented_pack
+  architecture_adapters_correctly_applied: Passed_for_pack; composed_projection Unknown
+  findings_evidence_backed: Passed
+  severity_consistent: Passed
+  contracts_aligned: Passed_for_artifact
+  routing_and_authority_aligned: Passed_for_artifact
+  source_of_truth_aligned: Passed
+  schema_and_configuration_aligned: Passed_for_artifact
+  security_aligned: Passed_for_pack
+  reliability_and_observability_aligned: Unknown_runtime
+  testing_and_validation_aligned: Passed_pack_only
+  correction_roadmap_actionable: Passed
+  convergence_verified: Passed_artifact_only
+  overall_audit: Passed_artifact_only; live_runtime_Unknown
+residual_risks:
+- Live EIE/CEG domain-pack admission and compatibility remains to be proven
+- Signed Gate action and tenant authorizations require real test creds
+- Source/PR base can drift post-package; rebind before publication
+- Docker graph and scored decision proof is a P4 future runtime gate
+convergence:
+  completed_passes:
+  - context/scope
+  - authority
+  - communication
+  - routing
+  - ownership
+  - structure
+  - schemas
+  - security
+  - reliability
+  - validation
+  - leverage
+  - reconciliation
+  skipped_passes:
+  - production deployment verification, excluded from packaging
+  work_remaining: execute LCTO and implement code, PRs, signed Docker G_RAIL
+  evidence: full file census + new package negative controls; external runtime not examined

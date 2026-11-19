@@ -1,0 +1,56 @@
+{
+  "activated_at": null,
+  "all_prs_published_and_green": false,
+  "cross_repo_composite_heads": null,
+  "docker_integration_receipt": null,
+  "docker_integration_started": false,
+  "lcto_projections_verified": false,
+  "one_cto_session_id": null,
+  "ordered_phases": [
+    "P0",
+    "P1",
+    "P2",
+    "P3",
+    "P4"
+  ],
+  "repositories": {
+    "Quantum-L9/Cognitive.Engine.Graphs": {
+      "current_default_branch_sha": null,
+      "current_tip_branch": null,
+      "current_tip_sha": null,
+      "first_campaign_parent": null,
+      "published_prs": []
+    },
+    "Quantum-L9/Constellation.Gate": {
+      "current_default_branch_sha": null,
+      "current_tip_branch": null,
+      "current_tip_sha": null,
+      "first_campaign_parent": null,
+      "published_prs": []
+    },
+    "Quantum-L9/Enrichment.Inference.Engine": {
+      "current_default_branch_sha": null,
+      "current_tip_branch": null,
+      "current_tip_sha": null,
+      "first_campaign_parent": null,
+      "published_prs": []
+    }
+  },
+  "required_pr_entry_fields": [
+    "phase",
+    "writer_lane",
+    "branch",
+    "base_branch",
+    "base_sha_at_publication",
+    "head_sha",
+    "github_pr_url",
+    "required_ci",
+    "review_status",
+    "remediation_owner",
+    "published_by_governed_make_pr"
+  ],
+  "schema": "eie-ceg.cto-pr-stack-ledger/example-v1",
+  "security_note": "Store only secret references, never plaintext values, access tokens or signing material.",
+  "series": "EIE_CEG_One_CTO_Stacked_v1.2.0",
+  "status": "EMPTY_AUTHORING_EXAMPLE_NOT_EXECUTION_EVIDENCE"
+}

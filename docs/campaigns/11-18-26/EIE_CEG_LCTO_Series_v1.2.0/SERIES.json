@@ -1,0 +1,104 @@
+{
+  "alignment_kernel_sha256": "4ac4420c9dc7e738332efe8dc95a7744743b16ec3172b8b522a2843ac31509a2",
+  "alignment_source_zip_sha256": "f9aa4591c5c7599071dd8713f6cf3dccccc006a510d9f62fb2f81162670eee83",
+  "compiler_source_sha256": "3b5ec8b479c179bc0ac96c64610c03061e85f3f372638635c256c7ab8b46284a",
+  "corrections_v130": [
+    "Validator census excludes __pycache__/.pyc; positive control deterministic",
+    "Predecessor evidence and already-satisfied mapping added (06)",
+    "New files labeled in lane briefs; DeepSeek provider surface gated on operator authorization at G0",
+    "Factual corrections: AGENTS.md 418 lines; stale-docs list narrowed; plasticos 0.6.0 activation recorded; P2 R04 evidence-fixed by #359",
+    "Current-state rebind: all pins == remote default heads; local EIE clone diverged — worktrees from origin/main only; EIE #328 sequencing"
+  ],
+  "dev_pack_sha256": "d1d7a959b01094c25acc2a7925f32169fe7787aaaa04a8a246d6289d4845a0be",
+  "doc_protection_waiver": "AGENT.md_and_AGENTS.md_local_extra_review_only",
+  "fixed_pool_max": 5,
+  "make_implementation_excluded": [
+    "Makefile",
+    "Repo.mk"
+  ],
+  "manual_docker_gate": "P4.G_PUBLISH_then_P4.G_RAIL",
+  "phases": [
+    {
+      "campaign_id": "EIE_CEG_P0_LCTO",
+      "compiled_source_sha256": "b9ce33cabffc60895437e5fe5d9c264db577ed4f953022d085ee5a414cd67009",
+      "docker_integration": "P4_ONLY_AFTER_ALL_PRS_PUBLISHED_GREEN",
+      "findings": 6,
+      "gates": 5,
+      "lanes": 5,
+      "manifest_sha256": "f0fb413be0eb7665ba5a0f4acffc90431b8c4185160d8a53e12d05316538e275",
+      "name": "P0_Domain_Docs",
+      "phase": 0,
+      "predecessor": null,
+      "status": "DRAFT_NOT_ACTIVATED"
+    },
+    {
+      "campaign_id": "EIE_CEG_P1_LCTO",
+      "compiled_source_sha256": "da8b56f4de0d797db6f2a82632c36240451f1f930344508a56d6a3439e9167a8",
+      "docker_integration": "P4_ONLY_AFTER_ALL_PRS_PUBLISHED_GREEN",
+      "findings": 4,
+      "gates": 5,
+      "lanes": 5,
+      "manifest_sha256": "ad4a98247041861346a35cb4fb79dc48d1e18ec82c86259ba54f9e9a304aa1d0",
+      "name": "P1_CRM_Graph",
+      "phase": 1,
+      "predecessor": "P0_PUBLISHED_GREEN_PR_MILESTONE",
+      "status": "DRAFT_NOT_ACTIVATED"
+    },
+    {
+      "campaign_id": "EIE_CEG_P2_LCTO",
+      "compiled_source_sha256": "e08018f2b31e2253248bfb1fec18d06a6b5d1df7ab5a2900d6fd96c7daaed905",
+      "docker_integration": "P4_ONLY_AFTER_ALL_PRS_PUBLISHED_GREEN",
+      "findings": 5,
+      "gates": 7,
+      "lanes": 5,
+      "manifest_sha256": "71c8b7f118627746ff207bc57b37d48d0b02b50f27ed3de24a3b9cedc2904ea2",
+      "name": "P2_Bidirectional_Reliability",
+      "phase": 2,
+      "predecessor": "P1_PUBLISHED_GREEN_PR_MILESTONE",
+      "status": "DRAFT_NOT_ACTIVATED"
+    },
+    {
+      "campaign_id": "EIE_CEG_P3_LCTO",
+      "compiled_source_sha256": "8abd9747dd1795bd6291edcb1a9f93cdb211606f554d0c632e9dd89817b29e7c",
+      "docker_integration": "P4_ONLY_AFTER_ALL_PRS_PUBLISHED_GREEN",
+      "findings": 4,
+      "gates": 5,
+      "lanes": 5,
+      "manifest_sha256": "1332662459b096da5a9066c307502695131fa4dbfbe6b7147cc67522b6075c15",
+      "name": "P3_Inference_Leverage",
+      "phase": 3,
+      "predecessor": "P2_PUBLISHED_GREEN_PR_MILESTONE",
+      "status": "DRAFT_NOT_ACTIVATED"
+    },
+    {
+      "campaign_id": "EIE_CEG_P4_LCTO",
+      "compiled_source_sha256": "3d64076a8acdc89b51483936b2782817a41ba1051ab06111cd3273c91036f178",
+      "docker_integration": "G_PUBLISH_THEN_G_RAIL",
+      "findings": 4,
+      "gates": 9,
+      "lanes": 5,
+      "manifest_sha256": "a9d88b19c568e00fd3ddd78513f84860f72d873067b1e6cbcbb91746951364a4",
+      "name": "P4_Full_Loop",
+      "phase": 4,
+      "predecessor": "P3_PUBLISHED_GREEN_PR_MILESTONE",
+      "status": "DRAFT_NOT_ACTIVATED"
+    }
+  ],
+  "post_publication_barrier": [
+    "G_E2E_CODE",
+    "G_DOC_PREP",
+    "G_PUBLISH",
+    "G_RAIL",
+    "G_DOC",
+    "G_DONE"
+  ],
+  "predecessor_evidence": "docs/campaigns/11-17-26/CEG-EIE/L9_EIE_CEG_Intelligence_Flywheel_CTO_v1.2.0 — executed: EIE #347-352 and #359, Gate #43-45, CEG #494/#497/#498, Odoo #506/#507/#512 merged; per-phase already-satisfied mapping in 06_PREDECESSOR_EVIDENCE_AND_CURRENT_STATE.md (verified 2026-11-18 via GitHub API).",
+  "publication_ssot": "current_governed_make_pr_with_verified_explicit_PR_BASE",
+  "scope": "One user-approved LCTO series with five sequential code-ready waves, per-repo stacked PR publication and one final signed Docker rail; not activated and no merge/deploy authority.",
+  "secrets": "scoped_existing_Infisical_test_secret_read_authorized",
+  "series": "EIE-CEG-domain-intelligence",
+  "single_cto_required": true,
+  "stack_per_repo_not_cross_repo": true,
+  "template_zip_sha256": "356c6f1ca0c5a0b425db4c2c67f1a6dc1209e6eb975350462032af5210811f4d",
+  "version": "1.3.0"
+}

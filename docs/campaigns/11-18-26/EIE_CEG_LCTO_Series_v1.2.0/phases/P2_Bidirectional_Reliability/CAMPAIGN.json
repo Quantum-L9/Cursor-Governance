@@ -1,0 +1,636 @@
+{
+  "authorization": {
+    "implementation": "authorized_bounded_single_LCTO_series_after_one_operator_activation",
+    "merge": "requires_current_operator_authority",
+    "production": "not_authorized",
+    "publication": "governed_make_pr_after_owner_verification",
+    "secrets": "operator_authorized_read_of_available_Infisical_credentials_for_bounded_test_integration_only_no_production_mutation_or_disclosure"
+  },
+  "campaign": {
+    "id": "EIE_CEG_P2_LCTO",
+    "objective": "Harden accepted EIE->CEG graph synchronization and CEG->EIE inference feedback so an interrupted worker or Gate failure cannot silently lose acknowledged intelligence. This is an implementation campaign in a single persistent CTO program: published stacked PRs and green code, not contracts only.",
+    "observable_done": "Pre-integration phase exit: all in-scope code/docs changes are published in verified per-repository stacked PRs, all required native unit/contract/CI checks are green at exact PR heads, owner remediation complete, and the next phase has compatible contract evidence. Complete Docker/runtime graph proof remains deferred to P4 after all PRs publish. Durable outbound/inbound stores and replay semantics pass negative and restart-injected unit/contract tests with stable idempotency and accepted/applied distinctions; actual process-kill windows, signed replay, and exact Neo4j graph state are P4-only G_RAIL proof.",
+    "priority_zero": "Single-CTO series continuation: no phase restarts or separate operator activation. Confirm process-local pending graph legs and feedback queue semantics against current stores, then reuse EIE PostgreSQL persistence before adding any table/worker.",
+    "status": "DRAFT_NOT_ACTIVATED",
+    "title": "P2 | Durable EIE-CEG bidirectional delivery and replay",
+    "version": "1.3.0"
+  },
+  "critical_path": [
+    {
+      "blocking_cause": "Process-local state and live replay semantics must be bound to existing authoritative store.",
+      "id": "CP20",
+      "owner_lane": "BASE",
+      "prerequisite_gates": [],
+      "proof_to_unlock": "Verify previous P1 published green PR receipts; no Docker or merged code required.",
+      "unlocks_gates": [
+        "G0"
+      ]
+    },
+    {
+      "blocking_cause": "EIE completed response can strand deferred CEG sync.",
+      "id": "CP21",
+      "owner_lane": "OUT",
+      "prerequisite_gates": [
+        "G0"
+      ],
+      "proof_to_unlock": "Persist and replay pinned payload through crash without extra provider calls.",
+      "unlocks_gates": [
+        "G_OUT"
+      ]
+    },
+    {
+      "blocking_cause": "CEG feedback accepted can be dropped before next convergence.",
+      "id": "CP22",
+      "owner_lane": "IN",
+      "prerequisite_gates": [
+        "G_OUT"
+      ],
+      "proof_to_unlock": "Existing durable store now supports accepted-then-restart-then-consumed semantics.",
+      "unlocks_gates": [
+        "G_IN"
+      ]
+    },
+    {
+      "blocking_cause": "Healthy endpoints alone do not demonstrate cross-process state.",
+      "id": "CP23",
+      "owner_lane": "BASE",
+      "prerequisite_gates": [
+        "G_IN",
+        "G_FEED",
+        "G_SEAM"
+      ],
+      "proof_to_unlock": "Close injected-store two-window restart simulator and readiness for P4 real signed Docker/Neo4j replay, without running Docker early.",
+      "unlocks_gates": [
+        "G_DONE"
+      ]
+    },
+    {
+      "blocking_cause": "IN and OUT both need durable storage semantics, but schema/migration writes must have one owner and cannot wait for full outbound crash proof.",
+      "id": "CP_PERSISTENCE_SCHEMA",
+      "owner_lane": "OUT",
+      "prerequisite_gates": [
+        "G0"
+      ],
+      "proof_to_unlock": "OUT publishes/locks a bounded storage interface and G_SCHEMA unit receipt immediately, unlocking IN in parallel with the rest of OUT and FEED.",
+      "unlocks_gates": [
+        "G_SCHEMA",
+        "G_IN"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "grade": "OBSERVED",
+      "id": "F_SNAPSHOTS",
+      "revalidate_when": "On activation, if target HEAD or applicable contract changes",
+      "source_ids": [
+        "SRC_EIE",
+        "SRC_CEG",
+        "SRC_GATE"
+      ],
+      "statement": "Sources are checked source snapshots, not live runtime or production release evidence."
+    },
+    {
+      "grade": "OBSERVED",
+      "id": "F_GOVERNANCE",
+      "revalidate_when": "On activation, if target HEAD or applicable contract changes",
+      "source_ids": [
+        "SRC_GOV",
+        "SRC_LAW"
+      ],
+      "statement": "The current LCTO mode selects required projections, a bounded reusable child pool, transcript-only reports and CTO integration; the documentation pack never supplies child system prompts."
+    },
+    {
+      "grade": "OBSERVED",
+      "id": "F_NO_PERMISSIONS",
+      "revalidate_when": "On activation, if target HEAD or applicable contract changes",
+      "source_ids": [
+        "SRC_TMPL",
+        "SRC_GOV"
+      ],
+      "statement": "Template packaging and successful CI do not authorize merges, deployments, secret reads or global-law admission."
+    },
+    {
+      "grade": "UNKNOWN",
+      "id": "F_PREDECESSOR",
+      "revalidate_when": "On CTO phase handoff, check exact preceding PR URLs, source heads and required CI, not a simulated merged receipt.",
+      "source_ids": [
+        "SRC_PREDECESSOR"
+      ],
+      "statement": "P2 code work requires P1 green published stacked PR heads and compatible source/contract receipts; previous full Docker integration and merge are deliberately not prerequisites."
+    },
+    {
+      "grade": "REPORTED",
+      "id": "F_SINGLE_CTO",
+      "revalidate_when": "At series activation confirm the active host LCTO binding and pool; on session resumption adopt state.",
+      "source_ids": [
+        "SRC_OPERATOR",
+        "SRC_GOV"
+      ],
+      "statement": "The operator selected one persistent CTO driving all five phases; each child agent remediates its own current-head PR and CTO never patches another agent branch. Phase gates before P4 represent code readiness, not executed five-service proof."
+    },
+    {
+      "grade": "OBSERVED",
+      "id": "F_STACK_SSOT",
+      "revalidate_when": "Before each publication and whenever GitHub open PR topology changes.",
+      "source_ids": [
+        "SRC_STACK",
+        "SRC_EIE"
+      ],
+      "statement": "Every same-repository campaign PR must be explicitly stacked. Auto tip resolution can fall back on telemetry failure; therefore use current governed make pr with a verified explicit PR_BASE and check the PR returned base/head before proceeding. GitHub PR bases cannot cross repositories."
+    },
+    {
+      "grade": "REPORTED",
+      "id": "F_OPERATOR_OVERRIDES",
+      "revalidate_when": "If target-enforced protections, authorization or secret scope differ at execution.",
+      "source_ids": [
+        "SRC_OPERATOR"
+      ],
+      "statement": "Bounded test secret consumption from available Infisical is authorized, and extra local AGENT.md/AGENTS.md human-review protection is suspended only for this documentation scope; Makefile/Repo.mk edits remain excluded."
+    },
+    {
+      "grade": "REPORTED",
+      "id": "F_DOCKER_BARRIER",
+      "revalidate_when": "If platform mandated CI requires Docker or P4 scope changes materially; report exact conflict.",
+      "source_ids": [
+        "SRC_OPERATOR"
+      ],
+      "statement": "User requires Docker integration only after the complete P0-P4 PR train is published; required existing per-PR CI and cheap native tests still run and must pass. Actual integrated acceptance remains P4 G_RAIL."
+    }
+  ],
+  "findings": [
+    {
+      "id": "R01",
+      "owner_lane": "OUT",
+      "receipt_refs": [],
+      "source_ids": [
+        "SRC_EIE"
+      ],
+      "statement": "SideEffectCoordinator pending/complete markers are process-local and can lose deferred CEG graph work on crash.",
+      "status": "OPEN"
+    },
+    {
+      "id": "R02",
+      "owner_lane": "IN",
+      "receipt_refs": [],
+      "source_ids": [
+        "SRC_EIE"
+      ],
+      "statement": "GraphReturnChannel accepts graph inference to bounded process-local queue; queue full drops targets.",
+      "status": "OPEN"
+    },
+    {
+      "id": "R03",
+      "owner_lane": "FEED",
+      "receipt_refs": [],
+      "source_ids": [
+        "SRC_CEG"
+      ],
+      "statement": "CEG feedback sender is admin-triggered and default-off; live automatic loop and signed caller key not demonstrated.",
+      "status": "OPEN"
+    },
+    {
+      "id": "R04",
+      "owner_lane": "OUT",
+      "receipt_refs": [],
+      "source_ids": [
+        "SRC_CEG"
+      ],
+      "statement": "Predeployment report identifies unsupported score-invalidate action; current cache need unproven. EIE #359 (merged 2026-11-18; the pinned baseline head) already stopped the false score-invalidate emission and the unbound staging ingress, and Gate canonically routes no score-invalidate action; tests/unit/test_score_invalidation.py does not exist at the pin — this lane writes it as a NEW regression file around the merged fix.",
+      "status": "OPEN"
+    },
+    {
+      "id": "R05",
+      "owner_lane": "BASE",
+      "receipt_refs": [],
+      "source_ids": [
+        "SRC_RUNTIME"
+      ],
+      "statement": "No actual cross-restart two-direction replay receipt.",
+      "status": "OPEN"
+    }
+  ],
+  "gates": [
+    {
+      "claim": "P1 stacked PR heads are published and green, with typed CRM-to-graph contracts ready; no Docker or prior phase merge is required.",
+      "depends_on": [],
+      "id": "G0",
+      "name": "predecessor_and_store_reality",
+      "negative_controls": [
+        "Do not claim actual Postgres crash safety from P1 static work."
+      ],
+      "owner_lane": "BASE",
+      "receipt_refs": [],
+      "required_proof": "Check P1 code-ready receipts, PR parent chain, and current DB model/migration source surface.",
+      "status": "NOT_RUN"
+    },
+    {
+      "claim": "EIE outbound and inbound writers agree on the existing Postgres model/table interfaces before separate code changes require shared persistence.",
+      "depends_on": [
+        "G0"
+      ],
+      "id": "G_SCHEMA",
+      "name": "shared_durable_state_shape",
+      "negative_controls": [
+        "IN must not independently edit pg_models.py or migrations; unresolved interface means IN waits while FEED continues."
+      ],
+      "owner_lane": "OUT",
+      "receipt_refs": [],
+      "required_proof": "One exact DB model/migration/interface shape owned solely by OUT, testable fake store API and source-bound handoff to IN; do not run Docker.",
+      "status": "NOT_RUN"
+    },
+    {
+      "claim": "EIE outbound graph sync uses a durable pending record and replayable idempotent acknowledgement state, demonstrated in focused tests.",
+      "depends_on": [
+        "G_SCHEMA"
+      ],
+      "id": "G_OUT",
+      "name": "durable_outbound_sync",
+      "negative_controls": [
+        "Process-local dedup alone is insufficient; no claim of tested real database restart."
+      ],
+      "owner_lane": "OUT",
+      "receipt_refs": [],
+      "required_proof": "Bounded DB-model/store contract plus injected-store persisted/restart simulation, duplicate and missing ACK negative; full Postgres crash window only P4 Docker rail.",
+      "status": "NOT_RUN"
+    },
+    {
+      "claim": "CEG feedback can be durably queued and consumed exactly for the tenant/entity under the approved OUT-owned storage interface.",
+      "depends_on": [
+        "G_SCHEMA"
+      ],
+      "id": "G_IN",
+      "name": "durable_feedback_intake",
+      "negative_controls": [
+        "Accepted must not mean in-memory-only or loss when queue full."
+      ],
+      "owner_lane": "IN",
+      "receipt_refs": [],
+      "required_proof": "Queue-full/restart/duplicate/request-selection negative unit cases against injected durable store, no direct schema write by IN.",
+      "status": "NOT_RUN"
+    },
+    {
+      "claim": "CEG feedback sender honors authorized domain inference rules and precise statuses with default-off safety, checked without Docker.",
+      "depends_on": [
+        "G0"
+      ],
+      "id": "G_FEED",
+      "name": "ceg_graph_feedback",
+      "negative_controls": [
+        "Cannot imply live signed EIE consumption or production activation."
+      ],
+      "owner_lane": "FEED",
+      "receipt_refs": [],
+      "required_proof": "Focused CEG sender/handler and Gate contract tests with fake signed response and above/below floor cases.",
+      "status": "NOT_RUN"
+    },
+    {
+      "claim": "Unsupported score-invalidate route is removed or corrected at the actual owner, without adding an unapproved Gate action.",
+      "depends_on": [
+        "G0"
+      ],
+      "id": "G_SEAM",
+      "name": "unsupported_action_resolved",
+      "negative_controls": [
+        "Do not silently treat fire-and-forget refusal as successful cache refresh."
+      ],
+      "owner_lane": "SEAM",
+      "receipt_refs": [],
+      "required_proof": "Current owner/caller inspection plus focused EIE negative test and any needed OUT-owned packet_router change; static Gate action listing.",
+      "status": "NOT_RUN"
+    },
+    {
+      "claim": "P2 bidirectional durability implementation is fully published and green at the exact PR stack heads; actual two-process crash/replay is reserved for final P4 Docker.",
+      "depends_on": [
+        "G_OUT",
+        "G_IN",
+        "G_FEED",
+        "G_SEAM"
+      ],
+      "id": "G_DONE",
+      "name": "phase_2_restart_replay",
+      "negative_controls": [
+        "No false green from process-local fake restart."
+      ],
+      "owner_lane": "BASE",
+      "receipt_refs": [],
+      "required_proof": "P2 green PR/base/head records, DB model ownership closure, durable queue/outbox/inference and auth unit tests; real crash/DB acknowledgement acceptance only P4.",
+      "status": "NOT_RUN"
+    }
+  ],
+  "lanes": [
+    {
+      "acceptance": [
+        "Prove existing persistence mechanism suitability before schema migration.",
+        "Distinguish transport ACK from durable receipt and graph application.",
+        "Assure only exact source and PR-head facts; do not use a partial code-ready phase receipt as final Docker integration evidence."
+      ],
+      "depends_on_lanes": [],
+      "exclusions": [
+        "No repository modifications or publication",
+        "No fictional evidence, release claim, or approval",
+        "No edits to Makefile or Repo.mk in any repository."
+      ],
+      "id": "BASE",
+      "kind": "assurance",
+      "objective": "Inspect P1 proof and EIE current PostgreSQL models, CEG feedback, Gate caller policy, code revision. Maintain ONE CTO program stack ledger across all phases; verify real agent-owned PR statuses and final Docker embargo.",
+      "read_only_repositories": [
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine",
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs",
+        "https://github.com/Quantum-L9/Constellation.Gate",
+        "https://github.com/Quantum-L9/Cursor-Governance"
+      ],
+      "title": "Previous phase and durable state source census",
+      "wait_for_gates": [],
+      "writable_repositories": [],
+      "write_paths": {}
+    },
+    {
+      "acceptance": [
+        "Persist pending graph work with actual existing store or minimal proven migration.",
+        "Use injected durable-store restart simulator and original pinned outbox payload with idempotent ACK test now; actual process kill plus CEG Neo4j readback is P4 G_RAIL.",
+        "No completed-graph claim without CEG ACK and no paid replay.",
+        "Publish any substantive code changes only through current governed make pr with verified explicit same-repository stack parent. Record exact PR URL, parent and head; own required CI and reviewer remediation until green.",
+        "Do not run manual Docker/five-service integration before CTO verifies all campaign PRs are published and current-head green; use focused unit/contracts and existing mandated CI only."
+      ],
+      "depends_on_lanes": [],
+      "exclusions": [
+        "No raw Git push or unauthorized merge/deploy",
+        "No global-law or unauthorized out-of-scope repo edits",
+        "Makefile and Repo.mk are out of scope; no edits, generation, or workaround patches.",
+        "No direct git push/gh pr create; no approvals requested solely for AGENT.md/AGENTS.md protected-doc changes in this campaign.",
+        "No edits to Makefile or Repo.mk in any repository."
+      ],
+      "id": "OUT",
+      "kind": "writer",
+      "objective": "At existing side-effect owner persist and replay graph-pending payload/operation id; ensure same evidence and no extra research call on recovery.",
+      "read_only_repositories": [
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs",
+        "https://github.com/Quantum-L9/Constellation.Gate"
+      ],
+      "title": "EIE persisted result to CEG durable outbox",
+      "wait_for_gates": [
+        "G0"
+      ],
+      "writable_repositories": [
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine"
+      ],
+      "write_paths": {
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine": [
+          "app/services/side_effect_coordinator.py",
+          "app/services/pg_models.py",
+          "migrations/versions/*",
+          "app/engines/handlers.py",
+          "app/engines/packet_router.py",
+          "tests/unit/test_side_effect_coordinator.py",
+          "tests/unit/test_converge_graph_sync.py",
+          "tests/unit/test_score_invalidation.py"
+        ]
+      }
+    },
+    {
+      "acceptance": [
+        "Accepted feedback is persisted and consumed once across injected-store reload in focused tests; live process restart is P4 G_RAIL.",
+        "QueueFull or store failure returns truthful refusal/pending; no silent loss.",
+        "No provenance inflation: graph-inferred value remains sourced and unadmitted if contract requires.",
+        "Publish any substantive code changes only through current governed make pr with verified explicit same-repository stack parent. Record exact PR URL, parent and head; own required CI and reviewer remediation until green.",
+        "Do not run manual Docker/five-service integration before CTO verifies all campaign PRs are published and current-head green; use focused unit/contracts and existing mandated CI only."
+      ],
+      "depends_on_lanes": [],
+      "exclusions": [
+        "No raw Git push or unauthorized merge/deploy",
+        "No global-law or unauthorized out-of-scope repo edits",
+        "Makefile and Repo.mk are out of scope; no edits, generation, or workaround patches.",
+        "No direct git push/gh pr create; no approvals requested solely for AGENT.md/AGENTS.md protected-doc changes in this campaign.",
+        "No edits to Makefile or Repo.mk in any repository."
+      ],
+      "id": "IN",
+      "kind": "writer",
+      "objective": "Use existing GraphReturnChannel handler as logical ingress, add proven recoverable acceptance/consume/dedupe; queue is performance optimization only. Build against the OUT-owned established persistence interface after early G_SCHEMA rather than waiting for outbound crash tests; never edit schema/migrations.",
+      "read_only_repositories": [
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs",
+        "https://github.com/Quantum-L9/Constellation.Gate"
+      ],
+      "title": "EIE durable CEG inference feedback intake",
+      "wait_for_gates": [
+        "G_SCHEMA"
+      ],
+      "writable_repositories": [
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine"
+      ],
+      "write_paths": {
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine": [
+          "app/services/graph_return_channel.py",
+          "app/services/chassis_handlers.py",
+          "tests/services/test_graph_return_channel.py",
+          "tests/services/test_chassis_handlers.py"
+        ]
+      }
+    },
+    {
+      "acceptance": [
+        "One authorized graph inference output reaches EIE only through Gate with bounded retries/status.",
+        "Unqualified, stale or unsupported evidence is not silently promoted to CRM observation; disabled mode stays honest.",
+        "Publish any substantive code changes only through current governed make pr with verified explicit same-repository stack parent. Record exact PR URL, parent and head; own required CI and reviewer remediation until green.",
+        "Do not run manual Docker/five-service integration before CTO verifies all campaign PRs are published and current-head green; use focused unit/contracts and existing mandated CI only."
+      ],
+      "depends_on_lanes": [],
+      "exclusions": [
+        "No raw Git push or unauthorized merge/deploy",
+        "No global-law or unauthorized out-of-scope repo edits",
+        "Makefile and Repo.mk are out of scope; no edits, generation, or workaround patches.",
+        "No direct git push/gh pr create; no approvals requested solely for AGENT.md/AGENTS.md protected-doc changes in this campaign.",
+        "No edits to Makefile or Repo.mk in any repository."
+      ],
+      "id": "FEED",
+      "kind": "writer",
+      "objective": "Use existing Gate-only graph inference sender, exact authorized domain rules, confidence floors, stable event IDs and idempotency.",
+      "read_only_repositories": [
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine",
+        "https://github.com/Quantum-L9/Constellation.Gate"
+      ],
+      "title": "CEG feedback sender and owned rule trigger",
+      "wait_for_gates": [
+        "G0"
+      ],
+      "writable_repositories": [
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs"
+      ],
+      "write_paths": {
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs": [
+          "engine/gate_egress.py",
+          "engine/handlers.py",
+          "engine/inference_rule_registry.py",
+          "tests/unit/test_graph_inference_egress.py",
+          "tests/unit/test_admin_tenant_binding.py"
+        ]
+      }
+    },
+    {
+      "acceptance": [
+        "Unsupported score-invalidate is removed or corrected only at owner; score worker permission remains denied.",
+        "Audit that both real restart windows are included in the final signed P4 rail; at P2 prove static contracts and unit restart simulator, not a live service.",
+        "Assure only exact source and PR-head facts; do not use a partial code-ready phase receipt as final Docker integration evidence."
+      ],
+      "depends_on_lanes": [],
+      "exclusions": [
+        "No repository modifications or publication",
+        "No fictional evidence, release claim, or approval",
+        "No edits to Makefile or Repo.mk in any repository."
+      ],
+      "id": "SEAM",
+      "kind": "assurance",
+      "objective": "Establish live signed caller policy and whether CEG needs invalidation; review crash/ACK evidence independently.",
+      "read_only_repositories": [
+        "https://github.com/Quantum-L9/Constellation.Gate",
+        "https://github.com/Quantum-L9/Enrichment.Inference.Engine",
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs"
+      ],
+      "title": "Gate and scoring cache seam audit",
+      "wait_for_gates": [
+        "G0"
+      ],
+      "writable_repositories": [],
+      "write_paths": {}
+    }
+  ],
+  "reserved_approvals": [
+    "The operator activates this complete P0-P4 series ONCE under the current /lcto session; each later phase advances on accepted predecessor code/PR receipts, without a fresh discretionary activation. If the host session changes, use its governed continuity/adoption rather than relaunching a parallel CTO.",
+    "PR publication is pre-authorized for in-scope branches through the verified current make pr SSOT; the same-repository parent branch must be explicit and verified. Coding agents require no individual publication approval. Never use raw push.",
+    "The operator suspends repository-local AGENT.md and AGENTS.md documentation protected-file extra human-review requirements for this campaign. Agents may edit these files in their declared DOC lanes without requesting an additional human reviewer; retained higher-authority security, actual GitHub protections and reserved merge controls are not waived.",
+    "Use already available Cursor/Infisical secrets for least-privilege test and signed integration calls without asking again. No raw material in prompts, commits, logs, PR bodies or artifacts; absent keys are a precise external blocker, not a fabricated success.",
+    "All PRs remain unmerged until actual current merge authorization permits it. Do not ask for merge permission on every coding agent PR; CTO consolidates the exact subject(s) when necessary. This approval does not authorize production deploy, data mutation or changing Makefile/Repo.mk.",
+    "Continue through source-proven corrections, PR publication and agent-owned remediation until all component PRs are green; conduct one combined Docker integration acceptance on the joined heads AFTER all are published. No per-PR Docker ceremony, but never bypass required CI."
+  ],
+  "schema": "l9.local.lcto-campaign-authoring/v2",
+  "scope": {
+    "exclude": [
+      "No new Redis stream/message bus/distributed transaction framework or guessed database tables.",
+      "No automatic CEG-triggered paid research or worker permission to invoke operator-only score.",
+      "No production rollout or hidden fail-open ACK.",
+      "Makefile and Repo.mk in every repository are strictly out of write scope; neither the generated make-v1 facade nor its repository-owned implementation can be edited or regenerated as a workaround.",
+      "No direct edits to Cursor-Governance publication machinery, GitHub .github global semantics, unrelated application modules or deployment/production resources.",
+      "No pre-publication heavy Docker integration runs, no suppression of existing required CI checks, no fake PRs when no code correction is needed.",
+      "No raw git push, ungoverned gh pr create, force-push, arbitrary rebases, permissions bypass or secret leakage."
+    ],
+    "include": [
+      "Recoverable EIE deferred graph sync using existing SideEffectCoordinator, Postgres models/migrations and pinned payload/idempotency.",
+      "Durable EIE graph inference feedback intake before accepted ACK; no queue-full acceptance or silent drop.",
+      "CEG Gate-only graph feedback emission with explicit tenant/entity/rule lineage, actual authorized trigger and default-off flags respected.",
+      "HubSpot observed association relationship retry/relevance admission and acknowledged-only claims.",
+      "Resolve unsupported score-invalidate path from actual CEG cache/route owner: remove if unused or define an approved route only if necessary.",
+      "Run two real process-restart points and a Gate timeout/replay against Neo4j.",
+      "A single persistent LCTO owns the complete P0-P4 program, integration and final disposition. One operator activation starts the series; later phases are gated continuation in that same session, not new operator approvals.",
+      "Preserve the same reusable CTO coding-agent pool, maximum five concurrent child agents or lower actual host capacity. Run independent disjoint work at once; keep each code writer as sole owner of its branch, affected files and PR remediation.",
+      "Stack every campaign PR on the verified previous campaign PR head within its own GitHub repository. Separate repositories have separate linear trains; bind cross-repository dependencies to pinned commit pairs in the CTO stack ledger.",
+      "Use the current Cursor-Governance governed make pr publication procedure exclusively. Verify the exact PR_BASE and resulting GitHub base/head, refuse ambiguous auto-stack/fallback, never raw push or direct PR creation.",
+      "Each coding agent owns its PR through native fast checks, required existing CI, reviewer comments, fixes and green current-head status. CTO schedules publication, evaluates integration and routes any defects back to the original writer.",
+      "No manual five-service Docker integration or repeated whole-system rail per PR or between phases. After ALL planned PRs in P0-P4 are published and green, test the final composite branch heads once; rerun only affected evidence and the final complete rail if integration defects require corrections.",
+      "Existing Infisical secrets available to Cursor are explicitly authorized for the bounded campaign test/integration need. Use the existing credential bindings, least-privilege scope and no logging/copying/committing secrets; availability is checked at use, not presumed.",
+      "For this campaign only, additional repository-local AGENT.md/AGENTS.md protected-file human-review ceremonies are waived for the declared documentation writer. Global policy, GitHub branch controls, security rules, and actual merge authority are not suspended."
+    ]
+  },
+  "sources": [
+    {
+      "coordinate": "AGENTS.md; docs/INVARIANTS.md; Repo.mk; app/engines/handlers.py; app/engines/convergence_controller.py; domains/plasticos/spec.yaml",
+      "grade": "OBSERVED",
+      "id": "SRC_EIE",
+      "kind": "code",
+      "observation": "Checked via GitHub connector against pinned current default-branch SHA on 2026-11-18.",
+      "owner": "https://github.com/Quantum-L9/Enrichment.Inference.Engine",
+      "revision": "29d4eb54942e446a9ac917d2ebe2d9733a4e7aec"
+    },
+    {
+      "coordinate": "engine/handlers.py; engine/config/loader.py; engine/sync/generator.py; engine/health/api.py; engine/gate_egress.py",
+      "grade": "OBSERVED",
+      "id": "SRC_CEG",
+      "kind": "code",
+      "observation": "Checked via GitHub connector against pinned current default-branch SHA on 2026-11-18.",
+      "owner": "https://github.com/Quantum-L9/Cognitive.Engine.Graphs",
+      "revision": "5d06649ed5587463c11b02594ce26b5ef4ad1733"
+    },
+    {
+      "coordinate": "constellation-gate/src/constellation_gate/routing/action_ownership.py; constellation-gate/src/constellation_gate/config/node_registry.yaml",
+      "grade": "OBSERVED",
+      "id": "SRC_GATE",
+      "kind": "code",
+      "observation": "Checked via GitHub connector against pinned current default-branch SHA on 2026-11-18.",
+      "owner": "https://github.com/Quantum-L9/Constellation.Gate",
+      "revision": "b451b68b98b315f57f0c4f9b99090a437e9dac23"
+    },
+    {
+      "coordinate": "commands/lcto.md; governance/cto-mode/MODE.yaml; Repo.mk; ops/autonomy/cto_mode.py",
+      "grade": "OBSERVED",
+      "id": "SRC_GOV",
+      "kind": "code",
+      "observation": "Checked via GitHub connector against pinned current default-branch SHA on 2026-11-18.",
+      "owner": "https://github.com/Quantum-L9/Cursor-Governance",
+      "revision": "59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd"
+    },
+    {
+      "coordinate": "semantics/invariants.yaml; semantics/projection_profiles.yaml; semantics/strategic_value_model.yaml",
+      "grade": "OBSERVED",
+      "id": "SRC_LAW",
+      "kind": "code",
+      "observation": "Checked via GitHub connector against pinned current default-branch SHA on 2026-11-18.",
+      "owner": "https://github.com/Quantum-L9/.github",
+      "revision": "00500268eb24de29a5e647a447d6f992d609f6f5"
+    },
+    {
+      "coordinate": "reference/EIE_CEG_Domain_Intelligence_DevPack_v1.3.0.zip",
+      "grade": "OBSERVED",
+      "id": "SRC_DEV",
+      "kind": "artifact",
+      "observation": "The exact local dev ZIP was read, CRC-checked and embedded; its code-source facts are snapshots, not deployment receipts.",
+      "owner": "Provided EIE + CEG development pack",
+      "revision": "d1d7a959b01094c25acc2a7925f32169fe7787aaaa04a8a246d6289d4845a0be"
+    },
+    {
+      "coordinate": "reference/L9_LCTO_Campaign_Compilation_Template_v2.0.0.zip",
+      "grade": "OBSERVED",
+      "id": "SRC_TMPL",
+      "kind": "artifact",
+      "observation": "Original user upload verified by ZIP CRC; the included template ZIP compiler passed its 13 bundled negative-control tests (tests/test_compiler.py).",
+      "owner": "User supplied LCTO template",
+      "revision": "356c6f1ca0c5a0b425db4c2c67f1a6dc1209e6eb975350462032af5210811f4d"
+    },
+    {
+      "coordinate": "Active approved EIE + CEG tenant pack revisions, Neo4j tenant database, signed Gate caller policies, live client credentials",
+      "grade": "UNKNOWN",
+      "id": "SRC_RUNTIME",
+      "kind": "runtime",
+      "observation": "No live deployed domain-pack admission, keys or Neo4j graph was examined; no synthetic source can prove it.",
+      "owner": "Operator deployment and native tenant pack authority",
+      "resolution_gate": "G0",
+      "revision": "UNKNOWN"
+    },
+    {
+      "coordinate": "P1 exact published stacked PR URLs/green current heads and typed handoff evidence",
+      "grade": "UNKNOWN",
+      "id": "SRC_PREDECESSOR",
+      "kind": "execution_receipt",
+      "observation": "Unknown until previous phase code-ready milestone; no live Docker, merge or production proof is implied by predecessor readiness.",
+      "owner": "LCTO Phase P1 integrator",
+      "resolution_gate": "G0",
+      "revision": "UNKNOWN"
+    },
+    {
+      "coordinate": "single CTO, stack all PRs, make pr SSOT, defer Docker until all published, Infisical authorized, AGENT protection suspended, Makefile out of scope",
+      "grade": "REPORTED",
+      "id": "SRC_OPERATOR",
+      "kind": "operator_decision",
+      "observation": "Explicit scoped operator direction to revise this campaign pack; it is not evidence that host permissions, credentials or runtime tests are already available.",
+      "owner": "Operator instruction in current conversation",
+      "revision": "2026-11-18-current-turn"
+    },
+    {
+      "coordinate": "ops/scripts/lib/resolve_pr_stack.sh; ops/scripts/pr_preflight.sh; ops/make/publish.mk; rules/53-pr-overlap-guardrail.mdc",
+      "grade": "OBSERVED",
+      "id": "SRC_STACK",
+      "kind": "code",
+      "observation": "PR_STACK=auto can preserve main on telemetry failures and may select ambiguous open PR chains; verified PR_BASE must be explicitly supplied and checked when every campaign PR is stacked.",
+      "owner": "https://github.com/Quantum-L9/Cursor-Governance",
+      "revision": "59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd"
+    }
+  ]
+}
