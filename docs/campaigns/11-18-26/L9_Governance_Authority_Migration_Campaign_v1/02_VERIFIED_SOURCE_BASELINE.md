@@ -30,9 +30,15 @@ All paths below were inspected through the connected GitHub repository API at ex
 - Cursor-Governance additionally has active repo ruleset **20855699** `main-protection` with required status checks and zero required approving reviews, and an EnterpriseOwner always-bypass actor. Check failing-PR behavior, applicability and actual bypass audit before claiming independent control.
 - Existing Core control-plane attestation is read-only and needs `L9_CONTROL_PLANE_TOKEN` for full proof; absence yields UNKNOWN, not PASS. [Source](https://github.com/Quantum-L9/l9-ci-core/blob/027e86543701740c4a238e593bd33c03f59eda00/.github/workflows/control-plane-attestation.yml)
 
-## Launch-binding recheck, 2026-11-18
+## Clean start, 2026-11-18
 
-The four writable `main` SHAs in the table above still match GitHub `main`. `.github` and `l9-ci-core` have no open pull requests. Cursor-Governance has six: #1038, #1037, #1036, #1014, #1013, and #1012. L9-Ops-MCP has #44, #43, #42, #40, and #38. Path holds, the clone/push dry-run, and the live ruleset payloads are recorded in `09_EXECUTION_BINDING.md`.
+Cursor-Governance `main` is `59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd`. That tip contains merged #1037, #1038, and #1039. `.github` `main` is still `00500268eb24de29a5e647a447d6f992d609f6f5`. `l9-ci-core` `main` is still `027e86543701740c4a238e593bd33c03f59eda00`. L9-Ops-MCP `main` is still `e372d303ee03cefc56f0179098eb6a2ebb011257`.
+
+Every lane branches from fetched `origin/main` at those SHAs. #1037, #1038, and #1039 are on that tip and are not stack parents. The policy blobs named in the table above are unchanged between `48c9e134` and `59c0b3e0`. `AGENTS.md` and `CANONICAL_LAW.md` on this tip already include the #1038 text.
+
+Still open, and not the integration base: Cursor-Governance #1040 (this amendment), #1036, #1014, #1013, and #1012. #1036 changes only `.github/CODEOWNERS`, `.github/dependabot.yml`, and `.github/workflows/governance.yml`. L9-Ops-MCP still has #44, #43, #42, #40, and #38. #44 changes only `.github/CODEOWNERS`, `.github/dependabot.yml`, and `.github/pull_request_template.md`. A lane stacks on one of those heads only when it edits a path that pull request already changes. Otherwise the base is `origin/main`.
+
+Local checkout commit `39fd2492b314a2b6b132f393af61a27b47764dd1` is still not on `origin/main`. Leave it out of every base. Path holds, the clone/push dry-run, and the live ruleset payloads are recorded in `09_EXECUTION_BINDING.md`.
 
 The repository API reports `Quantum-L9/.github` `private: false`. The child system prompt still calls it private. That does not let a pool agent clone, branch, or push it.
 
