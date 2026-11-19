@@ -228,6 +228,31 @@ class AutonomyControlPlaneBridgeTests(unittest.TestCase):
         self.assertIn("merge", campaign.scope["forbidden_operations"])
         self.assertNotIn("push_non_force_declared_branch", campaign.scope["allowed_operations"])
 
+    def test_validation_commands_grant_run_tests_to_the_campaign_scope(self) -> None:
+        """A contract that obliges its worker to run validations grants run_tests.
+
+        Without it the gateway denies every validation command with
+        CAMPAIGN_OPERATION_NOT_ALLOWED, so a read-only task's attempt can never
+        claim honest validations. An inspect contract that declares no
+        validation commands keeps the plain inspect operations.
+        """
+        module = _mapper()
+        plain = module.allowed_operations(
+            {"requested_actions": ["inspect"], "writable_paths": []}
+        )
+        self.assertEqual(plain, ["read", "search"])
+        validating = module.allowed_operations(
+            {
+                "requested_actions": ["inspect"],
+                "writable_paths": [],
+                "validation_commands": ["test -f Repo.mk"],
+            }
+        )
+        self.assertEqual(validating, ["read", "search", "run_tests"])
+        # Mutation contracts already carry run_tests through local_write.
+        mutating = module.allowed_operations(_mutating_contract())
+        self.assertIn("run_tests", mutating)
+
     def test_local_write_without_commit_does_not_allow_commit_local(self) -> None:
         """`mutation` is not one permission: commit is never inferred from write."""
         campaign = _mapper().map_program_contract(
