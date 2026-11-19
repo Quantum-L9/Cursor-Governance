@@ -131,6 +131,10 @@
               "string",
               "null"
             ]
+          },
+          "freshness": {
+            "type": "string",
+            "minLength": 1
           }
         }
       }

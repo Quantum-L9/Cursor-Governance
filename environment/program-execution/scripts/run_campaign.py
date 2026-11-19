@@ -7101,6 +7101,16 @@ def _run_rendered_plan(
     admission_evidence, and default_admit do not run on this path.
     """
     source_path, blueprint, document = _require_rendered_plan(intent_path)
+    causality = _load_script(
+        "evidence_causality",
+        PE_ROOT / "scripts" / "evidence_causality.py",
+    )
+    source_errors = list(causality.errors_for_campaign_source(document))
+    if source_errors:
+        raise CampaignError(
+            "evidence causality failed: " + "; ".join(source_errors),
+            error_code="BLUEPRINT_VALIDATE",
+        )
     seed = campaign_input_module().seed_view(document)
     campaign_id = str(seed.get("campaign_id") or "").strip()
     if not campaign_id:

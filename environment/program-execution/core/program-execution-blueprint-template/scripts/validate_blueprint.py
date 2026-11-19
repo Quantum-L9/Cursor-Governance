@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import re
 from pathlib import Path
@@ -148,6 +149,31 @@ def check_dag(nodes: set[str], edges: list[dict[str, Any]], errors: list[str]) -
 
     for node in sorted(nodes):
         visit(node, [])
+
+
+def _evidence_causality_errors(
+    tasks: list[dict[str, Any]],
+    evidence: list[dict[str, Any]],
+    edges: list[dict[str, Any]],
+    waves: list[dict[str, Any]],
+) -> list[str]:
+    """A catalog input must be admission evidence or produced by an earlier task."""
+    path = Path(__file__).resolve().parents[3] / "scripts" / "evidence_causality.py"
+    if not path.is_file():
+        return [f"evidence causality checker missing: {path}"]
+    spec = importlib.util.spec_from_file_location("evidence_causality", path)
+    if spec is None or spec.loader is None:
+        return [f"cannot load evidence causality checker: {path}"]
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return list(
+        module.evidence_input_errors(
+            tasks,
+            evidence,
+            edges,
+            wave_rank=module.task_wave_rank(waves),
+        )
+    )
 
 
 def validate(root: Path, mode: str) -> list[str]:
@@ -436,6 +462,8 @@ def validate(root: Path, mode: str) -> list[str]:
                 f"{', '.join(writable)}; declare T1/T2 for a reversible write, or make the task "
                 "inspection-only"
             )
+
+    errors.extend(_evidence_causality_errors(tasks, evidence, graph.get("edges") or [], waves))
 
     for gate in gates:
         if "status" in gate:
