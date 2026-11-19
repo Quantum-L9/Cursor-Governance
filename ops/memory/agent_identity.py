@@ -6,9 +6,11 @@ therefore derived at write time from markers the host itself sets on the
 running process — never read from a hard-coded setting that can drift from
 where the code is actually running:
 
-    cursor        Cursor        CURSOR_AGENT is set
-    claude-code   Claude Code   Claude Code markers. Desktop, CLI, and mobile
-                                are surfaces of this one actor, not authors.
+    cursor        Cursor        CURSOR_AGENT is set and no Claude runtime
+    claude-code   Claude Code   Claude Code markers. A live Claude runtime wins
+                                over an inherited CURSOR_AGENT. Desktop, CLI,
+                                IDE, and mobile are surfaces of this one actor,
+                                not authors.
 
 On a Cursor or Claude Code surface a static ``L9_MEMORY_AGENT_ID`` is IGNORED:
 the host's own markers are the only evidence, so a pasted surface author
@@ -25,11 +27,13 @@ actors in the canonical registry. ``human`` is canonical and has no agent
 binding here. None of those names resolve.
 
 No guessing: Claude host markers prove the actor ``claude-code``. The
-entrypoint proves a surface only when it selects ``claude-code-cli`` or
-``claude-code-mobile``. Every other entrypoint, including a missing one,
-leaves the surface unknown. ``claude-code-desktop`` and ``claude-code-mobile``
-are historical actor aliases of ``claude-code``; the same strings are current
-surface ids and are not authors.
+entrypoint proves a surface only when it selects ``claude-code-cli``
+(``cli``), ``claude-code-ide`` (``claude-vscode``), or ``claude-code-mobile``
+(``remote_mobile``). Every other entrypoint, including a missing one, leaves
+the surface unknown. ``claude-code-desktop`` and ``claude-code-mobile`` are
+historical actor aliases of ``claude-code``; the same strings are current
+surface ids and are not authors. A live Claude runtime outranks an inherited
+``CURSOR_AGENT``.
 
 Pure: reads the mapping it is given, no I/O. ``python -m ops.memory.agent_identity``
 prints the identity for the current process (exit 1 and a reason when none).
@@ -61,8 +65,12 @@ RETIRED: Final = frozenset({"claude-code-desktop", "claude-code-mobile"})
 HISTORICAL_ACTOR_ALIASES: Final = {name: CLAUDE_ACTOR for name in sorted(RETIRED)}
 CURSOR_SURFACE: Final = "cursor-ide"
 CLAUDE_CLI_SURFACE: Final = "claude-code-cli"
+CLAUDE_IDE_SURFACE: Final = "claude-code-ide"
 CLAUDE_MOBILE_SURFACE: Final = "claude-code-mobile"
-LOCAL_ENTRYPOINTS: Final = {"cli": CLAUDE_CLI_SURFACE}
+LOCAL_ENTRYPOINTS: Final = {
+    "cli": CLAUDE_CLI_SURFACE,
+    "claude-vscode": CLAUDE_IDE_SURFACE,
+}
 REMOTE_SURFACE_BY_ENTRYPOINT: Final = {"remote_mobile": CLAUDE_MOBILE_SURFACE}
 #: CLAUDE_CODE_ENTRYPOINT values of a cloud session this resolver admits.
 REMOTE_ENTRYPOINTS: Final = frozenset(REMOTE_SURFACE_BY_ENTRYPOINT)
@@ -179,10 +187,14 @@ def oauth_public_client_claim(env: Mapping[str, str] | None = None) -> str:
 def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
     """The writing agent's identity, derived from host markers; "" when unknown."""
     source = os.environ if env is None else env
-    if _is_cursor(source):
-        return CURSOR
+    # A live Claude process wins over an inherited Cursor host marker. The IDE
+    # panel sets both. Cursor with no Claude runtime stays cursor.
     if _is_claude(source):
         return _claude_identity(source)
+    if _flag(source, "CLAUDE_CODE_REMOTE").lower() == "true":
+        return CLAUDE_ACTOR
+    if _is_cursor(source):
+        return CURSOR
     # A public OAuth client id is not an actor. It neither selects one nor
     # denies a registered adapter whose marker happens to equal that string.
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
@@ -192,9 +204,10 @@ def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
 def resolve_surface_id(env: Mapping[str, str] | None = None) -> str:
     """The surface of this process, derived from host markers; "" when unknown."""
     source = os.environ if env is None else env
-    if _is_cursor(source):
+    claude = _is_claude(source) or _flag(source, "CLAUDE_CODE_REMOTE").lower() == "true"
+    if not claude and _is_cursor(source):
         return CURSOR_SURFACE
-    if not _is_claude(source):
+    if not claude:
         return ""
     entry = _flag(source, "CLAUDE_CODE_ENTRYPOINT").lower()
     if _flag(source, "CLAUDE_CODE_REMOTE").lower() == "true":

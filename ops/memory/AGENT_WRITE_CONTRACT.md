@@ -95,15 +95,16 @@ from the upstream registries pinned in `environment/agents/agent_registry.yaml`
 
 | ActorIdentity | SurfaceIdentity | Derived from |
 |---|---|---|
-| `l9.actor-registry/global@1#cursor` | `l9.surface-registry/global@1#cursor-ide` | `CURSOR_AGENT`. Cursor wins when Claude markers are also present. |
-| `l9.actor-registry/global@1#claude-code` | `l9.surface-registry/global@1#claude-code-cli` | Claude markers and local `CLAUDE_CODE_ENTRYPOINT=cli` |
+| `l9.actor-registry/global@1#cursor` | `l9.surface-registry/global@1#cursor-ide` | `CURSOR_AGENT` and no Claude runtime. |
+| `l9.actor-registry/global@1#claude-code` | `l9.surface-registry/global@1#claude-code-cli` | Claude markers and local `CLAUDE_CODE_ENTRYPOINT=cli`. A live Claude runtime wins over an inherited `CURSOR_AGENT`. |
+| `l9.actor-registry/global@1#claude-code` | `l9.surface-registry/global@1#claude-code-ide` | Claude markers and `CLAUDE_CODE_ENTRYPOINT=claude-vscode`, including when a Cursor host marker is inherited. |
 | `l9.actor-registry/global@1#claude-code` | `l9.surface-registry/global@1#claude-code-mobile` | `CLAUDE_CODE_REMOTE=true` and `CLAUDE_CODE_ENTRYPOINT=remote_mobile` |
 | `l9.actor-registry/global@1#claude-code` | `unknown` | Claude markers with any other entrypoint, including empty, `remote_web`, and `remote_unknown`. The `surface:` tag is omitted. |
 | `l9.actor-registry/global@1#codex` | `unknown` | `L9_MEMORY_AGENT_ID=codex` and no host markers |
 | `l9.actor-registry/global@1#gemini` | `unknown` | `L9_MEMORY_AGENT_ID=gemini` and no host markers |
 | `l9.actor-registry/global@1#manus` | `unknown` | `L9_MEMORY_AGENT_ID=manus` and no host markers |
 
-`claude-code-desktop` and `claude-code-ide` are canonical surfaces this plane does not assign. Missing evidence does not select them. `claude-code-web` is assigned and has no host marker, so it is not filled in. `perplexity`, `perplexity-computer`, `l-cto`, and `igorbot` are not actors. `human` is canonical and has no agent binding here.
+`claude-code-desktop` is a canonical surface this plane does not assign. Missing evidence does not select it. `claude-code-ide` is assigned only for `CLAUDE_CODE_ENTRYPOINT=claude-vscode`. `claude-code-web` is assigned and has no host marker, so it is not filled in. `perplexity`, `perplexity-computer`, `l-cto`, and `igorbot` are not actors. `human` is canonical and has no agent binding here.
 
 `claude-code-desktop` and `claude-code-mobile` are also **historical
 ActorIdentity aliases** of `claude-code`. Stored memories and receipts that

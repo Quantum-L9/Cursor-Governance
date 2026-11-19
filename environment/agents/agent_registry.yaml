@@ -115,6 +115,7 @@ agents:
     actor_ref: l9.actor-registry/global@1#claude-code
     surface_refs:
       - l9.surface-registry/global@1#claude-code-cli
+      - l9.surface-registry/global@1#claude-code-ide
       - l9.surface-registry/global@1#claude-code-web
       - l9.surface-registry/global@1#claude-code-mobile
     user_id: claude_code_agent
