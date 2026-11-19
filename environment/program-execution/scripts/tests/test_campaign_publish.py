@@ -111,7 +111,7 @@ class Fixture:
             )
         self.calls.append(argv)
         if argv[0] == "make":
-            assert env is not None and env["PR_REMEDIATE"] == "0"
+            assert env is not None and env["PR_REMEDIATE"] == "0" and env["OPEN_PR"] == "1"
             if self.write_summary:
                 summary = self.workspace / ".l9" / "pr" / "pr-summary.json"
                 summary.parent.mkdir(parents=True, exist_ok=True)
