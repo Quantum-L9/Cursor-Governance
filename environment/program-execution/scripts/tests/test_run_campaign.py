@@ -1851,6 +1851,45 @@ class RunCampaignTests(unittest.TestCase):
             self.assertIn("dead-one", ids)
             self.assertNotIn("live-one", ids)
 
+    def test_dirty_donor_clones_to_a_clean_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            donor = temp / "donor"
+            dest = temp / "dest"
+            donor.mkdir()
+            _git_init(donor)
+            env = _isolated_git_env()
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(donor),
+                    "remote",
+                    "set-url",
+                    "origin",
+                    "https://github.com/Quantum-L9/Cursor-Governance.git",
+                ],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            (donor / "README.md").write_text("dirty tracked\n", encoding="utf-8")
+            (donor / "untracked.txt").write_text("no\n", encoding="utf-8")
+            self.assertTrue(self.mod.is_dirty(donor))
+            with patch.dict(
+                os.environ,
+                _github_redirect("Quantum-L9/Cursor-Governance", donor / _FIXTURE_ORIGIN),
+            ):
+                got = self.mod.default_ensure_target_checkout(
+                    dest, "Quantum-L9/Cursor-Governance", donor=donor
+                )
+            self.assertEqual(got, dest.resolve())
+            self.assertFalse(self.mod.is_dirty(dest))
+            self.assertFalse((dest / "untracked.txt").exists())
+            self.assertEqual((dest / "README.md").read_text(encoding="utf-8"), "x\n")
+            self.assertTrue((donor / "untracked.txt").is_file())
+            self.assertEqual((donor / "README.md").read_text(encoding="utf-8"), "dirty tracked\n")
+
     def test_donor_rejected_when_origin_mismatches(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             donor = Path(raw) / "donor"

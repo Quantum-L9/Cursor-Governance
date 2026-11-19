@@ -35,9 +35,17 @@ from typing import Any
 
 SCHEMA = "l9.session-role/v1"
 ROLE_CHILD = "swarm_child"
-#: Same order as ops/autonomy/projection_mode.py SESSION_ENVS; the Claude hook payload's
-#: ``session_id`` equals CLAUDE_CODE_SESSION_ID (the transcript is named after it).
-SESSION_ENVS = ("CURSOR_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID")
+#: Same order as ops/autonomy/projection_mode.py SESSION_ENVS. The Claude hook
+#: payload's ``session_id`` equals CLAUDE_CODE_SESSION_ID. Cursor agent shells
+#: and Claude cloud fall through to CURSOR_CONVERSATION_ID and
+#: CLAUDE_CODE_REMOTE_SESSION_ID so a mode and a role bind the same host.
+SESSION_ENVS = (
+    "CURSOR_SESSION_ID",
+    "CLAUDE_CODE_SESSION_ID",
+    "CLAUDE_SESSION_ID",
+    "CURSOR_CONVERSATION_ID",
+    "CLAUDE_CODE_REMOTE_SESSION_ID",
+)
 _SAFE = re.compile(r"[^A-Za-z0-9._-]+")
 
 

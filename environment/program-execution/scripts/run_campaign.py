@@ -1545,9 +1545,10 @@ def default_ensure_target_checkout(
     if (
         donor is not None
         and may_clone_local(donor)
-        and not is_dirty(donor)
         and donor_matches_repository(donor, repository_id)
     ):
+        # A dirty donor still clones clean: uncommitted and untracked files are
+        # not objects, so the campaign tree does not inherit them.
         clone = run_cmd(
             ["git", "clone", "--local", str(donor.resolve()), str(dest)],
             timeout=CLONE_TIMEOUT_S,

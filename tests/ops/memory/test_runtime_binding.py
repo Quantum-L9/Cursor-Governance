@@ -1074,9 +1074,16 @@ def test_a_tag_ref_is_re_resolved_on_the_remote_every_proof() -> None:
     ).read_text(encoding="utf-8")
     assert "print(f\"memory_sha={ev['memory_sha']}\")" in workflow
     assert "floating refs are forbidden" in workflow
-    assert "refs/tags/${MEMORY_REF}^{}" in workflow
-    assert "does not exist on" in workflow
-    assert 'if [ "${resolved}" != "${MEMORY_SHA}" ]' in workflow
+    # The private clone is a non-persisted checkout of the memory repository.
+    # The projection token never appears in this pull_request workflow, and no
+    # secret is placed in a run step. Checkout peels a tag; the next step
+    # refuses any HEAD other than release_evidence.memory_sha.
+    assert "secrets.L9_GITHUB_READ_TOKEN" not in workflow
+    assert "token: ${{ secrets.GH_TOKEN }}" in workflow
+    assert "persist-credentials: false" in workflow
+    assert "repository: Quantum-L9/l9-graphiti-memory" in workflow
+    assert 'if [ "${actual}" != "${MEMORY_SHA}" ]' in workflow
+    assert "the tag moved or the manifest is stale" in workflow
 
 
 def test_probe_resolves_an_alias_from_a_second_declared_module(tmp_path: Path) -> None:
