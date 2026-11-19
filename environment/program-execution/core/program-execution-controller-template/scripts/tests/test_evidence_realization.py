@@ -10,12 +10,19 @@ completion gate that requires it can only ever see it planned
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from pec.controller import _realize_planned_evidence
-from pec.state import StateDB
+# The gate discovers this suite from the repository root; the scripts dir
+# (where the `pec` package lives) is not on the path there.
+_SCRIPTS = Path(__file__).resolve().parents[1]
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
+
+from pec.controller import _realize_planned_evidence  # noqa: E402
+from pec.state import StateDB  # noqa: E402
 
 BASE_SHA = "a" * 40
 CANDIDATE = "b" * 40

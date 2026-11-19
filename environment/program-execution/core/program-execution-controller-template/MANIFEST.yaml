@@ -161,7 +161,7 @@ files:
 - path: scripts/tests/test_do_not_build_verify.py
   sha256: bec6145fab2c70007baf383813c19cdc2e39e788d5154d6159294c4f4752425b
 - path: scripts/tests/test_evidence_realization.py
-  sha256: 1adbab4f66ba79716af1111df91cfac9dfb8c08cab065bb5594a58c988e08f71
+  sha256: e230ac6b375430498f1779fc4063c9a101bfd4074511df1d0dec34916391fca5
 - path: scripts/tests/test_exec_env_root.py
   sha256: aacac11e7303897620396c0ba7e6659b3f0930af06938d7d3f704a5c76600d64
 - path: scripts/tests/test_exec_env_truncation.py
