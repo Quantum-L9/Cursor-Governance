@@ -236,11 +236,11 @@ def test_print_helper_skip_message_names_no_path(
     assert str(tmp_path) not in captured.err
 
 
-_PROJECTION_DIGEST = "sha256:939f22ee33781c3d628dfca668e780826b695d9eb7caa20bd3f342484c3af882"
+_PROJECTION_DIGEST = "sha256:9d7491d507b7204caeaa9892019ab39a5e459cf507c59fa192fa238e3a953c5c"
 _AUTHORITY = "9b27869dd893fcd28f76f99c9184a90435542c76"
 GOLDEN_KEY = "golden-identity-hmac-key"
-GOLDEN_DIGEST = "sha256:8227c33e299d93b3193ad58c82e0f660e88a01b3524c398d40d178f4de1ae550"
-GOLDEN_HMAC = "9f43077612dfe22131e5617824ecc272645e003424eeb70295a132617436da62"
+GOLDEN_DIGEST = "sha256:48179465ef52b40d1a40259b222887aea08e13ce5cdd0b7115c78ab0af07b5b8"
+GOLDEN_HMAC = "3cfb0db2175cc0ac22b0a9de28c0dcdab1df9e16ea8ee16585dcfaca164c0244"
 
 
 def _golden_body() -> dict:

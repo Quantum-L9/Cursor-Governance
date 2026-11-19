@@ -63,9 +63,6 @@ surfaces:
 - id: claude-code-cli
   status: current
   description: The Claude Code terminal command-line surface.
-- id: claude-code-ide
-  status: current
-  description: The Claude Code IDE-extension surface.
 - id: claude-code-mobile
   status: current
   description: The Claude Code mobile surface. The same string is a historical ActorIdentity alias in
@@ -91,9 +88,6 @@ surfaces:
 surface_aliases:
 - alias: claude-cli
   canonical: claude-code-cli
-  alias_kind: historical_surface_alias
-- alias: claude-ide
-  canonical: claude-code-ide
   alias_kind: historical_surface_alias
 - alias: claude-mobile
   canonical: claude-code-mobile

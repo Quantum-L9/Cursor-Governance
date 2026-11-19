@@ -116,8 +116,8 @@ def test_surface_follows_evidence_and_does_not_default() -> None:
         "CLAUDE_CODE_ENTRYPOINT": "claude-vscode",
     }
     assert ai.resolve_agent_id(panel) == "claude-code"
-    assert ai.resolve_surface_id(panel) == "claude-code-ide"
-    assert ai.resolve_surface_id({"CLAUDE_CODE_ENTRYPOINT": "claude-vscode"}) == "claude-code-ide"
+    assert ai.resolve_surface_id(panel) == "claude-code-cli"
+    assert ai.resolve_surface_id({"CLAUDE_CODE_ENTRYPOINT": "claude-vscode"}) == "claude-code-cli"
     assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "codex"}) == ""
     assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "manus"}) == ""
     assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "gemini"}) == ""
