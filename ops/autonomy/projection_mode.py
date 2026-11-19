@@ -506,6 +506,7 @@ class ProjectionMode:
             "schema": f"l9.{self.name}-mode-status/v1",
             "workspace": str(workspace),
             "organization_policy": _organization_policy(self.name),
+            "organization_policy_denials": _policy_denials(self.name),
         }
         try:
             contract = self.load_contract(contract_path)
