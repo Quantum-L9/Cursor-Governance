@@ -90,6 +90,8 @@ files:
   sha256: 6ff6e71f1a820ae05bbd795a50ac96e176bf971ccb8f6e9051f4da1623b087c7
 - path: scripts/instantiate.py
   sha256: b8d702fc025d096668d063b02fafd7b6f393fcf4997b3dffa3fcf3fcbe34db02
+- path: scripts/pec.py
+  sha256: a06ff404d01ffaf0defa06e273897bb26f2464adf6d9507714c2d64749a25273
 - path: scripts/pec/__init__.py
   sha256: 1c97c455db405eead95452458bbd62c3843425adbeb120a7cf5da2848d42a2bb
 - path: scripts/pec/attempts.py
@@ -103,7 +105,7 @@ files:
 - path: scripts/pec/contracts.py
   sha256: bca3501a6828dd6cef7b9351fa424c964b02edc767db19fd966c0def8b84d380
 - path: scripts/pec/controller.py
-  sha256: 5e196a0b71cb12c7098e1766ba612a5e7be4a9175ced0e9935f8277b5ad5557d
+  sha256: 67a0cb37fe70ec55d9b8edeb3b41e3f81826f5f3a1a7e8ac277910986cbe1459
 - path: scripts/pec/dispatch.py
   sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
 - path: scripts/pec/exec_env.py
@@ -126,8 +128,6 @@ files:
   sha256: f7b0aa599c8e73778b4661c18d5f381bf5aaccfc403246cb991ea98bcf5f08e2
 - path: scripts/pec/workspace_reset.py
   sha256: 514ed27b962fe5590117b1bf2b5cbe81eef4b553bf024e59c6e5162e82c30bdf
-- path: scripts/pec.py
-  sha256: a06ff404d01ffaf0defa06e273897bb26f2464adf6d9507714c2d64749a25273
 - path: scripts/run_negative_tests.py
   sha256: 16dd96536bac0b9c5b6cfcf78b5cc308a6493a819712c829ebeb64bff70f4d31
 - path: scripts/tests/conftest.py
@@ -160,6 +160,8 @@ files:
   sha256: 8fd96068f7442f96de8af2abc401ff1cbf3800cfe227b2bccef55869d2dbeadf
 - path: scripts/tests/test_do_not_build_verify.py
   sha256: bec6145fab2c70007baf383813c19cdc2e39e788d5154d6159294c4f4752425b
+- path: scripts/tests/test_evidence_realization.py
+  sha256: 1adbab4f66ba79716af1111df91cfac9dfb8c08cab065bb5594a58c988e08f71
 - path: scripts/tests/test_exec_env_root.py
   sha256: aacac11e7303897620396c0ba7e6659b3f0930af06938d7d3f704a5c76600d64
 - path: scripts/tests/test_exec_env_truncation.py
