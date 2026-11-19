@@ -47,22 +47,14 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "id",
-            "required_state"
-          ],
+          "required": ["id", "required_state"],
           "properties": {
             "id": {
               "type": "string"
             },
             "required_state": {
               "type": "string",
-              "enum": [
-                "merged_and_green",
-                "merged",
-                "present",
-                "committed_and_validated"
-              ]
+              "enum": ["merged_and_green", "merged", "present", "committed_and_validated"]
             }
           }
         }
@@ -111,20 +103,14 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "resource",
-              "method"
-            ],
+            "required": ["resource", "method"],
             "properties": {
               "resource": {
                 "type": "string"
               },
               "method": {
                 "type": "string",
-                "enum": [
-                  "GET",
-                  "LIST"
-                ]
+                "enum": ["GET", "LIST"]
               },
               "note": {
                 "type": "string"
@@ -155,9 +141,7 @@
     "commit_gate": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "required_before_commit"
-      ],
+      "required": ["required_before_commit"],
       "properties": {
         "required_before_commit": {
           "type": "array",
@@ -181,11 +165,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "number",
-          "name",
-          "status"
-        ],
+        "required": ["number", "name", "status"],
         "properties": {
           "number": {
             "type": "integer",
@@ -197,10 +177,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "present",
-              "not_applicable"
-            ]
+            "enum": ["present", "not_applicable"]
           },
           "not_applicable_reason": {
             "type": "string"
@@ -220,11 +197,7 @@
     "resume_from": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "assumes_already_green",
-        "verify_before_starting",
-        "if_assumption_false"
-      ],
+      "required": ["assumes_already_green", "verify_before_starting", "if_assumption_false"],
       "properties": {
         "assumes_already_green": {
           "type": "array",
@@ -258,9 +231,7 @@
     "handoff": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "next_session_may_assume_green"
-      ],
+      "required": ["next_session_may_assume_green"],
       "properties": {
         "next_session_may_assume_green": {
           "type": "array",
@@ -269,10 +240,7 @@
           }
         },
         "next_contract": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "chain_digest": {
           "type": "string",
@@ -298,19 +266,13 @@
           "type": "object"
         },
         "rollback_target": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "has_ai_feature": {
           "type": "boolean"
         },
         "evaluation_suite": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "broken_alert_runbook_links": {
           "type": "boolean"
@@ -380,10 +342,7 @@
         "terminal_delivery": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "authorized",
-            "command"
-          ],
+          "required": ["authorized", "command"],
           "properties": {
             "authorized": {
               "type": "boolean"

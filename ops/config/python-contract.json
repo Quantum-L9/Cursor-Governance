@@ -124,9 +124,7 @@
       "id": "repo-root",
       "kind": "pytest",
       "working_directory": ".",
-      "owned_paths": [
-        "."
-      ],
+      "owned_paths": ["."],
       "env": {
         "TESTING": "true",
         "PYTHONPATH": "${REPO_ROOT}"
@@ -135,10 +133,7 @@
       "allow_exit_5": true,
       "profiles": {
         "local": {
-          "argv": [
-            ".",
-            "--ignore=environment/agents/generated-data/tests"
-          ]
+          "argv": [".", "--ignore=environment/agents/generated-data/tests"]
         },
         "ci": {
           "argv": [
@@ -164,9 +159,7 @@
       "id": "claude-code-autonomy",
       "kind": "pytest",
       "working_directory": "environment/program-execution/peer_execution",
-      "owned_paths": [
-        "environment/program-execution/peer_execution/autonomy/tests"
-      ],
+      "owned_paths": ["environment/program-execution/peer_execution/autonomy/tests"],
       "env": {
         "TESTING": "true",
         "PYTHONPATH": "${REPO_ROOT}/environment/program-execution/peer_execution"
@@ -175,12 +168,7 @@
       "allow_exit_5": true,
       "profiles": {
         "local": {
-          "argv": [
-            "autonomy/tests",
-            "--import-mode=importlib",
-            "-o",
-            "addopts="
-          ]
+          "argv": ["autonomy/tests", "--import-mode=importlib", "-o", "addopts="]
         },
         "ci": {
           "argv": [
@@ -215,44 +203,26 @@
       "profiles": {
         "local": {
           "argv": [
-            [
-              "${PYTHON}",
-              "scripts/validate_controller.py",
-              ".",
-              "--mode",
-              "template"
-            ],
+            ["${PYTHON}", "scripts/validate_controller.py", ".", "--mode", "template"],
             [
               "bash",
               "-c",
               "find scripts/tests -maxdepth 1 -name 'test_*.py' -print0 | sort -z | xargs -0 -P \"${PES_CONTROLLER_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}\" -I{} \"$0\" -B {} -v",
               "${PYTHON}"
             ],
-            [
-              "${PYTHON}",
-              "scripts/run_negative_tests.py"
-            ]
+            ["${PYTHON}", "scripts/run_negative_tests.py"]
           ]
         },
         "ci": {
           "argv": [
-            [
-              "${PYTHON}",
-              "scripts/validate_controller.py",
-              ".",
-              "--mode",
-              "template"
-            ],
+            ["${PYTHON}", "scripts/validate_controller.py", ".", "--mode", "template"],
             [
               "bash",
               "-c",
               "find scripts/tests -maxdepth 1 -name 'test_*.py' -print0 | sort -z | xargs -0 -P \"${PES_CONTROLLER_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}\" -I{} \"$0\" -B {} -v",
               "${PYTHON}"
             ],
-            [
-              "${PYTHON}",
-              "scripts/run_negative_tests.py"
-            ]
+            ["${PYTHON}", "scripts/run_negative_tests.py"]
           ]
         }
       },
@@ -262,9 +232,7 @@
       "id": "skill-contracts",
       "kind": "command_sequence",
       "working_directory": ".",
-      "owned_paths": [
-        "skills"
-      ],
+      "owned_paths": ["skills"],
       "env": {
         "PYTHONDONTWRITEBYTECODE": "1"
       },
@@ -273,26 +241,14 @@
       "profiles": {
         "local": {
           "argv": [
-            [
-              "${PYTHON}",
-              "ops/scripts/validate_python_contract.py"
-            ],
-            [
-              "${PYTHON}",
-              "ops/scripts/run_skill_self_tests.py"
-            ]
+            ["${PYTHON}", "ops/scripts/validate_python_contract.py"],
+            ["${PYTHON}", "ops/scripts/run_skill_self_tests.py"]
           ]
         },
         "ci": {
           "argv": [
-            [
-              "${PYTHON}",
-              "ops/scripts/validate_python_contract.py"
-            ],
-            [
-              "${PYTHON}",
-              "ops/scripts/run_skill_self_tests.py"
-            ]
+            ["${PYTHON}", "ops/scripts/validate_python_contract.py"],
+            ["${PYTHON}", "ops/scripts/run_skill_self_tests.py"]
           ]
         }
       },
@@ -302,24 +258,16 @@
       "id": "subagent-generated-data-wave3",
       "kind": "command",
       "working_directory": ".",
-      "owned_paths": [
-        "environment/agents/generated-data/tests"
-      ],
+      "owned_paths": ["environment/agents/generated-data/tests"],
       "env": {},
       "append_user_pytest_args": false,
       "allow_exit_5": false,
       "profiles": {
         "local": {
-          "argv": [
-            "${PYTHON}",
-            "environment/agents/generated-data/tests/run_wave3_tests.py"
-          ]
+          "argv": ["${PYTHON}", "environment/agents/generated-data/tests/run_wave3_tests.py"]
         },
         "ci": {
-          "argv": [
-            "${PYTHON}",
-            "environment/agents/generated-data/tests/run_wave3_tests.py"
-          ]
+          "argv": ["${PYTHON}", "environment/agents/generated-data/tests/run_wave3_tests.py"]
         }
       },
       "rationale": "The Wave 3 generated-data suite is globally ignored by root pytest and driven by its own unittest orchestrator (run_wave3_tests.py), which shells out to `python -m unittest discover` over the conformance/routing/negative/golden directories. Run as an opaque command in both profiles: no pytest arguments are appended and any nonzero result fails the whole runner."

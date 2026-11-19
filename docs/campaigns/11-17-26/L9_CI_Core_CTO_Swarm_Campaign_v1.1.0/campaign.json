@@ -53,10 +53,7 @@
     {
       "id": "D",
       "kind": "write",
-      "owner_files": [
-        "docs/ACTIVATION.md",
-        "docs/release/rulesets/README.md"
-      ],
+      "owner_files": ["docs/ACTIVATION.md", "docs/release/rulesets/README.md"],
       "predecessor": "B",
       "brief": "lanes/D_documentation.md",
       "parallel_sibling": "C"

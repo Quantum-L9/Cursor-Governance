@@ -33,10 +33,7 @@
       "format": "date-time"
     },
     "source_audit_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "objective": {
       "type": "string",
@@ -44,13 +41,7 @@
     },
     "repository": {
       "type": "object",
-      "required": [
-        "name",
-        "path",
-        "base_ref",
-        "base_commit",
-        "target_branch"
-      ],
+      "required": ["name", "path", "base_ref", "base_commit", "target_branch"],
       "properties": {
         "name": {
           "type": "string"
@@ -71,13 +62,7 @@
       "additionalProperties": false
     },
     "mode": {
-      "enum": [
-        "AUDIT_ONLY",
-        "CONTRACT_ONLY",
-        "PACK_ONLY",
-        "RENOVATE_TO_PR",
-        "BLOCKED_PACK"
-      ]
+      "enum": ["AUDIT_ONLY", "CONTRACT_ONLY", "PACK_ONLY", "RENOVATE_TO_PR", "BLOCKED_PACK"]
     },
     "authority_decisions": {
       "type": "array",

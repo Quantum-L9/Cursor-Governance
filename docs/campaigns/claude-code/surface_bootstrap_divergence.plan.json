@@ -69,14 +69,10 @@
     {
       "id": "T2",
       "task": "Hook-entry guard in environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh: when the detected surface is not claude-code/claude-code-remote, gate-class hooks (memory_gate, local_execution_gate_wrap for Edit/Write matchers) emit allow and exit 0. Observer-class hooks unchanged. Kill switch L9_SURFACE_GUARD=0 restores old behavior",
-      "files": [
-        "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh"
-      ],
+      "files": ["environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh"],
       "effort": "S",
       "risk": "medium",
-      "dependencies": [
-        "T1"
-      ],
+      "dependencies": ["T1"],
       "operation": "Insert",
       "anchor": "l9_hook_exec.sh dispatch before invoking the named hook script",
       "leverage_rank": 2,
@@ -91,10 +87,7 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": [
-        "T1",
-        "T2"
-      ],
+      "dependencies": ["T1", "T2"],
       "operation": "Create",
       "anchor": "docs/decisions/ numbering after latest ADR",
       "leverage_rank": 4
@@ -102,10 +95,7 @@
     {
       "id": "T4",
       "task": "GMP machine task-plan contract: gmp_executor.py start/full modes accept --todos-json (file or inline JSON list of {id,task,files}) persisted into GMPState; scope_lock fails fast at run start with an actionable message naming --todos-json when authorized runs have no TODOs; commands/gmp.md mechanical block documents passing the plan todos. No behavior change for TTY interactive mode",
-      "files": [
-        "workflows/gmp_executor.py",
-        "commands/gmp.md"
-      ],
+      "files": ["workflows/gmp_executor.py", "commands/gmp.md"],
       "effort": "M",
       "risk": "medium",
       "dependencies": [],
@@ -124,11 +114,7 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": [
-        "T1",
-        "T2",
-        "T4"
-      ],
+      "dependencies": ["T1", "T2", "T4"],
       "operation": "Create",
       "anchor": "existing tests/workflows/test_gmp_executor_authorized.py patterns",
       "leverage_rank": 5
@@ -136,24 +122,16 @@
     {
       "id": "T6",
       "task": "Mobile alignment verification: confirm the mobile bootstrap (CLAUDE_CODE_REMOTE path, WIP claude-code-mobile-environment pack, validate_claude_env) resolves surface claude-code-remote through the new SSOT and that no mobile flow depended on running claude gates under a non-Claude surface; code change only if a gap is proven",
-      "files": [
-        "ops/scripts/validate_claude_env.py"
-      ],
+      "files": ["ops/scripts/validate_claude_env.py"],
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "T1"
-      ],
+      "dependencies": ["T1"],
       "operation": "Insert",
       "anchor": "CLAUDE_CODE_REMOTE marker references",
       "leverage_rank": 6
     }
   ],
-  "critical_path": [
-    "T1",
-    "T2",
-    "T5"
-  ],
+  "critical_path": ["T1", "T2", "T5"],
   "milestones": [
     {
       "id": "M1",
@@ -195,9 +173,7 @@
     {
       "surface": "AGENTS.md",
       "action": "update",
-      "todo_ids": [
-        "T3"
-      ]
+      "todo_ids": ["T3"]
     },
     {
       "surface": "CLAUDE.md",
@@ -220,14 +196,7 @@
     "rollback": "git revert of the guard commit restores prior behavior; L9_SURFACE_GUARD=0 is the immediate runtime kill switch without a deploy"
   },
   "leverage": {
-    "ranked_todo_ids": [
-      "T1",
-      "T2",
-      "T4",
-      "T3",
-      "T5",
-      "T6"
-    ],
+    "ranked_todo_ids": ["T1", "T2", "T4", "T3", "T5", "T6"],
     "shared_causes": [
       "surface identity decided ad hoc per script instead of one upstream predicate",
       "protocol requirements written as prose and enforced late by gates instead of bound at invocation"
@@ -281,9 +250,7 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": [
-      "U1"
-    ],
+    "remaining_unknown_ids": ["U1"],
     "next_skill": "l9-ynp",
     "stop_reason": "plan validated structurally; Build not yet pressed"
   },

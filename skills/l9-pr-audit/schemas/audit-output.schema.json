@@ -54,11 +54,7 @@
     "repository_binding": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "repository",
-        "default_branch",
-        "audited_default_branch_sha"
-      ],
+      "required": ["repository", "default_branch", "audited_default_branch_sha"],
       "properties": {
         "repository": {
           "type": "string",
@@ -86,11 +82,7 @@
       ],
       "properties": {
         "status": {
-          "enum": [
-            "COMPLETE",
-            "PARTIAL",
-            "UNKNOWN"
-          ]
+          "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"]
         },
         "inspection_scope": {
           "type": "array",
@@ -106,11 +98,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "surface",
-              "reason",
-              "impact"
-            ],
+            "required": ["surface", "reason", "impact"],
             "properties": {
               "surface": {
                 "type": "string",
@@ -121,12 +109,7 @@
                 "minLength": 1
               },
               "impact": {
-                "enum": [
-                  "NON_BLOCKING",
-                  "BLOCKS_FINDING",
-                  "BLOCKS_READINESS",
-                  "BLOCKS_CONVERGENCE"
-                ]
+                "enum": ["NON_BLOCKING", "BLOCKS_FINDING", "BLOCKS_READINESS", "BLOCKS_CONVERGENCE"]
               }
             }
           }
@@ -230,13 +213,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "domain",
-              "status",
-              "evidence_ids",
-              "finding_ids",
-              "closing_validation"
-            ],
+            "required": ["domain", "status", "evidence_ids", "finding_ids", "closing_validation"],
             "properties": {
               "domain": {
                 "enum": [
@@ -255,12 +232,7 @@
                 ]
               },
               "status": {
-                "enum": [
-                  "PASS",
-                  "FAIL",
-                  "NOT_APPLICABLE",
-                  "UNKNOWN"
-                ]
+                "enum": ["PASS", "FAIL", "NOT_APPLICABLE", "UNKNOWN"]
               },
               "evidence_ids": {
                 "type": "array",
@@ -279,10 +251,7 @@
                 "uniqueItems": true
               },
               "closing_validation": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               }
             }
           }
@@ -292,19 +261,10 @@
     "authority_resolution": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "status",
-        "sources",
-        "conflicts"
-      ],
+      "required": ["status", "sources", "conflicts"],
       "properties": {
         "status": {
-          "enum": [
-            "RESOLVED",
-            "PARTIAL",
-            "CONFLICTED",
-            "UNKNOWN"
-          ]
+          "enum": ["RESOLVED", "PARTIAL", "CONFLICTED", "UNKNOWN"]
         },
         "sources": {
           "type": "array",
@@ -312,14 +272,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "authority_id",
-              "kind",
-              "source",
-              "scope",
-              "precedence",
-              "evidence_ids"
-            ],
+            "required": ["authority_id", "kind", "source", "scope", "precedence", "evidence_ids"],
             "properties": {
               "authority_id": {
                 "type": "string",
@@ -408,11 +361,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "description",
-              "authority_ids",
-              "status"
-            ],
+            "required": ["description", "authority_ids", "status"],
             "properties": {
               "description": {
                 "type": "string",
@@ -428,11 +377,7 @@
                 "uniqueItems": true
               },
               "status": {
-                "enum": [
-                  "RESOLVED",
-                  "UNKNOWN",
-                  "BLOCKING"
-                ]
+                "enum": ["RESOLVED", "UNKNOWN", "BLOCKING"]
               }
             }
           }
@@ -491,25 +436,15 @@
             "pattern": "^[0-9a-fA-F]{40,64}$"
           },
           "mergeability": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "required_check_resolution": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "status",
-              "evidence_ids"
-            ],
+            "required": ["status", "evidence_ids"],
             "properties": {
               "status": {
-                "enum": [
-                  "RESOLVED",
-                  "NONE",
-                  "UNKNOWN"
-                ]
+                "enum": ["RESOLVED", "NONE", "UNKNOWN"]
               },
               "checks": {
                 "type": "array",
@@ -563,11 +498,7 @@
                 ]
               },
               "status": {
-                "enum": [
-                  "COMPLETE",
-                  "INCOMPLETE",
-                  "UNKNOWN"
-                ]
+                "enum": ["COMPLETE", "INCOMPLETE", "UNKNOWN"]
               },
               "evidence_ids": {
                 "type": "array",
@@ -596,25 +527,14 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "path",
-                "status",
-                "additions",
-                "deletions"
-              ],
+              "required": ["path", "status", "additions", "deletions"],
               "properties": {
                 "path": {
                   "type": "string",
                   "minLength": 1
                 },
                 "status": {
-                  "enum": [
-                    "added",
-                    "modified",
-                    "deleted",
-                    "renamed",
-                    "copied"
-                  ]
+                  "enum": ["added", "modified", "deleted", "renamed", "copied"]
                 },
                 "additions": {
                   "type": "integer",
@@ -625,10 +545,7 @@
                   "minimum": 0
                 },
                 "previous_path": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": ["string", "null"]
                 }
               }
             }
@@ -648,28 +565,13 @@
       ],
       "properties": {
         "audit_status": {
-          "enum": [
-            "SUCCEEDED",
-            "PARTIALLY_SUCCEEDED",
-            "BLOCKED",
-            "FAILED"
-          ]
+          "enum": ["SUCCEEDED", "PARTIALLY_SUCCEEDED", "BLOCKED", "FAILED"]
         },
         "readiness_status": {
-          "enum": [
-            "READY",
-            "CONDITIONALLY_READY",
-            "NOT_READY",
-            "UNKNOWN"
-          ]
+          "enum": ["READY", "CONDITIONALLY_READY", "NOT_READY", "UNKNOWN"]
         },
         "convergence_status": {
-          "enum": [
-            "CONVERGED",
-            "PARTIAL",
-            "BLOCKED",
-            "NOT_CONVERGED"
-          ]
+          "enum": ["CONVERGED", "PARTIAL", "BLOCKED", "NOT_CONVERGED"]
         },
         "summary": {
           "type": "string",
@@ -678,11 +580,7 @@
         "minimum_safe_next_action": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "action",
-            "rationale",
-            "expected_evidence"
-          ],
+          "required": ["action", "rationale", "expected_evidence"],
           "properties": {
             "action": {
               "type": "string",
@@ -723,32 +621,16 @@
             "minimum": 1
           },
           "completeness": {
-            "enum": [
-              "PASS",
-              "FAIL",
-              "UNKNOWN"
-            ]
+            "enum": ["PASS", "FAIL", "UNKNOWN"]
           },
           "correctness": {
-            "enum": [
-              "PASS",
-              "FAIL",
-              "UNKNOWN"
-            ]
+            "enum": ["PASS", "FAIL", "UNKNOWN"]
           },
           "architecture_alignment": {
-            "enum": [
-              "PASS",
-              "FAIL",
-              "UNKNOWN"
-            ]
+            "enum": ["PASS", "FAIL", "UNKNOWN"]
           },
           "validation_sufficiency": {
-            "enum": [
-              "PASS",
-              "FAIL",
-              "UNKNOWN"
-            ]
+            "enum": ["PASS", "FAIL", "UNKNOWN"]
           },
           "merge_readiness": {
             "enum": [
@@ -842,20 +724,10 @@
             ]
           },
           "severity": {
-            "enum": [
-              "Critical",
-              "High",
-              "Medium",
-              "Low"
-            ]
+            "enum": ["Critical", "High", "Medium", "Low"]
           },
           "confidence": {
-            "enum": [
-              "Confirmed",
-              "Probable",
-              "Possible",
-              "Unknown"
-            ]
+            "enum": ["Confirmed", "Probable", "Possible", "Unknown"]
           },
           "affected_prs": {
             "type": "array",
@@ -876,10 +748,7 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "pr_number",
-                "head_sha"
-              ],
+              "required": ["pr_number", "head_sha"],
               "properties": {
                 "pr_number": {
                   "type": "integer",
@@ -895,12 +764,7 @@
           "governing_authority": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "authority_id",
-              "rule",
-              "source",
-              "enforcement_refs"
-            ],
+            "required": ["authority_id", "rule", "source", "enforcement_refs"],
             "properties": {
               "authority_id": {
                 "type": "string",
@@ -913,9 +777,7 @@
               "source": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "path"
-                ],
+                "required": ["path"],
                 "properties": {
                   "path": {
                     "type": "string",
@@ -997,11 +859,7 @@
             "minLength": 1
           },
           "root_cause_state": {
-            "enum": [
-              "CONFIRMED",
-              "INFERENCE",
-              "UNKNOWN"
-            ]
+            "enum": ["CONFIRMED", "INFERENCE", "UNKNOWN"]
           },
           "behavioral_closure_condition": {
             "type": "string",
@@ -1035,11 +893,7 @@
                   "minLength": 1
                 },
                 "execution_kind": {
-                  "enum": [
-                    "COMMAND",
-                    "CHECK",
-                    "MANUAL"
-                  ]
+                  "enum": ["COMMAND", "CHECK", "MANUAL"]
                 },
                 "authority_id": {
                   "type": "string",
@@ -1061,35 +915,18 @@
             "type": "boolean"
           },
           "origin": {
-            "enum": [
-              "PR_INTRODUCED",
-              "PR_EXPOSED",
-              "PRE_EXISTING",
-              "UNKNOWN"
-            ]
+            "enum": ["PR_INTRODUCED", "PR_EXPOSED", "PRE_EXISTING", "UNKNOWN"]
           },
           "merge_blocking_basis": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "status",
-              "authority_id",
-              "rationale",
-              "evidence_ids"
-            ],
+            "required": ["status", "authority_id", "rationale", "evidence_ids"],
             "properties": {
               "status": {
-                "enum": [
-                  "BLOCKING",
-                  "NON_BLOCKING",
-                  "UNKNOWN"
-                ]
+                "enum": ["BLOCKING", "NON_BLOCKING", "UNKNOWN"]
               },
               "authority_id": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "rationale": {
                 "type": "string",
@@ -1117,25 +954,13 @@
             "type": "object",
             "description": "Whether the PR's existing signals (CI, bot review) already caught this defect on the audited head.",
             "additionalProperties": false,
-            "required": [
-              "ci",
-              "bot_review",
-              "evidence"
-            ],
+            "required": ["ci", "bot_review", "evidence"],
             "properties": {
               "ci": {
-                "enum": [
-                  "CAUGHT",
-                  "MISSED",
-                  "NOT_APPLICABLE"
-                ]
+                "enum": ["CAUGHT", "MISSED", "NOT_APPLICABLE"]
               },
               "bot_review": {
-                "enum": [
-                  "CAUGHT",
-                  "MISSED",
-                  "NOT_APPLICABLE"
-                ]
+                "enum": ["CAUGHT", "MISSED", "NOT_APPLICABLE"]
               },
               "evidence": {
                 "type": "string",
@@ -1187,11 +1012,7 @@
             ]
           },
           "epistemic_state": {
-            "enum": [
-              "CONFIRMED",
-              "INFERENCE",
-              "UNKNOWN"
-            ]
+            "enum": ["CONFIRMED", "INFERENCE", "UNKNOWN"]
           },
           "repository": {
             "type": "string",
@@ -1208,14 +1029,7 @@
             "type": "string"
           },
           "validation_result": {
-            "enum": [
-              "PASS",
-              "FAIL",
-              "BLOCKED",
-              "NOT_EXECUTED",
-              "UNKNOWN",
-              "NOT_APPLICABLE"
-            ]
+            "enum": ["PASS", "FAIL", "BLOCKED", "NOT_EXECUTED", "UNKNOWN", "NOT_APPLICABLE"]
           },
           "path_or_check": {
             "type": "string",
@@ -1239,11 +1053,7 @@
             "uniqueItems": true
           },
           "redaction_state": {
-            "enum": [
-              "NOT_APPLICABLE",
-              "REDACTED",
-              "UNKNOWN"
-            ]
+            "enum": ["NOT_APPLICABLE", "REDACTED", "UNKNOWN"]
           },
           "findings_using_this_evidence": {
             "type": "array",
@@ -1310,23 +1120,14 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "path",
-                "role",
-                "evidence_ids"
-              ],
+              "required": ["path", "role", "evidence_ids"],
               "properties": {
                 "path": {
                   "type": "string",
                   "minLength": 1
                 },
                 "role": {
-                  "enum": [
-                    "AUTHORITATIVE_READ",
-                    "IMPLEMENTATION",
-                    "COUPLED_READ",
-                    "FALSE_LEAD"
-                  ]
+                  "enum": ["AUTHORITATIVE_READ", "IMPLEMENTATION", "COUPLED_READ", "FALSE_LEAD"]
                 },
                 "evidence_ids": {
                   "type": "array",
@@ -1373,10 +1174,7 @@
             "uniqueItems": true
           },
           "shared_root_cause": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "affected_prs": {
             "type": "array",
@@ -1387,13 +1185,7 @@
             "uniqueItems": true
           },
           "remediation_order_class": {
-            "enum": [
-              "ROOT_CAUSE_FIRST",
-              "DEPENDENT",
-              "INDEPENDENT",
-              "VALIDATION_ONLY",
-              "UNKNOWN"
-            ]
+            "enum": ["ROOT_CAUSE_FIRST", "DEPENDENT", "INDEPENDENT", "VALIDATION_ONLY", "UNKNOWN"]
           }
         }
       }
@@ -1437,39 +1229,19 @@
             "minLength": 1
           },
           "workflow_job": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "failing_step": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "failure_class": {
-            "enum": [
-              "CODEBASE",
-              "CI_PIPELINE",
-              "ENVIRONMENT",
-              "HUMAN",
-              "UNKNOWN"
-            ]
+            "enum": ["CODEBASE", "CI_PIPELINE", "ENVIRONMENT", "HUMAN", "UNKNOWN"]
           },
           "local_reproducibility": {
-            "enum": [
-              "CONFIRMED",
-              "NOT_REPRODUCED",
-              "NOT_ATTEMPTED",
-              "UNKNOWN"
-            ]
+            "enum": ["CONFIRMED", "NOT_REPRODUCED", "NOT_ATTEMPTED", "UNKNOWN"]
           },
           "local_reproduction_command": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "evidence_ids": {
             "type": "array",
@@ -1509,31 +1281,16 @@
             "minLength": 1
           },
           "existing_regression_test": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "missing_negative_boundary": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "reproduction_command": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "pre_remediation_result": {
-            "enum": [
-              "PASS",
-              "FAIL",
-              "NOT_EXECUTED",
-              "UNKNOWN",
-              "NOT_APPLICABLE"
-            ]
+            "enum": ["PASS", "FAIL", "NOT_EXECUTED", "UNKNOWN", "NOT_APPLICABLE"]
           },
           "expected_post_remediation_result": {
             "type": "string",
@@ -1635,11 +1392,7 @@
                   "minLength": 1
                 },
                 "execution_kind": {
-                  "enum": [
-                    "COMMAND",
-                    "CHECK",
-                    "MANUAL"
-                  ]
+                  "enum": ["COMMAND", "CHECK", "MANUAL"]
                 },
                 "authority_id": {
                   "type": "string",
@@ -1665,10 +1418,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "pr_number",
-          "checks"
-        ],
+        "required": ["pr_number", "checks"],
         "properties": {
           "pr_number": {
             "type": "integer",
@@ -1679,11 +1429,7 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "kind",
-                "status",
-                "evidence_ids"
-              ],
+              "required": ["kind", "status", "evidence_ids"],
               "properties": {
                 "kind": {
                   "enum": [
@@ -1696,12 +1442,7 @@
                   ]
                 },
                 "status": {
-                  "enum": [
-                    "PASS",
-                    "FINDING",
-                    "NOT_APPLICABLE",
-                    "UNKNOWN"
-                  ]
+                  "enum": ["PASS", "FINDING", "NOT_APPLICABLE", "UNKNOWN"]
                 },
                 "evidence_ids": {
                   "type": "array",
@@ -1720,19 +1461,10 @@
     "cross_pr_evidence_pack": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "status",
-        "relationships",
-        "merge_order"
-      ],
+      "required": ["status", "relationships", "merge_order"],
       "properties": {
         "status": {
-          "enum": [
-            "COMPLETE",
-            "PARTIAL",
-            "UNKNOWN",
-            "NOT_APPLICABLE"
-          ]
+          "enum": ["COMPLETE", "PARTIAL", "UNKNOWN", "NOT_APPLICABLE"]
         },
         "relationships": {
           "type": "array",
@@ -1871,19 +1603,10 @@
     "intent_contract": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "status",
-        "sources",
-        "objectives",
-        "original_pr_prompt"
-      ],
+      "required": ["status", "sources", "objectives", "original_pr_prompt"],
       "properties": {
         "status": {
-          "enum": [
-            "RESOLVED",
-            "PARTIAL",
-            "UNKNOWN"
-          ]
+          "enum": ["RESOLVED", "PARTIAL", "UNKNOWN"]
         },
         "sources": {
           "type": "array",
@@ -1891,13 +1614,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "source_id",
-              "kind",
-              "locator",
-              "scope",
-              "evidence_ids"
-            ],
+            "required": ["source_id", "kind", "locator", "scope", "evidence_ids"],
             "properties": {
               "source_id": {
                 "type": "string",
@@ -1966,11 +1683,7 @@
                 "uniqueItems": true
               },
               "status": {
-                "enum": [
-                  "ACTIVE",
-                  "SUPERSEDED",
-                  "CONFLICTED"
-                ]
+                "enum": ["ACTIVE", "SUPERSEDED", "CONFLICTED"]
               },
               "explicit_scope": {
                 "type": "array",
@@ -1999,26 +1712,13 @@
         "original_pr_prompt": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "availability",
-            "source_id",
-            "evidence_ids",
-            "used_for"
-          ],
+          "required": ["availability", "source_id", "evidence_ids", "used_for"],
           "properties": {
             "availability": {
-              "enum": [
-                "PROVIDED",
-                "RECOVERED",
-                "NOT_AVAILABLE",
-                "UNKNOWN"
-              ]
+              "enum": ["PROVIDED", "RECOVERED", "NOT_AVAILABLE", "UNKNOWN"]
             },
             "source_id": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "evidence_ids": {
               "type": "array",
@@ -2078,12 +1778,7 @@
                 "minLength": 1
               },
               "status": {
-                "enum": [
-                  "SATISFIED",
-                  "UNPROVEN",
-                  "NOT_IMPLEMENTED",
-                  "CONFLICTED"
-                ]
+                "enum": ["SATISFIED", "UNPROVEN", "NOT_IMPLEMENTED", "CONFLICTED"]
               },
               "implementation_evidence_ids": {
                 "type": "array",
@@ -2115,9 +1810,7 @@
         "scope_fidelity": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "changed_surfaces"
-          ],
+          "required": ["changed_surfaces"],
           "properties": {
             "changed_surfaces": {
               "type": "array",
@@ -2317,17 +2010,10 @@
                 "minLength": 1
               },
               "symbol": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "disposition": {
-                "enum": [
-                  "JUSTIFIED",
-                  "UNJUSTIFIED",
-                  "UNKNOWN"
-                ]
+                "enum": ["JUSTIFIED", "UNJUSTIFIED", "UNKNOWN"]
               },
               "objective_ids": {
                 "type": "array",
@@ -2393,12 +2079,7 @@
                 "minLength": 1
               },
               "status": {
-                "enum": [
-                  "CLOSED",
-                  "RESIDUAL",
-                  "NOT_APPLICABLE",
-                  "UNKNOWN"
-                ]
+                "enum": ["CLOSED", "RESIDUAL", "NOT_APPLICABLE", "UNKNOWN"]
               },
               "residual_references": {
                 "type": "array",
@@ -2459,12 +2140,7 @@
                 "minLength": 1
               },
               "status": {
-                "enum": [
-                  "TESTED",
-                  "STRUCTURALLY_PROVEN",
-                  "NOT_APPLICABLE",
-                  "UNKNOWN"
-                ]
+                "enum": ["TESTED", "STRUCTURALLY_PROVEN", "NOT_APPLICABLE", "UNKNOWN"]
               },
               "evidence_ids": {
                 "type": "array",
@@ -2516,19 +2192,10 @@
                 "minLength": 1
               },
               "test_surface": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "status": {
-                "enum": [
-                  "DISCRIMINATING",
-                  "WEAK",
-                  "ABSENT",
-                  "NOT_APPLICABLE",
-                  "UNKNOWN"
-                ]
+                "enum": ["DISCRIMINATING", "WEAK", "ABSENT", "NOT_APPLICABLE", "UNKNOWN"]
               },
               "objective_ids": {
                 "type": "array",
@@ -2599,12 +2266,7 @@
                 "minLength": 1
               },
               "status": {
-                "enum": [
-                  "ADEQUATE",
-                  "UNDERBUILT",
-                  "NOT_APPLICABLE",
-                  "UNKNOWN"
-                ]
+                "enum": ["ADEQUATE", "UNDERBUILT", "NOT_APPLICABLE", "UNKNOWN"]
               },
               "evidence_ids": {
                 "type": "array",
@@ -2680,12 +2342,7 @@
             "minLength": 1
           },
           "status": {
-            "enum": [
-              "PASS",
-              "FINDING",
-              "NOT_APPLICABLE",
-              "UNKNOWN"
-            ]
+            "enum": ["PASS", "FINDING", "NOT_APPLICABLE", "UNKNOWN"]
           },
           "evidence_ids": {
             "type": "array",
@@ -2733,11 +2390,7 @@
             "minimum": 1
           },
           "pass_type": {
-            "enum": [
-              "DISCOVERY",
-              "RECONCILIATION",
-              "VERIFICATION"
-            ]
+            "enum": ["DISCOVERY", "RECONCILIATION", "VERIFICATION"]
           },
           "objective": {
             "type": "string",
@@ -2777,10 +2430,7 @@
             "minLength": 1
           },
           "next_pass_objective": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "observed_claim_ids": {
             "type": "array",
@@ -2812,20 +2462,10 @@
     "architecture_policy_adapters": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "status",
-        "adapters",
-        "conflicts"
-      ],
+      "required": ["status", "adapters", "conflicts"],
       "properties": {
         "status": {
-          "enum": [
-            "RESOLVED",
-            "PARTIAL",
-            "NOT_APPLICABLE",
-            "UNKNOWN",
-            "CONFLICTED"
-          ]
+          "enum": ["RESOLVED", "PARTIAL", "NOT_APPLICABLE", "UNKNOWN", "CONFLICTED"]
         },
         "adapters": {
           "type": "array",
@@ -2857,13 +2497,7 @@
                 "minLength": 1
               },
               "status": {
-                "enum": [
-                  "APPLIED",
-                  "PARTIALLY_APPLIED",
-                  "NOT_APPLICABLE",
-                  "UNKNOWN",
-                  "CONFLICTED"
-                ]
+                "enum": ["APPLIED", "PARTIALLY_APPLIED", "NOT_APPLICABLE", "UNKNOWN", "CONFLICTED"]
               },
               "governing_authority_ids": {
                 "type": "array",
@@ -2927,11 +2561,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "description",
-              "adapter_ids",
-              "status"
-            ],
+            "required": ["description", "adapter_ids", "status"],
             "properties": {
               "description": {
                 "type": "string",
@@ -2947,11 +2577,7 @@
                 "uniqueItems": true
               },
               "status": {
-                "enum": [
-                  "RESOLVED",
-                  "UNKNOWN",
-                  "BLOCKING"
-                ]
+                "enum": ["RESOLVED", "UNKNOWN", "BLOCKING"]
               }
             }
           }
@@ -2961,18 +2587,10 @@
     "boundary_map": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "status",
-        "components",
-        "boundaries"
-      ],
+      "required": ["status", "components", "boundaries"],
       "properties": {
         "status": {
-          "enum": [
-            "COMPLETE",
-            "PARTIAL",
-            "UNKNOWN"
-          ]
+          "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"]
         },
         "components": {
           "type": "array",
@@ -2980,12 +2598,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "component_id",
-              "responsibilities",
-              "authority_ids",
-              "evidence_ids"
-            ],
+            "required": ["component_id", "responsibilities", "authority_ids", "evidence_ids"],
             "properties": {
               "component_id": {
                 "type": "string",
@@ -3095,11 +2708,7 @@
     "deterministic_census_binding": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "ledger_schema_version",
-        "generator_version",
-        "ledger_bindings"
-      ],
+      "required": ["ledger_schema_version", "generator_version", "ledger_bindings"],
       "properties": {
         "ledger_schema_version": {
           "const": "l9.pr-audit.change-ledger.v1.4"
@@ -3113,11 +2722,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "pr_number",
-              "head_sha",
-              "ledger_sha256"
-            ],
+            "required": ["pr_number", "head_sha", "ledger_sha256"],
             "properties": {
               "pr_number": {
                 "type": "integer",
@@ -3192,11 +2797,7 @@
             ]
           },
           "change_type": {
-            "enum": [
-              "ADDED",
-              "MODIFIED",
-              "REMOVED"
-            ]
+            "enum": ["ADDED", "MODIFIED", "REMOVED"]
           },
           "detection_method": {
             "enum": [
@@ -3208,17 +2809,10 @@
             ]
           },
           "detection_confidence": {
-            "enum": [
-              "EXACT_STATIC",
-              "HEURISTIC",
-              "SEMANTIC"
-            ]
+            "enum": ["EXACT_STATIC", "HEURISTIC", "SEMANTIC"]
           },
           "source": {
-            "enum": [
-              "MACHINE",
-              "AUDITOR"
-            ]
+            "enum": ["MACHINE", "AUDITOR"]
           },
           "scope_disposition": {
             "enum": [
@@ -3325,24 +2919,13 @@
             "minLength": 1
           },
           "materiality": {
-            "enum": [
-              "MATERIAL",
-              "NON_MATERIAL"
-            ]
+            "enum": ["MATERIAL", "NON_MATERIAL"]
           },
           "source": {
-            "enum": [
-              "MACHINE_SEEDED",
-              "AUDITOR_ADDED"
-            ]
+            "enum": ["MACHINE_SEEDED", "AUDITOR_ADDED"]
           },
           "status": {
-            "enum": [
-              "SUPPORTED",
-              "REFUTED",
-              "NOT_APPLICABLE",
-              "UNKNOWN"
-            ]
+            "enum": ["SUPPORTED", "REFUTED", "NOT_APPLICABLE", "UNKNOWN"]
           },
           "authority_ids": {
             "type": "array",
@@ -3426,10 +3009,7 @@
             "minLength": 1
           },
           "source": {
-            "enum": [
-              "MACHINE_SEEDED",
-              "AUDITOR_ADDED"
-            ]
+            "enum": ["MACHINE_SEEDED", "AUDITOR_ADDED"]
           },
           "attack_class": {
             "enum": [
@@ -3455,21 +3035,10 @@
             "minLength": 1
           },
           "execution_kind": {
-            "enum": [
-              "STATIC",
-              "COMMAND",
-              "CHECK",
-              "LLM_JUDGMENT",
-              "HYBRID"
-            ]
+            "enum": ["STATIC", "COMMAND", "CHECK", "LLM_JUDGMENT", "HYBRID"]
           },
           "result": {
-            "enum": [
-              "SURVIVED",
-              "FALSIFIED",
-              "INCONCLUSIVE",
-              "NOT_APPLICABLE"
-            ]
+            "enum": ["SURVIVED", "FALSIFIED", "INCONCLUSIVE", "NOT_APPLICABLE"]
           },
           "evidence_ids": {
             "type": "array",
@@ -3492,10 +3061,7 @@
             "type": "boolean"
           },
           "judgment_rationale": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           }
         }
       }
@@ -3551,25 +3117,14 @@
             "minLength": 1
           },
           "source": {
-            "enum": [
-              "MACHINE_SEEDED",
-              "AUDITOR_ADDED"
-            ]
+            "enum": ["MACHINE_SEEDED", "AUDITOR_ADDED"]
           },
           "seed_hash": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "pattern": "^[0-9a-f]{64}$"
           },
           "status": {
-            "enum": [
-              "PASS",
-              "FINDING",
-              "NOT_APPLICABLE",
-              "UNKNOWN"
-            ]
+            "enum": ["PASS", "FINDING", "NOT_APPLICABLE", "UNKNOWN"]
           },
           "evidence_ids": {
             "type": "array",
@@ -3598,23 +3153,14 @@
     "post_judgment_closure": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "root_cause_dominance",
-        "severity_consistency",
-        "validation_run_coverage"
-      ],
+      "required": ["root_cause_dominance", "severity_consistency", "validation_run_coverage"],
       "properties": {
         "root_cause_dominance": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "finding_a",
-              "finding_b",
-              "disposition",
-              "evidence_ids"
-            ],
+            "required": ["finding_a", "finding_b", "disposition", "evidence_ids"],
             "properties": {
               "finding_a": {
                 "type": "string",
@@ -3625,11 +3171,7 @@
                 "minLength": 1
               },
               "disposition": {
-                "enum": [
-                  "SAME_ROOT_CONSOLIDATED",
-                  "INDEPENDENT",
-                  "UNKNOWN"
-                ]
+                "enum": ["SAME_ROOT_CONSOLIDATED", "INDEPENDENT", "UNKNOWN"]
               },
               "evidence_ids": {
                 "type": "array",
@@ -3662,35 +3204,16 @@
                 "minLength": 1
               },
               "machine_floor": {
-                "enum": [
-                  "Low",
-                  "Medium",
-                  "High",
-                  "Critical"
-                ]
+                "enum": ["Low", "Medium", "High", "Critical"]
               },
               "machine_ceiling": {
-                "enum": [
-                  "Low",
-                  "Medium",
-                  "High",
-                  "Critical"
-                ]
+                "enum": ["Low", "Medium", "High", "Critical"]
               },
               "actual_severity": {
-                "enum": [
-                  "Low",
-                  "Medium",
-                  "High",
-                  "Critical"
-                ]
+                "enum": ["Low", "Medium", "High", "Critical"]
               },
               "status": {
-                "enum": [
-                  "CONSISTENT",
-                  "OVERRIDDEN_WITH_AUTHORITY",
-                  "UNKNOWN"
-                ]
+                "enum": ["CONSISTENT", "OVERRIDDEN_WITH_AUTHORITY", "UNKNOWN"]
               },
               "evidence_ids": {
                 "type": "array",
@@ -3709,23 +3232,14 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "evidence_id",
-              "disposition",
-              "claim_ids",
-              "rationale"
-            ],
+            "required": ["evidence_id", "disposition", "claim_ids", "rationale"],
             "properties": {
               "evidence_id": {
                 "type": "string",
                 "minLength": 1
               },
               "disposition": {
-                "enum": [
-                  "CLAIM_CLOSING",
-                  "JUSTIFIED_NON_CLOSING",
-                  "UNKNOWN"
-                ]
+                "enum": ["CLAIM_CLOSING", "JUSTIFIED_NON_CLOSING", "UNKNOWN"]
               },
               "claim_ids": {
                 "type": "array",
@@ -3777,11 +3291,7 @@
           "const": "integrations/CANONICAL_AUTHORITY_BINDING.yaml"
         },
         "mode": {
-          "enum": [
-            "admitted",
-            "candidate",
-            null
-          ]
+          "enum": ["admitted", "candidate", null]
         },
         "status": {
           "enum": [
@@ -3794,63 +3304,35 @@
           ]
         },
         "bundle_status": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "authority_status": {
-          "type": [
-            "object",
-            "null"
-          ]
+          "type": ["object", "null"]
         },
         "authoritative": {
           "type": "boolean"
         },
         "load_status": {
-          "enum": [
-            "NOT_LOADED",
-            "LOADED",
-            "LOADED_AS_CANDIDATE"
-          ]
+          "enum": ["NOT_LOADED", "LOADED", "LOADED_AS_CANDIDATE"]
         },
         "bundle_ref": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "authority_repository": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "authority_revision": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "pattern": "^[0-9a-f]{40}$"
         },
         "projection_profile": {
-          "type": [
-            "object",
-            "null"
-          ]
+          "type": ["object", "null"]
         },
         "composition_profile": {
-          "type": [
-            "object",
-            "null"
-          ]
+          "type": ["object", "null"]
         },
         "composition_digest": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "pattern": "^sha256:[0-9a-f]{64}$"
         },
         "component_digests": {
@@ -3864,10 +3346,7 @@
           "type": "object"
         },
         "producer": {
-          "type": [
-            "object",
-            "null"
-          ]
+          "type": ["object", "null"]
         },
         "production_attested_by_verifier": {
           "const": false
@@ -3879,16 +3358,10 @@
           "const": "scripts/verify_canonical_authority.py"
         },
         "currentness": {
-          "type": [
-            "object",
-            "null"
-          ]
+          "type": ["object", "null"]
         },
         "refusal_reason": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "fallback_used": {
           "const": false

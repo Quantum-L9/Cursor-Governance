@@ -148,10 +148,7 @@
     "dependencies": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "action_ids",
-        "artifact_ids"
-      ],
+      "required": ["action_ids", "artifact_ids"],
       "properties": {
         "action_ids": {
           "type": "array",

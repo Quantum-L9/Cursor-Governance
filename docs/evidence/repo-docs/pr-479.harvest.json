@@ -14,10 +14,7 @@
     "repo_docs": {
       "repository": "Quantum-L9/Cursor-Governance",
       "semantic_source_digest": "c5f57a7e0d26b716ddbc587657bcf23b1aff2d04592509f12f442dfc1f6a6659",
-      "required_surfaces": [
-        "architecture",
-        "invariants"
-      ]
+      "required_surfaces": ["architecture", "invariants"]
     }
   },
   "inventory": [
@@ -26,44 +23,30 @@
       "purpose": "Thin CI consumer for repository documentation obligation receipts.",
       "classification": "active",
       "owner": "Cursor-Governance",
-      "consumers": [
-        "pull_request",
-        "push:main",
-        "workflow_dispatch"
-      ],
+      "consumers": ["pull_request", "push:main", "workflow_dispatch"],
       "importance": 5,
       "action": "keep",
-      "evidence_ids": [
-        "ev-ci-consumer"
-      ]
+      "evidence_ids": ["ev-ci-consumer"]
     },
     {
       "path": "skills/l9-update-agent-docs/scripts/repo_docs.py",
       "purpose": "Canonical Repository Documentation Obligation Compiler front door.",
       "classification": "active",
       "owner": "l9-update-agent-docs",
-      "consumers": [
-        "governance-self-check"
-      ],
+      "consumers": ["governance-self-check"],
       "importance": 5,
       "action": "keep",
-      "evidence_ids": [
-        "ev-compiler"
-      ]
+      "evidence_ids": ["ev-compiler"]
     },
     {
       "path": "skills/l9-update-agent-docs/scripts/doc_obligations.py",
       "purpose": "Target resolution, obligation lifecycle, validation, and terminal-status derivation.",
       "classification": "active",
       "owner": "l9-update-agent-docs",
-      "consumers": [
-        "repo_docs.py"
-      ],
+      "consumers": ["repo_docs.py"],
       "importance": 5,
       "action": "keep",
-      "evidence_ids": [
-        "ev-obligation-lifecycle"
-      ]
+      "evidence_ids": ["ev-obligation-lifecycle"]
     }
   ],
   "system": {
@@ -127,13 +110,8 @@
         "skills/l9-update-agent-docs/scripts/repo_docs.py",
         ".github/workflows/governance-self-check.yml"
       ],
-      "mutations": [
-        "surgical refresh"
-      ],
-      "evidence_ids": [
-        "ev-ci-consumer",
-        "ev-compiler"
-      ]
+      "mutations": ["surgical refresh"],
+      "evidence_ids": ["ev-ci-consumer", "ev-compiler"]
     },
     {
       "item": "invariants",
@@ -145,13 +123,8 @@
         "skills/l9-update-agent-docs/scripts/doc_obligations.py",
         "skills/l9-update-agent-docs/scripts/repo_docs.py"
       ],
-      "mutations": [
-        "surgical refresh"
-      ],
-      "evidence_ids": [
-        "ev-obligation-lifecycle",
-        "ev-compiler"
-      ]
+      "mutations": ["surgical refresh"],
+      "evidence_ids": ["ev-obligation-lifecycle", "ev-compiler"]
     }
   ],
   "drift": [],
@@ -210,11 +183,7 @@
       "semantic_contract": "Repository changes compile into target-resolved DocumentationObligation objects; deterministic qualification remains local, semantic qualification remains owned by l9-intelligence-harvest, specialist owners render their own targets, and CI consumes the resulting receipt rather than reimplementing the compiler.",
       "disposition": "PORT",
       "beneficiary_destination": "docs:architecture",
-      "evidence_ids": [
-        "ev-ci-consumer",
-        "ev-compiler",
-        "ev-obligation-schema"
-      ],
+      "evidence_ids": ["ev-ci-consumer", "ev-compiler", "ev-obligation-schema"],
       "risks": [
         "Duplicating semantic reasoning inside Repo Docs would create a second Harvest owner.",
         "Moving rendering into the compiler would create duplicate documentation owners."
@@ -246,11 +215,7 @@
       "semantic_contract": "A repository documentation receipt may report PASS only when every applicable DocumentationObligation is terminal with required validation evidenced; any required non-terminal obligation remains PARTIAL, any blocked obligation yields BLOCKED, and semantic obligations may close only after change-bound canonical Harvest evidence is admitted.",
       "disposition": "PORT",
       "beneficiary_destination": "docs:invariants",
-      "evidence_ids": [
-        "ev-obligation-lifecycle",
-        "ev-compiler",
-        "ev-obligation-schema"
-      ],
+      "evidence_ids": ["ev-obligation-lifecycle", "ev-compiler", "ev-obligation-schema"],
       "risks": [
         "Treating SATISFIED as terminal would equate a touched target with validated closure.",
         "Accepting unbound Harvest evidence would allow semantic proof from the wrong repository change."

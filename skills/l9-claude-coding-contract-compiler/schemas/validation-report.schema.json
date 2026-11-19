@@ -17,82 +17,36 @@
     },
     "result": {
       "type": "string",
-      "enum": [
-        "passed",
-        "failed"
-      ]
+      "enum": ["passed", "failed"]
     },
     "validation_classes": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "structural",
-        "contract",
-        "execution",
-        "evidence",
-        "operator",
-        "regression"
-      ],
+      "required": ["structural", "contract", "execution", "evidence", "operator", "regression"],
       "properties": {
         "structural": {
           "type": "string",
-          "enum": [
-            "PASS",
-            "FAIL",
-            "BLOCKED",
-            "UNKNOWN",
-            "NOT_APPLICABLE"
-          ]
+          "enum": ["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NOT_APPLICABLE"]
         },
         "contract": {
           "type": "string",
-          "enum": [
-            "PASS",
-            "FAIL",
-            "BLOCKED",
-            "UNKNOWN",
-            "NOT_APPLICABLE"
-          ]
+          "enum": ["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NOT_APPLICABLE"]
         },
         "execution": {
           "type": "string",
-          "enum": [
-            "PASS",
-            "FAIL",
-            "BLOCKED",
-            "UNKNOWN",
-            "NOT_APPLICABLE"
-          ]
+          "enum": ["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NOT_APPLICABLE"]
         },
         "evidence": {
           "type": "string",
-          "enum": [
-            "PASS",
-            "FAIL",
-            "BLOCKED",
-            "UNKNOWN",
-            "NOT_APPLICABLE"
-          ]
+          "enum": ["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NOT_APPLICABLE"]
         },
         "operator": {
           "type": "string",
-          "enum": [
-            "PASS",
-            "FAIL",
-            "BLOCKED",
-            "UNKNOWN",
-            "NOT_APPLICABLE"
-          ]
+          "enum": ["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NOT_APPLICABLE"]
         },
         "regression": {
           "type": "string",
-          "enum": [
-            "PASS",
-            "FAIL",
-            "BLOCKED",
-            "UNKNOWN",
-            "NOT_APPLICABLE"
-          ]
+          "enum": ["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NOT_APPLICABLE"]
         }
       }
     },
@@ -107,10 +61,7 @@
     "scope": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "out_of_scope_files_touched",
-        "remote_changes_performed"
-      ],
+      "required": ["out_of_scope_files_touched", "remote_changes_performed"],
       "properties": {
         "out_of_scope_files_touched": {
           "type": "integer",
@@ -124,10 +75,7 @@
     "approval": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "push_requested",
-        "user_approval_recorded"
-      ],
+      "required": ["push_requested", "user_approval_recorded"],
       "properties": {
         "push_requested": {
           "type": "boolean"

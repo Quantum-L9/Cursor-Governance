@@ -9,22 +9,10 @@
   "breakglass": {
     "env": "L9_VERIFY_BYPASS_AUTHORIZED",
     "requires_reason": true,
-    "rejected_reasons": [
-      "1",
-      "0",
-      "y",
-      "yes",
-      "no",
-      "true",
-      "false",
-      "ok",
-      "please"
-    ],
+    "rejected_reasons": ["1", "0", "y", "yes", "no", "true", "false", "ok", "please"],
     "note": "Human/ops only. An agent MUST NOT set this for itself: exporting it inside the same turn that runs the commit is the bypass, one level up. A reason shorter than min_reason_chars is rejected like a bare affirmative. The alias is accepted so neither spelling silently fails.",
     "min_reason_chars": 8,
-    "aliases": [
-      "L9_VERIFICATION_BYPASS_AUTHORIZED"
-    ]
+    "aliases": ["L9_VERIFICATION_BYPASS_AUTHORIZED"]
   },
   "git_value_flags": {
     "$comment": "Flags whose value is a SEPARATE word, so a scanner must skip that word before reading the next flag. Without this, `git commit -m -n` (a message of '-n') reads as a bypass. Flags taking an attached-only optional value (-uno, -S<key>, --cleanup=<mode>) are deliberately absent: they never consume the next word.",
@@ -44,14 +32,7 @@
       "--trailer",
       "--pathspec-from-file"
     ],
-    "push": [
-      "--repo",
-      "--receive-pack",
-      "--exec",
-      "-o",
-      "--push-option",
-      "--refspec"
-    ],
+    "push": ["--repo", "--receive-pack", "--exec", "-o", "--push-option", "--refspec"],
     "merge": [
       "-m",
       "--message",
@@ -65,49 +46,18 @@
       "-X",
       "--into-name"
     ],
-    "rebase": [
-      "--onto",
-      "--exec",
-      "-x",
-      "--strategy",
-      "-s",
-      "--strategy-option",
-      "-X"
-    ],
-    "cherry-pick": [
-      "--strategy",
-      "-s",
-      "--strategy-option",
-      "-X",
-      "-m",
-      "--mainline"
-    ],
-    "revert": [
-      "--strategy",
-      "-s",
-      "--strategy-option",
-      "-X",
-      "-m",
-      "--mainline"
-    ],
-    "am": [
-      "--patch-format",
-      "-S",
-      "--gpg-sign"
-    ]
+    "rebase": ["--onto", "--exec", "-x", "--strategy", "-s", "--strategy-option", "-X"],
+    "cherry-pick": ["--strategy", "-s", "--strategy-option", "-X", "-m", "--mainline"],
+    "revert": ["--strategy", "-s", "--strategy-option", "-X", "-m", "--mainline"],
+    "am": ["--patch-format", "-S", "--gpg-sign"]
   },
   "forms": [
     {
       "id": "git-commit-no-verify",
       "detector": "git_flag",
       "subcommand": "commit",
-      "flags": [
-        "--no-verify",
-        "--no-pre-commit-hook"
-      ],
-      "short_flags": [
-        "n"
-      ],
+      "flags": ["--no-verify", "--no-pre-commit-hook"],
+      "short_flags": ["n"],
       "label": "git commit --no-verify",
       "why": "skips every pre-commit and commit-msg hook for this commit, which is the entire local verification plane"
     },
@@ -115,9 +65,7 @@
       "id": "git-push-no-verify",
       "detector": "git_flag",
       "subcommand": "push",
-      "flags": [
-        "--no-verify"
-      ],
+      "flags": ["--no-verify"],
       "short_flags": [],
       "$comment": "No short form: `git push -n` is --dry-run, which is read-only and must stay allowed.",
       "label": "git push --no-verify",
@@ -127,10 +75,7 @@
       "id": "git-merge-no-verify",
       "detector": "git_flag",
       "subcommand": "merge",
-      "flags": [
-        "--no-verify",
-        "--no-pre-commit-hook"
-      ],
+      "flags": ["--no-verify", "--no-pre-commit-hook"],
       "short_flags": [],
       "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
       "label": "git merge --no-verify",
@@ -140,10 +85,7 @@
       "id": "git-rebase-no-verify",
       "detector": "git_flag",
       "subcommand": "rebase",
-      "flags": [
-        "--no-verify",
-        "--no-pre-commit-hook"
-      ],
+      "flags": ["--no-verify", "--no-pre-commit-hook"],
       "short_flags": [],
       "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
       "label": "git rebase --no-verify",
@@ -153,10 +95,7 @@
       "id": "git-cherry-pick-no-verify",
       "detector": "git_flag",
       "subcommand": "cherry-pick",
-      "flags": [
-        "--no-verify",
-        "--no-pre-commit-hook"
-      ],
+      "flags": ["--no-verify", "--no-pre-commit-hook"],
       "short_flags": [],
       "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
       "label": "git cherry-pick --no-verify",
@@ -166,10 +105,7 @@
       "id": "git-revert-no-verify",
       "detector": "git_flag",
       "subcommand": "revert",
-      "flags": [
-        "--no-verify",
-        "--no-pre-commit-hook"
-      ],
+      "flags": ["--no-verify", "--no-pre-commit-hook"],
       "short_flags": [],
       "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
       "label": "git revert --no-verify",
@@ -179,10 +115,7 @@
       "id": "git-am-no-verify",
       "detector": "git_flag",
       "subcommand": "am",
-      "flags": [
-        "--no-verify",
-        "--no-pre-commit-hook"
-      ],
+      "flags": ["--no-verify", "--no-pre-commit-hook"],
       "short_flags": [],
       "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
       "label": "git am --no-verify",
@@ -191,9 +124,7 @@
     {
       "id": "git-hookspath-override",
       "detector": "git_global_config",
-      "keys": [
-        "core.hookspath"
-      ],
+      "keys": ["core.hookspath"],
       "label": "git -c core.hooksPath=… <command>",
       "why": "repoints the hook directory for this invocation, disabling every hook without naming --no-verify"
     },
@@ -201,9 +132,7 @@
       "id": "git-config-hookspath",
       "detector": "git_subcommand_args",
       "subcommand": "config",
-      "match_args": [
-        "core.hookspath"
-      ],
+      "match_args": ["core.hookspath"],
       "label": "git config core.hooksPath …",
       "why": "durably repoints the hook directory, so every later commit in this clone is unverified"
     },
@@ -220,10 +149,7 @@
         "GIT_CONFIG_SYSTEM",
         "GIT_CONFIG_COUNT"
       ],
-      "applies_to_subcommands": [
-        "commit",
-        "push"
-      ],
+      "applies_to_subcommands": ["commit", "push"],
       "$comment": "Scoped to a git commit/push segment on purpose. `SKIP=<ids> pre-commit run` is how ops/scripts/run_pr_precommit.sh legitimately narrows the sanctioned gate, and must not be caught here.",
       "label": "hook-suppressing environment variable on a git commit/push",
       "why": "disables or neutralises hook configuration through the environment instead of a flag; GIT_CONFIG_GLOBAL/SYSTEM/COUNT suppress the config that can carry core.hooksPath, so the commit is just as unverified and nothing in the command names a bypass"
@@ -232,9 +158,7 @@
       "id": "pre-commit-uninstall",
       "detector": "argv",
       "head": "pre-commit",
-      "args": [
-        "uninstall"
-      ],
+      "args": ["uninstall"],
       "label": "pre-commit uninstall",
       "why": "removes the hook shim from the clone, so verification stops for every later commit, not just this one"
     },

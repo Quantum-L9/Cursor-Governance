@@ -4,13 +4,7 @@
   "title": "L9 agent memory write (l9.agent_memory_write.v1)",
   "description": "The ARGUMENTS of one model-authored durable memory write: MCP tool mcp__l9-graphite-memory__memory_write_agent, or mcp__l9-graphite-memory__memory_write_governed when task_signature is present. One atomic fact, one line, a canonical agent-lane class, an agent:<id> tag plus a topic tag, and an idempotency key so the same fact is one record. Build with `python -m ops.memory.agent_write build`; check with `python -m ops.memory.agent_write validate`. Enforced by ops/memory/agent_write.py, which this schema mirrors (tests/ops/memory/test_agent_write_schema.py). The agent keeps this contract itself: no hook, matcher or receipt stands in front of the tool (CANONICAL_LAW §8.6); MemoryService still decides grants and admission. Contract: ops/memory/AGENT_WRITE_CONTRACT.md.",
   "type": "object",
-  "required": [
-    "namespace",
-    "content",
-    "memory_class",
-    "tags",
-    "idempotency_key"
-  ],
+  "required": ["namespace", "content", "memory_class", "tags", "idempotency_key"],
   "additionalProperties": false,
   "properties": {
     "namespace": {
@@ -18,13 +12,7 @@
       "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
       "maxLength": 63,
       "not": {
-        "enum": [
-          "main",
-          "master",
-          "default",
-          "test",
-          "l9-workspace"
-        ]
+        "enum": ["main", "master", "default", "test", "l9-workspace"]
       },
       "description": "The repository namespace from `python -m ops.memory.cli resolve` (write hint). Never main, master, default, test or the shared l9-workspace."
     },
@@ -81,10 +69,7 @@
       "description": "Exactly one agent:<id> tag naming the DERIVED ActorIdentity of the writing process (cursor, claude-code, …; never a historical actor alias such as agent:claude-code-desktop or agent:claude-code-mobile — ops/memory/agent_identity.py) plus at least one lowercase topic tag. The builder also stamps at most one surface:<id> tag naming the DERIVED SurfaceIdentity (claude-code-desktop, cursor-ide, …) when one resolves.",
       "not": {
         "contains": {
-          "enum": [
-            "agent:claude-code-desktop",
-            "agent:claude-code-mobile"
-          ]
+          "enum": ["agent:claude-code-desktop", "agent:claude-code-mobile"]
         }
       },
       "allOf": [
@@ -189,29 +174,16 @@
     }
   },
   "dependentRequired": {
-    "subject": [
-      "predicate",
-      "object"
-    ],
-    "predicate": [
-      "subject",
-      "object"
-    ],
-    "object": [
-      "subject",
-      "predicate"
-    ]
+    "subject": ["predicate", "object"],
+    "predicate": ["subject", "object"],
+    "object": ["subject", "predicate"]
   },
   "examples": [
     {
       "namespace": "cursor-governance",
       "content": "Stop hooks gate on usable_receipt, not fresh_receipt, so degraded sessions still close",
       "memory_class": "decision",
-      "tags": [
-        "agent:claude-code",
-        "surface:claude-code-desktop",
-        "hooks"
-      ],
+      "tags": ["agent:claude-code", "surface:claude-code-desktop", "hooks"],
       "idempotency_key": "agent:cursor-governance:788405ad0434f6de",
       "source_id": "Quantum-L9/Cursor-Governance#651"
     }

@@ -36,22 +36,14 @@
     },
     "status": {
       "type": "string",
-      "enum": [
-        "PASS",
-        "FAIL"
-      ]
+      "enum": ["PASS", "FAIL"]
     },
     "checks": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "check_id",
-          "passed",
-          "message",
-          "blocking"
-        ],
+        "required": ["check_id", "passed", "message", "blocking"],
         "properties": {
           "check_id": {
             "type": "string",
@@ -70,10 +62,7 @@
       }
     },
     "config_path": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "passed": {
       "type": "boolean"

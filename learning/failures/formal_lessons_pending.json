@@ -199,12 +199,7 @@
       "pattern_count": 4,
       "first_seen": "2025-10-10",
       "last_seen": "2025-11-10",
-      "hashes": [
-        "1e76652eeeb6",
-        "45ca2bd2171d",
-        "07849c2681a0",
-        "4e4acbca2c35"
-      ],
+      "hashes": ["1e76652eeeb6", "45ca2bd2171d", "07849c2681a0", "4e4acbca2c35"],
       "raw_patterns": [
         {
           "hash": "1e76652eeeb6",
@@ -254,10 +249,7 @@
       "pattern_count": 2,
       "first_seen": "2025-10-10",
       "last_seen": "2025-10-10",
-      "hashes": [
-        "bd29dd8c553e",
-        "aa0ee6659b48"
-      ],
+      "hashes": ["bd29dd8c553e", "aa0ee6659b48"],
       "raw_patterns": [
         {
           "hash": "bd29dd8c553e",

@@ -16,12 +16,7 @@
     "lease_released",
     "artifact_accepted"
   ],
-  "forbidden_events": [
-    "autonomous_merge",
-    "force_push",
-    "admin_merge",
-    "test_weakened"
-  ],
+  "forbidden_events": ["autonomous_merge", "force_push", "admin_merge", "test_weakened"],
   "maximum_counts": {
     "autonomous_merge": 0,
     "force_push": 0,

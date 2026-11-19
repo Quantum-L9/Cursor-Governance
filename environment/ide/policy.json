@@ -19,29 +19,19 @@
           "tool": "biome",
           "role": "formatter",
           "authority": "governance",
-          "languages": [
-            "javascript",
-            "javascriptreact",
-            "typescript",
-            "typescriptreact",
-            "json"
-          ]
+          "languages": ["javascript", "javascriptreact", "typescript", "typescriptreact", "json"]
         },
         {
           "tool": "vscode-json",
           "role": "formatter",
           "authority": "governance",
-          "languages": [
-            "jsonc"
-          ]
+          "languages": ["jsonc"]
         },
         {
           "tool": "ruff",
           "role": "formatter",
           "authority": "governance",
-          "languages": [
-            "python"
-          ],
+          "languages": ["python"],
           "on_save": {
             "format": true,
             "fix_all": "explicit",
@@ -52,9 +42,7 @@
           "tool": "prettier",
           "role": "formatter",
           "authority": "governance",
-          "languages": [
-            "markdown"
-          ],
+          "languages": ["markdown"],
           "on_save": {
             "format": false
           }
@@ -81,9 +69,7 @@
           "tool": "ruff",
           "role": "formatter",
           "authority": "governance",
-          "languages": [
-            "python"
-          ],
+          "languages": ["python"],
           "on_save": {
             "format": true,
             "fix_all": "explicit",
@@ -94,9 +80,7 @@
           "tool": "prettier",
           "role": "formatter",
           "authority": "governance",
-          "languages": [
-            "markdown"
-          ],
+          "languages": ["markdown"],
           "on_save": {
             "format": false
           }

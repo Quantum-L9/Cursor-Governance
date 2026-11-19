@@ -5,14 +5,7 @@
   "description": "Smallest independently classifiable and routable generated-data item (law §10).",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "unit_id",
-    "primary_class",
-    "epistemic_status",
-    "statement",
-    "scope",
-    "confidence"
-  ],
+  "required": ["unit_id", "primary_class", "epistemic_status", "statement", "scope", "confidence"],
   "$defs": {
     "generatedDataClass": {
       "type": "string",
@@ -41,14 +34,7 @@
     },
     "epistemicStatus": {
       "type": "string",
-      "enum": [
-        "observed",
-        "derived",
-        "hypothesized",
-        "disproven",
-        "contested",
-        "unresolved"
-      ]
+      "enum": ["observed", "derived", "hypothesized", "disproven", "contested", "unresolved"]
     },
     "routeName": {
       "type": "string",
@@ -123,22 +109,13 @@
       "additionalProperties": false,
       "properties": {
         "observed_at": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "base_sha": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "expires_at": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       }
     },
@@ -178,9 +155,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "condition_type"
-        ],
+        "required": ["condition_type"],
         "properties": {
           "condition_type": {
             "type": "string",

@@ -3,54 +3,29 @@
   "$id": "l9/dag-authoring/request-v2.2",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "operation",
-    "repo_root"
-  ],
+  "required": ["operation", "repo_root"],
   "properties": {
     "operation": {
-      "enum": [
-        "CREATE",
-        "UPDATE",
-        "VALIDATE",
-        "REGISTER",
-        "COMMAND_BIND",
-        "CONVERT"
-      ]
+      "enum": ["CREATE", "UPDATE", "VALIDATE", "REGISTER", "COMMAND_BIND", "CONVERT"]
     },
     "repo_root": {
       "type": "string",
       "minLength": 1
     },
     "dag_path": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "dag_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "dag_symbol": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "command_path": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "domain_owner": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "allow_mutation": {
       "type": "boolean",
@@ -61,12 +36,7 @@
       "default": false
     },
     "graph_kind": {
-      "enum": [
-        "AUTO",
-        "SESSION_GUIDANCE",
-        "LANGGRAPH_RUNTIME",
-        "UNKNOWN"
-      ],
+      "enum": ["AUTO", "SESSION_GUIDANCE", "LANGGRAPH_RUNTIME", "UNKNOWN"],
       "default": "AUTO"
     }
   }
