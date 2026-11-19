@@ -52,20 +52,19 @@ def _organization_policy(role: str) -> dict[str, Any]:
         return {"status": "MISSING", "role": role, "reason": str(exc)}
 
 
-def _policy_denials(role: str) -> list[dict[str, Any]]:
-    """Authority claims this mode must not grant. Mode ON/OFF stays independent."""
-    try:
-        try:
-            from org_policy_binding import AUTHORITY_CLAIMS, govern
-        except ImportError:
-            from ops.autonomy.org_policy_binding import AUTHORITY_CLAIMS, govern
-        return [govern(action, role) for action in AUTHORITY_CLAIMS]
-    except (OSError, ValueError, ImportError) as exc:
-        return [{"action": "author_organization_policy", "allowed": False, "reason": str(exc)}]
-
-
-# Host session identity, in order. An unresolvable session never activates a mode.
-SESSION_ENVS = ("CURSOR_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID")
+# Host session identity, in order. The first names are the ones hooks document.
+# Cursor agent shells set CURSOR_CONVERSATION_ID and not CURSOR_SESSION_ID;
+# Claude cloud sets CLAUDE_CODE_REMOTE_SESSION_ID when the local id is absent.
+# Those two are how `on` binds without a hand-passed --session-id. An earlier
+# name still wins. "default" is not an identity. An unresolvable session never
+# activates a mode.
+SESSION_ENVS = (
+    "CURSOR_SESSION_ID",
+    "CLAUDE_CODE_SESSION_ID",
+    "CLAUDE_SESSION_ID",
+    "CURSOR_CONVERSATION_ID",
+    "CLAUDE_CODE_REMOTE_SESSION_ID",
+)
 EXIT = {"ACTIVE": 0, "OFF": 0, "BLOCKED": 3, "REJECTED": 1, "STALE": 1}
 ADMITTED = "ADMITTED_AND_CURRENT"
 # The coding-agent execution projection keeps its own binding

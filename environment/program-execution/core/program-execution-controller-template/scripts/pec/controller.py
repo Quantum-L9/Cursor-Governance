@@ -938,6 +938,46 @@ def validate_runtime(workspace: Path) -> dict[str, Any]:
     return {"status": "PASS" if not errors else "FAIL", "errors": errors}
 
 
+def _porcelain(repo: Path) -> str:
+    return run_git(repo, "status", "--porcelain", check=False).stdout
+
+
+def ensure_clean_repository(repo: Path, workspace: Path) -> Path:
+    """The checkout a campaign executes in. A dirty tree is never that checkout.
+
+    Uncommitted files in the operator checkout stay there. They are not the
+    campaign, and carrying them forward is what blocks ``make pr``. A clean
+    repository is used as itself. A dirty one is left untouched, and a detached
+    worktree at the same HEAD — empty porcelain — becomes the execution root.
+    """
+    if not _porcelain(repo).strip():
+        return repo
+    head = run_git(repo, "rev-parse", "HEAD").stdout.strip()
+    dest = workspace / "worktrees" / "_execution"
+    if dest.exists():
+        current = run_git(dest, "rev-parse", "HEAD", check=False)
+        if (
+            (dest / ".git").exists()
+            and not _porcelain(dest).strip()
+            and current.returncode == 0
+            and current.stdout.strip() == head
+        ):
+            return dest
+        stamp = re.sub(r"[^0-9TZ]", "", utc_now())
+        parked = workspace / "recovery" / f"_execution-{stamp}"
+        parked.parent.mkdir(parents=True, exist_ok=True)
+        dest.rename(parked)
+        run_git(repo, "worktree", "prune", check=False)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    added = run_git(repo, "worktree", "add", "--detach", str(dest), head, check=False)
+    if added.returncode != 0:
+        detail = added.stderr.strip() or added.stdout.strip()
+        raise ControllerError(f"cannot create a clean execution worktree from {repo}: {detail}")
+    if _porcelain(dest).strip():
+        raise ControllerError(f"execution worktree {dest} was created dirty")
+    return dest
+
+
 def reconcile_repositories(workspace: Path, mappings: list[str]) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     results: list[dict[str, Any]] = []
@@ -958,6 +998,7 @@ def reconcile_repositories(workspace: Path, mappings: list[str]) -> dict[str, An
             repo = Path(raw_path).expanduser().resolve()
             if run_git(repo, "rev-parse", "--git-dir", check=False).returncode != 0:
                 raise ControllerError(f"not a Git repository: {repo}")
+            repo = ensure_clean_repository(repo, workspace)
             branch = run_git(repo, "branch", "--show-current").stdout.strip()
             head = run_git(repo, "rev-parse", "HEAD").stdout.strip()
             dirty = bool(run_git(repo, "status", "--porcelain").stdout.strip())
@@ -1136,10 +1177,8 @@ def _lease_base_sha(workspace: Path, repo: dict[str, Any], task_id: str) -> str:
     kind = run_git(repo_path, "cat-file", "-t", sha, check=False)
     if kind.returncode != 0 or kind.stdout.strip() != "commit":
         raise ControllerError(f"campaign integration head is not a commit: {branch}={sha}")
-    if run_git(repo_path, "status", "--porcelain").stdout.strip():
-        raise ControllerError(
-            "repository must be clean before leasing from the campaign integration branch"
-        )
+    # The lease base is the commit. Porcelain in the parent checkout does not
+    # enter the task worktree `git worktree add` creates from this SHA.
     recorded = str(repo.get("head_sha") or "")
     if recorded and recorded != sha:
         ancestry = run_git(repo_path, "merge-base", "--is-ancestor", recorded, sha, check=False)
@@ -1424,8 +1463,9 @@ def task_readiness_detail(
         if repo is None or not repo.get("head_sha"):
             # Setup not prepared yet; `pec reconcile` deterministically clears it.
             entries.append((_WAITING, "repository_not_reconciled"))
-        elif repo.get("dirty"):
-            entries.append((_BLOCKING, "repository_dirty"))
+        # `dirty` stays on the repository row as evidence. It does not block:
+        # reconcile binds a clean execution worktree, and a task worktree is
+        # created from the commit SHA, so parent porcelain is not the campaign.
         if task["scope_status"] != "exact" or not task.get("source_contract_path"):
             # Setup not prepared yet; draft/register-contract deterministically clears it.
             entries.append((_WAITING, "source_contract_incomplete"))
@@ -1929,10 +1969,6 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         if repo is None:
             raise ControllerError("repository not reconciled")
         repo_path = Path(repo["local_path"])
-        current_dirty = bool(run_git(repo_path, "status", "--porcelain").stdout.strip())
-        if current_dirty:
-            _stale_and_release(db, task_id, lease, "repository_state_changed")
-            raise ControllerError("repository state changed after reconciliation")
         # Campaign lineage (an existing campaign/<id> integration branch) means
         # task bases come from that branch, not the checked-out HEAD — the
         # equality check below only applies to standalone runtimes. STACK.json
@@ -1982,6 +2018,11 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
                     f"(worktree={worktree}, branch={lease['branch']}, "
                     f"base_sha={lease['base_sha']}; residue cleanup already attempted — "
                     "run `pec fresh-workspace` to reset every task worktree)"
+                )
+            _strip_session_residue(worktree)
+            if _porcelain(worktree).strip():
+                raise ControllerError(
+                    f"task worktree {worktree} was created dirty; a campaign starts clean"
                 )
         db.update_lease(lease["lease_id"], worktree=str(worktree))
         db.update_task(task_id, worktree=str(worktree))

@@ -11,7 +11,7 @@ repository_access:
 
 # E: enforce released org policy under the already-required Core check
 
-**Executor:** one pool agent in its own `l9-ci-core` worktree. **The pull request may open after A merges.** It must not merge required-job enforcement until B's immutable signed release is on `.github` `main`. A missing release must not become a green skip. An unmerged pull request is the only safe state before B. No SDK writes. See `09_EXECUTION_BINDING.md`.
+**Executor:** one pool agent in its own `l9-ci-core` worktree. Open the pull request as soon as A's or B's head SHA exists and pin that open head. Update the pin on this pull request when the parent head moves. A missing release must not become a green skip. The CTO does not merge this pull request, and an unmerged parent does not pause the lane. No SDK writes. See `09_EXECUTION_BINDING.md`.
 
 ## Observed current enforcement seam
 

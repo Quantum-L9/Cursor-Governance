@@ -232,7 +232,15 @@ def test_request_from_another_session_does_not_carry_over(tmp_path: Path) -> Non
     assert "load" not in report
 
 
-def test_unresolvable_session_never_activates(tmp_path: Path) -> None:
+def _clear_host_session(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in cto_mode.SESSION_ENVS:
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_unresolvable_session_never_activates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _clear_host_session(monkeypatch)
     with pytest.raises(cto_mode.ContractError, match="SESSION_UNRESOLVED"):
         cto_mode.request(tmp_path)
     cto_mode.request(tmp_path, session_id=SID)
@@ -242,14 +250,49 @@ def test_unresolvable_session_never_activates(tmp_path: Path) -> None:
 
 
 def test_session_resolves_from_host_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    _clear_host_session(monkeypatch)
     assert cto_mode.resolve_session_id() is None
     monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "default")
     assert cto_mode.resolve_session_id() is None
+    monkeypatch.setenv("CURSOR_CONVERSATION_ID", "conv-1")
+    assert cto_mode.resolve_session_id() == "conv-1"
+    monkeypatch.setenv("CLAUDE_CODE_REMOTE_SESSION_ID", "cse-1")
+    assert cto_mode.resolve_session_id() == "conv-1"
+    monkeypatch.delenv("CURSOR_CONVERSATION_ID")
+    assert cto_mode.resolve_session_id() == "cse-1"
     monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "cc-1")
     assert cto_mode.resolve_session_id() == "cc-1"
     monkeypatch.setenv("CURSOR_SESSION_ID", "cur-1")
     assert cto_mode.resolve_session_id() == "cur-1"
     assert cto_mode.resolve_session_id("explicit") == "explicit"
+
+
+@pytest.mark.parametrize(
+    "script",
+    ["cto_mode.py", "architect_mode.py", "coding_agent_mode.py"],
+)
+def test_cli_on_binds_the_host_conversation_without_a_session_flag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, script: str
+) -> None:
+    monkeypatch.setenv("CURSOR_CONVERSATION_ID", "conv-auto")
+    on = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "ops/autonomy" / script),
+            "on",
+            "--workspace",
+            str(tmp_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    report = json.loads(on.stdout)
+    assert on.returncode == 3, on.stdout + on.stderr
+    assert report["mode"] == "BLOCKED"
+    assert "SESSION_UNRESOLVED" not in on.stdout
+    state = json.loads(next(tmp_path.glob(".l9/*-mode/session.json")).read_text())
+    assert state["session_id"] == "conv-auto"
 
 
 # --- operating protocol: the CTO swarm invariants (operator-directed 2026-11-13) ---
