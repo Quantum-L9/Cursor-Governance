@@ -52,6 +52,18 @@ def _organization_policy(role: str) -> dict[str, Any]:
         return {"status": "MISSING", "role": role, "reason": str(exc)}
 
 
+def _policy_denials(role: str) -> list[dict[str, Any]]:
+    """Authority claims this mode must not grant. Mode ON/OFF stays independent."""
+    try:
+        try:
+            from org_policy_binding import AUTHORITY_CLAIMS, govern
+        except ImportError:
+            from ops.autonomy.org_policy_binding import AUTHORITY_CLAIMS, govern
+        return [govern(action, role) for action in AUTHORITY_CLAIMS]
+    except (OSError, ValueError, ImportError) as exc:
+        return [{"action": "author_organization_policy", "allowed": False, "reason": str(exc)}]
+
+
 # Host session identity, in order. An unresolvable session never activates a mode.
 SESSION_ENVS = ("CURSOR_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID")
 EXIT = {"ACTIVE": 0, "OFF": 0, "BLOCKED": 3, "REJECTED": 1, "STALE": 1}
@@ -495,6 +507,7 @@ class ProjectionMode:
             "schema": f"l9.{self.name}-mode-status/v1",
             "workspace": str(workspace),
             "organization_policy": _organization_policy(self.name),
+            "organization_policy_denials": _policy_denials(self.name),
         }
         try:
             contract = self.load_contract(contract_path)
