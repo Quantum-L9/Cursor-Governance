@@ -5,6 +5,10 @@ Infer API / MCP / install / Docker / named products from the activate seed,
 fetch current docs (Context7 HTTP, then official page GET, plus live MCP
 schemas), write $HOME/.l9/primed/<id>/stack-proof.json, and validate.
 Agent-written receipts without fetch evidence fail closed.
+
+Context7 HTTP takes its bearer from capability_bind: the process environment
+when that is already set, otherwise the Infisical grant, held in-process.
+The value is never copied into os.environ, argv, or the receipt.
 """
 
 from __future__ import annotations
@@ -22,7 +26,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-_OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_OPS_LIB = _REPO_ROOT / "ops" / "lib"
+_SECRETS = _REPO_ROOT / "ops" / "secrets"
 if str(_OPS_LIB) not in sys.path:
     sys.path.insert(0, str(_OPS_LIB))
 
@@ -154,12 +160,37 @@ def is_pure_file_edit(seed: dict[str, Any], inferred: list[dict[str, str]]) -> b
     return bool(PURE_FILE_RE.search(seed_text(seed)))
 
 
+def resolve_context7() -> tuple[str, str]:
+    """Bearer for the live Context7 GET, and the bind source name.
+
+    A key already in this process is used as-is and is not entered into the
+    bind cache. When it is absent, capability_bind resolves the Infisical
+    grant and holds it in-process. This function never writes os.environ.
+    """
+    present = os.environ.get("CONTEXT7_API_KEY", "").strip()
+    if present:
+        return present, "env"
+    if str(_SECRETS) not in sys.path:
+        sys.path.insert(0, str(_SECRETS))
+    try:
+        import capability_bind as cb
+    except ImportError:
+        return "", "unknown"
+    value = (cb.bind("CONTEXT7_API_KEY") or "").strip()
+    source = cb.literal_source(cb.bind_status("CONTEXT7_API_KEY")["source"])
+    return value, source
+
+
 def _headers() -> dict[str, str]:
-    key = os.environ.get("CONTEXT7_API_KEY", "").strip()
-    headers = {"User-Agent": "l9-pe-stack-proof/1"}
-    if key:
-        headers["Authorization"] = f"Bearer {key}"
-    return headers
+    key, source = resolve_context7()
+    if not key:
+        raise StackProofError(
+            f"CONTEXT7_API_KEY missing on the live stack-proof path (source={source})"
+        )
+    return {
+        "User-Agent": "l9-pe-stack-proof/1",
+        "Authorization": f"Bearer {key}",
+    }
 
 
 ALLOWED_FETCH_SCHEMES = frozenset({"https"})
@@ -255,8 +286,6 @@ def context7_fetch(
     *,
     fetch: FetchFn,
 ) -> dict[str, Any] | None:
-    if not os.environ.get("CONTEXT7_API_KEY", "").strip():
-        raise StackProofError("CONTEXT7_API_KEY missing on the live stack-proof path")
     params = urllib.parse.urlencode({"libraryName": name, "query": query})
     status, body = fetch(f"{CONTEXT7_SEARCH}?{params}", _headers())
     if status != 200:

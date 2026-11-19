@@ -174,6 +174,7 @@ class Context7StackProofTests(unittest.TestCase):
 
     def test_missing_key_refuses_on_live_fetch(self) -> None:
         os.environ.pop("CONTEXT7_API_KEY", None)
+        self.mod.resolve_context7 = lambda: ("", "unbound")
         seed = {
             "campaign_id": "nokey",
             "objective": "Call the Context7 HTTP API",
@@ -181,7 +182,91 @@ class Context7StackProofTests(unittest.TestCase):
         }
         with self.assertRaises(self.mod.StackProofError) as ctx:
             self.mod.prove_stack(seed, primed_dir=Path(tempfile.mkdtemp()))
-        self.assertIn("CONTEXT7_API_KEY", str(ctx.exception))
+        message = str(ctx.exception)
+        self.assertIn("CONTEXT7_API_KEY missing on the live stack-proof path", message)
+        self.assertIn("source=unbound", message)
+
+    def test_infisical_bind_authorizes_fetch_without_env(self) -> None:
+        os.environ.pop("CONTEXT7_API_KEY", None)
+        self.mod.resolve_context7 = lambda: ("vault-key-not-logged", "infisical")
+        seen: list[str] = []
+
+        def fetch(url: str, headers=None):
+            seen.append((headers or {}).get("Authorization", ""))
+            if "libs/search" in url:
+                return 200, json.dumps({"results": [{"id": "/upstash/context7"}]})
+            return 200, "language_name must be the full English name. language_code is en."
+
+        seed = {
+            "campaign_id": "vault-key",
+            "objective": "Call the Context7 HTTP API",
+            "tasks": [{"title": "API", "objective": "GET docs"}],
+        }
+        with tempfile.TemporaryDirectory() as raw:
+            receipt = self.mod.prove_stack(seed, primed_dir=Path(raw), fetch=fetch)
+        self.assertEqual(receipt["status"], "pass")
+        self.assertTrue(seen)
+        self.assertTrue(all(item == "Bearer vault-key-not-logged" for item in seen))
+        self.assertNotIn("vault-key-not-logged", json.dumps(receipt))
+        self.assertNotIn("CONTEXT7_API_KEY", os.environ)
+
+    def test_resolve_context7_binds_infisical_when_env_is_empty(self) -> None:
+        import sys
+        import types
+
+        os.environ.pop("CONTEXT7_API_KEY", None)
+        calls: list[str] = []
+        fake = types.ModuleType("capability_bind")
+
+        def bind(name: str, **_kwargs: Any) -> str:
+            calls.append(name)
+            return "from-vault"
+
+        def bind_status(name: str, **_kwargs: Any) -> dict[str, Any]:
+            return {"name": name, "bound": True, "source": "infisical"}
+
+        def literal_source(raw: object) -> str:
+            return "infisical" if raw == "infisical" else "unknown"
+
+        fake.bind = bind
+        fake.bind_status = bind_status
+        fake.literal_source = literal_source
+        previous = sys.modules.get("capability_bind")
+        sys.modules["capability_bind"] = fake
+        try:
+            key, source = self.mod.resolve_context7()
+        finally:
+            if previous is None:
+                sys.modules.pop("capability_bind", None)
+            else:
+                sys.modules["capability_bind"] = previous
+        self.assertEqual(key, "from-vault")
+        self.assertEqual(source, "infisical")
+        self.assertEqual(calls, ["CONTEXT7_API_KEY"])
+        self.assertNotIn("CONTEXT7_API_KEY", os.environ)
+
+    def test_resolve_context7_uses_env_without_binding(self) -> None:
+        import sys
+        import types
+
+        os.environ["CONTEXT7_API_KEY"] = "env-key-not-a-secret"
+        fake = types.ModuleType("capability_bind")
+
+        def bind(*_args: Any, **_kwargs: Any) -> str:
+            raise AssertionError("env key must not enter capability_bind")
+
+        fake.bind = bind
+        previous = sys.modules.get("capability_bind")
+        sys.modules["capability_bind"] = fake
+        try:
+            key, source = self.mod.resolve_context7()
+        finally:
+            if previous is None:
+                sys.modules.pop("capability_bind", None)
+            else:
+                sys.modules["capability_bind"] = previous
+        self.assertEqual(key, "env-key-not-a-secret")
+        self.assertEqual(source, "env")
 
     def test_docs_url_get_failure_refuses(self) -> None:
         def fetch(url: str, headers=None):
