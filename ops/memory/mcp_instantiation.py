@@ -100,6 +100,17 @@ def classify_managed_config(config: Mapping[str, Any]) -> str:
     return "unknown"
 
 
+def _require_placeholder_env(name: str, spec: Mapping[str, Any]) -> None:
+    """A rendered MCP env value is a ``${NAME}`` placeholder. A raw value is refused."""
+    env = spec.get("env")
+    if not isinstance(env, dict):
+        return
+    for key, value in env.items():
+        text = "" if value is None else str(value)
+        if text and not text.startswith("${"):
+            raise ValueError(f"{name} env {key} must be a ${{NAME}} placeholder")
+
+
 def render_machine_config(
     master: Mapping[str, Any],
     existing: Mapping[str, Any] | None,
@@ -131,6 +142,7 @@ def render_machine_config(
             dropped[name] = "legacy direct-provider front door retired (stage C7)"
             servers.pop(name, None)
             continue
+        _require_placeholder_env(name, spec)
         servers[name] = {key: value for key, value in spec.items() if not str(key).startswith("_")}
     for name in sorted(LEGACY_KEYS):
         if name in servers:

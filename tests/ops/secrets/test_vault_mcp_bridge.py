@@ -181,3 +181,31 @@ def test_an_unbound_key_refuses_to_start_and_names_the_fix(
 def test_an_unknown_bridge_is_refused(capsys: pytest.CaptureFixture[str]) -> None:
     assert bridge.main(["nope"]) == 2
     assert capsys.readouterr().out == ""
+
+
+def test_spawn_env_binds_into_the_child_and_not_the_parent(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        bridge.cb,
+        "allowed_names",
+        lambda: frozenset({"GITHUB_TOKEN", "N8N_API_KEY", "N8N_API_URL", "PERPLEXITY_API_KEY"}),
+    )
+    monkeypatch.setattr(bridge.cb, "bind", lambda name: f"CANARY-{name}")
+    github = bridge.build_child_env(bridge.load_spawn("github"))
+    assert github["GITHUB_PERSONAL_ACCESS_TOKEN"] == "CANARY-GITHUB_TOKEN"
+    assert "GITHUB_TOKEN" not in github
+    n8n = bridge.build_child_env(bridge.load_spawn("n8n"))
+    assert n8n["N8N_API_KEY"] == "CANARY-N8N_API_KEY"
+    assert n8n["N8N_API_URL"] == "CANARY-N8N_API_URL"
+    assert n8n["MCP_MODE"] == "stdio"
+    assert bridge.load_spawn("perplexity")["env"] == {"PERPLEXITY_API_KEY": "PERPLEXITY_API_KEY"}
+    assert "CANARY-GITHUB_TOKEN" not in os.environ.values()
+
+
+def test_spawn_does_not_write_a_config_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(bridge.cb, "allowed_names", lambda: frozenset({"NOTION_API_KEY"}))
+    monkeypatch.setattr(bridge.cb, "bind", lambda _name: "CANARY-NOTION")
+    bridge.build_child_env(bridge.load_spawn("notion"))
+    assert list(tmp_path.iterdir()) == []

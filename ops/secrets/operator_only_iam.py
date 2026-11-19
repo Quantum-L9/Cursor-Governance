@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
-"""Infisical IAM for ``operator_only_keys``: hosted identities cannot read them.
+"""Infisical IAM for ``operator_only_keys``.
 
-``capability_bind`` refuses operator-only names off the operator workstation,
-but a hosted process controls both inputs to that check. The boundary is here:
-every project identity named in ``operator_only_iam.hosted_identity_names``
-keeps its built-in role and holds one identity-specific privilege that forbids
-every secret action on the operator-only names.
+An empty ``operator_only_keys`` list is the grant: no name is operator-only.
+``--check`` exits 0 when the hosted forbid privilege is absent. ``--apply``
+deletes that privilege from every identity named in
+``operator_only_iam.hosted_identity_names``. A non-empty list still creates or
+updates the forbid privilege.
 
 Usage:
-  operator_only_iam.py --check   # exit 1 if any hosted identity lacks the forbid privilege
-  operator_only_iam.py --apply   # create or update the privilege on every hosted identity
+  operator_only_iam.py --check   # exit 0 when the privilege matches the list
+  operator_only_iam.py --apply   # delete, or create/update, until the list matches
   operator_only_iam.py --probe   # log in as each hosted identity once; prove deny and allow
   operator_only_iam.py --self-probe  # this surface's own identity: HTTP status per name
 
 ``--probe`` exits 1 on any unexpected read and 2 when an identity could not be
-probed from this surface. ``--self-probe`` needs no admin rights; on a hosted
-surface it exits 0 only when every operator-only name is refused. The other modes
+probed from this surface. ``--self-probe`` needs no admin rights. The other modes
 run as this surface's machine identity, which must administer the project.
 Prints names, IDs and HTTP statuses, never a secret value.
 """
@@ -54,11 +53,8 @@ def policy() -> tuple[list[str], list[str], str]:
     names = sorted(capability_bind.operator_only_names())
     hosted = [str(name) for name in block.get("hosted_identity_names") or []]
     slug = str(block.get("privilege_slug") or "")
-    if not names or not hosted or not slug:
-        raise IamError(
-            "inventory lacks operator_only_keys or operator_only_iam "
-            "(hosted_identity_names, privilege_slug)"
-        )
+    if not hosted or not slug:
+        raise IamError("inventory lacks operator_only_iam (hosted_identity_names, privilege_slug)")
     return names, hosted, slug
 
 
@@ -130,15 +126,32 @@ class Project:
         body = {"slug": slug, "permissions": rules, "type": {"isTemporary": False}}
         self.call("PATCH", f"{PRIVILEGE_PATH}/{privilege_id}", body)
 
+    def delete_privilege(self, privilege_id: str) -> None:
+        self.call("DELETE", f"{PRIVILEGE_PATH}/{privilege_id}")
+
 
 def hosted_memberships(project: Project, hosted: list[str]) -> list[dict[str, Any]]:
     return [m for m in project.memberships() if m["identity"].get("name") in hosted]
 
 
 def plan(project: Project, names: list[str], hosted: list[str], slug: str) -> list[dict[str, Any]]:
-    """Actions that give every hosted identity the forbid privilege. Reads only."""
-    rules = deny_rules(names)
+    """Actions that make the hosted forbid privilege match ``names``. Reads only."""
     actions: list[dict[str, Any]] = []
+    if not names:
+        for membership in hosted_memberships(project, hosted):
+            identity = membership["identity"]
+            found = [p for p in project.privileges(identity["id"]) if p.get("slug") == slug]
+            for privilege in found:
+                actions.append(
+                    {
+                        "op": "delete",
+                        "identity": identity["name"],
+                        "identity_id": identity["id"],
+                        "privilege_id": privilege["id"],
+                    }
+                )
+        return actions
+    rules = deny_rules(names)
     for membership in hosted_memberships(project, hosted):
         identity = membership["identity"]
         found = [p for p in project.privileges(identity["id"]) if p.get("slug") == slug]
@@ -156,6 +169,8 @@ def apply(project: Project, actions: list[dict[str, Any]], slug: str) -> None:
     for action in actions:
         if action["op"] == "create":
             project.create_privilege(action["identity_id"], slug, action["rules"])
+        elif action["op"] == "delete":
+            project.delete_privilege(action["privilege_id"])
         else:
             project.update_privilege(action["privilege_id"], slug, action["rules"])
 
@@ -238,6 +253,9 @@ def self_probe(request: Request, project_id: str, names: list[str], environment:
             "viewSecretValue": "true",
         }
     )
+    if not names:
+        print("PASS: no operator-only names")
+        return 0
     readable = []
     for name in names:
         status, _ = request(
@@ -302,15 +320,24 @@ def main(argv: list[str] | None = None) -> int:
         for action in actions:
             print(("apply: " if args.apply else "drift: ") + describe(action, slug))
         if args.check:
-            print("PASS" if not actions else "FAIL: hosted identities can read operator-only names")
-            return 0 if not actions else 1
+            if not actions:
+                print("PASS")
+                return 0
+            detail = (
+                "hosted forbid privilege still present"
+                if not names
+                else "hosted identities can read operator-only names"
+            )
+            print(f"FAIL: {detail}")
+            return 1
         apply(project, actions, slug)
         remaining = plan(project, names, hosted, slug)
         if remaining:
             raise IamError(
                 "read-back still differs: " + "; ".join(describe(a, slug) for a in remaining)
             )
-        print(f"PASS: {len(actions)} change(s); every hosted identity holds {slug}")
+        held = "holds" if names else "no longer holds"
+        print(f"PASS: {len(actions)} change(s); every hosted identity {held} {slug}")
         return 0
     except IamError as error:
         print(f"error: {error}", file=sys.stderr)

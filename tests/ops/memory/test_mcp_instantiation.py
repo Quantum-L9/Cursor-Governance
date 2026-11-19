@@ -183,6 +183,16 @@ def test_exact_native_memory_entry_is_preserved_only_with_package_evidence() -> 
     assert inst.MEMORY_KEY not in config["mcpServers"]
 
 
+def test_render_refuses_a_raw_env_value() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="placeholder"):
+        inst.render_machine_config(
+            _master(bad={"command": "npx", "env": {"TOKEN": "raw-secret-value"}}),
+            None,
+        )
+
+
 def test_render_from_nothing_has_no_memory_entry_and_no_private_keys() -> None:
     config, dropped, preserved = inst.render_machine_config(
         _master(docs={"command": "tool", "_owner": "x"}), None
