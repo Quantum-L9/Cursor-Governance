@@ -69,6 +69,17 @@ def _run(
         mock.patch.object(plane, "_aws_probe", return_value=aws or AWS_OK),
         mock.patch.object(plane.login, "ensure_machine_profile", return_value=login_state),
         mock.patch.object(plane.login, "machine_identity", return_value=(source, None)),
+        mock.patch.object(
+            plane.cb,
+            "allowed_names",
+            return_value=frozenset(
+                {
+                    "PERPLEXITY_API_KEY",
+                    "CLAUDE_INFISICAL_CLIENT_SECRET",
+                    *plane.BIND_NAMES,
+                }
+            ),
+        ),
         mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(binds)),
         # Process-global in capability_bind; never let a test leave it set.
         mock.patch.object(plane.cb, "note_login_failed", login_failed or mock.MagicMock()),
@@ -222,6 +233,9 @@ class OperatorPathTests(unittest.TestCase):
             payload = json.loads(dest.read_text(encoding="utf-8"))
             self.assertEqual(payload["identity"]["source"], "env")
             self.assertEqual(len(payload["binds"]), len(plane.BIND_NAMES))
+            self.assertIn("PERPLEXITY_API_KEY", payload["authorized_names"])
+            self.assertNotIn("CLAUDE_INFISICAL_CLIENT_SECRET", payload["authorized_names"])
+            self.assertNotIn("CANARY", json.dumps(payload))
 
     def test_omit_receipt_out_writes_no_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -64,6 +64,9 @@ class FakeInfisical:
             return 200, {"privilege": privilege}
         if route.startswith(iam.PRIVILEGE_PATH + "/"):
             privilege_id = route.rsplit("/", 1)[1]
+            if method == "DELETE":
+                self.privileges.pop(privilege_id, None)
+                return 200, {}
             if method == "PATCH":
                 self.privileges[privilege_id].update(body)
             return 200, {"privilege": self.privileges[privilege_id]}
@@ -97,10 +100,24 @@ def _project(fake: FakeInfisical) -> iam.Project:
 
 def test_policy_comes_from_the_inventory() -> None:
     names, hosted, slug = iam.policy()
-    assert names == sorted(cb.operator_only_names())
-    assert set(NAMES) <= set(names)
+    assert names == sorted(cb.operator_only_names()) == []
     assert "claude-code" in hosted
     assert slug == SLUG
+
+
+def test_empty_names_plan_deletes_the_forbid_privilege() -> None:
+    fake = FakeInfisical()
+    project = _project(fake)
+    iam.apply(project, iam.plan(project, NAMES, ["claude-code"], SLUG), SLUG)
+    assert fake.privileges
+    actions = iam.plan(project, [], ["claude-code"], SLUG)
+    assert [(a["op"], a["identity_id"]) for a in actions] == [
+        ("delete", HOSTED_A),
+        ("delete", HOSTED_B),
+    ]
+    iam.apply(project, actions, SLUG)
+    assert fake.privileges == {}
+    assert iam.plan(project, [], ["claude-code"], SLUG) == []
 
 
 def test_deny_rules_cover_legacy_read_separately() -> None:

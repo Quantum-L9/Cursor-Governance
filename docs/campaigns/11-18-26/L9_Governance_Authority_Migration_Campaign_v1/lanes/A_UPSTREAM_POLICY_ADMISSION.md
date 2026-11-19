@@ -28,4 +28,4 @@ Within `.github`, only existing `policies/` owner surfaces or narrowly justified
 
 ## Done
 
-Native validation passed at exact head; no duplicate global owner; all invariants/controls dispositioned; owner authority and exact-head decision recorded; PR opened through `make pr` and verified merged; upstream merged commit and content digests captured. Release signing is **B**, not claimed here. Any unverified upstream requirement blocks only admission, not read-only downstream preparation.
+Native validation passed at exact head; no duplicate global owner; all invariants/controls dispositioned; owner authority and exact-head decision recorded; PR opened through `make pr`. B, E, C, and M stack on or pin that open head immediately. The CTO does not merge A, and the open PR does not pause those lanes. Release signing is **B**, not claimed here. Any unverified upstream requirement is recorded on A and does not pause the other lanes.
