@@ -2,14 +2,15 @@
   "schema": "l9.memory.receipt-contract/v1",
   "contract_version": "memory-control-plane/v1",
   "compatible_package_majors": [
-    2
+    2,
+    3
   ],
   "record_schema_version": "2.2.0",
   "source": {
     "repository": "Quantum-L9/l9-graphiti-memory",
-    "ref": "v2.3.1",
-    "memory_sha": "84eedcdfab83020776eab290599751b3b6af8dbf",
-    "note": "Consumer contract for every V2 control-plane receipt. Cursor narrows required fields; it does not restate the package pydantic models and does not reject a superset. Live schema probe from the bound interpreter still wins when it exports a model; this file is the canonical fallback and the SSOT the test fixtures load. DistillationReceipt (l9-memory distill, ADR-0033) was read from src/l9_graphite_memory/extraction/distiller.py at the bound 2.4.0 ref; it lives outside the contracts package, so the binding's contract_model_modules names l9_graphite_memory.extraction."
+    "ref": "96ed99eb172bb3b7433600db8581991c4c890737",
+    "memory_sha": "96ed99eb172bb3b7433600db8581991c4c890737",
+    "note": "Consumer contract for the memory-control-plane/v1 receipts of package 3.0.1. Cursor narrows required fields; it does not restate the package pydantic models and does not reject a superset. Live schema probe from the bound interpreter still wins when it exports a model; this file is the canonical fallback and the SSOT the test fixtures load. DistillationReceipt (l9-memory distill, ADR-0033) lives outside the contracts package, so the binding's contract_model_modules names l9_graphite_memory.extraction."
   },
   "aliases": {
     "HealthReceipt": [

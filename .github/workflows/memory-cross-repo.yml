@@ -7,10 +7,13 @@
 #      git ls-remote, a bare SHA is taken as is — and refuse any commit other
 #      than release_evidence.memory_sha (a moved tag fails here, never rebinds);
 #      then clone Quantum-L9/l9-graphiti-memory at that immutable SHA
-#   2. rebuild its wheel with uv build --wheel and the fixed SOURCE_DATE_EPOCH
-#      and refuse a digest that differs from release_evidence.artifact_sha256.
-#      That digest is the official published wheel (python -m build / PyPI).
-#      The rebuild is kept because it reproduces those bytes; a mismatch fails.
+#   2. rebuild its wheel with the memory release recipe at the fixed
+#      SOURCE_DATE_EPOCH (scripts/build_release_artifacts.sh: python -m build,
+#      then tools/assurance/reproducible_artifacts.py canonicalize) and refuse
+#      a digest that differs from release_evidence.artifact_sha256. The
+#      binding's build_backend_constraint must equal that source's
+#      [build-system] requires pin. uv build --wheel --build-constraint does
+#      not reproduce the admitted wheel. A mismatch fails.
 #   3. install that wheel with its `postgres` extra (held to uv.lock, as
 #      pyproject.toml composes it) into a clean environment and bind it through
 #      L9_MEMORY_INTERPRETER (runtime_mode=pinned_environment) — never a
@@ -22,21 +25,21 @@
 #   5. record Cursor SHA, memory SHA, package version, wheel digest and the
 #      test outcome in the job summary and as an artifact
 #
-# The memory repository is private. The clone uses MEMORY_REPO_READ_TOKEN when
-# the repository provides it (a fine-grained read-only token on the memory
-# repository, held in Actions secrets, never in a file) and falls back to the
-# workflow token, which reaches the memory repository only where the
-# organization grants it. Either way nothing is written to any file: the
-# token rides on one git fetch and one x-access-token URL that is reset after.
+# The memory repository is private. The clone is one non-persisted
+# actions/checkout of Quantum-L9/l9-graphiti-memory with GH_TOKEN, the same
+# credential the trusted private checkouts in this repository already use.
+# L9_GITHUB_READ_TOKEN stays out of this pull_request workflow: that secret is
+# the projection credential and a pull-request shell step can print it
+# (run 44396822814 skipped the proof because the workflow token cannot see
+# this private repository and git reports that as "repository not found").
+# There is no workflow-token fallback. An empty or unauthorized GH_TOKEN
+# fails the checkout, and the job fails with it.
 #
-# ADVISORY MODE (operator, 2026-10-20). MEMORY_PROOF_ADVISORY below is "true"
-# while the memory binding is realigned (the rebuilt wheel digest does not yet
-# match release_evidence.artifact_sha256). Every proof step still runs exactly
-# as written and stops the chain at the first failure, but a failure is
-# reported as a ::warning:: and in the job summary instead of failing the job.
-# Set MEMORY_PROOF_ADVISORY to "false" to make the proof blocking again; with
-# it "false" there is no continue-on-error in effect anywhere in this workflow.
-# Tracked in TODO.md ("Memory cross-repo proof advisory").
+# The proof is blocking. MEMORY_PROOF_ADVISORY is "false", so a failed step
+# fails the job. The wheel step runs the memory repository's
+# scripts/build_release_artifacts.sh at release_evidence.source_date_epoch.
+# That recipe, not `uv build --build-constraint`, produced the admitted
+# artifact_sha256. A digest mismatch fails the job.
 name: Memory Cross-Repo Proof
 
 on:
@@ -57,8 +60,9 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.12"
-  # "true" = advisory (failures warn, the job passes); "false" = blocking.
-  MEMORY_PROOF_ADVISORY: "true"
+  # "false" = a failed proof step fails the job. Do not set this back to
+  # "true": advisory mode reported success while the proof steps were skipped.
+  MEMORY_PROOF_ADVISORY: "false"
 
 jobs:
   proof:
@@ -126,7 +130,18 @@ jobs:
           print(f"build_constraint={ev['build_backend_constraint']}")
           PY
 
-      - name: Resolve the bound ref and clone the memory repository at that SHA
+      - name: Clone the bound memory ref without persisting credentials
+        if: steps.binding.outcome == 'success'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: Quantum-L9/l9-graphiti-memory
+          ref: ${{ steps.binding.outputs.ref }}
+          fetch-depth: 1
+          path: memory-src
+          persist-credentials: false
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Refuse a moved tag or a checkout that is not the bound SHA
         id: memory_src
         if: steps.binding.outcome == 'success'
         continue-on-error: ${{ env.MEMORY_PROOF_ADVISORY == 'true' }}
@@ -134,45 +149,23 @@ jobs:
           MEMORY_REPO: ${{ steps.binding.outputs.repository }}
           MEMORY_REF: ${{ steps.binding.outputs.ref }}
           MEMORY_SHA: ${{ steps.binding.outputs.memory_sha }}
-          TOKEN: ${{ secrets.MEMORY_REPO_READ_TOKEN || github.token }}
         run: |
           set -euo pipefail
-          mkdir -p "${RUNNER_TEMP}/memory-src"
-          cd "${RUNNER_TEMP}/memory-src"
-          git init .
-          git remote add origin \
-            "https://x-access-token:${TOKEN}@github.com/${MEMORY_REPO}.git"
-          # A release tag is a name, not the proof: peel it on the remote and
-          # refuse any commit other than release_evidence.memory_sha. A bare
-          # SHA already equals memory_sha (asserted while reading the binding).
-          if printf '%s' "${MEMORY_REF}" | grep -Eq '^[0-9a-f]{40}$'; then
-            resolved="${MEMORY_REF}"
-          else
-            listing="$(git ls-remote --tags origin "refs/tags/${MEMORY_REF}" "refs/tags/${MEMORY_REF}^{}")"
-            if [ -z "${listing}" ]; then
-              echo "::error::tag ${MEMORY_REF} does not exist on ${MEMORY_REPO}"
-              exit 1
-            fi
-            # Prefer the peeled line (annotated tag -> commit); a lightweight tag has only the plain line.
-            resolved="$(printf '%s\n' "${listing}" | awk -v peeled="refs/tags/${MEMORY_REF}^{}" '$2 == peeled {print $1}')"
-            if [ -z "${resolved}" ]; then
-              resolved="$(printf '%s\n' "${listing}" | awk -v plain="refs/tags/${MEMORY_REF}" '$2 == plain {print $1}')"
-            fi
-          fi
-          if [ "${resolved}" != "${MEMORY_SHA}" ]; then
-            echo "::error::binding ref ${MEMORY_REF} resolves to ${resolved}, release_evidence.memory_sha is ${MEMORY_SHA} — the tag moved or the manifest is stale; rebind before proving"
+          # The checkout above is hardcoded to the memory repository. A binding
+          # that names anything else never receives the credential.
+          if [ "${MEMORY_REPO}" != "Quantum-L9/l9-graphiti-memory" ]; then
+            echo "::error::binding repository ${MEMORY_REPO} is not Quantum-L9/l9-graphiti-memory"
             exit 1
           fi
-          git -c protocol.version=2 fetch --depth=1 origin "${resolved}"
-          git checkout --detach FETCH_HEAD
-          git remote set-url origin "https://github.com/${MEMORY_REPO}.git"
-          actual="$(git rev-parse HEAD)"
+          # actions/checkout peels an annotated tag. HEAD is that commit, so a
+          # tag that no longer points at release_evidence.memory_sha fails here.
+          # A missing ref fails the checkout itself. No credential is in this step.
+          actual="$(git -C memory-src rev-parse HEAD)"
           if [ "${actual}" != "${MEMORY_SHA}" ]; then
-            echo "::error::memory checkout is ${actual}, binding names ${MEMORY_SHA}"
+            echo "::error::binding ref ${MEMORY_REF} checked out ${actual}, release_evidence.memory_sha is ${MEMORY_SHA} — the tag moved or the manifest is stale"
             exit 1
           fi
           echo "resolved_sha=${actual}" >> "$GITHUB_OUTPUT"
-          echo "memory ref ${MEMORY_REF} resolves to ${actual} and matches release_evidence.memory_sha"
 
       - name: Build the memory wheel reproducibly and verify its digest
         id: wheel
@@ -183,16 +176,26 @@ jobs:
           EXPECTED_ARTIFACT: ${{ steps.binding.outputs.artifact }}
           SOURCE_DATE_EPOCH: ${{ steps.binding.outputs.epoch }}
           BUILD_CONSTRAINT: ${{ steps.binding.outputs.build_constraint }}
+          SRC: ${{ github.workspace }}/memory-src
         run: |
           set -euo pipefail
+          src="${GITHUB_WORKSPACE}/memory-src"
+          # uv build --build-constraint does not reproduce the admitted wheel.
+          # The one recipe is the memory repository's release script. The
+          # constraint stays an exact setuptools== pin and must be the pin
+          # that script's isolated build will resolve.
+          python3 -c 'import os, sys, tomllib; from pathlib import Path
+          reqs = tomllib.loads((Path(os.environ["SRC"]) / "pyproject.toml").read_text())["build-system"]["requires"]
+          want = os.environ["BUILD_CONSTRAINT"]
+          if reqs != [want]:
+              sys.exit("build-system requires %r, binding constraint is %s" % (reqs, want))'
+          frontend="${RUNNER_TEMP}/memory-build-frontend"
+          uv venv "${frontend}" --python "${PYTHON_VERSION}"
+          uv pip install --python "${frontend}/bin/python" "build>=1.2,<2"
           out="${RUNNER_TEMP}/memory-wheel"
-          mkdir -p "${out}"
-          # The isolated build env resolves the backend afresh; pin the one that
-          # produced the official wheel, or a new setuptools release changes bytes.
-          printf '%s\n' "${BUILD_CONSTRAINT}" > "${RUNNER_TEMP}/memory-build-constraints.txt"
-          uv build --wheel --out-dir "${out}" \
-            --build-constraint "${RUNNER_TEMP}/memory-build-constraints.txt" \
-            "${RUNNER_TEMP}/memory-src"
+          SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH}" \
+            PYTHON="${frontend}/bin/python" \
+            bash "${src}/scripts/build_release_artifacts.sh" "${out}"
           wheel="${out}/${EXPECTED_ARTIFACT}"
           if [ ! -f "${wheel}" ]; then
             echo "::error::expected artifact ${EXPECTED_ARTIFACT} was not built; got: $(ls "${out}")"

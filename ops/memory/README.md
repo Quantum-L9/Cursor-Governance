@@ -432,25 +432,25 @@ non-skippable PR check (audit P2-02 / P1-01): it resolves `memory-binding.json`
 `source.ref` on the memory remote (the bound release tag is peeled with
 `git ls-remote`; a bare SHA is taken as is), refuses any commit other than
 `release_evidence.memory_sha` so a moved tag fails rather than rebinds, clones
-the memory repository at that SHA, rebuilds the wheel by writing
-`release_evidence.build_backend_constraint` (`setuptools==84.0.0`) into a
-requirements file and passing that path to `uv build --wheel
---build-constraint` under the recorded `SOURCE_DATE_EPOCH`, refuses a digest that differs from
+the memory repository at that SHA, rebuilds the wheel with
+`scripts/build_release_artifacts.sh` (`python -m build`, then
+`tools/assurance/reproducible_artifacts.py canonicalize`) under the recorded
+`SOURCE_DATE_EPOCH`, checks that `[build-system] requires` equals
+`release_evidence.build_backend_constraint` (`setuptools==84.2.1`), refuses a digest that differs from
 `release_evidence.artifact_sha256`, installs the wheel into a clean
 environment bound through `L9_MEMORY_INTERPRETER`, runs the proof in required
 mode with `GRAPHITI_MCP_URL` / `GRAPHITI_MCP_TOKEN` unset, fails if any case
 skipped, and records the Cursor head, memory head, package version and
 artifact digest in the job summary and a proof artifact
-(`cursor.memory-cross-repo-proof/v1`). The live `source.ref` is the bound
-`v2.6.0` package pin in `ops/config/memory-binding.json`. `v2.3.1` was the
-first PyPI upload and stays immutable history. The admitted hosted release
-`v3.0.0` is not this lockfile.
+(`cursor.memory-cross-repo-proof/v1`). The live `source.ref` is
+`96ed99eb172bb3b7433600db8581991c4c890737`, the commit annotated tag `v3.0.1`
+peels to. `v3.0.0` was not uploaded. Earlier tags stay immutable history.
 
 ## Shared Hetzner memory staging binding (target; not live proof)
 
 For the approved Claude Code -> Cursor memory test, Cursor-Governance is the
 existing composer of the `l9-graphite-memory` dependency. The release binding
-in `ops/config/memory-binding.json` is `2.6.0` / `memory-control-plane/v1`.
+in `ops/config/memory-binding.json` is `3.0.1` / `memory-control-plane/v1`.
 Both agents must use that exact compatible package via their existing managed
 stdio MCP launchers, with each agent independently authenticated and authorized.
 
@@ -470,7 +470,7 @@ injected through permitted secret sources and must not enter MCP JSON,
 Git-tracked configuration, logs or model-visible output.
 
 The dependency pin selects the release's own `postgres` extra
-(`l9-graphite-memory[postgres]==2.6.0`), so `uv sync --locked` installs the
+(`l9-graphite-memory[postgres]==3.0.1`), so `uv sync --locked` installs the
 `psycopg2-binary` that `PostgresRecordStore` imports. No launcher selects the
 postgres backend or carries a DSN yet. No host-trusted pre-spawn has been shown
 to keep a DSN out of the model's reach: on the hosted Claude surface the model
@@ -512,12 +512,12 @@ The remote-host/Mobile consumer access boundary is explicitly unresolved.
 Do not treat the two local processes' successful shared-database test as
 permission to publish a remote HTTP memory endpoint or a database port.
 
-`2.6.0` is the current exact package binding, and the First E2E runs on it.
-It does not contain the readiness work in Quantum-L9/l9-graphiti-memory#90
+`3.0.1` is the current exact package binding. The First E2E ran on `2.6.0`.
+That 2.6.0 pin does not contain the readiness work in Quantum-L9/l9-graphiti-memory#90
 (ADR-097). #90 is merged on memory `main` at
 `6c98332d91ac9ec9ee5d4573b59dfc270cb705e6`, after the 2.6.0 source
-`846f283f7dade101b324b87008ab4f5901f97074`, so no admitted release carries
-it yet: five readiness families (`canonical`, `projection`,
+`846f283f7dade101b324b87008ab4f5901f97074`. The 2.6.0 pin therefore does not
+carry it: five readiness families (`canonical`, `projection`,
 `graph`, `active_store`, `awareness_bus`), with `full_capability` true only
 when every family is selected and healthy. Full-deployment acceptance
 therefore needs a later, newly admitted memory release and an exact consumer

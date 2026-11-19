@@ -10,7 +10,7 @@ repository_access:
 
 # B: issue and verify authentic immutable policy release
 
-**Executor:** the activating CTO session, same single `.github` writer slot as A, after A is merged. A pool agent must not clone, branch, or push this repository. **No simultaneous A/F modification of the same paths.** Source must be read back from the merged `.github` SHA, never from a pending worktree or the mutable `main` alias. If the signer or attestor is absent, stop at `BLOCKED`. Do not publish an unsigned blocking release. See `09_EXECUTION_BINDING.md`.
+**Executor:** the activating CTO session, stacked on A's open head as soon as that head exists. A pool agent must not clone, branch, or push this repository. **No simultaneous A/F modification of the same paths.** Read the policy bytes from A's head, and git-merge A's branch when it moves. If the signer or attestor is absent, record `BLOCKED` on B and keep the pull request open. Do not publish an unsigned blocking release, and do not pause C, M, E, or F. The CTO does not merge B. See `09_EXECUTION_BINDING.md`.
 
 ## Work contract
 
