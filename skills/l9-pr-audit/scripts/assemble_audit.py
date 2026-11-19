@@ -77,6 +77,64 @@ def load(path: Path) -> Any:
     return json.loads(path.read_text())
 
 
+RECEIPT_SCHEMA = "l9.pr-audit.verification-run-receipt/v1"
+RECEIPT_GLOB = ("runs", "*", "receipt.json")
+
+
+def _receipt_documents(run: Path) -> list[dict[str, Any]]:
+    docs = []
+    for path in sorted((run / "runs").glob("*/receipt.json")) if (run / "runs").is_dir() else []:
+        try:
+            doc = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(doc, dict) and doc.get("schema") == RECEIPT_SCHEMA:
+            docs.append(doc)
+    return docs
+
+
+def load_verification_receipt(run: Path, frozen_heads: dict[str, str]) -> tuple[dict | None, str]:
+    """The separate run-directory receipt bound to the frozen heads, or why not.
+
+    A verification run writes ``runs/verification/receipt.json`` (its own run
+    directory) declaring the frozen per-PR heads it executed against plus the
+    claim, obligation and probe ids it observed. Lane prose alone is not a
+    receipt: SURVIVED, validation_result PASS, VERIFICATION and CONVERGED all
+    require this document.
+    """
+    docs = _receipt_documents(run)
+    if not docs:
+        return None, "no runs/*/receipt.json in the run directory"
+    doc = docs[0]
+    head_by_pr = doc.get("head_by_pr") or {}
+    if not isinstance(head_by_pr, dict) or {
+        str(k): str(v) for k, v in head_by_pr.items()
+    } != frozen_heads:
+        return None, (
+            f"receipt head_by_pr {sorted(head_by_pr.items())} does not bind the frozen heads "
+            f"{sorted(frozen_heads.items())}"
+        )
+    for field in ("claim_ids", "obligation_ids"):
+        if not isinstance(doc.get(field), list):
+            return None, f"receipt {field} is not a list"
+    if not isinstance(doc.get("probe_ids") or {}, dict):
+        return None, "receipt probe_ids is not a per-PR map"
+    return doc, "present and head-bound"
+
+
+def _probe_coverage(receipt: dict | None, n: int) -> bool:
+    if receipt is None:
+        return False
+    listed = (receipt.get("probe_ids") or {}).get(str(n)) or []
+    return set(PROBES) <= {str(k) for k in listed}
+
+
+def _id_coverage(receipt: dict | None, field: str, ids: set[str]) -> bool:
+    if receipt is None:
+        return False
+    return ids <= {str(k) for k in receipt.get(field) or []}
+
+
 def schema_check(doc: Any, schema_name: str, label: str) -> None:
     schema = load(SKILL / "schemas" / schema_name)
     problems = [
@@ -150,6 +208,15 @@ def assemble(run: Path) -> dict[str, Any]:
                 raise InputError(
                     f"lane {lane['lane']} judged PR #{p['pr']} at {p['head_sha'][:12]}, frozen head is {snaps[p['pr']]['head_sha'][:12]}: re-run the lane"
                 )
+
+    frozen_heads = {str(p): snaps[p]["head_sha"] for p in sorted(snaps)}
+    receipt, receipt_state = load_verification_receipt(run, frozen_heads)
+    receipt_bound = receipt is not None
+    claims_covered = _id_coverage(
+        receipt,
+        "claim_ids",
+        {str(c["claim_id"]) for c in machine["claim_validation_matrix"]},
+    )
 
     # Lane PR records: several lanes may judge one PR; lists merge, the most severe readiness wins.
     lane_pr: dict[int, dict[str, Any]] = {}
@@ -240,6 +307,8 @@ def assemble(run: Path) -> dict[str, Any]:
         }
         rules_known = rules.get("source") not in {None, "UNAVAILABLE"}
         required = list(rules.get("required_status_checks") or [])
+        classic = rules.get("classic_protection") or {}
+        classic_status = str(classic.get("status") or "UNKNOWN")
         add(
             evidence(
                 f"E-MERGE-RULES-{n}",
@@ -250,7 +319,8 @@ def assemble(run: Path) -> dict[str, Any]:
                 rules.get("source", "UNAVAILABLE"),
                 f"Merge gates for base '{s['base_ref']}': required checks {required}, required workflows "
                 f"{rules.get('required_workflows')}, approvals {rules.get('required_approving_review_count')}, "
-                f"thread resolution {rules.get('required_review_thread_resolution')}; rulesets only.",
+                f"thread resolution {rules.get('required_review_thread_resolution')}; "
+                f"classic protection {classic_status}.",
                 ["required_check_identity"],
             )
         )
@@ -329,9 +399,10 @@ def assemble(run: Path) -> dict[str, Any]:
                 )
                 continue
             on_head = run_["tested_revision"] == head
-            props = ["closure_property"] + (
-                ["mandatory_validation"] if on_head and run_["result"] == "PASS" else []
-            )
+            # A lane's claim that a command passed is prose until the head-bound
+            # verification-run receipt proves a separate run executed it on the head.
+            proven_pass = on_head and run_["result"] == "PASS" and receipt_bound
+            props = ["closure_property"] + (["mandatory_validation"] if proven_pass else [])
             vids.append(
                 add(
                     evidence(
@@ -345,7 +416,13 @@ def assemble(run: Path) -> dict[str, Any]:
                         props,
                         source_head_sha=head,
                         tested_revision_sha=run_["tested_revision"],
-                        validation_result=run_["result"],
+                        validation_result=(
+                            "PASS"
+                            if proven_pass
+                            else "NOT_EXECUTED"
+                            if run_["result"] == "PASS"
+                            else run_["result"]
+                        ),
                     )
                 )
             )
@@ -377,13 +454,19 @@ def assemble(run: Path) -> dict[str, Any]:
                 ["closure_property"],
                 source_head_sha=head,
                 tested_revision_sha=head,
-                validation_result="NOT_EXECUTED" if probe_gaps[n] else "PASS",
+                validation_result=(
+                    "PASS"
+                    if not probe_gaps[n] and receipt_bound and _probe_coverage(receipt, n)
+                    else "NOT_EXECUTED"
+                ),
             )
         )
         ready_pre[n] = {
             "beyond-CI probes complete ("
             + ", ".join(probe_gaps[n] or ["all done"])
             + ")": not probe_gaps[n],
+            "head-bound verification receipt present": receipt_bound,
+            "classic branch protection resolved (or proven absent)": classic_status != "UNKNOWN",
             "merge rules readable for the base branch": rules_known,
             "required checks green on head": required_green,
             "required workflows green on head": workflows_green,
@@ -1133,6 +1216,35 @@ def assemble(run: Path) -> dict[str, Any]:
             "VALIDATION_ONLY",
         )
 
+    # SURVIVED, validation_result PASS, VERIFICATION and CONVERGED are never
+    # projected from a READY lane or from prose DONE: they require the separate
+    # run-directory receipt covering the claim, obligation and probe ids.
+    obligations_covered = _id_coverage(
+        receipt, "obligation_ids", {str(o["obligation_id"]) for o in obligations}
+    )
+    probes_covered_all = all(_probe_coverage(receipt, n) for n in prs)
+    receipt_complete = receipt_bound and claims_covered and obligations_covered and probes_covered_all
+    if not receipt_complete:
+        gaps = []
+        if not receipt_bound:
+            gaps.append(receipt_state)
+        if receipt_bound and not claims_covered:
+            gaps.append("claim ids uncovered")
+        if receipt_bound and not obligations_covered:
+            gaps.append("obligation ids uncovered")
+        if receipt_bound and not probes_covered_all:
+            gaps.append("probe ids uncovered")
+        unknown(
+            "U-RECEIPT",
+            "The verification-run receipt is missing or incomplete: " + "; ".join(gaps) + ".",
+            prs,
+            "claim, obligation and probe verification",
+            False,
+            "Produce runs/verification/receipt.json from a separate verification run bound to "
+            "the frozen heads (references/semantic-lane.md), then re-run.",
+            "VALIDATION_ONLY",
+        )
+
     # ---- domains, inventory
     by_domain: dict[str, set[str]] = {d: set() for d in DOMAINS}
     for f in findings:
@@ -1414,7 +1526,8 @@ def assemble(run: Path) -> dict[str, Any]:
     }
 
     # Readiness claims of READY PRs: every probe was attacked by the lane's readiness checks
-    # and the observed head preconditions above; record that survival on the probes.
+    # and the observed head preconditions above; record that survival on the probes. Survival
+    # is attested only when the verification-run receipt covers the claim ids.
     fals = {f["falsification_id"]: f for f in audit["falsification_ledger"]}
     for n in ready_prs:
         cids = [
@@ -1423,6 +1536,8 @@ def assemble(run: Path) -> dict[str, Any]:
             if c["claim_kind"] == "READINESS" and c["pr_numbers"] == [n]
         ]
         if not cids:
+            continue
+        if not claims_covered:
             continue
         add(
             evidence(
@@ -1449,8 +1564,9 @@ def assemble(run: Path) -> dict[str, Any]:
                     judgment_rationale="Readiness attacked by lane review and observed head preconditions; survived.",
                 )
     # A PASSing CHANGE_DISCIPLINE domain mirrors SUPPORTED claims: their probes were attacked by
-    # the per-file scope dispositions every lane must give, and survived.
-    if not by_domain["CHANGE_DISCIPLINE"]:
+    # the per-file scope dispositions every lane must give, and survived. Attested only when the
+    # verification-run receipt covers the claim ids.
+    if not by_domain["CHANGE_DISCIPLINE"] and claims_covered:
         for n in prs:
             cids = [
                 c
@@ -1517,7 +1633,8 @@ def assemble(run: Path) -> dict[str, Any]:
             "new_information_count": len(judgment["reconcile"])
             + len(judgment.get("parent_findings", [])),
             "measurable_result": f"{len(judgment['reconcile'])} lane verdicts reconciled; "
-            f"{len(judgment.get('parent_findings', []))} cross-lane findings added.",
+            f"{len(judgment.get('parent_findings', []))} cross-lane findings added; "
+            f"verification-run receipt {receipt_state}.",
             "next_pass_objective": None
             if not convergence_blocked
             else "Close residual Unknowns, then re-verify.",

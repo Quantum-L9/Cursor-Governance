@@ -6,9 +6,13 @@ build_change_ledger.py plus the binding facts the audit needs (base/head refs, c
 review threads, approvals, PR body). It also writes ``frozen-pr-set.json`` with stack edges
 (a PR whose base branch is another open PR's head branch) so semantic lanes can be grouped.
 
-GitHub is read over REST only (``gh api --method GET``); review threads use the
-``ccr/review_threads`` route, which works where GraphQL is refused. The only local write is
-fetching ``refs/pull/<n>/head`` into ``refs/remotes/origin/pr/<n>`` of the given clone.
+GitHub is read over the transport ``protocol.rest_only`` selects: review threads come
+from the GraphQL ``reviewThreads`` query unless the surface is REST-only, in which case the
+``ccr/review_threads`` route is used (with one fallback to the other transport, then a
+non-zero exit). Classic branch protection is probed and recorded only on evidence: ABSENT
+requires the exact 404 body ``Branch not protected``; a 200 merges its required checks; every
+other result is UNKNOWN. The only local write is fetching ``refs/pull/<n>/head`` into
+``refs/remotes/origin/pr/<n>`` of the given clone.
 
 Usage:
   collect_snapshot.py --repo OWNER/NAME --clone PATH --out DIR [--pr N ...]
@@ -22,7 +26,14 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+# protocol.rest_only is the transport selector for review threads. It lives in the
+# remediation skill and is imported, never copied: one definition, one surface contract.
+_PROTOCOL_DIR = Path(__file__).resolve().parents[2] / "l9-pr-remediation" / "scripts"
+if str(_PROTOCOL_DIR) not in sys.path:
+    sys.path.insert(0, str(_PROTOCOL_DIR))
+from protocol import rest_only  # noqa: E402
 
 MAX_CONTENT_BYTES = 400_000
 MAX_ISSUE_BODY = 8_000
@@ -53,6 +64,96 @@ def gh(path: str) -> Any:
             else:
                 merged[key] = value
     return merged
+
+
+class ThreadsUnavailable(RuntimeError):
+    """Both review-thread transports failed; the run must exit non-zero."""
+
+
+def _threads_rest(repo: str, n: int) -> list[dict[str, Any]]:
+    return gh(f"repos/{repo}/pulls/{n}/ccr/review_threads")
+
+
+_THREADS_QUERY = (
+    "query($owner:String!,$name:String!,$number:Int!,$cursor:String)"
+    "{repository(owner:$owner,name:$name)"
+    "{pullRequest(number:$number){reviewThreads(first:100,after:$cursor)"
+    "{pageInfo{hasNextPage endCursor}nodes{isResolved isOutdated path line"
+    " comments(first:100){nodes{id}}}}}}}"
+)
+
+
+def _threads_graphql(repo: str, n: int) -> list[dict[str, Any]]:
+    owner, _, name = repo.partition("/")
+    threads: list[dict[str, Any]] = []
+    cursor: str | None = None
+    while True:
+        argv = [
+            "gh",
+            "api",
+            "graphql",
+            "-F",
+            f"owner={owner}",
+            "-F",
+            f"name={name}",
+            "-F",
+            f"number={n}",
+            "-f",
+            f"query={_THREADS_QUERY}",
+        ]
+        if cursor:
+            argv += ["-F", f"cursor={cursor}"]
+        proc = subprocess.run(argv, capture_output=True, text=True, check=False)
+        if proc.returncode != 0:
+            raise ThreadsUnavailable(f"reviewThreads query failed: {proc.stderr.strip()[-300:]}")
+        try:
+            payload = json.loads(proc.stdout)
+        except json.JSONDecodeError as exc:
+            raise ThreadsUnavailable(f"reviewThreads query returned no JSON: {exc}") from exc
+        window = ((((payload.get("data") or {}).get("repository")) or {}).get("pullRequest") or {})
+        window = window.get("reviewThreads") or {}
+        for node in window.get("nodes") or []:
+            comments = ((node.get("comments") or {}).get("nodes")) or []
+            comment_ids = [str(c["id"]) for c in comments if c.get("id")]
+            if comment_ids:
+                threads.append(
+                    {
+                        "resolved": bool(node.get("isResolved")),
+                        "outdated": node.get("isOutdated"),
+                        "path": node.get("path"),
+                        "line": node.get("line"),
+                        "comment_ids": comment_ids,
+                    }
+                )
+        page_info = window.get("pageInfo") or {}
+        if page_info.get("hasNextPage") and page_info.get("endCursor"):
+            cursor = str(page_info["endCursor"])
+            continue
+        return threads
+
+
+def review_threads(
+    repo: str,
+    n: int,
+    *,
+    rest: Callable[[str, int], list[dict[str, Any]]] = _threads_rest,
+    graphql: Callable[[str, int], list[dict[str, Any]]] = _threads_graphql,
+    selector: Callable[[], bool] = rest_only,
+) -> list[dict[str, Any]]:
+    """Review threads over the transport ``protocol.rest_only`` selects.
+
+    The ``reviewThreads`` GraphQL query runs unless ``rest_only`` is true, which
+    selects ``ccr/review_threads``. If the selected transport fails the other is
+    tried once; when both fail the run exits non-zero.
+    """
+    first, second = (rest, graphql) if selector() else (graphql, rest)
+    last_error = ""
+    for fetch in (first, second):
+        try:
+            return fetch(repo, n)
+        except (subprocess.CalledProcessError, ThreadsUnavailable) as exc:
+            last_error = str(exc)
+    raise ThreadsUnavailable(f"review threads unavailable on both transports: {last_error}")
 
 
 def effective_approvals(reviews: list[dict[str, Any]], head: str) -> list[dict[str, Any]]:
@@ -145,7 +246,7 @@ def snapshot(repo: str, clone: Path, pr: dict[str, Any]) -> dict[str, Any]:
             }
         )
     runs = gh(f"repos/{repo}/commits/{head}/check-runs?per_page=100").get("check_runs", [])
-    threads = gh(f"repos/{repo}/pulls/{n}/ccr/review_threads")
+    threads = review_threads(repo, n)
     reviews = gh(f"repos/{repo}/pulls/{n}/reviews?per_page=100")
     issues = linked_issues(repo, pr.get("body") or "")
     workflow_runs = gh(f"repos/{repo}/actions/runs?head_sha={head}&per_page=100").get(
@@ -212,11 +313,50 @@ def snapshot(repo: str, clone: Path, pr: dict[str, Any]) -> dict[str, Any]:
 _RULES_CACHE: dict[tuple[str, str], dict[str, Any]] = {}
 
 
-def merge_rules(repo: str, branch: str) -> dict[str, Any]:
-    """Effective ruleset merge gates for ``branch`` (cached per branch).
+def _classic_protection_result(returncode: int, stdout: str, stderr: str, source: str) -> dict[str, Any]:
+    """Classic branch protection verdict from a probe's raw result, evidence-bound.
 
-    Only repository rulesets are read. Classic branch protection is not probed: its endpoint
-    needs admin scope and is refused on the tokens this audit runs with.
+    ABSENT only for the exact 404 body ``Branch not protected``. A 200 merges its
+    required checks into the effective rules. Every other result (403, another 404,
+    a malformed 200 body) is UNKNOWN and withholds complete READY downstream.
+    """
+    if returncode == 0:
+        try:
+            payload = json.loads(stdout)
+        except json.JSONDecodeError:
+            return {"status": "UNKNOWN", "source": source, "required_status_checks": []}
+        if not isinstance(payload, dict):
+            return {"status": "UNKNOWN", "source": source, "required_status_checks": []}
+        required = payload.get("required_status_checks") or {}
+        contexts = list(required.get("contexts") or [])
+        contexts += [c.get("context") for c in required.get("checks") or [] if c.get("context")]
+        return {
+            "status": "PRESENT",
+            "source": source,
+            "required_status_checks": sorted({str(c) for c in contexts if c}),
+        }
+    lowered = (stderr or "").lower()
+    if "404" in lowered and "branch not protected" in lowered:
+        return {"status": "ABSENT", "source": source, "required_status_checks": []}
+    return {"status": "UNKNOWN", "source": source, "required_status_checks": []}
+
+
+def classic_protection(repo: str, branch: str) -> dict[str, Any]:
+    """Probe classic branch protection for ``branch`` and classify the raw result."""
+    source = f"repos/{repo}/branches/{branch}/protection"
+    proc = subprocess.run(
+        ["gh", "api", "--method", "GET", source], capture_output=True, text=True, check=False
+    )
+    return _classic_protection_result(proc.returncode, proc.stdout, proc.stderr, source)
+
+
+def merge_rules(repo: str, branch: str) -> dict[str, Any]:
+    """Effective merge gates for ``branch`` (cached per branch).
+
+    Repository rulesets and classic branch protection both contribute required checks.
+    Classic protection is recorded on evidence: ABSENT only for the exact 404 body
+    ``Branch not protected``; a 200 merges its required checks; every other result is
+    UNKNOWN (and withholds complete READY downstream).
     """
     key = (repo, branch)
     if key not in _RULES_CACHE:
@@ -232,28 +372,31 @@ def _merge_rules(repo: str, branch: str) -> dict[str, Any]:
         "required_workflows": [],
         "required_approving_review_count": 0,
         "required_review_thread_resolution": False,
+        "classic_protection": {"status": "UNKNOWN", "source": "", "required_status_checks": []},
     }
     try:
         active = gh(rules["source"])
     except subprocess.CalledProcessError:
         rules["source"] = "UNAVAILABLE"
-        return rules
-    for rule in active:
-        params = rule.get("parameters") or {}
-        if rule["type"] == "required_status_checks":
-            rules["required_status_checks"] += [
-                c["context"] for c in params.get("required_status_checks", [])
-            ]
-        elif rule["type"] == "workflows":
-            rules["required_workflows"] += [w["path"] for w in params.get("workflows", [])]
-        elif rule["type"] == "pull_request":
-            rules["required_approving_review_count"] = max(
-                rules["required_approving_review_count"],
-                params.get("required_approving_review_count", 0),
-            )
-            rules["required_review_thread_resolution"] |= bool(
-                params.get("required_review_thread_resolution")
-            )
+    else:
+        for rule in active:
+            params = rule.get("parameters") or {}
+            if rule["type"] == "required_status_checks":
+                rules["required_status_checks"] += [
+                    c["context"] for c in params.get("required_status_checks", [])
+                ]
+            elif rule["type"] == "workflows":
+                rules["required_workflows"] += [w["path"] for w in params.get("workflows", [])]
+            elif rule["type"] == "pull_request":
+                rules["required_approving_review_count"] = max(
+                    rules["required_approving_review_count"],
+                    params.get("required_approving_review_count", 0),
+                )
+                rules["required_review_thread_resolution"] |= bool(
+                    params.get("required_review_thread_resolution")
+                )
+    rules["classic_protection"] = classic_protection(repo, branch)
+    rules["required_status_checks"] += rules["classic_protection"]["required_status_checks"]
     rules["required_status_checks"] = sorted(set(rules["required_status_checks"]))
     rules["required_workflows"] = sorted(set(rules["required_workflows"]))
     return rules
@@ -285,9 +428,13 @@ def main() -> int:
     heads_by_ref = {open_prs[n]["head"]["ref"]: n for n in selected}
     frozen = []
     snaps = {}
-    for n in selected:
-        snap = snaps[n] = snapshot(args.repo, args.clone, open_prs[n])
-        (snap_dir / f"pr-{n}.json").write_text(json.dumps(snap, indent=1))
+    try:
+        for n in selected:
+            snap = snaps[n] = snapshot(args.repo, args.clone, open_prs[n])
+            (snap_dir / f"pr-{n}.json").write_text(json.dumps(snap, indent=1))
+    except ThreadsUnavailable as exc:
+        print(f"FAIL: {exc}", file=sys.stderr)
+        return 2
     paths = {n: touched_paths(snaps[n]) for n in selected}
     for n in selected:
         snap = snaps[n]

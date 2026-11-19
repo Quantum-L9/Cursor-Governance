@@ -30,7 +30,20 @@ RULES = {
     "required_workflows": [".github/workflows/org-ci.yml"],
     "required_approving_review_count": 0,
     "required_review_thread_resolution": True,
+    "classic_protection": {
+        "status": "ABSENT",
+        "source": "repos/x/branches/main/protection",
+        "required_status_checks": [],
+    },
 }
+PROBES = [
+    "adversarial_input",
+    "base_discrimination",
+    "merged_tree",
+    "ci_causality",
+    "ingress_reachability",
+]
+RECEIPT_SCHEMA = "l9.pr-audit.verification-run-receipt/v1"
 
 
 def run(*args: object) -> subprocess.CompletedProcess[str]:
@@ -217,6 +230,31 @@ def run_dir(tmp_path: Path) -> Path:
         *ledgers,
     )
     assert done.returncode == 0, done.stdout + done.stderr
+    # The verification-run receipt: a separate run directory, bound to the frozen heads,
+    # covering the audit's claim, obligation and probe ids. Lane prose alone never
+    # projects SURVIVED / validation_result PASS / VERIFICATION / CONVERGED.
+    machine_rows = json.loads((tmp_path / "machine-rows.json").read_text())
+    claim_ids = [str(c["claim_id"]) for c in machine_rows.get("claim_validation_matrix", [])]
+    obligation_ids = [
+        str(o["obligation_id"]) for o in machine_rows.get("audit_obligation_ledger", [])
+    ]
+    for n in files:
+        obligation_ids += [f"OB-O-{n}", f"OB-TD-{n}"]
+    receipt_dir = tmp_path / "runs" / "verification"
+    receipt_dir.mkdir(parents=True)
+    (receipt_dir / "receipt.json").write_text(
+        json.dumps(
+            {
+                "schema": RECEIPT_SCHEMA,
+                "head_by_pr": {str(n): HEAD[n] for n in files},
+                "commands": ["pytest -q"],
+                "claim_ids": claim_ids,
+                "obligation_ids": sorted(set(obligation_ids)),
+                "probe_ids": {str(n): list(PROBES) for n in files},
+                "observed_finding_ids": [],
+            }
+        )
+    )
     finding = {
         "id": "F-2-1",
         "prs": [2],
@@ -562,3 +600,154 @@ def test_bot_pr_stays_in_its_overlap_lane() -> None:
     }
     lanes = {lane["lane"]: lane["prs"] for lane in run_audit.lane_plan(frozen)}
     assert lanes == {"pr-1": [1, 2], "deps": [3]}
+
+
+def test_prose_done_without_receipt_does_not_project_survived_or_converged(run_dir: Path) -> None:
+    # The lane's "fed malformed payloads; rejected" DONE sentence is prose: without the
+    # separate run-directory receipt nothing survives, nothing passes and nothing converges.
+    (run_dir / "runs" / "verification" / "receipt.json").unlink()
+    audit = assembled(run_dir)
+    ledger = audit["falsification_ledger"]
+    assert ledger and all(f["result"] != "SURVIVED" for f in ledger)
+    assert "U-RECEIPT" in {u["unknown_id"] for u in audit["residual_unknowns"]}
+    assert audit["executive_verdict"]["convergence_status"] == "NOT_CONVERGED"
+    assert "verification-run receipt" in audit["audit_passes"][-1]["measurable_result"]
+    verdict = next(v for v in audit["per_pr_verdicts"] if v["pr_number"] == 1)
+    assert verdict["merge_readiness"] == "UNKNOWN"
+    probes = next(e for e in audit["shared_evidence_index"] if e["evidence_id"] == "E-PROBES-1")
+    assert probes["validation_result"] == "NOT_EXECUTED"
+
+
+def test_classic_protection_unknown_withholds_ready_and_is_named(run_dir: Path) -> None:
+    set_rules(
+        run_dir,
+        1,
+        classic_protection={
+            "status": "UNKNOWN",
+            "source": "repos/x/branches/main/protection",
+            "required_status_checks": [],
+        },
+    )
+    state, why = readiness(run_dir, 1)
+    assert state == "UNKNOWN" and "classic branch protection" in why
+    audit = json.loads((run_dir / "audit.json").read_text())
+    fact = next(
+        e["fact_proven"]
+        for e in audit["shared_evidence_index"]
+        if e["evidence_id"] == "E-MERGE-RULES-1"
+    )
+    assert "classic protection UNKNOWN" in fact
+
+
+def test_classic_protection_absent_keeps_ready(run_dir: Path) -> None:
+    # The fixture's classic protection is ABSENT (the exact 404 body); PR 1 stays READY.
+    audit = assembled(run_dir)
+    fact = next(
+        e["fact_proven"]
+        for e in audit["shared_evidence_index"]
+        if e["evidence_id"] == "E-MERGE-RULES-1"
+    )
+    assert "classic protection ABSENT" in fact
+    verdict = next(v for v in audit["per_pr_verdicts"] if v["pr_number"] == 1)
+    assert verdict["merge_readiness"] == "READY"
+
+
+def test_review_threads_selects_graphql_when_not_rest_only() -> None:
+    collect = load_script("collect_snapshot")
+    seen: list[str] = []
+
+    def fake_graphql(repo: str, n: int) -> list[dict]:
+        seen.append(f"graphql:{repo}:{n}")
+        return []
+
+    def fake_rest(repo: str, n: int) -> list[dict]:
+        seen.append("rest")
+        raise AssertionError("REST must not run when GraphQL is selected")
+
+    threads = collect.review_threads(
+        "o/r", 5, rest=fake_rest, graphql=fake_graphql, selector=lambda: False
+    )
+    assert threads == [] and seen == ["graphql:o/r:5"]
+
+
+def test_review_threads_selects_rest_when_rest_only() -> None:
+    collect = load_script("collect_snapshot")
+    seen: list[str] = []
+
+    def fake_graphql(repo: str, n: int) -> list[dict]:
+        seen.append("graphql")
+        raise AssertionError("GraphQL must not run on a REST-only surface")
+
+    def fake_rest(repo: str, n: int) -> list[dict]:
+        seen.append(f"rest:{repo}:{n}")
+        return []
+
+    threads = collect.review_threads(
+        "o/r", 5, rest=fake_rest, graphql=fake_graphql, selector=lambda: True
+    )
+    assert threads == [] and seen == ["rest:o/r:5"]
+
+
+def test_review_threads_tries_the_other_transport_once_then_refuses() -> None:
+    collect = load_script("collect_snapshot")
+    seen: list[str] = []
+
+    def fail_graphql(repo: str, n: int) -> list[dict]:
+        seen.append("graphql")
+        raise collect.ThreadsUnavailable("graphql down")
+
+    def fail_rest(repo: str, n: int) -> list[dict]:
+        seen.append("rest")
+        raise subprocess.CalledProcessError(1, ["gh"], stderr="rest down")
+
+    with pytest.raises(collect.ThreadsUnavailable):
+        collect.review_threads(
+            "o/r", 5, rest=fail_rest, graphql=fail_graphql, selector=lambda: False
+        )
+    assert seen == ["graphql", "rest"]
+    seen.clear()
+    with pytest.raises(collect.ThreadsUnavailable):
+        collect.review_threads(
+            "o/r", 5, rest=fail_rest, graphql=fail_graphql, selector=lambda: True
+        )
+    assert seen == ["rest", "graphql"]
+
+
+def test_classic_protection_absent_only_for_the_exact_404_body() -> None:
+    collect = load_script("collect_snapshot")
+    source = "repos/o/r/branches/main/protection"
+    absent = collect._classic_protection_result(
+        1, "", "gh: Branch not protected (HTTP 404)", source
+    )
+    assert absent["status"] == "ABSENT"
+    for stderr in (
+        "gh: Not Found (HTTP 404)",
+        "gh: could not resolve host (HTTP 0)",
+        "gh: Resource not accessible by integration (HTTP 403)",
+        "gh: Branch not protected (HTTP 403)",
+    ):
+        result = collect._classic_protection_result(1, "", stderr, source)
+        assert result["status"] == "UNKNOWN", stderr
+    malformed = collect._classic_protection_result(0, "not json", "", source)
+    assert malformed["status"] == "UNKNOWN"
+
+
+def test_classic_protection_200_merges_required_checks() -> None:
+    collect = load_script("collect_snapshot")
+    source = "repos/o/r/branches/main/protection"
+    result = collect._classic_protection_result(
+        0,
+        json.dumps(
+            {
+                "required_status_checks": {
+                    "strict": True,
+                    "contexts": ["ci"],
+                    "checks": [{"context": "ci", "app_id": 1}, {"context": "org-ci", "app_id": 2}],
+                }
+            }
+        ),
+        "",
+        source,
+    )
+    assert result["status"] == "PRESENT"
+    assert result["required_status_checks"] == ["ci", "org-ci"]
