@@ -11,7 +11,6 @@ tokens on tasks that never use them. A task now opts in with
 from __future__ import annotations
 
 import importlib.util
-import os
 import sys
 import unittest
 from pathlib import Path
@@ -88,25 +87,6 @@ class ProjectionOptInTests(unittest.TestCase):
     def test_a_truthy_non_boolean_does_not_opt_in(self) -> None:
         request, _ = _dispatch({"task_id": "TASK-001", "projection_context": "yes"})
         self.assertIsNone(request.projection)
-
-
-class VscodePeerIdentityTests(unittest.TestCase):
-    def test_vscode_panel_keeps_the_cli_provider_row(self) -> None:
-        with patch.dict(
-            os.environ,
-            {
-                "L9_PE_AGENT_REF": "",
-                "L9_PE_SURFACE": "",
-                "L9_PE_PROVIDER_REF": "",
-                "L9_GOVERNANCE_SURFACE": "claude-code",
-                "CLAUDE_CODE_ENTRYPOINT": "claude-vscode",
-                "CURSOR_AGENT": "1",
-                "CLAUDECODE": "1",
-            },
-            clear=False,
-        ):
-            agent, surface, _provider = RUNNER._peer_identity()
-        self.assertEqual((agent, surface), ("claude-code", "claude-code-cli"))
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -3239,13 +3239,7 @@ def _peer_identity() -> tuple[str, str, str | None]:
     if claude_here is not None:
         aliases["claude-code"] = claude_here
     binding = aliases.get(governance_surface)
-    entrypoint = os.environ.get("CLAUDE_CODE_ENTRYPOINT", "").strip().lower()
-    # The IDE panel's memory surface is claude-code-ide. Peer Execution has no
-    # topology row for it; the one local Claude provider row is claude-code-cli.
-    # This wins over the alias, which follows resolve_surface_id.
-    if entrypoint == "claude-vscode":
-        binding = (claude_actor, identity.CLAUDE_CLI_SURFACE)
-    elif binding is None and coarse == "cursor":
+    if binding is None and coarse == "cursor":
         binding = aliases["cursor"]
         if provider_ref is None:
             provider_ref = "cursor-foreground"
