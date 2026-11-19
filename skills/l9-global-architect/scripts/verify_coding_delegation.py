@@ -29,6 +29,7 @@ import copy
 import fnmatch
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -374,7 +375,7 @@ def accept(
     """GAR's independent acceptance (contracts/OUTCOME_OWNERSHIP.yaml#acceptance)."""
     checks: list[dict[str, str]] = []
     present = {
-        "diff": diff_path.is_file() and "diff --git " in diff_path.read_text(encoding="utf-8"),
+        "diff": diff_path.is_file() and b"diff --git " in diff_path.read_bytes(),
         "implementation_report": report_path.is_file() and report_path.stat().st_size > 0,
         "execution_receipt": receipt_path.is_file() and receipt_path.stat().st_size > 0,
     }
@@ -504,7 +505,8 @@ def diff_truth(
     name = "diff_is_the_delivered_change"
     if not present:
         return set(), check("GAR-DELEG-004", name, VIOLATED, "no diff")
-    claimed = diff_paths(diff_path.read_text(encoding="utf-8"))
+    submitted = diff_path.read_bytes()
+    claimed = diff_paths(submitted.decode("utf-8", "surrogateescape"))
     if repo is None:
         return claimed, check("GAR-DELEG-005", name, UNKNOWN, "no repository to bind the diff")
     base = str(record.get("frozen_target_revision") or "")
@@ -522,31 +524,86 @@ def diff_truth(
         capture_output=True,
         check=False,
     )
-    want = patch_id(repo, canonical.stdout) if canonical.returncode == 0 else None
-    got = patch_id(repo, diff_path.read_bytes())
-    if want is None or got is None:
-        detail = f"patch-id unavailable (returned {got}, git {base}..{delivered} {want})"
+    if canonical.returncode != 0:
+        detail = f"git diff --no-color --no-ext-diff {base}..{delivered} failed"
         return actual, check("GAR-DELEG-005", name, UNKNOWN, detail)
-    if want != got:
-        detail = (
-            f"returned patch content differs from git {base}..{delivered} "
-            f"(patch-id {got[:12]} != {want[:12]}); file names alone do not bind the diff"
-        )
+    want_lines = _diff_lines(canonical.stdout)
+    got_lines = _diff_lines(submitted)
+    divergence = _first_divergence(got_lines, want_lines)
+    if divergence is not None:
+        submitted_line, canonical_line = divergence
+        detail = _divergence_detail(submitted_line, canonical_line, base, delivered)
         return actual, check("GAR-DELEG-005", name, VIOLATED, detail)
-    detail = f"{len(actual)} paths and patch-id {want[:12]} match git {base}..{delivered}"
+    detail = f"{len(actual)} paths match git {base}..{delivered} hunk bytes"
     return actual, check("GAR-DELEG-005", name, SATISFIED, detail)
 
 
-def patch_id(repo: Path, patch: bytes) -> str | None:
-    """git's stable patch-id: content-bound, independent of line numbers and whitespace."""
-    proc = subprocess.run(
-        ["git", "-C", str(repo), "patch-id", "--stable"],
-        input=patch,
-        capture_output=True,
-        check=False,
+# Authentic git index header only. A hunk line that merely begins with "index "
+# stays in the comparison; CRLF and non-UTF-8 bytes stay on the line.
+_INDEX_HEADER = re.compile(rb"^index [0-9a-f]+\.\.[0-9a-f]+(?: [0-7]{6})?\r?$")
+
+
+def _diff_lines(patch: bytes) -> list[bytes]:
+    """Raw diff lines, terminator included, with authentic `index` headers dropped."""
+    lines: list[bytes] = []
+    start = 0
+    length = len(patch)
+    while start < length:
+        newline = patch.find(b"\n", start)
+        if newline == -1:
+            raw = patch[start:]
+            start = length
+        else:
+            raw = patch[start : newline + 1]
+            start = newline + 1
+        body = raw[:-1] if raw.endswith(b"\n") else raw
+        if _INDEX_HEADER.fullmatch(body):
+            continue
+        lines.append(raw)
+    return lines
+
+
+def _is_added_line(line: bytes | None) -> bool:
+    return bool(line) and line.startswith(b"+") and not line.startswith(b"+++")
+
+
+def _first_divergence(
+    submitted: list[bytes], canonical: list[bytes]
+) -> tuple[bytes | None, bytes | None] | None:
+    for index in range(max(len(submitted), len(canonical))):
+        got = submitted[index] if index < len(submitted) else None
+        want = canonical[index] if index < len(canonical) else None
+        if got != want:
+            return got, want
+    return None
+
+
+def _divergence_detail(
+    submitted_line: bytes | None, canonical_line: bytes | None, base: str, delivered: str
+) -> str:
+    if (
+        _is_added_line(submitted_line)
+        and _is_added_line(canonical_line)
+        and submitted_line[1:].lstrip() == canonical_line[1:].lstrip()
+    ):
+        return (
+            f"returned diff indents an added line: {submitted_line!r} vs "
+            f"git {base}..{delivered} {canonical_line!r}"
+        )
+    if (
+        bool(submitted_line)
+        and bool(canonical_line)
+        and submitted_line.startswith(b"@@")
+        and canonical_line.startswith(b"@@")
+    ):
+        return (
+            f"returned diff shifts a hunk header: {submitted_line!r} vs "
+            f"git {base}..{delivered} {canonical_line!r}"
+        )
+    return (
+        f"returned diff content differs from git {base}..{delivered}: "
+        f"{submitted_line!r} vs {canonical_line!r}; file names alone do not bind the diff"
     )
-    fields = proc.stdout.decode("utf-8", "replace").split()
-    return fields[0] if proc.returncode == 0 and fields else None
 
 
 def scope_check(contract: Any, paths: set[str], diff_result: str) -> dict[str, str]:
@@ -1197,7 +1254,68 @@ def acceptance_cases(
         "GAR-DELEG-005",
         "fabricated hunks under correct headers are rejected",
         rejected(run(diff_path=forged_diff), "GAR-DELEG-005"),
-        "patch-id",
+        "hunk bytes",
+    )
+    indented = fx.tmp / "indented.diff"
+    indented.write_text(
+        diff.read_text(encoding="utf-8").replace("+VALUE = 2", "+ VALUE = 2"), encoding="utf-8"
+    )
+    expect(
+        "GAR-DELEG-005",
+        "indented added line is rejected",
+        rejected(run(diff_path=indented), "GAR-DELEG-005"),
+        "hunk bytes",
+    )
+    shifted = fx.tmp / "shifted.diff"
+    shifted.write_text(
+        diff.read_text(encoding="utf-8").replace("@@ -1 +1 @@", "@@ -1,2 +1,2 @@"),
+        encoding="utf-8",
+    )
+    expect(
+        "GAR-DELEG-005",
+        "shifted hunk header is rejected",
+        rejected(run(diff_path=shifted), "GAR-DELEG-005"),
+        "hunk bytes",
+    )
+    canonical_bytes = diff.read_bytes()
+    needle = b"+VALUE = 2"
+    crlf = fx.tmp / "crlf.diff"
+    crlf.write_bytes(canonical_bytes.replace(b"\n", b"\r\n"))
+    expect(
+        "GAR-DELEG-005",
+        "CRLF substitution of an LF diff is rejected",
+        rejected(run(diff_path=crlf), "GAR-DELEG-005"),
+        "hunk bytes",
+    )
+    invalid_ff = fx.tmp / "invalid-ff.diff"
+    invalid_fe = fx.tmp / "invalid-fe.diff"
+    invalid_ff.write_bytes(canonical_bytes.replace(needle, b"+VALUE = \xff", 1))
+    invalid_fe.write_bytes(canonical_bytes.replace(needle, b"+VALUE = \xfe", 1))
+    expect(
+        "GAR-DELEG-005",
+        "invalid byte ff in a hunk is rejected",
+        rejected(run(diff_path=invalid_ff), "GAR-DELEG-005"),
+        "hunk bytes",
+    )
+    expect(
+        "GAR-DELEG-005",
+        "invalid byte fe in a hunk is rejected",
+        rejected(run(diff_path=invalid_fe), "GAR-DELEG-005"),
+        "hunk bytes",
+    )
+    expect(
+        "GAR-DELEG-005",
+        "distinct invalid bytes do not collapse to one replacement character",
+        _diff_lines(invalid_ff.read_bytes()) != _diff_lines(invalid_fe.read_bytes()),
+        "hunk bytes",
+    )
+    forged_index = fx.tmp / "index-line.diff"
+    forged_index.write_bytes(canonical_bytes.replace(b"\n", b"\nindex not-a-header\n", 1))
+    expect(
+        "GAR-DELEG-005",
+        "a non-header index line is rejected",
+        rejected(run(diff_path=forged_index), "GAR-DELEG-005"),
+        "hunk bytes",
     )
     unknown = fx.receipt(
         fx.delivered, "unknown.json", validation=[{"obligation_index": 0, "result": "Unknown"}]

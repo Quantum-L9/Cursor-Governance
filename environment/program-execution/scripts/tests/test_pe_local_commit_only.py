@@ -74,7 +74,8 @@ exec {real} "$@"
 # writes the summary the SSOT `make pr` would leave in the published workspace.
 _MAKE_PR_SHIM = """#!/bin/sh
 {{ printf 'make'; for arg in "$@"; do printf ' %s' "$arg"; done; \
-printf ' |PR_REMEDIATE=%s PR_BASE=%s PR_STACK=%s' "$PR_REMEDIATE" "$PR_BASE" "$PR_STACK"; \
+printf ' |OPEN_PR=%s PR_REMEDIATE=%s PR_BASE=%s PR_STACK=%s' \
+"$OPEN_PR" "$PR_REMEDIATE" "$PR_BASE" "$PR_STACK"; \
 printf '\\n'; }} >> "$L9_TEST_SUBPROCESS_LOG"
 for arg in "$@"; do case "$arg" in WS=*) ws="${{arg#WS=}}";; esac; done
 mkdir -p "$ws/.l9/pr"
@@ -316,7 +317,7 @@ class PublicationBoundaryTests(unittest.TestCase):
                 makes,
                 [
                     f"make -C {ssot.resolve()} pr WS={workspace} "
-                    "|PR_REMEDIATE=0 PR_BASE=origin/main PR_STACK="
+                    "|OPEN_PR=1 PR_REMEDIATE=0 PR_BASE=origin/main PR_STACK="
                 ],
             )
             # The exact verified tree was authorized for L4 release first.

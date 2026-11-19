@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from ops.autonomy.org_policy_binding import ROLES, bind
+from ops.autonomy.org_policy_binding import AUTHORITY_CLAIMS, ROLES, bind, govern, main
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -48,3 +48,29 @@ def test_stale_when_the_projection_digest_changes(tmp_path: Path) -> None:
     item = bind("cto", tmp_path)
     assert item["status"] == "STALE"
     assert "author organization policy" in item["must_not"]
+
+
+def test_local_admission_text_does_not_authorize_a_claim(tmp_path: Path) -> None:
+    source = ROOT / "governance" / "authority-bindings" / "org-invariants.yaml"
+    binding = tmp_path / "governance" / "authority-bindings"
+    binding.mkdir(parents=True)
+    text = source.read_text(encoding="utf-8")
+    text = text.replace("admission: false", "admission: true", 1)
+    text = text.replace("signature_status: UNKNOWN", "signature_status: verified", 1)
+    text = text.replace("release_status: BLOCKED", "release_status: verified", 1)
+    (binding / "org-invariants.yaml").write_text(text, encoding="utf-8")
+    (tmp_path / "ORG_INVARIANTS.yaml").write_bytes((ROOT / "ORG_INVARIANTS.yaml").read_bytes())
+    for action in AUTHORITY_CLAIMS:
+        decision = govern(action, "session", tmp_path)
+        assert decision["allowed"] is False
+    assert govern("make_pr", "session", tmp_path)["allowed"] is True
+    assert main(["--action", "claim_admission", "--root", str(tmp_path)]) == 1
+    assert main(["--format", "markdown", "--root", str(ROOT)]) == 0
+
+
+def test_mode_status_denies_every_authority_claim() -> None:
+    from ops.autonomy.projection_mode import _policy_denials
+
+    denials = _policy_denials("cto")
+    assert [item["action"] for item in denials] == list(AUTHORITY_CLAIMS)
+    assert all(item["allowed"] is False for item in denials)

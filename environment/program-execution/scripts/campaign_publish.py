@@ -303,14 +303,23 @@ def publish_campaign(
     child_env = dict(env_source)
     for key in _STRIPPED_ENV:
         child_env.pop(key, None)
+    # publish.mk opens the pull request only when OPEN_PR=1. Stripping a
+    # caller value and then setting 1 is the org ceremony: gate, push, and
+    # open. PUSH_ONLY stays stripped so this cannot become push-without-PR.
     child_env.update(
-        {"PR_REMEDIATE": "0", "PR_BASE": base_ref, "PR_STACK": "", "WS": str(workspace)}
+        {
+            "OPEN_PR": "1",
+            "PR_REMEDIATE": "0",
+            "PR_BASE": base_ref,
+            "PR_STACK": "",
+            "WS": str(workspace),
+        }
     )
     completed = run(argv, timeout=MAKE_PR_TIMEOUT_S, cwd=workspace, env=child_env)
     log_path = pec_workspace / PUBLICATION_LOG
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text(
-        f"$ PR_REMEDIATE=0 PR_BASE={base_ref} {' '.join(argv)}\n"
+        f"$ OPEN_PR=1 PR_REMEDIATE=0 PR_BASE={base_ref} {' '.join(argv)}\n"
         f"exit={completed.returncode}\n--- stdout ---\n{completed.stdout}\n"
         f"--- stderr ---\n{completed.stderr}\n",
         encoding="utf-8",
@@ -350,7 +359,7 @@ def publish_campaign(
         "workspace": str(workspace),
         "ssot": str(ssot),
         "ssot_revision": ssot_revision,
-        "command": f"PR_REMEDIATE=0 PR_BASE={base_ref} {' '.join(argv)}",
+        "command": f"OPEN_PR=1 PR_REMEDIATE=0 PR_BASE={base_ref} {' '.join(argv)}",
         "merge": "not_performed",
         "recorded_at": _now(),
     }

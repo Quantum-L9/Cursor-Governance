@@ -52,6 +52,18 @@ def _organization_policy(role: str) -> dict[str, Any]:
         return {"status": "MISSING", "role": role, "reason": str(exc)}
 
 
+def _policy_denials(role: str) -> list[dict[str, Any]]:
+    """Authority claims this mode must not grant. Mode ON/OFF stays independent."""
+    try:
+        try:
+            from org_policy_binding import AUTHORITY_CLAIMS, govern
+        except ImportError:
+            from ops.autonomy.org_policy_binding import AUTHORITY_CLAIMS, govern
+        return [govern(action, role) for action in AUTHORITY_CLAIMS]
+    except (OSError, ValueError, ImportError) as exc:
+        return [{"action": "author_organization_policy", "allowed": False, "reason": str(exc)}]
+
+
 # Host session identity, in order. The first names are the ones hooks document.
 # Cursor agent shells set CURSOR_CONVERSATION_ID and not CURSOR_SESSION_ID;
 # Claude cloud sets CLAUDE_CODE_REMOTE_SESSION_ID when the local id is absent.
@@ -506,6 +518,7 @@ class ProjectionMode:
             "schema": f"l9.{self.name}-mode-status/v1",
             "workspace": str(workspace),
             "organization_policy": _organization_policy(self.name),
+            "organization_policy_denials": _policy_denials(self.name),
         }
         try:
             contract = self.load_contract(contract_path)

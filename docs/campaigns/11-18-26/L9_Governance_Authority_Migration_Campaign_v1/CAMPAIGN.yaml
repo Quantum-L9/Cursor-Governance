@@ -24,6 +24,12 @@ observed_start_revisions:
   Quantum-L9/Cursor-Governance: 48c9e134bfbb5520adc18645ded9e68cdcb1056a
   Quantum-L9/l9-ci-core: 027e86543701740c4a238e593bd33c03f59eda00
   Quantum-L9/L9-Ops-MCP: e372d303ee03cefc56f0179098eb6a2ebb011257
+launch_base_revisions:
+  Quantum-L9/.github: 00500268eb24de29a5e647a447d6f992d609f6f5
+  Quantum-L9/Cursor-Governance: 59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd
+  Quantum-L9/l9-ci-core: 027e86543701740c4a238e593bd33c03f59eda00
+  Quantum-L9/L9-Ops-MCP: e372d303ee03cefc56f0179098eb6a2ebb011257
+  cursor_merged_onto_launch_base: [1037, 1038, 1039]
 live_start_observations:
   org_ruleset_id: 21895545
   required_job: Analyze (central Core)
@@ -47,17 +53,20 @@ publication:
   prohibit_gate_only_smoke_rehearsal: true
   prohibit_raw_push_and_gh_pr_create_bypass: true
   require_pr_url_and_exact_head_receipt: true
-  pr_stack: empty
+  pr_stack: predecessor_or_overlapping_open_pr
   open_pr: 1
   pr_remediate: 0
+  merge_authority: operator_only
+  unmerged_prs_block_progress: false
   command: >-
-    PR_STACK= PR_REMEDIATE=0 OPEN_PR=1 make -C "$HOME/.cursor-governance" pr
-    WS="$WT"
+    PR_REMEDIATE=0 OPEN_PR=1 make -C "$HOME/.cursor-governance" pr WS="$WT"
 execution_binding:
   document: 09_EXECUTION_BINDING.md
   checked_at: '2026-11-18'
   state: bound_pending_operator_launch
-  baseline_shas_match_origin_main: true
+  baseline_shas_match_origin_main: false
+  launch_base_matches_origin_main: true
+  start_from: fetched_origin_main
   dotgithub_push_proven: dry_run_only
   child_prompt_forbids_pool_writes_to_dotgithub: true
   mode_contract_edited: false
@@ -66,6 +75,8 @@ execution_binding:
   pool_size: 4
   pool_cap: 5
   swarm_launch: not_authorized_by_this_binding
+  stack_authorization: >-
+    operator 2026-11-18: stack on open PRs; unmerged PRs do not block
 permissions:
   exact_owner_admission_required: true
   agent_may_not_self_authorize_admission: true
