@@ -2665,9 +2665,7 @@ def _status_excluding_wiring(worktree: Path) -> str:
     worktree; the rendered contract defines them as not changes, so the
     at-base judgment must not see them as dirt.
     """
-    raw = run_git(
-        worktree, "status", "--porcelain", "--untracked-files=all", check=False
-    ).stdout
+    raw = run_git(worktree, "status", "--porcelain", "--untracked-files=all", check=False).stdout
     kept: list[str] = []
     for line in raw.splitlines():
         path = line[3:] if len(line) >= 4 else ""
