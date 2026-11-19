@@ -119,7 +119,7 @@ def _observe_worktree_changes(contract: Mapping[str, Any]) -> list[str]:
             # The pre-existing untracked wiring the runner links into every
             # task worktree is not a repository change; the rendered contract
             # defines it as not changes, so the observation must not count it.
-            if not normalized.split("/", 1)[0] in {".cursor-commands", ".cursor", ".l9"}:
+            if normalized.split("/", 1)[0] not in {".cursor-commands", ".cursor", ".l9"}:
                 paths.add(normalized)
         index += 1
     return sorted(paths)
