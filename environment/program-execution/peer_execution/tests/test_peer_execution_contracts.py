@@ -443,6 +443,7 @@ class PeerExecutionContractTests(unittest.TestCase):
                 "contract_digest": "b" * 64,
                 "base_sha": "c" * 40,
                 "worktree": str(root),
+                "requested_actions": ["inspect", "local_write"],
             }
             result = CanonicalProviderResult(
                 execution_id="exec-1",
@@ -455,6 +456,37 @@ class PeerExecutionContractTests(unittest.TestCase):
             receipt = adapter._attempt_receipt(contract, result)
         self.assertIn("edited.py", receipt["changed_files"])
         self.assertIn("changed_files_recovered_from_worktree", receipt["residual_unknowns"])
+
+    def test_read_only_claim_stays_empty_despite_worktree_wiring(self) -> None:
+        """An inspect-only worker's honest [] is never replaced with observed files."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+            for entry in (".cursor-commands", ".cursor", ".l9"):
+                (root / entry).mkdir()
+                (root / entry / "probe").touch()
+            adapter = self._attempt_adapter(root)
+            contract = {
+                "task_id": "TASK-RO",
+                "program_digest": "a" * 64,
+                "contract_digest": "b" * 64,
+                "base_sha": "c" * 40,
+                "worktree": str(root),
+                "requested_actions": ["inspect"],
+            }
+            result = CanonicalProviderResult(
+                execution_id="exec-ro",
+                status="PASS",
+                structured_payload={
+                    "candidate_sha": None,
+                    "claimed_status": "completed",
+                    "changed_files": [],
+                    "residual_unknowns": [],
+                },
+            )
+            receipt = adapter._attempt_receipt(contract, result)
+        self.assertEqual(receipt["changed_files"], [])
+        self.assertEqual(receipt["residual_unknowns"], [])
 
 
 if __name__ == "__main__":
