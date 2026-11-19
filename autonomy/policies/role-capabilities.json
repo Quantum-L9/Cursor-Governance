@@ -16,6 +16,7 @@
         "repository.read",
         "repository.search",
         "graphiti.read",
+        "test.run",
         "artifact.write_recon_report"
       ]
     },
