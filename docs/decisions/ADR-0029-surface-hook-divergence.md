@@ -38,15 +38,20 @@ must not maintain private marker lists.
 
 Locked precedence, copied from the live detector and tests:
 
-1. `CURSOR_AGENT` set **and** explicit `L9_GOVERNANCE_SURFACE` in
-   `{claude-code, claude-code-remote}` → `cursor`. The projected Claude triad
-   must not steal a Cursor session.
+1. A Cursor host marker (`CURSOR_AGENT`, `CURSOR_CONVERSATION_ID`, or
+   `CURSOR_EXTENSION_HOST_ROLE`) set **and** explicit `L9_GOVERNANCE_SURFACE`
+   in `{claude-code, claude-code-remote}` **and** no live Claude runtime
+   marker set → `cursor`. The projected Claude triad must not steal a Cursor
+   session; the override applies only while no live Claude runtime is present
+   (the claude-vscode extension runs the real CLI inside Cursor, so its
+   runtime markers win).
 2. Else an explicit id in
    `{cursor, claude-code, claude-code-remote, codex, gemini, manus}` → that id.
 3. Else `CLAUDE_CODE_REMOTE=true` → `claude-code-remote`.
 4. Else `CLAUDECODE` or `CLAUDE_CODE_ENTRYPOINT` or
    `CLAUDE_CODE_SESSION_ID` → `claude-code`.
-5. Else `CURSOR_AGENT` → `cursor`.
+5. Else a Cursor host marker (`CURSOR_AGENT`, `CURSOR_CONVERSATION_ID`, or
+   `CURSOR_EXTENSION_HOST_ROLE`) → `cursor`.
 6. Else → `unknown`.
 
 `unknown` gates run, fail-toward-closed. `unknown` Claude observers skip so they
@@ -157,3 +162,25 @@ Decision item 2's lists drifted from the launcher. As executed:
 
 `environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md` carries the same table; the
 launcher's `l9_required_class` and Claude-only `case` are the authority for both.
+
+## Amendment (2026-11-19) — precedence and the memory-gate skip follow the live detector
+
+Decision item 1's steps 1 and 5 and the memory-gate predicate drifted from the
+executed detector and launcher; this amendment records the as-executed form.
+
+- The step-1 Cursor override applies only while no live Claude runtime marker
+  is set. `claude_runtime_present` (shell twin `l9_claude_runtime_present`) is
+  true when `CLAUDE_CODE_REMOTE=true`, `CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`,
+  or `CLAUDE_CODE_SESSION_ID` is set. The claude-vscode extension launches the
+  real CLI inside Cursor, so those markers beat the host-marker override and
+  the surface resolves `claude-code`. A projected
+  `L9_GOVERNANCE_SURFACE=claude-code` is not a runtime.
+- `memory_gate.py` runs only when `l9_claude_runtime_present` is true, and its
+  launcher skip depends on that absence ALONE. A Cursor host marker does not
+  veto the gate when a live Claude runtime is present: the launcher must not
+  skip the gate in exactly the environment the surface detector reports as
+  `claude-code` — the two detectors must not disagree about the same process.
+
+`ops/autonomy/surface_detect.py`, its shell twin
+`ops/scripts/lib/surface_detect.sh`, and `l9_hook_exec.sh` remain the authority
+for this document and `environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md`.
