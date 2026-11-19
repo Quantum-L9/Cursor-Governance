@@ -337,6 +337,8 @@ def _resolve(
         source, value = SOURCE_REFUSED, None
     elif name not in allowed_names():
         source, value = SOURCE_UNBOUND, None
+    elif name in operator_only_names() and not _operator_surface(**kwargs):
+        source, value = SOURCE_OPERATOR_ONLY_REFUSED, None
     else:
         present = (context.get(name) or "").strip()
         if present:
