@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Validate Cursor-Governance normative organization-policy artifacts.
+"""Validate the Cursor-Governance consumer mirror of organization policy.
 
-This validator intentionally validates repository-owned policy semantics.
-It does not claim that GitHub rulesets, required checks, external assurance,
-or consumer bindings are deployed.
+Quantum-L9/.github authors that policy. This checker accepts the local
+mirror only when canonical is false and canonical_source pins the candidate
+commit. A missing signature stays UNKNOWN and is not treated as verified.
+It does not claim that GitHub rulesets or required checks are deployed.
 """
 
 from __future__ import annotations
@@ -33,6 +34,12 @@ RELEASE_SCHEMA_PATH = ROOT / "releases" / "POLICY_RELEASE.schema.yaml"
 INVARIANT_ID = re.compile(r"^L9-ORG-[0-9]{3}$")
 CONTROL_ID = re.compile(r"^L9-CTRL-[0-9]{3}$")
 ASSERTION_TYPE = re.compile(r"^[a-z][a-z0-9_]*$")
+FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
+CONSUMER_SOURCE_REPOSITORY = "Quantum-L9/.github"
+CONSUMER_SOURCE_PATH = "policies/ORG_INVARIANTS.yaml"
+CONSUMER_SOURCE_REVISION = "ec3f5c6734530a3a90438a80827ebd8edd876734"
+CONSUMER_PAYLOAD_SHA256 = "fdb3a6d45af46f237470671b57873557301f1261679d67c352cda5a81661b59c"
 
 ALLOWED_SEVERITIES = {"critical", "high", "medium", "low"}
 ALLOWED_POLICY_STATES = {"proposed", "active", "deprecated", "retired"}
@@ -210,6 +217,92 @@ def assertion_versions(registry: Any, findings: list[Finding]) -> set[tuple[str,
     return resolved
 
 
+def _registered_assertion(
+    assertion_type: Any,
+    assertion_version: Any,
+    registered_assertions: set[tuple[str, int]],
+) -> bool:
+    return (
+        isinstance(assertion_type, str)
+        and isinstance(assertion_version, int)
+        and not isinstance(assertion_version, bool)
+        and (assertion_type, assertion_version) in registered_assertions
+    )
+
+
+def validate_consumer_source(source: Any, findings: list[Finding]) -> None:
+    """Require an immutable pin of the open .github candidate.
+
+    A branch name, a missing revision, or any revision other than the pinned
+    candidate head is a mutable or unbound source. signature_status other than
+    UNKNOWN would claim a verification this candidate does not have.
+    """
+    source_map = require_mapping(source, "policy.metadata.canonical_source", findings)
+    path = "policy.metadata.canonical_source"
+    if source_map.get("repository") != CONSUMER_SOURCE_REPOSITORY:
+        findings.append(
+            Finding(
+                "CANONICAL_SOURCE_MISMATCH",
+                f"canonical source repository must be {CONSUMER_SOURCE_REPOSITORY}",
+                f"{path}.repository",
+            )
+        )
+    if source_map.get("path") != CONSUMER_SOURCE_PATH:
+        findings.append(
+            Finding(
+                "CANONICAL_SOURCE_MISMATCH",
+                f"canonical source path must be {CONSUMER_SOURCE_PATH}",
+                f"{path}.path",
+            )
+        )
+    revision = source_map.get("revision")
+    revision_text = revision if isinstance(revision, str) else ""
+    if not FULL_SHA.fullmatch(revision_text):
+        findings.append(
+            Finding(
+                "CANONICAL_REF_MUTABLE",
+                "canonical source revision must be a full 40-character lowercase commit SHA",
+                f"{path}.revision",
+            )
+        )
+    elif revision_text != CONSUMER_SOURCE_REVISION:
+        findings.append(
+            Finding(
+                "CANONICAL_SOURCE_MISMATCH",
+                "canonical source revision is not the pinned candidate head",
+                f"{path}.revision",
+            )
+        )
+    branch = source_map.get("branch")
+    if isinstance(branch, str) and branch:
+        findings.append(
+            Finding(
+                "CANONICAL_REF_MUTABLE",
+                "canonical source must pin a commit revision and must not use a branch ref",
+                f"{path}.branch",
+            )
+        )
+    digest = source_map.get("payload_sha256")
+    digest_text = digest if isinstance(digest, str) else ""
+    if not SHA256.fullmatch(digest_text) or digest_text != CONSUMER_PAYLOAD_SHA256:
+        findings.append(
+            Finding(
+                "CANONICAL_PAYLOAD_MISMATCH",
+                "canonical source payload_sha256 must be the pinned candidate digest",
+                f"{path}.payload_sha256",
+            )
+        )
+    signature_status = source_map.get("signature_status", "UNKNOWN")
+    if signature_status != "UNKNOWN":
+        findings.append(
+            Finding(
+                "SIGNATURE_STATUS_UNVERIFIED",
+                "a missing signature stays UNKNOWN and is not verified",
+                f"{path}.signature_status",
+            )
+        )
+
+
 def validate_policy(
     policy: Any,
     registered_assertions: set[tuple[str, int]],
@@ -241,11 +334,11 @@ def validate_policy(
                 "policy.artifact_type",
             )
         )
-    if policy_map.get("canonical") is not True:
+    if policy_map.get("canonical") is not False:
         findings.append(
             Finding(
-                "POLICY_NOT_CANONICAL",
-                "canonical policy must declare canonical: true",
+                "POLICY_CONSUMER_CANONICAL",
+                "consumer mirror must declare canonical: false",
                 "policy.canonical",
             )
         )
@@ -275,6 +368,7 @@ def validate_policy(
                 "policy.metadata.policy_version",
             )
         )
+    validate_consumer_source(metadata.get("canonical_source"), findings)
     invariants = require_list(
         policy_map.get("invariants"),
         "policy.invariants",
@@ -380,6 +474,18 @@ def validate_policy(
                 )
             if isinstance(assertion_type, str) and isinstance(assertion_version, int):
                 referenced_assertions.append((assertion_type, assertion_version, path))
+            if severity == "critical" and not _registered_assertion(
+                assertion_type,
+                assertion_version,
+                registered_assertions,
+            ):
+                findings.append(
+                    Finding(
+                        "UNKNOWN_CRITICAL_ASSERTION",
+                        "unknown critical assertion is rejected",
+                        f"{path}.assertion",
+                    )
+                )
         assurance = invariant.get("assurance")
         if isinstance(assurance, dict):
             enforcement_state = assurance.get("effective_enforcement_state")

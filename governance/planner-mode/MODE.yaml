@@ -14,6 +14,10 @@
 schema: l9.cursor-governance.planner-mode/v1
 artifact_id: l9.cursor-governance/planner-mode@1
 canonical: true
+organization_policy:
+  binding: governance/authority-bindings/org-invariants.yaml
+  role: planner
+  separate_from: l9.projection/cursor-governance-operating-plane@2
 authority:
   owner: Quantum-L9/Cursor-Governance
   scope: planner_mode_consumer_contract

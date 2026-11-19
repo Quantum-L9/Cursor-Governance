@@ -2,8 +2,8 @@
 
 ## Authority
 
-`ORG_INVARIANTS.yaml` is the canonical machine-readable declaration of
-Quantum-L9 organization requirements.
+`ORG_INVARIANTS.yaml` in this repository is the consumer mirror of the
+organization policy authored at `Quantum-L9/.github` `policies/ORG_INVARIANTS.yaml`.
 
 This document explains the model. It does not replace the policy.
 
@@ -190,14 +190,15 @@ full verification or convergence while material critical unknowns remain.
 
 ## Repository ownership boundaries
 
-Cursor-Governance owns:
+Quantum-L9/.github authors organization policy. Cursor-Governance keeps the
+local operating implementation:
 
-- canonical policy;
-- policy grammar;
-- assertion vocabulary;
-- trust semantics;
-- change process;
-- release-record requirements.
+- the consumer mirror and its local evaluation vocabulary;
+- local trust and change-process documents;
+- the `make pr` ceremony.
+
+It does not author organization policy. The pinned candidate is not an
+admission, and a missing signature stays UNKNOWN.
 
 Other repositories may own:
 
@@ -206,4 +207,4 @@ Other repositories may own:
 - reusable CI execution;
 - consumer installation.
 
-Those systems consume this policy; they do not redefine it.
+Those systems consume the organization policy; they do not redefine it.

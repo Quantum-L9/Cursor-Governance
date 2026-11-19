@@ -38,8 +38,33 @@ except ImportError:  # pragma: no cover - interpreter without PyYAML
     sys.exit(3)
 
 REPO = Path(__file__).resolve().parents[2]
-# Host session identity, in order. An unresolvable session never activates a mode.
-SESSION_ENVS = ("CURSOR_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID")
+
+
+def _organization_policy(role: str) -> dict[str, Any]:
+    """Same .github pin for every mode. A failure here does not change mode admission."""
+    try:
+        try:
+            from org_policy_binding import bind
+        except ImportError:
+            from ops.autonomy.org_policy_binding import bind
+        return bind(role)
+    except (OSError, ValueError, ImportError) as exc:
+        return {"status": "MISSING", "role": role, "reason": str(exc)}
+
+
+# Host session identity, in order. The first names are the ones hooks document.
+# Cursor agent shells set CURSOR_CONVERSATION_ID and not CURSOR_SESSION_ID;
+# Claude cloud sets CLAUDE_CODE_REMOTE_SESSION_ID when the local id is absent.
+# Those two are how `on` binds without a hand-passed --session-id. An earlier
+# name still wins. "default" is not an identity. An unresolvable session never
+# activates a mode.
+SESSION_ENVS = (
+    "CURSOR_SESSION_ID",
+    "CLAUDE_CODE_SESSION_ID",
+    "CLAUDE_SESSION_ID",
+    "CURSOR_CONVERSATION_ID",
+    "CLAUDE_CODE_REMOTE_SESSION_ID",
+)
 EXIT = {"ACTIVE": 0, "OFF": 0, "BLOCKED": 3, "REJECTED": 1, "STALE": 1}
 ADMITTED = "ADMITTED_AND_CURRENT"
 # The coding-agent execution projection keeps its own binding
@@ -480,6 +505,7 @@ class ProjectionMode:
         report: dict[str, Any] = {
             "schema": f"l9.{self.name}-mode-status/v1",
             "workspace": str(workspace),
+            "organization_policy": _organization_policy(self.name),
         }
         try:
             contract = self.load_contract(contract_path)
