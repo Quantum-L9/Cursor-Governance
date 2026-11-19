@@ -91,6 +91,39 @@ def bind(role: str, root: Path | None = None) -> dict[str, Any]:
     }
 
 
+AUTHORITY_CLAIMS = (
+    "author_organization_policy",
+    "claim_admission",
+    "claim_signed_release",
+)
+
+
+def govern(action: str, role: str = "session", root: Path | None = None) -> dict[str, Any]:
+    """Deny an organization-policy authority claim.
+
+    This repository is the consumer. A local ``admission: true`` or a local
+    signature string does not authorize the claim. Session reports stay
+    separate and do not call this function.
+    """
+    item = bind(role, root)
+    if action not in AUTHORITY_CLAIMS:
+        return {
+            "action": action,
+            "allowed": True,
+            "reason": "not an organization-policy authority claim",
+        }
+    return {
+        "action": action,
+        "allowed": False,
+        "reason": (
+            "Cursor-Governance does not author, admit, or sign organization policy "
+            f"(admission={item.get('admission')}, "
+            f"signature={item.get('signature_status')}, "
+            f"release={item.get('release_status')})"
+        ),
+    }
+
+
 def markdown(role: str = "session", root: Path | None = None) -> str:
     """SessionStart section. A missing bind is reported, not hidden."""
     item = bind(role, root)
@@ -119,6 +152,7 @@ def markdown(role: str = "session", root: Path | None = None) -> str:
             f"canonical {str(item.get('projection_canonical')).lower()}"
         ),
         "- operating law stays here; this binding does not author organization policy",
+        "- denied: author_organization_policy, claim_admission, claim_signed_release",
         f"- this role: {item.get('applies')}",
     ]
     return "\n".join(lines)
@@ -128,8 +162,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--role", default="session", choices=ROLES)
     parser.add_argument("--format", choices=("markdown", "json"), default="json")
+    parser.add_argument("--action", choices=AUTHORITY_CLAIMS)
     parser.add_argument("--root", type=Path, default=REPO)
     args = parser.parse_args(argv)
+    if args.action:
+        decision = govern(args.action, args.role, args.root)
+        print(json.dumps(decision, indent=2, sort_keys=True))
+        return 0 if decision["allowed"] else 1
     if args.format == "markdown":
         print(markdown(args.role, args.root))
     else:
