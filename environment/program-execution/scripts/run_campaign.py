@@ -7013,9 +7013,7 @@ def _plan_frontmatter(path: Path) -> dict[str, Any]:
         return {}
     loaded = yaml.safe_load(match.group(1)) or {}
     if not isinstance(loaded, dict):
-        raise CampaignError(
-            f"{path} frontmatter is not a mapping", error_code="PLAN_FRONTMATTER"
-        )
+        raise CampaignError(f"{path} frontmatter is not a mapping", error_code="PLAN_FRONTMATTER")
     return loaded
 
 
