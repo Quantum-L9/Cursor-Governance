@@ -9,13 +9,15 @@ status: active
 
 # Org Invariants — Single Source of Truth
 
-The canonical Quantum-L9 organization invariant policy lives here:
+Quantum-L9 organization policy is authored in `Quantum-L9/.github` at
+`policies/ORG_INVARIANTS.yaml`, candidate
+`ec3f5c6734530a3a90438a80827ebd8edd876734`. That candidate is not an admission,
+and its signature is UNKNOWN.
 
-- **Canonical file:** [`ORG_INVARIANTS.yaml`](../../ORG_INVARIANTS.yaml) (repo root of `Quantum-L9/Cursor-Governance`).
+- **Consumer mirror:** [`ORG_INVARIANTS.yaml`](../../ORG_INVARIANTS.yaml) in this repository (`canonical: false`).
 
-This is the governance control plane, so the org invariant policy is canonical
-here and mirrored into consumer repos. It is **policy, not enforcement** — the
-enforcement lives in each consumer's deterministic gate.
+This repository does not author organization policy. The local file is a
+consumer mirror. Enforcement remains a deterministic gate, not this document.
 
 ## The invariant
 
@@ -26,16 +28,15 @@ Personal-account owners (e.g. `cryptoxdog`, `personal_accounts`) are
 ## Topology
 
 ```text
-Quantum-L9/Cursor-Governance/ORG_INVARIANTS.yaml   (CANONICAL — edit here)
-        │  synced (byte-identical org_invariants block)
+Quantum-L9/.github/policies/ORG_INVARIANTS.yaml    (AUTHOR — candidate ec3f5c67, signature UNKNOWN)
+        │  consumed, not authored, by this repository
         ▼
-Quantum-L9/L9-Ops-MCP/ORG_INVARIANTS.yaml          (MIRROR — do not edit here)
-        └── enforced by scripts/validate_org_invariants.py  (CI gate)
+Quantum-L9/Cursor-Governance/ORG_INVARIANTS.yaml   (CONSUMER MIRROR — canonical: false)
 ```
 
 ## Change process
 
-1. Edit the `org_invariants` block in the canonical file (this repo).
+1. Organization policy is edited in `Quantum-L9/.github`, not in this repository.
 2. Re-sync each consumer's mirror so its `org_invariants` block is
    **byte-identical** (in the same PR or an immediate follow-up).
 3. Consumer gates (e.g. `L9-Ops-MCP/scripts/validate_org_invariants.py`) continue
@@ -43,12 +44,11 @@ Quantum-L9/L9-Ops-MCP/ORG_INVARIANTS.yaml          (MIRROR — do not edit here)
 
 ## Adding a consumer
 
-Add the repo under `provenance.consumers` in the canonical file, copy the
-`org_invariants` block into that repo (with a mirror-provenance header), and wire
-its gate to validate the local copy.
+A new consumer records its pin to `Quantum-L9/.github` `policies/ORG_INVARIANTS.yaml`
+and validates that pin locally.
 
-> Enforcement stays deterministic and repo-local. This SSOT governs **where the
-> policy is authored**, not how it is checked.
+> Enforcement stays deterministic and repo-local. This document does not choose
+> the organization-policy author. That author is `Quantum-L9/.github`.
 
 ---
 
@@ -59,7 +59,7 @@ its gate to validate the local copy.
 
 ## Purpose
 
-`ORG_INVARIANTS.yaml` is the canonical machine-readable organization policy.
+`ORG_INVARIANTS.yaml` in this repository is the consumer mirror of the organization policy.
 
 It defines mandatory outcomes. It does not, by itself, prove that every outcome
 is currently enforced.
@@ -151,7 +151,7 @@ Mutable branch references are insufficient for immutable blocking consumption.
 
 ## Repository ownership
 
-Cursor-Governance owns normative policy and policy meaning.
+Cursor-Governance consumes organization policy and owns its local operating implementation.
 
 It does not own:
 

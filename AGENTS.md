@@ -435,11 +435,11 @@ provision a second GitHub PAT in AWS while this ref works.
 - `ops/hooks/session_start_bootstrap.sh` — activation entry point (§2.1)
 - `ops/scripts/resolve_governance_paths.sh` — path resolution (GitHub clone
   only, no Dropbox fallback)
-- `ORG_INVARIANTS.yaml` — canonical Quantum-L9 org policy
+- `ORG_INVARIANTS.yaml` — consumer mirror of `Quantum-L9/.github` `policies/ORG_INVARIANTS.yaml` at `ec3f5c6734530a3a90438a80827ebd8edd876734`; this repository does not author organization policy
 - `ops/autonomy/surface_profile.yaml` — autonomy / L4 / campaign / overlap
 - [`requirements.txt`](requirements.txt) — toolchain pins
 - `ARCHITECTURE.md` — this-repo map (index; does not outrank this file or `CANONICAL_LAW.md`)
-- `INVARIANTS.md` — this-repo invariant index (`ORG_INVARIANTS.yaml` remains the machine org-policy SSOT)
+- `INVARIANTS.md` — this-repo invariant index (organization policy is authored in `Quantum-L9/.github`; `ORG_INVARIANTS.yaml` is the local consumer mirror)
 
 Agents must keep code and these docs aligned — see `TODO.md` for known drift
 not yet reconciled.

@@ -1,0 +1,59 @@
+# Local consumption binding. This file does not admit organization policy and it
+# does not make the local projection the author.
+schema: l9.cursor-governance.org-invariants-binding/v1
+artifact_id: l9.cursor-governance/org-invariants-binding@1
+canonical: false
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: org_invariants_consumer_binding
+  authority_class: local_consumer_binding
+upstream:
+  repository: Quantum-L9/.github
+  path: policies/ORG_INVARIANTS.yaml
+  revision: ec3f5c6734530a3a90438a80827ebd8edd876734
+  pull_request: 269
+  policy_version: 4.1.0
+  payload_sha256: fdb3a6d45af46f237470671b57873557301f1261679d67c352cda5a81661b59c
+  admission: false
+  signature_status: UNKNOWN
+  release_pull_request: 270
+  release_status: BLOCKED
+projection:
+  path: ORG_INVARIANTS.yaml
+  canonical: false
+  sha256: b432ab6366e7090d862ee108f1a15c8fbdd3e6e9dfdf4fe87d682fcc288abb9a
+operating_law:
+  remains: CANONICAL_LAW.md
+  separate_from: l9.projection/cursor-governance-operating-plane@2
+roles:
+  session:
+    when: sessionStart
+    applies: Report the .github pin and whether the local projection matches this binding.
+    must_not:
+      - treat the local file as the organization-policy author
+      - claim admission
+      - claim a signed release
+  cto:
+    when: cto mode on
+    applies: Apply the pinned organization policy to coordination, ownership, and publication claims.
+    must_not:
+      - author organization policy
+      - treat operating-plane semantics as organization law
+  architect:
+    when: architect mode on
+    applies: Apply the pinned organization policy to ownership boundaries and integration proposals.
+    must_not:
+      - author organization policy
+      - replace the architecture projection with this file
+  planner:
+    when: planner mode on
+    applies: Apply the pinned organization policy to plan scope and protected paths.
+    must_not:
+      - author organization policy
+      - treat a plan as organization law
+  coding-agent:
+    when: coding-agent mode on
+    applies: Apply the pinned organization policy as an edit constraint on protected paths and a second author.
+    must_not:
+      - author organization policy
+      - treat this file as the execution projection

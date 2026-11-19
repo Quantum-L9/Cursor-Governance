@@ -143,13 +143,17 @@ class PreflightTests(unittest.TestCase):
             self.assertIn("lock_identity_mismatch", tokens)
             self.assertEqual(result["blockers"][0]["error_code"], "LOCK_IDENTITY_MISMATCH")
 
-    def test_dirty_repo_named(self) -> None:
+    def test_dirty_operator_checkout_is_not_the_execution_root(self) -> None:
         with TemporaryDirectory() as raw:
             temp = Path(raw)
             _, repo, workspace = bootstrap_repo(temp)
             _ready_receipt(temp, repo)
             (repo / "dirty.txt").write_text("x\n", encoding="utf-8")
             run_cli("reconcile", "--workspace", str(workspace), "--repository", f"repo-a={repo}")
+            execution = workspace / "worktrees" / "_execution"
+            self.assertTrue((execution / ".git").exists())
+            self.assertTrue((repo / "dirty.txt").is_file())
+            self.assertFalse((execution / "dirty.txt").exists())
             result = run_cli(
                 "preflight",
                 "--workspace",
@@ -158,7 +162,7 @@ class PreflightTests(unittest.TestCase):
                 str(repo),
             )
             tokens = [row["token"] for row in result["blockers"]]
-            self.assertIn("repository_dirty", tokens)
+            self.assertNotIn("repository_dirty", tokens)
 
 
 if __name__ == "__main__":
