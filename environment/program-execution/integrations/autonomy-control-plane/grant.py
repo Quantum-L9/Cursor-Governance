@@ -95,6 +95,11 @@ RECON_CAPABILITIES = [
     "repository.read",
     "repository.search",
     "graphiti.read",
+    # A read-only task still runs its contract's declared validation commands;
+    # `canonical_shell_capability` admits them as test.run only through the PE
+    # validation grammar (one operation, no substitution, read-only git), so
+    # this does not hand the recon worker an open shell.
+    "test.run",
     "artifact.write_recon_report",
 ]
 WRITE_AUTHORIZATIONS = ("repository.write_scoped",)

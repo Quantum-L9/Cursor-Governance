@@ -721,6 +721,25 @@ class SubordinateLifecycleTests(unittest.TestCase):
             self.assertEqual(payload["status"], "PASS")
             self.assertIn("attempt_receipt_path", payload["evidence"])
 
+    def test_recon_lease_admits_canonical_validation_commands(self) -> None:
+        """A read-only task must be able to run its contract's validation commands.
+
+        Every shell validation command maps to test.run through the canonical
+        validation grammar, so a recon lease that does not acknowledge test.run
+        can never produce an honest validation claim.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            contract = _mutating_contract()
+            contract["requested_actions"] = ["inspect"]
+            contract["writable_paths"] = []
+            contract["task_id"] = "TASK-RO"
+            contract["contract_digest"] = "digest-ro"
+            _module, grant = self._granted(workspace, contract)
+            self.assertFalse(grant["mutation"])
+            metadata = json.loads(self._lease_row(grant)["metadata_json"])
+            self.assertIn("test.run", metadata["accepted_capabilities"])
+
     def test_terminal_result_is_bound_to_the_rendered_contract_digest(self) -> None:
         """An empty or foreign digest must not release this lease."""
         with tempfile.TemporaryDirectory() as raw:
