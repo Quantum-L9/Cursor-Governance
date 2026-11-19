@@ -2585,3 +2585,24 @@ Quantum-L9/l9-deploy run `43786931510`. Hosted MCP is authenticated
 Streamable HTTP (CANONICAL_LAW §8.10 and §8.13). This checkout's bound
 package remains `l9-graphite-memory==2.6.0` until a separate rebind. The
 3.0.0 wheel is not on PyPI. Do not install 3.0.0 over that pin.
+
+<!-- INFISICAL_VAULT_IS_THE_GRANT_V1 -->
+## A vault name is the grant (2026-11-19)
+
+Append-only. A name in Infisical project `cursor-governance` prod `/` is
+authorized to bind when the task needs that system. `allowed_names()` is the
+committed `root_env_keys` mirror plus one `viewSecretValue=false` listing, so
+a new vault name is usable before the next commit. A listing failure uses the
+mirror. Values stay in-process.
+
+`CLAUDE_INFISICAL_CLIENT_SECRET`, `INFISICAL_CLIENT_SECRET`, and
+`L9_INFISICAL_CLIENT_SECRET` are refused. The identity is used, never
+re-issued. `operator_only_keys` is empty. `GITHUB_TOKEN` is the default GitHub
+credential. `GITHUB_CLASSIC_PAT` binds when the task needs it. `make pr` still
+does not require `SONAR_TOKEN` or `SEMGREP_APP_TOKEN`.
+
+SessionStart prints the authorized name catalog and still probes only
+`SEMGREP_APP_TOKEN`, `SONAR_TOKEN`, `GITHUB_TOKEN`, and `CONTEXT7_API_KEY`.
+Stdio MCP servers whose env name is a vault name spawn through
+`run_vault_mcp_bridge.sh spawn`. The child environment receives the bind.
+`master.mcp.json` and a rendered config keep placeholders.

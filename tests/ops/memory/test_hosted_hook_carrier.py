@@ -19,6 +19,7 @@ What is proved:
 from __future__ import annotations
 
 import json
+import sys
 import uuid
 from collections.abc import Mapping
 from pathlib import Path
@@ -245,16 +246,29 @@ def test_the_override_is_decided_before_any_credential_is_bound() -> None:
     assert asked == []
 
 
-def test_credentials_bind_through_capability_bind_from_the_inventory() -> None:
-    """Real bind path: both names are inventoried root keys, not operator-only."""
+def test_hook_credentials_bind_once_the_live_list_names_them() -> None:
+    """The committed mirror omits names the vault does not hold. The live list grants them."""
     inventory = yaml.safe_load(
         (ROOT / "ops/secrets/infisical-cursor-governance.yaml").read_text(encoding="utf-8")
     )
     for name in HOOK_CREDENTIALS:
-        assert name in inventory["root_env_keys"]
-        assert name not in inventory["operator_only_keys"]
+        assert name not in inventory["root_env_keys"]
+    secrets = str(ROOT / "ops" / "secrets")
+    if secrets not in sys.path:
+        sys.path.insert(0, secrets)
+    import capability_bind as bind
+
     env = {HOOK_CLIENT_ID: CLIENT_ID_VALUE, HOOK_CLIENT_SECRET: CLIENT_SECRET_VALUE}
-    assert resolve_carrier(env) == "hosted"
+    bind.remember_vault_names(frozenset())
+    bind.reset_cache()
+    try:
+        assert resolve_carrier(env) != "hosted"
+        bind.reset_cache()
+        bind.remember_vault_names(frozenset(HOOK_CREDENTIALS))
+        assert resolve_carrier(env) == "hosted"
+    finally:
+        bind.remember_vault_names(None)
+        bind.reset_cache()
 
 
 def test_relay_and_hosted_are_the_same_store() -> None:
