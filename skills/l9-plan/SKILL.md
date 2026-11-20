@@ -9,8 +9,8 @@ metadata:
   tags: [l9, plan, spec, execution, requirements, validation, program-execution, autonomy]
   owner: igor_beylin
   status: active
-  version: 4.3.0
-  updated: 2026-11-13
+  version: 4.4.0
+  updated: 2026-11-19
 ---
 
 # l9-plan (explicit-only)
@@ -71,8 +71,8 @@ Legacy projection kept in place: [references/plan-workflow.md](references/plan-w
 9. **Validate** — `python3 scripts/validate_plan_document.py <plan.json>`. FAIL → not ready.
 10. **Project (default)** — `python3 scripts/render_plan_pe_autonomy.py <plan.json> > .cursor/plans/<slug>_<8hex>.plan.md` (or hand-fill [executable-plan.pe-autonomy.template.md](references/executable-plan.pe-autonomy.template.md)). Must retain **Execute via @environment/program-execution + autonomy**.
 11. **Kernel receipt** — ready only when `python3 scripts/validate_plan_kernel_receipt.py <bound.plan.md>` PASSes. Hooks enforce this; this step is the pointer.
-12. **Campaign source (campaign mode)** — `python3 scripts/render_campaign_source.py <plan.json> [--target OWNER/REPO] [--out PATH]`. It refuses a writing todo without validation, an unknown or cyclic dependency, and an `ask`/`block` unknown; then judges the render with Program Execution's own front door, compiler and launchability (inference off). Only `ADMITTED` is a deliverable. Default output: `.l9/plans/<campaign_id>/CAMPAIGN_SOURCE.yaml`; set `campaign.campaign_id` / `campaign.target_repository` in the plan or pass the flags.
-13. **Handoff** — give the operator the printed `next` line: `/coding-agent on`, then `L9_PE_OPERATOR_INVOCATION="<their words>" make -C "$HOME/.cursor-governance" campaign INTENT=<CAMPAIGN_SOURCE.yaml> WS="$PWD"`. Never run `make campaign` yourself and never set the invocation. The campaign finishes with the SSOT `make pr`. Optional `python3 scripts/emit_gmp_phase0.py <plan.json>` when also chaining GMP.
+12. **Campaign source (campaign mode)** — `python3 scripts/render_campaign_source.py <plan.json> --plan-md <the .plan.md> [--target OWNER/REPO] [--out PATH]`. It refuses a writing todo without validation, an unknown or cyclic dependency, and an `ask`/`block` unknown; then judges the render with Program Execution's own front door, compiler and launchability (inference off). Only `ADMITTED` is a deliverable. The script keeps the blueprint beside the YAML and records `campaign_source` and `campaign_blueprint` on that `.plan.md`. Default output: `.l9/plans/<campaign_id>/CAMPAIGN_SOURCE.yaml`; set `campaign.campaign_id` / `campaign.target_repository` in the plan or pass the flags. The model does not write `CAMPAIGN_SOURCE.yaml`.
+13. **Handoff** — give the operator the printed `next` line: `make campaign <the .plan.md>`. Never run `make campaign` yourself. The command line is the operator invocation. The campaign finishes with the SSOT `make pr`. Optional `python3 scripts/emit_gmp_phase0.py <plan.json>` when also chaining GMP.
 
 ## Depth Classifier (escalate-only)
 
