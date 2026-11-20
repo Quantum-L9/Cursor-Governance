@@ -12,18 +12,31 @@ status: active
 **GMP ID:** `GMP-L.3-codeql-org-rollout-2026-07-05`
 **Handoff type:** AI-to-AI / AI-to-engineer · **Task type:** ci · **Autonomy:** L3 (constrained execution, human-approved writes)
 **Owner org:** Quantum-L9 (`https://github.com/Quantum-L9`) · **Central repo:** `Quantum-L9/Cursor-Governance`
-**Status:** Central layer READY (this PR). Org rollout PENDING (this packet).
+**Status:** Central layer is the two SHA-pinned callers in this packet. CodeQL stays in Cursor-Governance. It is not part of `l9-ci-core`.
 
 ---
 
 ## Objective
 
-Make CodeQL **security + code-quality** analysis org-wide from a **single source of truth**. This repo (`Cursor-Governance`) now hosts one **reusable workflow** + one **shared config**. Every other Quantum-L9 repo enables analysis by adding **one ~18-line thin caller** and deleting any local CodeQL config. Change analysis once here → it propagates to all callers pinned at `@main`.
+CodeQL implementation, query policy, the reusable workflow, and the default/extended suite split stay in Cursor-Governance. Do not add a CodeQL job to `l9-ci-core` `org-ci.yml` or to Core's required pull-request test job. Core keeps its own workflow inventory and its prevention of redundant full pytest suites on pull requests. A CodeQL workflow is a centrally governed security scanner, not one of those pytest violations.
 
-**Non-negotiable guardrails (carry forward):**
-- **No auto-commit, ever.** Copilot Autofix / reviewer suggestions stay suggestion-only; a human reads every diff and commits. No workflow writes fixes back.
-- **Suppression is explicit** — via versioned `query-filters`/`paths-ignore`, never silent mass-dismissal.
-- **Org invariant:** all repo routes stay under `https://github.com/Quantum-L9/`. No personal-account owners.
+Every other Quantum-L9 repo installs by replacing its CodeQL workflows with two callers. Neither caller uses `@main`. Both pin:
+
+- reusable workflow `Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@24f0c4db99ba3ba170e5f872cd1c402684e47b81` (`actions: write`, CodeQL action `33d7b85d` / v4.39.3)
+- pull-request config `Quantum-L9/Cursor-Governance/.github/codeql/codeql-config.yml@52d87ce2e217c16a96f0ef131f4da097ef7cd5e2` (default suite: no `queries`, no `query-filters`)
+- nightly config `Quantum-L9/Cursor-Governance/.github/codeql/codeql-config-nightly.yml@52d87ce2e217c16a96f0ef131f4da097ef7cd5e2` (`security-extended`)
+
+Copy these files, and no local `.github/codeql/` config:
+
+- `docs/handoffs/codeql-caller-template.yml` → `.github/workflows/codeql.yml`. Push and pull request against the repository default branch. No schedule.
+- `docs/handoffs/codeql-nightly-caller-template.yml` → `.github/workflows/codeql-nightly.yml`. Nightly `security-extended`. Not a pull-request check. The schedule runs from the default branch whatever that branch is named.
+
+Cursor-Governance's own `.github/workflows/codeql.yml` is the self-scan. It passes the checkout config and is not the file other repos copy.
+
+**Guardrails:**
+- No workflow writes fixes back.
+- A suppression belongs on the nightly config, one reason per rule id. A `queries` or `query-filters` key on the pull-request config disables overlay.
+- Repos stay under `https://github.com/Quantum-L9/`.
 
 ---
 
@@ -31,63 +44,32 @@ Make CodeQL **security + code-quality** analysis org-wide from a **single source
 
 | File | Role |
 |---|---|
-| `.github/workflows/codeql-reusable.yml` | Reusable (`workflow_call`) analysis: language auto-detect + per-language build-mode + `analyze`. |
-| `.github/codeql/codeql-config.yml` | Shared query policy: `security-and-quality` suite, `query-filters: exclude precision:low`, `paths-ignore` incl. `tests/`. |
-| `.github/workflows/codeql.yml` | This repo's own thin caller (self-scan). |
-| `docs/handoffs/codeql-caller-template.yml` | The verbatim caller to copy into every other repo. |
+| `.github/workflows/codeql-reusable.yml` | Reusable analysis at `24f0c4db`. Language detect, `build-mode`, `actions: write` so the default-branch run can save the overlay base. |
+| `.github/codeql/codeql-config.yml` | Pull-request and default-branch suite at `52d87ce2`. No `queries`, no `query-filters`, `paths-ignore` includes tests. |
+| `.github/codeql/codeql-config-nightly.yml` | Nightly `security-extended` config at the same commit. |
+| `.github/workflows/codeql.yml` | This repo's self-scan. Local config path. Not the consumer install file. |
+| `.github/workflows/codeql-nightly.yml` | This repo's nightly self-scan. Local nightly config. |
+| `docs/handoffs/codeql-caller-template.yml` | The verbatim pull-request caller to copy into every other repo. |
+| `docs/handoffs/codeql-nightly-caller-template.yml` | The verbatim nightly caller. `security-extended`, no pull request. |
 | `docs/handoffs/CODEQL_ROLLOUT_HANDOFF.md` | This packet. |
 
 ---
 
-## Phase 0 — TODO plan (org rollout)
+## Fleet install
 
-Scope: every repo under `https://github.com/Quantum-L9/` except `Cursor-Governance` (already done). Risk: **LOW** (additive CI file; no source changes). Estimated: ~2 min/repo.
+Scope: every non-archived repo under `https://github.com/Quantum-L9/` except `Cursor-Governance`. The install replaces CodeQL. It does not add a second scanner, and it does not assume the default branch is named `main`.
+
+A CodeQL workflow is any `.github/workflows/*.yml` file that references `github/codeql-action/` or `codeql-reusable.yml`. The only two that remain are `.github/workflows/codeql.yml` and `.github/workflows/codeql-nightly.yml`.
 
 Per target repo:
-- **TODO-1** CREATE `.github/workflows/codeql.yml` = `docs/handoffs/codeql-caller-template.yml` (verbatim). Risk LOW.
-- **TODO-2** DELETE `.github/codeql/codeql-config.yml` and any standalone CodeQL workflow if present (config is centralized). Risk LOW.
-- **TODO-3** ADMIN: if the repo has CodeQL **default setup** enabled, switch it to **advanced** (see runbook) so the caller runs. Risk LOW, but **required** — default setup blocks the workflow.
-- **TODO-4** VERIFY per Phase 5. Risk LOW.
 
-The caller (copy verbatim):
+1. Read the default branch: `gh repo view Quantum-L9/<repo> --json defaultBranchRef --jq .defaultBranchRef.name`. Branch and open the pull request against that name.
+2. Inventory workflows. Write the two templates over the canonical paths.
+3. Delete every other CodeQL workflow and delete `.github/codeql/` when it exists. A leftover standalone workflow is a duplicate scan.
+4. Leave default setup off when the callers are installed. Default setup disables the workflow file and rejects later CodeQL uploads. Its stored suite on this org is `extended`, which disables overlay.
+5. Do not add these jobs to the repo's Core caller. `Analyze (central Core)` stays the required test check. CodeQL stays a separate security workflow.
 
-```yaml
-name: "CodeQL (security + code quality)"
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-    paths-ignore: ["**/*.md", "docs/**", "**/*.mdc"]
-  schedule:
-    - cron: "24 3 * * 1"
-  workflow_dispatch: {}
-permissions:
-  contents: read
-  security-events: write
-  actions: read
-jobs:
-  codeql:
-    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@main
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
-```
-
-### Sequencing (do not skip)
-Callers pin `@main`; they only resolve **after this PR merges** the reusable workflow to `Cursor-Governance@main`. Order: **(1)** merge this PR → **(2)** roll callers to other repos → **(3)** verify. (To smoke-test before merge, temporarily pin a caller to `@claude/l9-ops-mcp-proof-gates-4ak2al`, then flip back to `@main`.)
-
-### Rollout options
-- **Manual:** in each repo, add the caller file via the GitHub UI ("Add file" → commit to a branch → PR).
-- **Scripted (engineer with `gh` + write scope):** for each repo, drop the template at `.github/workflows/codeql.yml` on a branch and open a PR. Pseudocode:
-  ```
-  for repo in $(gh repo list Quantum-L9 --no-archived --json name -q '.[].name'); do
-    [ "$repo" = "Cursor-Governance" ] && continue
-    # add .github/workflows/codeql.yml (= codeql-caller-template.yml), rm local .github/codeql/, open PR
-  done
-  ```
-  (Run by a human or automated session with write access to the target repositories.)
+The pull-request template gates the job with `github.event.repository.default_branch`, so the same file works when that branch is not `main`. The nightly schedule already runs from the default branch. GitHub registers `workflow_dispatch` for a workflow only after the file is on that default branch.
 
 ---
 
@@ -102,42 +84,36 @@ Callers pin `@main`; they only resolve **after this PR merges** the reusable wor
 
 **Actions access (public repos):** none required — same-org reusable workflows are callable by default. (Only if a repo becomes private: Org → *Settings → Actions → General* and Cursor-Governance → *Settings → Actions → General → Access* → "Accessible from repositories in the organization.")
 
-**DEFERRED — enable only when chosen:**
-- **Copilot Autofix (suggestion-only):** Repo → *Settings → Code security → Code scanning → Copilot Autofix → Enable* (or org-wide via *Code security → Configurations*). Never auto-commits.
-- **Required-check ruleset (baseline-first):** Repo/Org → *Settings → Rules → Rulesets → New branch ruleset* → target `main` → enforcement **Evaluate** (observe ~1–2 weeks) → **Require status checks** → add check `codeql` → **Create**; flip to **Active** after the baseline is triaged to zero. NOTE: with the item-2 `paths-ignore`, a docs-only PR skips CodeQL — a *required* check would then hang. Before making it required, add a companion "skip-guard" workflow reporting success on the complementary paths, required by the **`codeql`** job name.
+**Not part of this install:**
+- Do not require the CodeQL check. `paths-ignore` skips docs-only pull requests, and a required check would then hang. The check also stays off the required set until a default-branch run has saved an overlay base and the job is no longer the long pole.
+- Do not enable Copilot Autofix from this packet.
 
 ---
 
-## Phase 5 — Verification ladder
+## Hosted evidence
 
-| Level | Check | Status | Confidence |
-|---|---|---|---|
-| 1 Syntax | `yaml.safe_load` on reusable wf, config, caller, template | ✅ SUCCESS | 95 |
-| 2 Structure | reusable has `on.workflow_call`; caller job is pure `uses:` + `permissions`; `security-events: write` present | ✅ SUCCESS | 92 |
-| 3 Detection logic | `detect` builder simulated on real language JSON → `python/none`; mixed & empty cases degrade correctly | ✅ SUCCESS | 90 |
-| 4 Policy | config carries `security-and-quality` + `query-filters: precision:low` + `tests/` ignore | ✅ SUCCESS | 93 |
-| 5 Runtime (end-to-end) | first Actions run invokes reusable wf, `Analyze (python)` uploads to Security tab | ⏳ PENDING (requires merge to `main` + a triggering PR/push) | n/a |
+Read from GitHub, not from the working tree alone.
 
-**Aggregate confidence (static layers 1–4): ~92/100.** Level 5 is deliberately **not claimed** — CodeQL cannot be executed without a GitHub-hosted runner; first real proof is the initial Actions run after merge. Do not report CI as passing until that run is green.
-
-### How to complete Level 5 (post-merge)
-1. After merge to `Cursor-Governance@main`, open/observe a PR in a caller repo.
-2. **Actions** tab → run **"CodeQL (security + code quality)"** shows **"Reusable workflow: Quantum-L9/Cursor-Governance/…"**; `Analyze (python)` runs with **no autobuild step**.
-3. **Security** tab → **Code scanning alerts** populated.
-4. Docs-only PR → CodeQL **skipped**; code PR → **runs**. Low-precision findings absent.
+| Evidence | Result |
+|---|---|
+| Reusable workflow `24f0c4db99ba3ba170e5f872cd1c402684e47b81` | `actions: write` is present. `actions: read` is absent. Default config is `codeql-config.yml@52d87ce2`. Action pin is `33d7b85d`. |
+| Pull-request config `52d87ce2e217c16a96f0ef131f4da097ef7cd5e2` | No `queries` key. No `query-filters` key. `paths-ignore` is present. |
+| Nightly config at that same commit | `queries: uses: security-extended`. |
+| Pull request run [44652212018](https://github.com/Quantum-L9/Cursor-Governance/actions/runs/44652212018) on `#1067` | `Setting overlay database mode to overlay with caching because we are analyzing a pull request.` Then `No overlay-base database found in cache, reverting overlay database mode to none.` `Analyze (python)` succeeded in 3m49s. The cache miss is expected until a default-branch run saves the base. |
+| Nightly execution | No hosted run. `workflow_dispatch` of `codeql-nightly.yml` returns 404 until that file is on the default branch. The schedule cannot fire before then. Do not record a nightly pass. |
 
 ---
 
 ## Phase 6 — Finalization / acceptance
 
 Rollout is complete when, for every non-archived Quantum-L9 repo:
-- [ ] `.github/workflows/codeql.yml` = the caller template (verbatim), merged to `main`.
-- [ ] No local `.github/codeql/` config remains.
-- [ ] Default setup switched to advanced (no conflict).
-- [ ] Level 5 verified once (green Actions run + Security-tab alerts).
-- [ ] Guardrails intact: no auto-commit automation added.
+- [ ] The two caller templates are the only CodeQL workflows, on the repository default branch.
+- [ ] No local `.github/codeql/` config and no standalone `github/codeql-action` workflow remains.
+- [ ] Default setup stays off.
+- [ ] A pull-request log shows overlay mode. A nightly log exists only after the nightly file has been on the default branch long enough to run.
+- [ ] CodeQL is still not a required check and not a job inside Core's required pull-request workflow.
 
-Future analysis/query/filter changes happen **once** in `Cursor-Governance/.github/codeql/codeql-config.yml` (or the reusable workflow) and propagate via `@main`.
+A later suite change is a new commit in Cursor-Governance and a new pin in both caller templates. Callers do not float on `@main`.
 
 ---
 
@@ -161,7 +137,10 @@ Future analysis/query/filter changes happen **once** in `Cursor-Governance/.gith
     ".github/workflows/codeql-reusable.yml",
     ".github/codeql/codeql-config.yml",
     ".github/workflows/codeql.yml",
+    ".github/codeql/codeql-config-nightly.yml",
+    ".github/workflows/codeql-nightly.yml",
     "docs/handoffs/codeql-caller-template.yml",
+    "docs/handoffs/codeql-nightly-caller-template.yml",
     "docs/handoffs/CODEQL_ROLLOUT_HANDOFF.md"
   ],
   "execution_tree": {
@@ -169,12 +148,12 @@ Future analysis/query/filter changes happen **once** in `Cursor-Governance/.gith
     "status": "SUCCESS_STATIC",
     "children": [
       {"node": "reusable-workflow", "status": "SUCCESS", "evidence": ["yaml_ok", "workflow_call", "per_language_build_mode"]},
-      {"node": "shared-config", "status": "SUCCESS", "evidence": ["security_and_quality", "query_filters_precision_low", "tests_ignored"]},
+      {"node": "shared-config", "status": "SUCCESS", "evidence": ["default_suite_no_queries_key", "nightly_security_extended", "tests_ignored"]},
       {"node": "caller-template", "status": "SUCCESS", "evidence": ["yaml_ok", "pure_uses_job", "security_events_write"]},
-      {"node": "runtime-analysis", "status": "PENDING", "evidence": ["requires_merge_to_main", "requires_actions_run"]}
+      {"node": "runtime-analysis", "status": "PULL_REQUEST_OVERLAY_OBSERVED", "evidence": ["actions_run_44652212018", "overlay_mode_then_cache_miss", "nightly_not_on_default_branch"]}
     ]
   },
-  "next_action": "Merge this PR to Cursor-Governance@main, then roll the caller template to all non-archived Quantum-L9 repos and complete Level 5 verification.",
+  "next_action": "After this pull request is on the default branch, the nightly workflow can run. Fleet install then replaces standalone CodeQL workflows with the two pinned callers. Do not add CodeQL to l9-ci-core.",
   "source_intent_preserved": true,
   "scope_drift_detected": false
 }
@@ -184,8 +163,7 @@ Future analysis/query/filter changes happen **once** in `Cursor-Governance/.gith
 
 ## Handoff acceptance checklist (for the receiving agent/engineer)
 
-- [ ] Read guardrails; confirm no auto-commit will be introduced.
-- [ ] Confirm this PR is merged to `Cursor-Governance@main` **first**.
-- [ ] Roll the caller template to each non-archived Quantum-L9 repo (Phase 0 TODOs).
-- [ ] Run the admin runbook (switch default→advanced) per repo.
-- [ ] Complete Level 5 verification; only then report CI green.
+- [ ] Read the ownership decision. CodeQL stays in Cursor-Governance and out of `l9-ci-core`.
+- [ ] Install the two pinned callers onto each repo's default branch, replacing standalone CodeQL workflows.
+- [ ] Leave default setup off.
+- [ ] Treat a nightly pass as unproven until a run exists after the nightly file is on the default branch.
