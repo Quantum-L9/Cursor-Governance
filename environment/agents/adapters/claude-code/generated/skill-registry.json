@@ -1,5 +1,5 @@
 {
-  "generation_id": "b44968403c169804d00937a27b95170d3bd16d72c3dcc730e3f51ca582ab34e1",
+  "generation_id": "f30de708388a5347dd335669db67c891862543fee9c7f7376408deb7a920bea7",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1427,7 +1427,7 @@
       "path": "skills/l9-repo-sync",
       "reason": "in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach",
       "skill_md": "skills/l9-repo-sync/SKILL.md",
-      "skill_sha256": "608dc41f3411264a1e190faee7b44fc26a14f2ac427b92a18ee101f84b1bb991",
+      "skill_sha256": "bbd4058e5e28f93ff94cbfbd782115dcdbd526561632d084aa046eb4111c8fd0",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1577,5 +1577,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "0cfc1ca9eca7517332b01ad272c4805734be5f748919dc1bf8cb67acce34a5c7",
-  "source_skill_corpus_sha256": "088fdc7f5cd943e9ec69bac76ae881841b565c65ddcd46f27130609cbfd280fd"
+  "source_skill_corpus_sha256": "b92f956a9df3a82626c7a7b88196b6121074a6953002806979b49489caaaf5f5"
 }
