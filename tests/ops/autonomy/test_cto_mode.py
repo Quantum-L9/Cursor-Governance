@@ -590,7 +590,12 @@ def test_children_bootstrap_on_the_one_path_the_cto_uses() -> None:
     assert "there is one bootstrap path and no other" in text
     assert "never mid-lane" in text
     assert "never work around it" in text
-    for gone in ("l9-materialize-governance", "DEGRADED", 'ff.sh" --ssot', "Quantum-L9/Cursor-Governance (access"):
+    for gone in (
+        "l9-materialize-governance",
+        "DEGRADED",
+        'ff.sh" --ssot',
+        "Quantum-L9/Cursor-Governance (access",
+    ):
         assert gone not in text, gone
 
 

@@ -264,7 +264,7 @@ CHILD_PROMPT_REQUIRED = (
 )
 CHILD_PROMPT_FORBIDDEN = ("send_message", "SendMessage")
 # A child-only bootstrap step is a second bootstrap path; the prompt may never carry one.
-CHILD_PROMPT_BOOTSTRAP_FORBIDDEN = ("l9-materialize-governance", "web/setup.sh\" ", "DEGRADED")
+CHILD_PROMPT_BOOTSTRAP_FORBIDDEN = ("l9-materialize-governance", 'web/setup.sh" ', "DEGRADED")
 
 
 def check_child_system_prompt(template: Any) -> None:
