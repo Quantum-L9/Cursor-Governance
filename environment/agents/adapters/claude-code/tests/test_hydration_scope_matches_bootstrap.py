@@ -92,3 +92,36 @@ def test_bootstrap_reports_exactly_the_hydrated_roots(
     reported = nc.resolve_workspace_namespaces(container, cap=2)
     assert [root for root, _ in reported.namespaces] == hydrated
     assert [ns for _, ns in reported.namespaces] == ["cursor-governance", "l9-ci-core"]
+
+
+def test_the_hydration_cap_is_the_shared_default_and_not_six() -> None:
+    """One source for the cap (operator decision 2026-11-20: raise it to 20)."""
+    from ops.scripts.lib.workspace_roots import DEFAULT_MAX_ROOTS
+
+    prefetch = _prefetch()
+    assert prefetch._MAX_HYDRATION_ROOTS == DEFAULT_MAX_ROOTS == 20
+
+
+def test_eight_repositories_are_all_in_scope(tmp_path: Path) -> None:
+    """The operator's required set fits under the cap; none is left out."""
+    for name, remote in (
+        ("dot-github", "https://github.com/Quantum-L9/.github"),
+        ("Cognitive.Engine.Graphs", "https://github.com/Quantum-L9/Cognitive.Engine.Graphs"),
+        ("Cursor-Governance", "https://github.com/Quantum-L9/Cursor-Governance"),
+        (
+            "Enrichment.Inference.Engine",
+            "https://github.com/Quantum-L9/Enrichment.Inference.Engine",
+        ),
+        ("IB-Odoo_19", "https://github.com/cryptoxdog/IB-Odoo_19"),
+        ("l9-graphiti-memory", "https://github.com/Quantum-L9/l9-graphiti-memory"),
+        ("l9-repo-template", "https://github.com/Quantum-L9/l9-repo-template"),
+        (
+            "l9-semantic-compiler-engine",
+            "https://github.com/Quantum-L9/l9-semantic-compiler-engine",
+        ),
+    ):
+        _repo(tmp_path / name, remote)
+    prefetch = _prefetch()
+    selection = prefetch._hydration_selection(tmp_path)
+    assert len(selection.selected) == 8
+    assert [why for _, why in selection.dropped] == []
