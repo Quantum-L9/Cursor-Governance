@@ -7,9 +7,9 @@
 # status: active
 # --- /L9_META ---
 #
-# Thin caller -> the org-wide reusable CodeQL workflow. This is the ONLY CodeQL
-# file a repo needs; analysis logic + query policy live centrally in
-# Quantum-L9/Cursor-Governance. This copy self-scans Cursor-Governance itself.
+# Thin caller -> the org-wide reusable CodeQL workflow. Analysis for pull
+# requests and pushes to main uses the default suite (see codeql-config.yml).
+# security-extended is codeql-nightly.yml and does not run on pull requests.
 
 name: "CodeQL (security + code quality)"
 
@@ -22,8 +22,6 @@ on:
       - "**/*.md"
       - "docs/**"
       - "**/*.mdc"
-  schedule:
-    - cron: "24 3 * * 1"     # weekly, Monday 03:24 UTC
   workflow_dispatch: {}
 
 # Cancel a superseded run of the same PR (saves CI minutes on rapid pushes).
@@ -36,19 +34,16 @@ concurrency:
 permissions:
   contents: read
   security-events: write
-  actions: read
+  actions: write
 
 jobs:
   codeql:
-    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@a01485a4a3c16a8c78012b15d2a11d48e1836ed1  # CodeQL init+analyze v4.37.9
+    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@24f0c4db99ba3ba170e5f872cd1c402684e47b81  # actions: write; default suite; action v4.39.3
     with:
-      # Override the reusable workflow's remote @main default: this repo IS
-      # Cursor-Governance, so the config file already sits in the checked-out
-      # tree at any ref (PR branch, push, or main). A local path resolves
-      # against the workspace instead of fetching a remote ref via the
-      # Contents API -- avoids a 404 on PRs before this file exists on main.
+      # This repo's checkout config. A local path is the file on the commit
+      # being analyzed, so a pull request previews its own default-suite config.
       config-file: ./.github/codeql/codeql-config.yml
     permissions:
       contents: read
       security-events: write
-      actions: read
+      actions: write
