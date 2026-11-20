@@ -125,6 +125,57 @@ def test_modes_keep_separate_state(tmp_path: Path) -> None:
     assert coding_agent_mode.release(tmp_path) is True
 
 
+def _git_init(path: Path) -> Path:
+    subprocess.run(["git", "init", "-q", str(path)], check=True)
+    return path
+
+
+def test_request_keeps_the_state_file_out_of_git_status(tmp_path: Path) -> None:
+    """A lane repository attached mid-session is never wired by the installer,
+    so the mode writer itself must keep its state file out of the checkout."""
+    repo = _git_init(tmp_path / "lane")
+    coding_agent_mode.request(repo, session_id=SID)
+    assert (repo / ".l9/coding-agent-mode/session.json").is_file()
+    status = subprocess.run(
+        ["git", "-C", str(repo), "status", "--porcelain", "--untracked-files=all"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert status == ""
+    exclude = (repo / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+    assert projection_mode.STATE_GIT_EXCLUDE in exclude.splitlines()
+    assert not (repo / ".gitignore").exists()
+
+
+def test_request_adds_the_exclude_once_and_keeps_existing_entries(tmp_path: Path) -> None:
+    repo = _git_init(tmp_path / "lane")
+    exclude = repo / ".git" / "info" / "exclude"
+    exclude.write_text("# local\nbuild/", encoding="utf-8")
+    coding_agent_mode.request(repo, session_id=SID)
+    coding_agent_mode.request(repo, session_id=SID)
+    lines = exclude.read_text(encoding="utf-8").splitlines()
+    assert lines == ["# local", "build/", projection_mode.STATE_GIT_EXCLUDE]
+
+
+def test_request_outside_a_git_checkout_still_writes_state(tmp_path: Path) -> None:
+    coding_agent_mode.request(tmp_path, session_id=SID)
+    assert (tmp_path / ".l9/coding-agent-mode/session.json").is_file()
+    assert not (tmp_path / ".git").exists()
+
+
+def test_state_exclude_matches_the_session_exclude_list() -> None:
+    """One pattern, two writers: the Python constant and the shell list must agree."""
+    lib = REPO / "ops" / "scripts" / "lib" / "session_git_excludes.sh"
+    out = subprocess.run(
+        ["bash", "-c", f'source "{lib}"; session_shared_exclude_globs'],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    assert projection_mode.STATE_GIT_EXCLUDE in out
+
+
 def test_command_is_registered() -> None:
     manifest = yaml.safe_load((REPO / "commands/COMMANDS_MANIFEST.yaml").read_text())
     assert {"slash": "/coding-agent", "file": "commands/coding-agent.md", "enabled": True} in (

@@ -39,6 +39,54 @@ except ImportError:  # pragma: no cover - interpreter without PyYAML
 
 REPO = Path(__file__).resolve().parents[2]
 
+#: The local-only exclude pattern for every mode's state file
+#: (``.l9/<name>-mode/session.json``). It is the same entry the session list in
+#: ``ops/scripts/lib/session_git_excludes.sh`` carries; a test pins the two
+#: together so they cannot drift.
+STATE_GIT_EXCLUDE = "/.l9/"
+
+
+def _ensure_state_git_exclude(workspace: Path) -> None:
+    """Keep the mode state file out of ``git status`` in ``workspace``.
+
+    The adapter installer writes ``/.l9/`` into ``.git/info/exclude`` when it
+    wires a workspace, but a repository a swarm child attaches mid-session with
+    ``add_repo`` is cloned after setup and SessionStart have run, so nothing
+    wires it and the first mode request left untracked state in the lane
+    checkout. The writer of the file closes that gap itself.
+
+    Local only: ``info/exclude`` is never committed, and a tracked
+    ``.gitignore`` is never touched (Option A, forbidden by Cursor-Governance
+    #281). Best-effort: a workspace that is not a git checkout, or an exclude
+    file that cannot be written, leaves the mode request itself unaffected.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(workspace), "rev-parse", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return
+    common = Path(proc.stdout.strip())
+    if not common.is_absolute():
+        common = workspace / common
+    exclude = common / "info" / "exclude"
+    try:
+        existing = exclude.read_text(encoding="utf-8") if exclude.is_file() else ""
+        if STATE_GIT_EXCLUDE in (line.strip() for line in existing.splitlines()):
+            return
+        exclude.parent.mkdir(parents=True, exist_ok=True)
+        prefix = "" if not existing or existing.endswith("\n") else "\n"
+        with exclude.open("a", encoding="utf-8") as handle:
+            handle.write(f"{prefix}{STATE_GIT_EXCLUDE}\n")
+    except OSError:
+        return
+
 
 def _organization_policy(role: str) -> dict[str, Any]:
     """Same .github pin for every mode. A failure here does not change mode admission."""
@@ -608,6 +656,7 @@ class ProjectionMode:
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         tmp.replace(path)
+        _ensure_state_git_exclude(workspace)
         return path
 
     def record_outcome(
