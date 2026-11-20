@@ -1,0 +1,940 @@
+audit_status: Succeeded
+readiness_status: Ready
+convergence_status: Converged
+target_binding:
+  release_unit: Revised campaign handoff ZIP only
+  result_version: 1.7.0
+  assessment_scope_note: All statuses and scores concern the complete revised document/patch package. They do not
+    certify live repositories, vendor accounts, runtime behavior, admission or deployment.
+  source_archive:
+    name: L9_CI_Unified_Leverage_Campaign_v1.6.0.zip
+    workspace_path: /workspace/scratch/467f23dd5be5/source/chat_files/74cb0122ae4d1e7ddde16fd69898f1b927bf64afb0e91583f99badd11ccc4e1a/L9_CI_Unified_Leverage_Campaign_v1.6.0.zip
+    sha256: f7a2e7b6e40e0ae909ba129327954eb3138670bd8c9b56a0ff0fd6bd46be6e03
+    bytes: 90988
+    library_file_id: libfile_b4223d2181d08191bfe77addd8cae56e
+    file_id: file_00000000248081f595d7b6bb410e4282
+    entries: 24
+  source_root: /workspace/scratch/467f23dd5be5/baseline/L9_CI_Unified_Leverage_Campaign_v1.6.0
+  result_root: /workspace/scratch/467f23dd5be5/revised/L9_CI_Unified_Leverage_Campaign_v1.7.0
+  result_archive_name: L9_CI_Unified_Leverage_Campaign_v1.7.0.zip
+  artifact_types:
+  - Markdown campaign contracts/runbooks
+  - YAML invariant proposal
+  - unified-diff proposals
+  - integrity manifest
+  - YAML audit
+  kernel:
+    name: recursive_architecture_alignment_auditor
+    version: '1.0'
+    original_name: Recursive Alignment(20261120-035803).md
+    sha256: ce9f7d2face6e7007c27313cbc885a5d11df85335877851e60ddb87b84adb639
+    included_as: audit/RECURSIVE_ALIGNMENT_KERNEL.md
+    preserved_unchanged: true
+  result_identity: Final ZIP digest is reported with delivery; per-file SHA256SUMS binds payload. Report and manifest
+    omit self-referential hashes.
+authorized_scope:
+  inspection: All 24 original ZIP entries and every revised/added payload.
+  correction: Implement pack corrections and emit a separate revised ZIP.
+  authorization: 'User: Point this kernel at the zip; emit the revised aligned zip.'
+  execution_boundary: No authority to execute the campaign follows from this pack-revision request.
+excluded_scope:
+- Live repository/branch mutations, PR publication, merges and deployment
+- Running product tests or CI/scanners
+- Vendor account, billing, authentication and configuration changes
+- Harvesting real customer production data or credentials
+- Fresh L9 authority admission or policy creation
+- Current public vendor feature/pricing verification; inherited examples remain snapshot inputs
+source_authority_used:
+- source: Explicit current user request
+  precedence: 1
+  scope: Target and permission to revise/emit the pack
+  conflicts: []
+- source: Supplied Recursive Alignment kernel v1.0
+  precedence: 2
+  scope: Audit method, evidence, finding schema and output contract
+  sha256: ce9f7d2face6e7007c27313cbc885a5d11df85335877851e60ddb87b84adb639
+  conflicts: []
+- source: Exact v1.6.0 pack CAMPAIGN/ADRS/INVARIANTS/native-owner contracts
+  precedence: 3
+  scope: Frozen design constraints for internal consistency; proposals remain proposals
+  sha256_of_container: f7a2e7b6e40e0ae909ba129327954eb3138670bd8c9b56a0ff0fd6bd46be6e03
+  conflicts: Five internal inconsistencies resolved below.
+- source: Historical external source/run/vendor references embedded in v1.6.0
+  precedence: 4
+  scope: Historical evidence and future verification inputs only
+  current_authority_status: Unknown; no current canonical receipt fabricated
+architecture_adapters:
+- identifier: campaign_pack_consistency
+  name: L9 CI campaign supplied-contract adapter
+  version: v1.6.0 exact archive
+  status: Applied
+  governing_source:
+  - CAMPAIGN.md
+  - ADRS.md
+  - INVARIANTS.yaml
+  - native-owner acceptance documents
+  applicable_scope: Campaign text, proposed ADRs, invariant map and patch representations.
+  mandatory_rules:
+  - Preserve frozen owner decisions and eleven statements
+  - Distinguish proposal/admission/execution
+  - Targeted harvest; Cursor first canary; parity before cleanup
+  prohibited_patterns:
+  - New global law or parallel orchestrator
+  - Native ownership transfer by packaging
+  - False execution/admission/entitlement claims
+  ownership_rules: Core orchestrates; SDK implements facts/providers; native/product owners retain their semantics
+    and trust boundaries.
+  communication_and_integration_rules: Revision-bound observations flow to existing evidence routes; native execution
+    is not impersonated.
+  schema_and_naming_rules: Preserve exact invariant IDs/statements and candidate status; use existing contracts,
+    no new runtime state algebra.
+  security_and_observability_rules: No secret/customer-data harvest; explicit Unknown/failure; native privileges
+    separated.
+  validation_methods:
+  - Full artifact review
+  - Independent specialist convergence review
+  - YAML/patch/statement consistency
+  - Integrity and archive checks
+  release_blocking_policy: Kernel severity/readiness rules applied to package handoff; live execution blockers remain
+    in PROOF.
+  precedence: Supplied user/kernel rules first; live canonical law must be resolved before campaign execution.
+normalized_context:
+  purpose: Executable planning handoff for central CI governance, selective upstream configuration harvest and verified
+    native-tool value.
+  intended_consumer: Authorized CTO/LCTO executor after live Stage 0 binding
+  mode: Implementation-authorized for pack only
+  live_campaign_state: Unknown / not executed by this task
+  preserved:
+    exact_invariants: 11
+    proposed_adrs: 3
+    byte_identical_patch_files: 3
+    current_CodeQL_owner: Cursor-Governance
+    first_integrated_consumer: Cursor-Governance
+artifact_inventory:
+  source_entries: 24
+  result_entries: 26
+  coverage: Complete package inspection
+  files:
+  - path: ADRS.md
+    kind: campaign_document_or_candidate
+    bytes: 6892
+    sha256: 86e6ac164d398b5507bcec8f3b033bdc8981f42e65dbd04927ee73913d5c25d0
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: BASELINE.md
+    kind: campaign_document_or_candidate
+    bytes: 11699
+    sha256: b06d537dc23dbc36fa33dfaf5e57b829c1f887adcbb424945440cdf5a7fa5d09
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: CAMPAIGN.md
+    kind: campaign_document_or_candidate
+    bytes: 20689
+    sha256: a807c6f9b81bb2530b558ede0a948e9960c58f947d24b71b6c5ce4deba3174a1
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: CODEQL_SONAR_LEVERAGE.md
+    kind: campaign_document_or_candidate
+    bytes: 18819
+    sha256: 5de1ae57f0276d0aea2c6f1f454a51e92700bfc685efd749b9232eca592f5882
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: CODERABBIT_ACTIVATION.md
+    kind: campaign_document_or_candidate
+    bytes: 8768
+    sha256: 7119c0f025b82e5cc5ee41baa064decde3a80b3ffe391d3635f17a86823541d0
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: CURSOR_CANARY.md
+    kind: campaign_document_or_candidate
+    bytes: 6587
+    sha256: 12c441e376996cae080696023d3053bb63d4c4f272998c929f0a49091e068a66
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: G0_OTHER_VENDOR_CHECK.md
+    kind: campaign_document_or_candidate
+    bytes: 3237
+    sha256: ce530c8302455ce70e55bbecb505a859eeb037deb5926be4632e6c67a267e5bc
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: HARVEST.md
+    kind: campaign_document_or_candidate
+    bytes: 12003
+    sha256: 31e86eb234af834d008dca5cc6a4dd452fa5bc02f33b891e32c75c6a5baf4672
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: INVARIANTS.md
+    kind: campaign_document_or_candidate
+    bytes: 10605
+    sha256: db72a3faf907f03150e1466e89f9bb0d1678c66091fdadb9d08880e7491b50b6
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: INVARIANTS.yaml
+    kind: campaign_document_or_candidate
+    bytes: 11452
+    sha256: 1134d6bb2c82f8a5a373a85b819d9f7535d4b87bb2b94c335f2d5126b421f779
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: OPERATOR_VERIFY_FIRST.md
+    kind: campaign_document_or_candidate
+    bytes: 9612
+    sha256: 56af858875a0c4aea20b19352ca2e5e35d7a0b9282b0809d77c3bf62fdd5eb76
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: OTHER_TOOLS_EVIDENCE.md
+    kind: campaign_document_or_candidate
+    bytes: 13034
+    sha256: 631254dc4a371cecb1bb269ae0e1f7ea0de51698a7f6516320164ab61a62b76b
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: OTHER_TOOLS_EXECUTION.md
+    kind: campaign_document_or_candidate
+    bytes: 11580
+    sha256: cdbe749669cbe069e01bff8a7f72ea6c2c6e13e79ebe679419b8bf508f4a7d9e
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: PROOF.md
+    kind: campaign_document_or_candidate
+    bytes: 17062
+    sha256: 800c931d004be14b0b755e2a5bda26d4c724eb147f0ffdacb5eb423c2b8a002d
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: README.md
+    kind: campaign_document_or_candidate
+    bytes: 11280
+    sha256: e0dfe7110a6bc03a691d50f2278cf4d66dc5693abb8a5b4583207bfde121010c
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: SHA256SUMS
+    kind: generated_integrity_manifest
+    inspection: Regenerated after all payload changes; excludes itself.
+  - path: TOOL_VALUE.md
+    kind: campaign_document_or_candidate
+    bytes: 9327
+    sha256: 9b33aa5776637014ecc21178587f91839f6172fa3ede9798a0a8d16aed074f82
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: audit/ALIGNMENT.yaml
+    kind: generated_audit
+    inspection: Generated and validated against kernel output fields; checksum bound by SHA256SUMS.
+  - path: audit/RECURSIVE_ALIGNMENT_KERNEL.md
+    kind: audit_kernel
+    bytes: 45945
+    sha256: ce9f7d2face6e7007c27313cbc885a5d11df85335877851e60ddb87b84adb639
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: candidates/adr/l9-ci-core/docs/adr/0001-top-down-ci-control-and-runtime-inheritance.md
+    kind: campaign_document_or_candidate
+    bytes: 7839
+    sha256: 2ea6191ea47100dff85628599c69212f8176e5620a91e940529bdc9b46df806a
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: candidates/adr/l9-ci-core/docs/adr/0002-governed-promotion-native-provider-boundaries-and-cost.md
+    kind: campaign_document_or_candidate
+    bytes: 5985
+    sha256: bbef7f46b0e69afaef2d912992075b3c457135b50367d5608671ada7f85a235b
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: candidates/adr/l9-ci-core/docs/adr/README.md
+    kind: campaign_document_or_candidate
+    bytes: 719
+    sha256: c5f1eb5425fc2239f87546cdecd2fc89472d48dc900faa12849db52092574da7
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: candidates/adr/l9-ci-sdk/docs/adr/0020-all-applicable-capabilities-and-lossless-provider-evidence.md
+    kind: campaign_document_or_candidate
+    bytes: 7049
+    sha256: 8947dee28188b8e73ffb4125558b35a9dfd0c40c956acace48b51ba22d679284
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: candidates/core-governance-contract.patch
+    kind: proposal_patch
+    bytes: 2560
+    sha256: f29a042125d86f695eb2cfe33c6872dfbe5851b5ae9329e0c815e1d0015a767a
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: candidates/sdk-adr-index.patch
+    kind: proposal_patch
+    bytes: 771
+    sha256: 5c536210ad54cab96e7b3431320a0d630bda362a706d99c5cd7e1dafcd4676c8
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  - path: candidates/sdk-integration-contract.patch
+    kind: proposal_patch
+    bytes: 2210
+    sha256: f20f01cf2335de33168ae444eb8094b45e3e86ff5f191f992e1bdcf0a67d80b7
+    inspection: Read and reconciled; immutable carryovers also compared to source.
+  modified_original_payloads:
+  - ADRS.md
+  - BASELINE.md
+  - CAMPAIGN.md
+  - CODEQL_SONAR_LEVERAGE.md
+  - CURSOR_CANARY.md
+  - G0_OTHER_VENDOR_CHECK.md
+  - HARVEST.md
+  - INVARIANTS.md
+  - OPERATOR_VERIFY_FIRST.md
+  - OTHER_TOOLS_EVIDENCE.md
+  - OTHER_TOOLS_EXECUTION.md
+  - PROOF.md
+  - README.md
+  - TOOL_VALUE.md
+  - candidates/adr/l9-ci-core/docs/adr/0001-top-down-ci-control-and-runtime-inheritance.md
+  added:
+  - audit/ALIGNMENT.yaml
+  - audit/RECURSIVE_ALIGNMENT_KERNEL.md
+  generated:
+  - SHA256SUMS
+  - audit/ALIGNMENT.yaml
+  removed: []
+boundary_map:
+- component: .github
+  responsibility: Global semantics/rulesets plus existing CodeRabbit/Dependabot sources/generators; no new CI orchestrator.
+  path: Canonical source -> generated native configuration -> effective native consumer; generated copies do not
+    acquire authority.
+- component: Core
+  responsibility: Required runtime orchestration, versions, profiles, permissions, requiredness, promotion and rollback.
+  path: Org ruleset -> Core required workflow -> admitted SDK/provider/native contracts.
+- component: SDK
+  responsibility: Capability facts, admitted CLI execution, rulepack composition, normalization and technical observations.
+  path: Pinned config/provider -> native facts -> canonical evidence; not final Assurance.
+- component: Native owners
+  responsibility: Cursor native CodeQL; Sonar/CodeRabbit/Codecov/GitGuardian account/project settings and accepted
+    outcomes.
+  path: Existing native source/account -> authorized native execution -> exact-run observation; no privileged-token
+    transfer to untrusted Core PR job.
+- component: Products/consumers
+  responsibility: Domain rules, tests, source/build/type facts, project identity and justified scoped exceptions.
+  path: Donor delta -> owner admission -> effective scoped config; no weakening central baseline.
+- component: Validation/Assurance
+  responsibility: Owner tests, promoted real Cursor then secondary/fleet proof; final Assurance only where separately
+    integrated.
+  path: PROOF/CURSOR_CANARY receipts -> declared scope-specific outcome; package checks are not runtime receipts.
+alignment_summary:
+  resolved_findings: 5
+  open_pack_findings: 0
+  critical: 0
+  high: 0
+  medium_resolved: 5
+  position: Ready to hand off the corrected pack. Live campaign readiness remains Unknown.
+  not_performed:
+  - Donor harvesting
+  - Upstream PRs/promotion
+  - Vendor/account changes
+  - Product runtime tests
+  - Live canary/fleet rollout
+alignment_score:
+  weighted_overall: 100
+  maximum: 100
+  method: Each domain uses two explicit document-level obligations, 50 points each. All were satisfied after corrections;
+    weighted sum / 100. This is bounded checklist closure, not a quality probability.
+  domains:
+  - domain: intent_and_scope
+    weight: 10
+    score: 100
+    status: Passed
+    satisfied_obligations: &id001
+    - ALIGNED_PACKAGE_ONLY
+    - BOUNDED_HARVEST
+    evidence: &id002
+    - README.md v1.7.0 revision/Mission
+    - HARVEST.md Scope
+    - CAMPAIGN.md A/B
+  - domain: communication_contracts
+    weight: 10
+    score: 100
+    status: Passed
+    satisfied_obligations: &id003
+    - EXACT_PROPOSAL_PARITY
+    - REVISION_LINEAGE
+    evidence: &id004
+    - INVARIANTS.yaml
+    - PROOF.md P2/P8/P9
+    - HARVEST.md evidence row
+  - domain: routing_and_integration
+    weight: 10
+    score: 100
+    status: Passed
+    satisfied_obligations: &id005
+    - EXISTING_OWNER_ROUTE
+    - PROMOTION_BEFORE_CLEANUP
+    evidence: &id006
+    - HARVEST.md owner table/closure
+    - CAMPAIGN.md Stage 0H/Lanes 1-3
+  - domain: ownership_and_authority
+    weight: 15
+    score: 100
+    status: Passed
+    satisfied_obligations: &id007
+    - NATIVE_EXCEPTIONS
+    - PROPOSED_NOT_ADMITTED
+    evidence: &id008
+    - ADRS.md
+    - INVARIANTS.md Applicability
+    - Core ADR 0001 Decisions 3/6
+  - domain: structure_and_source_of_truth
+    weight: 10
+    score: 100
+    status: Passed
+    satisfied_obligations: &id009
+    - COMPLETE_INVENTORY
+    - CANONICAL_VS_DERIVED
+    evidence: &id010
+    - SHA256SUMS
+    - HARVEST.md generator lineage
+    - audit/RECURSIVE_ALIGNMENT_KERNEL.md
+  - domain: schema_and_configuration
+    weight: 10
+    score: 100
+    status: Passed
+    satisfied_obligations: &id011
+    - YAML_AND_PATCH_PARITY
+    - EFFECTIVE_CONFIG_PROOF
+    evidence: &id012
+    - INVARIANTS.yaml
+    - candidates/*.patch
+    - HARVEST.md ledger
+  - domain: security
+    weight: 15
+    score: 100
+    status: Passed
+    satisfied_obligations: &id013
+    - NO_SECRET_HARVEST
+    - NATIVE_TRUST_PRESERVED
+    evidence: &id014
+    - HARVEST.md Scope
+    - OPERATOR_VERIFY_FIRST.md
+    - Core ADR 0002 Decision 3
+  - domain: reliability_and_observability
+    weight: 10
+    score: 100
+    status: Passed
+    satisfied_obligations: &id015
+    - TRUTHFUL_OUTCOME
+    - SCOPED_ROLLBACK
+    evidence: &id016
+    - PROOF.md P7/P14
+    - OTHER_TOOLS_EVIDENCE.md coordinate limits
+    - OTHER_TOOLS_EXECUTION.md F1
+  - domain: testing_and_validation
+    weight: 10
+    score: 100
+    status: Passed
+    satisfied_obligations: &id017
+    - REQUIRED_BEHAVIOR_WITNESSES
+    - STATIC_VS_RUNTIME_DISTINCT
+    evidence: &id018
+    - PROOF.md
+    - CURSOR_CANARY.md
+    - static validation results below
+  excluded_domains: []
+  unknown_domains_within_target: []
+  unscored_external_domains:
+  - Current authority/admission
+  - Runtime scanner/canary/fleet behavior
+  - Native account/entitlement state
+  warning: Score cannot override any release blocker and does not certify uninspected external systems.
+critical_violations: []
+high_violations: []
+medium_violations:
+- id: ALIGN-001
+  title: Harvest discovery outgrew its SDK-only delivery contract
+  severity: Medium
+  confidence: Confirmed
+  governing_rule:
+  - ownership_and_authority
+  - configuration_and_source_of_truth
+  - correction_roadmap_actionable
+  rule_source: audit/RECURSIVE_ALIGNMENT_KERNEL.md and frozen campaign constraints
+  affected_artifacts: &id021
+  - HARVEST.md
+  - CAMPAIGN.md
+  - PROOF.md
+  - README.md
+  - ADRS.md
+  - OTHER_TOOLS_EXECUTION.md
+  - TOOL_VALUE.md
+  direct_evidence:
+  - 'v1.6.0 HARVEST.md: Source-owner deliverable routes output through SDK/Semgrep although census includes Sonar/CodeQL.'
+  - 'v1.6.0 CAMPAIGN.md: Stage 0H identifies harvest as input to Lane 1 only.'
+  - v1.6.0 CODEQL_SONAR_LEVERAGE.md and CODERABBIT_ACTIVATION.md preserve distinct native owners.
+  observed_behavior: Cross-tool inventory could close as an SDK rule list or route native settings to the wrong
+    source.
+  expected_behavior: Every actual delta has an existing owner, upstream delivery path and effective-behavior proof.
+  impact: Incomplete upstream delivery or native ownership drift.
+  root_cause: Harvest closure remained Semgrep-specific after the campaign included other native configuration.
+  smallest_safe_correction: Expanded HARVEST into a cross-tool owner/delivery ledger and bound campaign lanes, proof,
+    retained semantics and rollback.
+  owning_component: Campaign document owner
+  dependencies: []
+  blocks_release: false
+  release_note: Not a Critical/High live release finding; correction required before declaring this document handoff
+    aligned.
+  required_closing_validation: &id022
+  - Trace SDK rule, Core profile, native CodeQL, CodeRabbit generator and retained product delta through owner ->
+    delivery -> promotion -> effective config -> parity.
+  - Independent harvest reviewer closed HBR-01; no invented delta required where no customization exists.
+  status: Resolved
+  implementation_scope: Pack text only
+  review_aliases:
+  - HBR-01
+- id: ALIGN-002
+  title: Centralization shorthand conflicted with preserved native contracts
+  severity: Medium
+  confidence: Confirmed
+  governing_rule:
+  - intent_and_scope
+  - ownership_and_authority
+  - structure_and_artifact_placement
+  - source_of_truth_aligned
+  rule_source: audit/RECURSIVE_ALIGNMENT_KERNEL.md and frozen campaign constraints
+  affected_artifacts: &id019
+  - README.md
+  - CAMPAIGN.md
+  - ADRS.md
+  - INVARIANTS.md
+  - PROOF.md
+  - HARVEST.md
+  - candidates/adr/l9-ci-core/docs/adr/0001-top-down-ci-control-and-runtime-inheritance.md
+  direct_evidence:
+  - v1.6.0 CAMPAIGN.md A.1 and PROOF.md P4 make unqualified no-config/no-pin promises.
+  - v1.6.0 ADRS.md Explicit rejects bans all consumer workflow/template distribution.
+  - v1.6.0 CODEQL_SONAR_LEVERAGE.md A.6 retains thin caller SHA pins and updates.
+  - v1.6.0 CAMPAIGN.md B excludes .github generators that CodeRabbit/Dependabot contracts retain.
+  observed_behavior: Accepted native callers/generators could appear both required and prohibited.
+  expected_behavior: Core/SDK inheritance is scoped; existing native sources, generators, callers and identities
+    stay explicit.
+  impact: Wrongful removal/relocation or false zero-repin completion.
+  root_cause: Absolute shorthand was not qualified after native exceptions were recorded.
+  smallest_safe_correction: Clarified applicability across campaign, invariant map and Core ADR 0001; included existing
+    .github native generators. Exact invariant statements and patches preserved.
+  owning_component: Campaign and proposed ADR author
+  dependencies: []
+  blocks_release: false
+  release_note: Not a Critical/High live release finding; correction required before declaring this document handoff
+    aligned.
+  required_closing_validation: &id020
+  - Read linked native scope statements together; no Core/SDK pin override is allowed.
+  - Compare all eleven exact statements/witnesses and all three patch files to source.
+  - Independent contract and harvest reviewers closed CTR-01, HBR-02 and HBR-03.
+  status: Resolved
+  implementation_scope: Pack text only
+  review_aliases:
+  - CTR-01
+  - HBR-02
+  - HBR-03
+- id: ALIGN-003
+  title: G0 scope and startup wording contradicted independent authorized work
+  severity: Medium
+  confidence: Confirmed
+  governing_rule:
+  - intent_and_scope
+  - ownership_and_authority
+  - observability_and_auditability
+  - correction_roadmap_actionable
+  rule_source: audit/RECURSIVE_ALIGNMENT_KERNEL.md and frozen campaign constraints
+  affected_artifacts: &id023
+  - OPERATOR_VERIFY_FIRST.md
+  - G0_OTHER_VENDOR_CHECK.md
+  - OTHER_TOOLS_EXECUTION.md
+  - CODEQL_SONAR_LEVERAGE.md
+  - README.md
+  - PROOF.md
+  direct_evidence:
+  - v1.6.0 OPERATOR_VERIFY_FIRST.md prohibits all file changes/tests during G0 while allowing independent Core/SDK
+    engineering.
+  - v1.6.0 G0_OTHER_VENDOR_CHECK.md supplies another first-words script claiming current inspection already occurred.
+  - v1.6.0 OTHER_TOOLS_EXECUTION.md says all mutations are PR-only despite native account changes.
+  - Convergence review found residual PROOF approval-after-G0 wording; corrected before release.
+  observed_behavior: G0 could freeze unrelated validation, require duplicate approval, or imply an inspection not
+    performed.
+  expected_behavior: G0 activity stays read-only; independent authorized work continues, native changes occur only
+    after G0 under applicable specific authorization.
+  impact: Execution friction, incorrect permission interpretation and false observation claims.
+  root_cause: Lane-specific verification rules and startup prose were expressed as universal rules.
+  smallest_safe_correction: Scoped G0, retained one startup sequence, distinguished repository PRs/native changes
+    and honored authorization already supplied for the same action.
+  owning_component: Campaign operator instructions
+  dependencies: []
+  blocks_release: false
+  release_note: Not a Critical/High live release finding; correction required before declaring this document handoff
+    aligned.
+  required_closing_validation: &id024
+  - 'Manual scenario review: G0 cannot mutate/scan; independent authorized SDK tests permitted; native Sonar change
+    during G0 prohibited; reading historical pack cannot claim live inspection.'
+  - Final approval wording requires change after G0, not a redundant new authorization timestamp.
+  status: Resolved
+  implementation_scope: Pack text only
+  review_aliases:
+  - EE-01
+- id: ALIGN-004
+  title: Historical source and hosted-run binding was overstated
+  severity: Medium
+  confidence: Confirmed
+  governing_rule:
+  - target_contract.binding_rules
+  - communication_contracts
+  - observability_and_auditability
+  - findings_evidence_backed
+  rule_source: audit/RECURSIVE_ALIGNMENT_KERNEL.md and frozen campaign constraints
+  affected_artifacts: &id025
+  - OTHER_TOOLS_EVIDENCE.md
+  - CODEQL_SONAR_LEVERAGE.md
+  - BASELINE.md
+  - PROOF.md
+  - TOOL_VALUE.md
+  direct_evidence:
+  - v1.6.0 OTHER_TOOLS_EVIDENCE.md Confidence claims exact PR-head grounding while CEG/EIE run anchors omit evaluated
+    heads/actions.
+  - v1.6.0 CODEQL_SONAR_LEVERAGE.md combines source snapshots and PR run links without every analyzed checkout coordinate.
+  observed_behavior: Default source snapshots could be mistaken for code used by hosted runs.
+  expected_behavior: Inspected source, PR head, analyzed checkout and resolved workflow/action remain distinct;
+    absent bindings are Unknown.
+  impact: Unsupported causal attribution or fixing a later action rather than the failing revision.
+  root_cause: Evidence summary overstated what was preserved inside the artifact.
+  smallest_safe_correction: Added explicit coordinate-limit table, preserved historical observations, required narrow
+    rebinding before affected correction; marked vendor feature/pricing examples as snapshot inputs.
+  owning_component: Campaign evidence author
+  dependencies: []
+  blocks_release: false
+  release_note: Not a Critical/High live release finding; correction required before declaring this document handoff
+    aligned.
+  required_closing_validation: &id026
+  - Every historical run is distinguishable from branch-source snapshots; no missing SHA is fabricated.
+  - Independent evidence reviewer closed EE-02.
+  status: Resolved
+  implementation_scope: Pack text only
+  review_aliases:
+  - EE-02
+- id: ALIGN-005
+  title: Codecov supporting detail duplicated a separately prioritized finding
+  severity: Medium
+  confidence: Confirmed
+  governing_rule:
+  - recursive_pass_model
+  - execution_logic.step_9_assess_convergence
+  - correction_roadmap_actionable
+  rule_source: audit/RECURSIVE_ALIGNMENT_KERNEL.md and frozen campaign constraints
+  affected_artifacts: &id027
+  - OTHER_TOOLS_EVIDENCE.md
+  - OTHER_TOOLS_EXECUTION.md
+  - PROOF.md
+  - README.md
+  direct_evidence:
+  - v1.6.0 OTHER_TOOLS_EVIDENCE.md T02/P0 and T14/P2 repeat empty token and fail_ci_if_error=false.
+  - v1.6.0 OTHER_TOOLS_EXECUTION.md routes T02 but has no independent T14 correction; PROOF requires disposition
+    of all IDs.
+  observed_behavior: Same Codecov root cause appears as two work items with different priorities.
+  expected_behavior: Keep historical IDs while sharing one owning correction/receipt.
+  impact: Duplicate PR work or silently unclosed T14.
+  root_cause: Sub-observation was promoted into an independent ledger row.
+  smallest_safe_correction: Linked T14 to T02 owner, priority, correction and terminal receipt; kept T07 as dependent
+    aggregate obligation.
+  owning_component: Campaign evidence/remediation ledger
+  dependencies: []
+  blocks_release: false
+  release_note: Not a Critical/High live release finding; correction required before declaring this document handoff
+    aligned.
+  required_closing_validation: &id028
+  - All T01-T14 remain traceable; T14 closes with T02 and needs no second PR.
+  - Independent evidence reviewer closed EE-03.
+  status: Resolved
+  implementation_scope: Pack text only
+  review_aliases:
+  - EE-03
+low_violations: []
+unknowns:
+- id: U-01
+  item: Current canonical L9 authority, source-owner heads and open PR/ADR collisions
+  reason: No live repository retrieval in this pack-only revision; historical source anchors are inputs.
+  affected_conclusion: Campaign implementation/admission readiness, not package internal consistency.
+  minimum_evidence: Stage 0 exact current owner heads, canonical authority and applicable admission/validator evidence.
+  owner: Executing CTO and relevant source owners
+  status: Unknown
+- id: U-02
+  item: Historical per-run PR/analyzed checkout and reusable workflow/action bindings omitted from source pack
+  reason: Archive retains links/observations, not all raw logs or resolution metadata.
+  affected_conclusion: Causal attribution and fresh proof of affected scanner correction.
+  minimum_evidence: Retrieve only the affected run metadata, checkout logs, resolved workflow/action revisions and
+    relevant source blobs.
+  owner: Native/provider source owner
+  status: Unknown
+- id: U-03
+  item: Owner-schema acceptance and live applicability of the three candidate patches
+  reason: Syntax parsing and statement equality cannot validate unavailable target trees/schemas.
+  affected_conclusion: Applying/admitting candidate contracts and ADRs.
+  minimum_evidence: Current target inspection, patch applicability and actual owner schema/contract validation.
+  owner: Core/SDK owners
+  status: Unknown
+- id: U-04
+  item: Native entitlements, auth, effective settings, CodeRabbit derived repo availability and spend
+  reason: No authenticated account inspection in this revision.
+  affected_conclusion: Native activation, paid-value optimization and effective inherited configuration.
+  minimum_evidence: Existing G0 and bounded account proof, effective config and accepted native outcomes.
+  owner: Applicable native account and repository owner
+  status: Unknown
+- id: U-05
+  item: Actual harvested deltas, owner delivery/admission, promoted runtime, canary and fleet enforcement
+  reason: This task revised instructions only; campaign not executed.
+  affected_conclusion: Harvest performed, upstream changes effective, controls migrated and fleet protected.
+  minimum_evidence: HARVEST delivery ledger, owner receipts and PROOF/CURSOR_CANARY evidence after authorized execution.
+  owner: Executing CTO, Core/SDK/native owners
+  status: Unknown
+intent_and_scope_compliance:
+  status: Passed
+  scope: Package contract representation only
+  governing_rules: *id001
+  evidence: *id002
+  open_violations: []
+  required_closing_validation: Document review and corresponding static checks completed; live obligations remain
+    execution-stage proof.
+communication_contract_compliance:
+  status: Passed
+  scope: Package contract representation only
+  governing_rules: *id003
+  evidence: *id004
+  open_violations: []
+  required_closing_validation: Document review and corresponding static checks completed; live obligations remain
+    execution-stage proof.
+routing_and_integration_compliance:
+  status: Passed
+  scope: Package contract representation only
+  governing_rules: *id005
+  evidence: *id006
+  open_violations: []
+  required_closing_validation: Document review and corresponding static checks completed; live obligations remain
+    execution-stage proof.
+authority_boundary_compliance:
+  status: Passed
+  scope: Package contract representation only
+  governing_rules: *id007
+  evidence: *id008
+  open_violations: []
+  required_closing_validation: Document review and corresponding static checks completed; live obligations remain
+    execution-stage proof.
+structure_and_source_of_truth_compliance:
+  status: Passed
+  scope: Package contract representation only
+  governing_rules: *id009
+  evidence: *id010
+  open_violations: []
+  required_closing_validation: Document review and corresponding static checks completed; live obligations remain
+    execution-stage proof.
+schema_and_configuration_compliance:
+  status: Passed
+  scope: Package contract representation only
+  governing_rules: *id011
+  evidence: *id012
+  open_violations: []
+  required_closing_validation: Document review and corresponding static checks completed; live obligations remain
+    execution-stage proof.
+security_compliance:
+  status: Passed
+  scope: Package contract representation only
+  governing_rules: *id013
+  evidence: *id014
+  open_violations: []
+  required_closing_validation: Document review and corresponding static checks completed; live obligations remain
+    execution-stage proof.
+reliability_observability_compliance:
+  status: Passed
+  scope: Package contract representation only
+  governing_rules: *id015
+  evidence: *id016
+  open_violations: []
+  required_closing_validation: Document review and corresponding static checks completed; live obligations remain
+    execution-stage proof.
+testing_validation_compliance:
+  status: Passed
+  scope: Package contract representation only
+  governing_rules: *id017
+  evidence: *id018
+  open_violations: []
+  required_closing_validation: Document review and corresponding static checks completed; live obligations remain
+    execution-stage proof.
+overbuilt_vs_underbuilt:
+  verified_overbuilt:
+  - T14 duplicated T02 work without an independent cause; consolidated without dropping ID.
+  verified_underbuilt:
+  - Cross-tool upstream delivery contract
+  - Consistent native exceptions
+  - Run-to-source evidence limits
+  - G0 lane scope
+  speculative_observations: []
+  simplest_high_value_correction: Repair existing owner routing and proof in the current files; do not create another
+    framework.
+  bounded_refinements_applied:
+  - T01 wrapper/aggregate and synthetic-secret witness made explicit
+  - T05 skip predicate plus license/actual premerge proof clarified
+  - Concatenated headings repaired
+  - Static vendor-price assertion removed in favor of current account/official verification
+leverage_analysis:
+- rank: 1
+  correction: Existing-owner harvest delivery
+  value: Turns collected configurations into correctly owned, provable upstream changes.
+- rank: 2
+  correction: Native scope/G0 consistency
+  value: Protects accepted architecture and lets independent authorized work proceed.
+- rank: 3
+  correction: Revision truth and duplicate closure
+  value: Prevents wrong-revision fixes, false receipts and duplicate work.
+correction_roadmap:
+- order: 1
+  finding: ALIGN-002
+  owner: Campaign and proposed ADR author
+  prerequisites:
+  - Exact source archive and supplied kernel bound
+  affected_artifacts: *id019
+  risk: Bounded document correction; no live mutation
+  expected_value: Preserves accepted native contracts while keeping Core/SDK inheritance enforceable.
+  closing_validation: *id020
+  status: Applied and verified in pack
+- order: 2
+  finding: ALIGN-001
+  owner: Campaign document owner
+  prerequisites:
+  - Exact source archive and supplied kernel bound
+  affected_artifacts: *id021
+  risk: Bounded document correction; no live mutation
+  expected_value: Ensures reusable configurations reach their existing owners with effective execution proof.
+  closing_validation: *id022
+  status: Applied and verified in pack
+- order: 3
+  finding: ALIGN-003
+  owner: Campaign operator instructions
+  prerequisites:
+  - Exact source archive and supplied kernel bound
+  affected_artifacts: *id023
+  risk: Bounded document correction; no live mutation
+  expected_value: Allows independent authorized work without bypassing native read-only verification.
+  closing_validation: *id024
+  status: Applied and verified in pack
+- order: 4
+  finding: ALIGN-004
+  owner: Campaign evidence author
+  prerequisites:
+  - Exact source archive and supplied kernel bound
+  affected_artifacts: *id025
+  risk: Bounded document correction; no live mutation
+  expected_value: Prevents attributing historical failures to unrelated current source revisions.
+  closing_validation: *id026
+  status: Applied and verified in pack
+- order: 5
+  finding: ALIGN-005
+  owner: Campaign evidence/remediation ledger
+  prerequisites:
+  - Exact source archive and supplied kernel bound
+  affected_artifacts: *id027
+  risk: Bounded document correction; no live mutation
+  expected_value: Closes both Codecov identifiers through one owning correction and receipt.
+  closing_validation: *id028
+  status: Applied and verified in pack
+minimum_safe_next_action:
+  action: Release the verified v1.7.0 ZIP as the revised campaign handoff.
+  rationale: All in-scope pack findings are reconciled; live execution is a separate existing campaign stage.
+  dependency_resolved: Delivery of the user-requested aligned artifact
+  expected_evidence: Final archive passes CRC, manifest and complete-inventory checks and has an exact SHA-256 delivery
+    identity.
+validation_gates:
+  target_bound:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  authority_resolved:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  inventory_complete:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  boundary_map_complete:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  architecture_adapters_correctly_applied:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  findings_evidence_backed:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  severity_consistent:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  contracts_aligned:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  routing_and_authority_aligned:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  source_of_truth_aligned:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  schema_and_configuration_aligned:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  security_aligned:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  reliability_and_observability_aligned:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  testing_and_validation_aligned:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  correction_roadmap_actionable:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  convergence_verified:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+  overall_audit:
+    status: Passed
+    scope: Complete revised package; external live systems excluded
+residual_risks:
+- risk: External state can invalidate execution assumptions
+  disposition: Refresh at Stage 0; affects corresponding lane only.
+- risk: Published proposals or inherited config text can be confused with running controls
+  disposition: README/HARVEST/PROOF explicitly separate each execution stage; live receipts remain mandatory.
+- risk: Customer-specific semantics or allowlists could be generalized incorrectly
+  disposition: Bounded authorized CI scope, owner retention and non-target/parity witnesses required before promotion.
+convergence:
+  state: Converged
+  scope: All statuses and scores concern the complete revised document/patch package. They do not certify live repositories,
+    vendor accounts, runtime behavior, admission or deployment.
+  completed_passes:
+  - phase: Context/policy binding
+    kernel_passes:
+    - 1
+    - 2
+    evidence: Exact ZIP/kernel hashes, all 24 source entries and frozen contract/authority limits.
+  - phase: Cross-artifact alignment
+    kernel_passes:
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    evidence: Full root/team inspection of contracts, owner routes, source lineage, security, evidence, proof and
+      minimality.
+  - phase: Correction and convergence
+    kernel_passes:
+    - 10
+    evidence: Five root causes corrected; three independent reviewers rechecked affected domains; residual approval
+      wording corrected; structural checks passed.
+  skipped_passes: []
+  excluded_validation: No live application runtime exists inside the target; scanner/product/vendor tests were neither
+    attempted nor claimed.
+  material_audit_work_remaining: []
+  independent_reviews:
+    harvest_boundary_review: HBR-01/02/03 closed; no remaining material finding.
+    contracts_review: CTR-01 closed; exact invariant/patch preservation and native scope confirmed.
+    execution_evidence_review: EE-02/03 closed; EE-01 corrected, including final approval-timing phrase verified
+      by root.
+  static_validation:
+    python: 3.12.14
+    pyyaml: 6.0.3
+    git: git version 2.56.1
+    source_manifest: 23/23 source payload hashes verified before edits; source ZIP CRC passed.
+    invariant_count: 11
+    markdown_yaml_witness_parity: Passed
+    patch_statement_parity: Passed
+    byte_identical_payloads_required:
+    - INVARIANTS.yaml
+    - candidates/core-governance-contract.patch
+    - candidates/sdk-adr-index.patch
+    - candidates/sdk-integration-contract.patch
+    proposal_patch_syntax:
+    - path: candidates/core-governance-contract.patch
+      result: Passed
+      numstat: "39\t0\t.l9/governance-contract.yaml"
+    - path: candidates/sdk-adr-index.patch
+      result: Passed
+      numstat: "1\t0\tdocs/adr/README.md"
+    - path: candidates/sdk-integration-contract.patch
+      result: Passed
+      numstat: "33\t0\t.l9/integration-contract.yaml"
+    proposed_adr_count: 3
+    local_markdown_links:
+    - from: candidates/adr/l9-ci-core/docs/adr/README.md
+      to: candidates/adr/l9-ci-core/docs/adr/0001-top-down-ci-control-and-runtime-inheritance.md
+    - from: candidates/adr/l9-ci-core/docs/adr/README.md
+      to: candidates/adr/l9-ci-core/docs/adr/0002-governed-promotion-native-provider-boundaries-and-cost.md
+    kernel_preservation: Byte-identical SHA-256 verified
+    limits: git apply --numstat proves patch syntax only, not live applicability/schema acceptance; source-text
+      checks are not scanner behavior tests.
