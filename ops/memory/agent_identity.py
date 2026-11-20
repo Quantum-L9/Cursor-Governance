@@ -26,15 +26,17 @@ stays unknown: an adapter id is actor evidence, not surface evidence.
 actors in the canonical registry. ``human`` is canonical and has no agent
 binding here. None of those names resolve.
 
-No guessing: Claude host markers prove the actor ``claude-code``. The
-entrypoint proves a surface only when it selects the assigned surface
-``claude-code-cli`` (``cli``, and ``claude-vscode`` for the CLI process
-inside Cursor) or ``claude-code-mobile`` (``remote_mobile``). Every other
+No guessing: Claude host markers prove the actor ``claude-code``, which has
+exactly two surfaces (operator decision 2026-11-20). ``claude-code-cli`` is
+the local CLI (``cli``, and ``claude-vscode`` for the CLI process inside an
+IDE). ``claude-code-web`` is every hosted cloud session: ``CLAUDE_CODE_REMOTE=true``
+with an observed hosted entrypoint (``remote_desktop``, observed 2026-11-20;
+``remote_mobile``, a cloud session started from the phone). Every other
 entrypoint, including a missing one, leaves the surface unknown.
-``claude-code-desktop`` and ``claude-code-ide`` are canonical surfaces this
-plane does not assign. ``claude-code-desktop`` and ``claude-code-mobile`` are
-historical actor aliases of ``claude-code``; the same strings are current
-surface ids and are not authors. A live Claude runtime outranks an inherited
+``claude-code-desktop``, ``claude-code-ide`` and ``claude-code-mobile`` are
+never assigned. ``claude-code-desktop`` and ``claude-code-mobile`` are
+historical actor aliases of ``claude-code``; the same strings are not authors.
+A live Claude runtime outranks an inherited
 ``CURSOR_AGENT``.
 
 Pure: reads the mapping it is given, no I/O. ``python -m ops.memory.agent_identity``
@@ -67,15 +69,19 @@ RETIRED: Final = frozenset({"claude-code-desktop", "claude-code-mobile"})
 HISTORICAL_ACTOR_ALIASES: Final = {name: CLAUDE_ACTOR for name in sorted(RETIRED)}
 CURSOR_SURFACE: Final = "cursor-ide"
 CLAUDE_CLI_SURFACE: Final = "claude-code-cli"
-CLAUDE_MOBILE_SURFACE: Final = "claude-code-mobile"
-#: ``claude-vscode`` is the host marker for the CLI process inside Cursor.
-#: It selects the assigned ``claude-code-cli`` surface. This plane does not
-#: assign ``claude-code-ide``.
+CLAUDE_WEB_SURFACE: Final = "claude-code-web"
+#: ``claude-vscode`` is the host marker for the CLI process inside an IDE.
+#: It selects ``claude-code-cli``; there is no separate IDE surface.
 LOCAL_ENTRYPOINTS: Final = {
     "cli": CLAUDE_CLI_SURFACE,
     "claude-vscode": CLAUDE_CLI_SURFACE,
 }
-REMOTE_SURFACE_BY_ENTRYPOINT: Final = {"remote_mobile": CLAUDE_MOBILE_SURFACE}
+#: Observed CLAUDE_CODE_ENTRYPOINT values of a hosted cloud session. Every
+#: hosted session is Claude Code Web, whichever client drives it.
+REMOTE_SURFACE_BY_ENTRYPOINT: Final = {
+    "remote_desktop": CLAUDE_WEB_SURFACE,
+    "remote_mobile": CLAUDE_WEB_SURFACE,
+}
 #: CLAUDE_CODE_ENTRYPOINT values of a cloud session this resolver admits.
 REMOTE_ENTRYPOINTS: Final = frozenset(REMOTE_SURFACE_BY_ENTRYPOINT)
 #: Local resolver identity. Cursor-Governance produces the assertion; memory verifies it.
