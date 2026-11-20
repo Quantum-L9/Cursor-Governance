@@ -1,4 +1,8 @@
-"""Cursor host default binding: the operating plane plus the canonical Cursor domain set."""
+"""Host default bindings: the operating plane plus each host's default domain set.
+
+Cursor: the canonical Cursor domain set. Claude Code: the coding-agent execution projection
+(operator decision 2026-11-20, a host binding, not a default-on mode).
+"""
 
 from __future__ import annotations
 
@@ -28,13 +32,16 @@ EXPECTED = {
     "l9.projection/signals@1": "explicit_task_requirement",
 }
 ALWAYS = [ref for ref, activation in EXPECTED.items() if activation == "always"]
+CODING = "l9.projection/coding-agent-execution@1"
+CODING_BINDING = "governance/authority-bindings/coding-agent-execution.yaml"
+MANUAL = ["/coding-agent", "/lcto", "/architect", "/planner"]
 
 
 def _verify(statuses: dict[str, str] | None = None, default: str = host_binding.ADMITTED):
     statuses = statuses or {}
 
     def verify(binding: Path, _root: Path | None) -> dict:
-        ref = yaml.safe_load(binding.read_text())["input"]["authority"]["projection_profile_ref"]
+        ref, _verifier = host_binding.binding_profile(yaml.safe_load(binding.read_text()))
         status = statuses.get(ref, default)
         return {"status": status, "reason": status}
 
@@ -183,18 +190,75 @@ def test_every_host_autobinds_at_session_start_without_a_skill(host: str) -> Non
     doc = host_binding.load_contract(host_binding.contract_path(host))
     assert doc["session_start"]["autobind"] is True
     assert doc["session_start"]["depends_on_skill"] is False
-    assert doc["session_start"]["manual_bindings"] == ["/coding-agent", "/lcto", "/architect"]
+    assert doc["session_start"]["manual_bindings"] == MANUAL
     assert doc["base"]["ref"] == BASE
     assert doc["base"]["required"] is True
 
 
-def test_claude_code_binds_the_operating_plane_alone() -> None:
+def test_claude_code_binds_the_operating_plane_and_the_coding_projection() -> None:
     doc = host_binding.load_contract(host_binding.contract_path("claude-code"))
-    assert doc["domains"] == []
+    assert doc["domains"] == [
+        {
+            "ref": CODING,
+            "binding": CODING_BINDING,
+            "activation": "always",
+            "purpose": "Coding-agent execution invariants, contracts and authority model",
+        }
+    ]
+    # Both Claude Code surfaces share the one host contract.
+    assert doc["host"]["surface_refs"] == [
+        "l9.surface-registry/global@1#claude-code-cli",
+        "l9.surface-registry/global@1#claude-code-web",
+    ]
     report = _evaluate("claude-code")
     assert report["status"] == "BOUND"
     assert report["default"]["status"] == "BOUND"
+    (item,) = report["load"]
+    assert item["ref"] == CODING
+    assert "composed_view" not in item
+    assert sorted(Path(v).name for v in item["views"]) == [
+        "authority_model.projection.json",
+        "contracts.projection.json",
+        "invariants.projection.json",
+    ]
+    assert all(Path(v).is_file() for v in item["views"])
+
+
+def test_cursor_default_set_is_unchanged_by_the_claude_code_decision() -> None:
+    doc = host_binding.load_contract(host_binding.contract_path("cursor"))
+    assert {d["ref"]: d["activation"] for d in doc["domains"]} == EXPECTED
+    assert CODING not in {d["ref"] for d in doc["domains"]}
+    assert CODING not in {i["ref"] for i in _evaluate()["load"]}
+
+
+@pytest.mark.parametrize("status", ["STALE", "BLOCKED", "UNVERIFIED", "REJECTED"])
+def test_claude_code_degrades_to_the_operating_plane_when_the_coding_projection_fails(
+    status: str,
+) -> None:
+    report = _evaluate("claude-code", verify=_verify({CODING: status}))
+    assert report["status"] == "DEGRADED"
+    assert report["default"]["status"] == "BOUND"
     assert report["load"] == []
+    (domain,) = report["domains"]
+    assert domain["bound"] is False
+    text = host_binding.line(report).splitlines()
+    assert text[0].startswith("default projection binding (claude-code): DEGRADED")
+    assert "fail-open: the session continues" in text[0]
+    warns = [line for line in text if "WARN" in line]
+    assert warns == [
+        f"  WARN: {CODING} [always] NOT BOUND ({status}: {status}) — the session continues "
+        "with what is marked BOUND (fail-open; cite nothing from it)"
+    ]
+    assert any(f"operating plane {BASE}: BOUND" in line for line in text)
+    # The rendering still exits 0: SessionStart is never blocked.
+    assert host_binding.EXIT["DEGRADED"] == 3
+
+
+def test_coding_projection_is_never_bound_without_the_base() -> None:
+    report = _evaluate("claude-code", verify_base=_base("STALE"))
+    assert report["status"] == "NOT_BOUND"
+    assert report["load"] == []
+    assert report["domains"][0]["bound"] is False
 
 
 @pytest.mark.parametrize("host", ["cursor", "claude-code"])
@@ -258,11 +322,12 @@ def test_renderings_state_exactly_what_is_bound() -> None:
         "  - l9.projection/signals@1 [explicit_task_requirement]: not activated, not bound"
         in cursor
     )
-    assert cursor.endswith("- manual bindings: /coding-agent, /lcto, /architect")
+    assert cursor.endswith("- manual bindings: /coding-agent, /lcto, /architect, /planner")
     claude = host_binding.line(_evaluate("claude-code")).splitlines()
     assert claude[0].startswith("default projection binding (claude-code): BOUND — every")
     assert all(item.startswith("  ") for item in claude[1:])
-    assert not any("domains" in item for item in claude)
+    assert claude[-1] == "  manual bindings: /coding-agent, /lcto, /architect, /planner"
+    assert f"    {CODING} [always]: BOUND — read " in "\n".join(claude)
 
 
 def test_degraded_rendering_names_the_unbound_domain_and_continues() -> None:
@@ -271,7 +336,7 @@ def test_degraded_rendering_names_the_unbound_domain_and_continues() -> None:
     assert "- DEGRADED — partly bound" in text
     assert "1 default domain(s) failed verification and are not" in text
     assert "fail-open: the session continues" in text
-    assert "  - l9.projection/architecture@1 [always]: NOT BOUND (STALE: STALE)" in text
+    assert "\n- WARN: l9.projection/architecture@1 [always] NOT BOUND (STALE: STALE)" in text
     assert f"- operating plane {BASE}: BOUND" in text
 
 
@@ -335,3 +400,18 @@ def test_session_start_cli_reports_not_bound_without_authority(
     assert "NOT BOUND — the operating plane did not verify" in proc.stdout
     assert "fail-open: the session continues" in proc.stdout
     assert "BOUND at authority main" not in proc.stdout
+
+
+def test_claude_hook_does_not_run_the_coding_classifier_twice() -> None:
+    # The default binding verifies the coding projection; the separate line only points at it,
+    # so binding it by default spends no more of the SessionStart budget than before.
+    for hook in (
+        REPO / "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",
+        REPO / ".claude/hooks/session_start_claude_governance.sh",
+    ):
+        text = hook.read_text(encoding="utf-8")
+        body = text[text.index("emit_coding_projection() {") :]
+        body = body[: body.index("\n}\n")]
+        assert "coding_projection_status.py" not in body
+        assert "bound by default for Claude Code" in body
+        assert "not bound in this session" not in body

@@ -15,8 +15,11 @@ other adapter status leaves the session NOT_BOUND with the exact reason, and not
 operating plane may be cited.
 
 On top of the base a contract may list domain projections (the Cursor contract mirrors
-Quantum-L9/.github `l9.domain-consumer-binding/cursor@1`), each verified by the verifier its
-binding declares. `always` domains are loaded in every session; a conditional domain
+Quantum-L9/.github `l9.domain-consumer-binding/cursor@1`; the Claude Code contract binds the
+coding-agent execution projection through its own binding,
+`governance/authority-bindings/coding-agent-execution.yaml`), each verified by the verifier its
+binding declares — the same `projection_mode` reader the manual modes use, whichever binding
+shape it is. `always` domains are loaded in every session; a conditional domain
 (`hosted_skill_requirement`, `explicit_task_requirement`) is loaded only when that activation
 is named, and is otherwise neither verified nor loaded.
 
@@ -31,8 +34,9 @@ Status, each only with the proof named:
 Failure is fail-open: a binding that failed or degraded never stops the session. The
 SessionStart renderings say exactly what is and is not bound, never claim a projection that
 did not verify, and exit 0 even if this module itself raises. It changes what a session
-reads, never what it may do. Other projections are bound only by the manual modes
-(`/coding-agent`, `/lcto`, `/architect`).
+reads, never what it may do, and a projection bound here is not a mode: it never stands in
+for the per-session state a mode writes. Other projections are bound only by the manual
+modes the contract lists (`session_start.manual_bindings`).
 
 Usage:
   host_binding.py [--host cursor|claude-code] [--activate ACTIVATION ...] [--workspace DIR]
@@ -58,6 +62,8 @@ from projection_mode import (  # noqa: E402
     ADMITTED,
     REPO,
     ContractError,
+    binding_profile,
+    binding_views,
     resolve_authority,
     run_verifier,
 )
@@ -122,9 +128,12 @@ def load_contract(path: Path) -> dict[str, Any]:
         binding = REPO / entry["binding"]
         if not binding.is_file():
             raise ContractError(f"BINDING_ABSENT: {entry['binding']}")
-        pins = (yaml.safe_load(binding.read_text(encoding="utf-8")) or {}).get("input", {})
-        if (pins.get("authority") or {}).get("projection_profile_ref") != entry["ref"]:
+        ref, _verifier = binding_profile(yaml.safe_load(binding.read_text(encoding="utf-8")) or {})
+        if ref != entry["ref"]:
             raise ContractError(f"BINDING_REF_MISMATCH: {entry['binding']}")
+    manual = start.get("manual_bindings")
+    if not isinstance(manual, list) or not all(isinstance(m, str) and m for m in manual):
+        raise ContractError("MANUAL_BINDINGS_MALFORMED")
     return doc
 
 
@@ -232,10 +241,14 @@ def evaluate(
         result = verify(REPO / entry["binding"], authority)
         record.update(status=result.get("status"), reason=result.get("reason"))
         if result.get("status") == ADMITTED:
-            bundle = yaml.safe_load((REPO / entry["binding"]).read_text("utf-8"))["input"]["bundle"]
-            view = str(REPO / bundle["path"] / bundle["composed_view"])
-            verified.append({"ref": entry["ref"], "composed_view": view})
-            record["composed_view"] = view
+            doc = yaml.safe_load((REPO / entry["binding"]).read_text("utf-8"))
+            views = [str(path) for path in binding_views(doc)]
+            item: dict[str, Any] = {"ref": entry["ref"], "views": views}
+            if "input" in doc:
+                # A domain binding has exactly one composed view.
+                item["composed_view"] = views[0]
+            verified.append(item)
+            record.update({k: v for k, v in item.items() if k != "ref"})
         else:
             blockers.append(record)
         domains.append(record)
@@ -252,6 +265,7 @@ def evaluate(
         "status": status,
         "fail_open": True,
         "canonical_binding_ref": contract.get("canonical_binding_ref"),
+        "manual_bindings": contract["session_start"]["manual_bindings"],
         "activations": sorted(active),
         "authority_root": str(authority) if authority else None,
         "domains": domains,
@@ -260,7 +274,8 @@ def evaluate(
     }
 
 
-MANUAL = "/coding-agent, /lcto, /architect"
+# Shown only when no contract could be read (REJECTED, or this module failed).
+MANUAL = "/coding-agent, /lcto, /architect, /planner"
 CONTINUES = "fail-open: the session continues"
 
 
@@ -294,11 +309,24 @@ def _headline(report: dict[str, Any]) -> str:
     return "BOUND — every default projection verified and is bound for this session"
 
 
+def _manual(report: dict[str, Any]) -> str:
+    return ", ".join(report.get("manual_bindings") or []) or MANUAL
+
+
+def _warn(item: dict[str, Any]) -> str:
+    """The one named line a default domain that did not verify gets, while the base is bound."""
+    return (
+        f"WARN: {item['ref']} [{item['activation']}] NOT BOUND ({item['status']}: "
+        f"{item.get('reason')}) — the session continues with what is marked BOUND "
+        "(fail-open; cite nothing from it)"
+    )
+
+
 def _items(report: dict[str, Any]) -> list[str]:
     """The binding as plain items; markdown prefixes them, line indents them."""
     items = [_headline(report)]
     if report["status"] == "REJECTED":
-        return [*items, f"manual bindings: {MANUAL}"]
+        return [*items, f"manual bindings: {_manual(report)}"]
     default = report.get("default") or {}
     ref = default.get("ref")
     if default.get("status") == "BOUND":
@@ -314,17 +342,20 @@ def _items(report: dict[str, Any]) -> list[str]:
     else:
         items.append(f"operating plane {ref}: not evaluated here (domains only)")
     if report["domains"]:
-        items.append(f"domains ({report.get('canonical_binding_ref')}):")
+        canonical = report.get("canonical_binding_ref")
+        items.append(f"domains ({canonical}):" if canonical else "domains:")
         for item in report["domains"]:
             label = f"  {item['ref']} [{item['activation']}]"
             if item["status"] == "NOT_ACTIVATED":
                 items.append(f"{label}: not activated, not bound (loads on {item['activation']})")
             elif item.get("bound"):
-                items.append(f"{label}: BOUND — read {item['composed_view']}")
+                items.append(f"{label}: BOUND — read {', '.join(item['views'])}")
+            elif default.get("status") == "BOUND":
+                items.append(_warn(item))
             else:
                 why = item["status"] if item["status"] != ADMITTED else "base not bound"
                 items.append(f"{label}: NOT BOUND ({why}: {item.get('reason')})")
-    items.append(f"manual bindings: {MANUAL}")
+    items.append(f"manual bindings: {_manual(report)}")
     return items
 
 
