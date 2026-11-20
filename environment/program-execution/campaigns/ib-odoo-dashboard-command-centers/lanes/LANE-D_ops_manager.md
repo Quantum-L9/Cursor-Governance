@@ -1,34 +1,30 @@
-# LANE-D — Operations Manager command center (starts only after DEC-004 and DEC-005)
+# LANE-D — Exception routing + Operations Manager AI & Transaction Review Workbench
 
 ## MANIFEST
-- Campaign: `ib-odoo-dashboard-command-centers` v1.0.0 — definition in Quantum-L9/Cursor-Governance, execution in `cryptoxdog/IB-Odoo_19` off `Staging` @ `c422140`.
-- Tasks (order): TASK-040.
-- Writable paths: the DEC-004 host module (recommended new `plasticos_ops_dashboard/**`) plus exactly the security records DEC-005 approves. Everything else is read-only.
+- Campaign: `ib-odoo-dashboard-command-centers` v1.1.0 — definition in Quantum-L9/Cursor-Governance, execution in `cryptoxdog/IB-Odoo_19` off `Staging` @ `c422140`.
+- Tasks (order): TASK-060 → TASK-064 → TASK-040 (TASK-040 starts once DEC-004 and DEC-005 are decided, TASK-002 is recorded and TASK-013 is merged).
+- Writable paths: `plasticos_documents/**`, `plasticos_documents_native/models/document_sync.py`, `plasticos_documents_native/data/**`, `plasticos_documents_native/tests/**`, `plasticos_documents_native/migrations/**`, `plasticos_documents_native/__manifest__.py`, the DEC-004 host module (recommended new `plasticos_ops_dashboard/**`), and exactly the security records DEC-005 approves. Everything else is read-only (`plasticos_base` resolvers are used, never edited).
 - Repositories: attach `cryptoxdog/IB-Odoo_19` with push (add_repo), clone, register_repo_root. Read-only: `Quantum-L9/L9-Ops-MCP` (kernels), `Quantum-L9/Cursor-Governance` (campaign definition; your session source).
 - Role: coding agent in the CTO pool (launch system prompt governs reporting, publishing and PR ownership).
 
 ## OBJECTIVE
-Build a cross-department execution queue for `plasticos_security_base.group_operations_manager` (`security_groups.xml:112-117`), company-scoped per DEC-008, every item drilling to its source record (DEC-007):
-- Linda approvals pending decision — `plasticos.linda.approval` `state='pending'` (`linda_approval.py:259-309`; approve/reject already require this group, :377-426).
-- Claims escalated or overdue — `plasticos.claim` `state='escalated'` or `is_overdue` (`claim.py:14`, cron `_cron_check_sla` :404). Company derives via `transaction_id`/`load_id` (claim has no company_id).
-- Load exceptions / SLA breaches / missing BOL — `plasticos.load` (`state='exception'`, `sla_breached`, `bol_*_attached`).
-- Document gaps overdue or escalated — `plasticos.transaction.missing_doc_status in ('overdue','escalated')` (`transaction_docs.py:18`).
-- Documents awaiting review — `plasticos.document.association_review_required` and native `documents.document.verification_review_required`.
-- Delivered-uninvoiced handoffs — the predicate `admin_dashboard.py:283-313` already counts (reuse the DEC-007 declaration LANE-A creates; coordinate via CTO-QUESTION if not merged yet).
-Menus restricted to the Operations Manager group (DEC-005b); claims access per DEC-005a.
+1. TASK-060 (DEC-010, DEC-012): one routing function in `plasticos_documents` returns (owner group, activity type, reason) from the confirmed business purpose — decided by association and obligation (associated model, `obligation_kind`, `account.move.move_type` in_invoice vs out_invoice), never by filename, a tag alone or an AI guess (INV lumps invoice and vendor bill; no PO/SO/carrier-cert tag, N-006) — and the exception type. Confidently attributed shipping-document exceptions (BOL, PACKING, SCALE, CST, PHOTO, RECEIVING, DO, carrier CERT, PO/SO shipping paperwork: missing, incomplete, outdated, needs verification, wrong-load attribution) → Logistics. Unclassified or conflicting classification, unknown/conflicting references, wrong company, ambiguous association, historical verification conflicts, AP/AR discrepancies, duplicate or blocked bills, transaction-level and cross-department exceptions → Operations Manager. Uncertain classification → Operations even with a logistics candidate. Rewire the writers at their owners: `document_sync` review (`plasticos_documents_native/models/document_sync.py:23,85-87,147-213`; retire `_manager_reviewer` for the `plasticos_base` resolver), missing-document and scale-ticket escalations (`plasticos_documents/models/transaction_docs.py:185,270-278,398-454`). Module-owned `mail.activity.type` per exception class; `activity_search` → reschedule/reassign → create only if absent → `activity_feedback` on resolution. One original with several obligations → one activity per obligation, distinct owners. Repeatable migration moving open activities to their DEC-010 owner, with a before/after owner count in the PR. Add PO/SO/CARRIER_CERT tags only if DEC-014 = OPT-A.
+2. TASK-064 (N-008): `plasticos.document.action_verify` (`document.py:701-707,1077-1101`) refuses service users — Linda, the system cron user, and superuser context without a human — server-side.
+3. TASK-040 Operations Manager AI & Transaction Review Workbench: inbox Mine / Team / Unassigned / Escalated over Operations-routed DEC-012 activities, Operations-only Linda classes, escalated/overdue claims, document gaps and blocked vendor bills (block reasons `plasticos_documents_native/models/account_move.py:166-212`). Each item opens a review surface: original preview, candidate extracted facts when they exist (else UNKNOWN), the exact linked record and its current values, the discrepancy, owner, due date. Actions Confirm Classification, Associate to Exact Record (the existing exact association command), Request Correction, Return to Logistics (reassigns the one activity), Open AP/AR Record — each an existing authorized command. Build it on native forms; use an Owl `ir.actions.client` only if TASK-001's report names a gap native views cannot close. Company scope via DEC-008 and DEC-005(d); menus per DEC-005(b); claims per DEC-005(a).
 
 ## NON-GOALS
-- Not an executive financial report (that is Admin).
-- No approval workflow changes — the queue links to existing approve/reject actions.
-- No `company_id` added to claim/transaction/offer/intake.
-- No Gate / CEG / EIE / Neo4j / TransportPacket surface is touched by this lane; if a change would reach one, CTO-QUESTION.
+- Not an executive financial report (Admin) and not a new queue table, scheduler or verification writer.
+- AI classifies, proposes and routes only: no AI auto-sort record creation, no AI server action as a writer, no auto-post, no new sender (DEC-013). Nothing in Documents AI or digitization settings is enabled.
+- No change to verification rules beyond TASK-064; no change to the bill guard; no posting from the workbench.
+- No `company_id` added to claim/transaction/offer/intake; no `plasticos_base` edits.
 
 ## ASSETS USED
 - Campaign definition (Quantum-L9/Cursor-Governance): `environment/program-execution/campaigns/ib-odoo-dashboard-command-centers/CAMPAIGN_SOURCE.yaml` (decisions DEC-001..009, tasks, gates), `CURRENT_STATE.yaml` (re-verified findings at Staging c422140), `ACCEPTANCE.md`.
 - Coding kernel: `Quantum-L9/L9-Ops-MCP` `docs/kernels/R5/l9_coding_kernel.v1.md` (hard bans: no print, no eval/exec, CI-enforced) and `docs/kernels/R5/l9_build_kernel.v1.md` (no stubs or pass-only functions; no `status: pass`-only reports).
 - Governance coding kernel: `skills/l9-coding-agent/kernels/CODING_KERNEL.yaml` (smallest complete root-cause repair) — bound through /coding-agent mode, never invoked as a skill.
 - Target repo law (cryptoxdog/IB-Odoo_19): `AGENTS.md` (Git Workflow :236-242, Ask First :543-547, Never list :549-566), `CLAUDE.md`, `INVARIANTS.md` (POS-INV-05 company isolation, POS-INV-19 repeatable migrations), `skills/plasticos-odoo-version-bump/SKILL.md`.
-- Odoo 19 docs: Context7 `/websites/odoo/19.0` (verify any ORM/view/action API before use; record the query in the PR).
+- Odoo 19 docs: Context7 `/websites/odoo/19.0` first; where it lacks developer detail, the official sources below.
+- Official Odoo 19.0 build sources (EVID-007): dashboard record shape `odoo/odoo` 19.0 `addons/spreadsheet_dashboard_account/data/dashboards.xml` L4-13 and `addons/spreadsheet_dashboard/models/spreadsheet_dashboard.py`; dashboard JSON keys (`pivots`, `lists`, `globalFilters` with `fieldMatching`, `chartOdooMenusReferences`) in `addons/spreadsheet_dashboard_sale/data/files/sales_dashboard.json`; access `addons/spreadsheet_dashboard/security/security.xml`; `mail.activity` `activity_search`/`activity_schedule`/`activity_feedback` in `addons/mail/models/mail_activity_mixin.py` L340-503; view reference https://www.odoo.com/documentation/19.0/developer/reference/user_interface/view_architectures.html (kanban progressbar, searchpanel, graph, pivot); client actions https://www.odoo.com/documentation/19.0/developer/howtos/javascript_client_action.html; Documents AI and digitization limits https://www.odoo.com/documentation/19.0/applications/productivity/ai/document_sort.html and .../finance/accounting/vendor_bills/invoice_digitization.html.
 
 ## WORKFLOW
 1. Bootstrap per the launch system prompt; /coding-agent mode ACTIVE before any edit; first CTO-STATUS carries the mode JSON.
@@ -45,12 +41,17 @@ Menus restricted to the Operations Manager group (DEC-005b); claims access per D
 - A true zero must render distinctly from unavailable/stale; never default an error to 0.
 - Do not change security groups, record rules, crons or `plasticos_base` unless the campaign decision for it is accepted (DEC-005). Prohibited paths: `plasticos_base/**`, `plasticos_gate/**`, `.github/workflows/**`, `plasticos_transaction/models/**`, Docker/compose/.env files.
 - Runtime tests: rely on the `make pr` pre-push gate (pr-check incl. install-smoke) — do not run `make test-module` / `make test-odoo` ad hoc. Locally run `make check` and `make test`; run `python3 scripts/check_module_wiring.py` before each commit.
+- Exceptions are `mail.activity` records only (DEC-012): module-owned activity type per exception class, assignee via `plasticos_base` `_plasticos_escalation_manager_in_group`, `activity_search` before any create (Odoo never deduplicates), `activity_feedback` to close. No new queue table, scheduler or verification writer.
+- AI may classify, propose and route only (DEC-013): no AI auto-sort record creation, no AI server action as a decision writer, no bill auto-post, no new external sender — Linda stays the sole logistics-document chase sender. Unknown AI output stays UNKNOWN with a manual path.
+- Authority is enforced server-side; a hidden or shown button is never the control.
 - Truth contract: report NOT RUN where a check did not run; never present a static read as runtime proof.
 
 ## DONE-CRITERIA
-- AC-040: an Operations Manager sees each queue with counts equal to its drills; a sales rep cannot open the menu; a second company's items never appear; claims queue present only if DEC-005a approved.
-- New module (if DEC-004 OPT-A) has its own ACL, literal `_name`, `ondelete=` on every Many2one, manifest wiring checked by `scripts/check_module_wiring.py`.
-- PR into Staging green via `make pr`; CTO-STATUS: ready-to-merge.
+- AC-060 / A13–A15 / A18: a confidently attributed BOL or scale-ticket exception yields exactly one Logistics activity; an ambiguous classification yields one Operations activity; one original with two obligations yields two activities with distinct owners; re-running sync and crons, reassigning, resolving and reloading never duplicate, lose or wrongly close an activity; the cron user is never an assignee.
+- AC-064 / A19: Linda and the cron user get `AccessError` on `action_verify`; a human Documents User on an exact accepted scope still verifies.
+- AC-040 / A11 / A16: ambiguous classification and a digitized bill with mismatched amounts appear in the Operations inbox; the bill stays unposted until the existing guard is satisfied; Return to Logistics reassigns rather than duplicates; counts equal drills; a sales rep cannot open the menu; no cross-company item or protected detail appears.
+- New module (if DEC-004 OPT-A): own ACL, literal `_name`, `ondelete=` on every Many2one, `scripts/check_module_wiring.py` clean.
+- Each task its own PR into Staging, green via `make pr`; CTO-STATUS: ready-to-merge per PR.
 
 ## ACTIVATION
 Launch via `cto_mode.py launch-spec --cto-session <CTO session> --lane-repo cryptoxdog/IB-Odoo_19 --model <model> --tag lane:lane-d --tag campaign:ib-odoo-dashboard-command-centers`; pass `create_session` fields unchanged; this file's body is the task prompt. Start condition: see `CAMPAIGN_EXECUTION_BINDING.yaml` lanes[].

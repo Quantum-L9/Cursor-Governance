@@ -1,6 +1,8 @@
 # Campaign: ib-odoo-dashboard-command-centers
 
-Repair the IB-Odoo_19 dashboards' wrong numbers and broken drills first, then build four native-first role command centers (Logistics, Sales, Admin, Operations Manager) where every actionable KPI opens exactly the records it counts.
+Repair the IB-Odoo_19 dashboards' wrong numbers and broken drills first, then build four native-first role command centers (Logistics, Sales, Admin, Operations Manager) where every actionable KPI opens exactly the records it counts — operating as one routed system in which every exception has exactly one accountable owner who can resolve it, and the wrong role cannot.
+
+**v1.1.0** incorporates the operator's Role-Specific Exception Routing Addendum (2026-11-20), re-verified against Staging `c422140` (`CURRENT_STATE.yaml` N-004..N-011), and the official Odoo 19.0 dashboard, Documents AI and activity sources (EVID-007).
 
 | Artifact | Purpose |
 |---|---|
@@ -15,9 +17,9 @@ Repair the IB-Odoo_19 dashboards' wrong numbers and broken drills first, then bu
 
 | Wave | Tasks | Exit gate |
 |---|---|---|
-| W0 spike | TASK-001 native dashboard as module data | GATE-002 |
-| W1 correctness | TASK-010 drills, 011 rep aggregation, 013 company scope, 012 period date, 020 payout, 021 navigation | GATE-001 |
-| W2 command centers | TASK-031 Admin, 032 Logistics, 033 Sales, 040 Ops Manager | GATE-003 |
+| W0 proofs | TASK-001 dashboard authoring path, TASK-002 Enterprise capability inventory | GATE-002 |
+| W1 correctness + routing | TASK-010 drills, 011 rep aggregation, 013 company scope, 012 period date, 020 payout, 021 navigation, 060 exception routing, 061 Linda authority, 064 service-user verify refusal | GATE-001 |
+| W2 command centers | TASK-040 Ops AI & Transaction Review Workbench, 032 Logistics Live Control Tower, then 031 Admin Business Health, 033 Sales | GATE-003 |
 | W3 acceptance | TASK-050 runtime + query plans, 051 operator Staging walk | GATE-004 |
 
 ## Operator decisions needed
@@ -26,9 +28,11 @@ Repair the IB-Odoo_19 dashboards' wrong numbers and broken drills first, then bu
 |---|---|---|---|
 | DEC-002 | Business date for closed-deal periods | `commission_earned_date` | TASK-012 |
 | DEC-004 | Ops Manager host | new module `plasticos_ops_dashboard` | TASK-040 |
-| DEC-005 | Security: Ops claims read, Ops menu groups, admin.kpi company rule | approve all three | TASK-040 |
+| DEC-005 | Security: Ops claims read, Ops menu groups, admin.kpi company rule, company isolation for pending document rows | approve all four | TASK-040 |
+| DEC-011 | Which Linda command classes Logistics Ops may decide | execution-timing classes to Logistics; fact corrections, VGM, tare, regulatory parties, unit mismatch, refusal retry stay Ops | TASK-061 |
+| DEC-014 | Add PO, SO, CARRIER_CERT evidence tags | optional; routing decides by association either way | none |
 
-Everything else is decided in the source (DEC-001, 003, 006–009) or proven by the TASK-001 spike.
+Everything else is decided in the source (DEC-001, 003, 006–010, 012, 013) or proven by TASK-001 and TASK-002.
 
 ## Launch preconditions
 

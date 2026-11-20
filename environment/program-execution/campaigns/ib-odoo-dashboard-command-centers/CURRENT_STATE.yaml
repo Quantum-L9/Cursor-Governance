@@ -1,7 +1,7 @@
 schema: l9.program-execution.current-state-delta.v1
 schema_version: 1.0.0
 campaign_id: ib-odoo-dashboard-command-centers
-source_version: "1.0.0"
+source_version: "1.1.0"
 collected_at: "2026-11-20T23:20:00Z"
 collection_method: read_only_inspection
 producer: "CTO session (claude-code-web), three read-only research passes"
@@ -110,9 +110,61 @@ platform_facts:
   version_bump: "Mandatory for Python/XML/security/migration changes (skills/plasticos-odoo-version-bump/SKILL.md)"
   ask_first: "New modules, security groups and record rules, ir.cron, plasticos_base (AGENTS.md:543-547)"
 
-open_operator_decisions: [DEC-002, DEC-004, DEC-005]
-ready_tasks: [TASK-001, TASK-010, TASK-011, TASK-013, TASK-020, TASK-021]
+addendum_verification:
+  operator_input: "Role-Specific Exception Routing Addendum, 2026-11-20"
+  revision: c422140c1d777a72b95cfc20995b80207d9bae6b
+  items:
+    - id: N-004
+      claim: "plasticos.document.sync sends every association review to Operations Manager"
+      verdict: CONFIRMED
+      fact: "REVIEW_GROUP_XMLID = group_operations_manager (plasticos_documents_native/models/document_sync.py:23); review scheduled whenever association_state != accepted with no doc_type check (:85-87); assignee = lowest-id eligible member via _manager_reviewer (:147-162), which does not exclude the cron user; todo activity deduped on (res_model, res_id, summary) (:185-213). Same helper holds digitized bills (account_move.py:276)."
+      task: TASK-060
+    - id: N-005
+      claim: "Missing-document and scale-ticket escalations go to Operations Manager"
+      verdict: CONFIRMED
+      fact: "_escalation_manager_group and _scale_ticket_manager_group return group_operations_manager (plasticos_documents/models/transaction_docs.py:426-431); owner via plasticos_base _plasticos_escalation_manager_in_group (res_users.py:48-59); crons every 6 h with advisory lock; dedupe on pre-loaded (res_id, summary) (:186-195, :536-545)."
+      task: TASK-060
+    - id: N-006
+      claim: "Native classification lumps invoice and vendor bill; evidence tags are more specific"
+      verdict: PARTLY_CONFIRMED
+      fact: "doc_type 'invoice' = Invoice / Vendor Bill (document_native.py:87-106) and maps to tag INV (document_sync.py:46), also 'Invoice / Vendor Bill'. plasticos.document.tag has BOL, INV, SCALE, PHOTO, PACKING, CO, RECEIVING, CST, DO, CONTRACT, CERT, PERMIT, LAB, CORR, CLAIM_PHOTO, OTHER — no PO, SO, carrier-cert or separate vendor-bill tag (document_tags_data.xml). No AI classification hook in custom code; doc_type is manual."
+      task: [TASK-060, DEC-014]
+    - id: N-007
+      claim: "Linda approval decisions restricted to Operations Manager"
+      verdict: CONFIRMED
+      fact: "MANAGER_GROUP (linda_approval.py:50); _require_approver refuses Linda and non-managers (:374-378); buttons carry no groups (linda_approval_views.xml:50-53). Safeguards: replay as Linda under _APPROVED_TOKEN (:441-457), stale-conflict check (:513-538), FOR UPDATE (:380-386), pending unique index (:335-338), refusal ledger (:150-195), immutability (:357-371). A pending approval creates no activity. Menu under Logistics (linda_approval_views.xml:103-104). group_operations_manager implies group_logistics_ops (security_groups.xml:88-93,115)."
+      task: TASK-061
+    - id: N-008
+      claim: "AI/automation cannot verify documents"
+      verdict: GAP
+      fact: "No auto-verify caller exists, but action_verify (plasticos_documents/models/document.py:701-707,1077-1101) admits any group_documents_user; Linda holds group_logistics which implies it (record_rules.xml:225-227, security_groups.xml:68); the cron user holds group_documents_manager (hooks.py:183)."
+      task: TASK-064
+    - id: N-009
+      claim: "Linda is the sole logistics-document chase sender"
+      verdict: CONFIRMED
+      fact: "linda_request.py:14-21,206-214,1204-1227; documents reminders are internal notes (transaction_docs.py:241-247,456-468). Active non-document external sender: cron_supplier_confirmation (transaction.py:1532-1595) — RISK-006."
+    - id: N-010
+      claim: "Digitized vendor bill with mismatched amounts stays unposted"
+      verdict: CONFIRMED_WITH_SCOPE
+      fact: "action_post/_post/_autopost_bill overrides block on total mismatch, duplicates, conflicting references, missing fields (plasticos_documents_native/models/account_move.py:166-212,259-309) — only for emailed/digitized bills (:66-73); hand-entered bills unchecked (RISK-005)."
+    - id: N-011
+      claim: "Company scope of document evidence"
+      verdict: GAP
+      fact: "plasticos.document has only subject_company_id; rule_document_operation_scope_company leaves legacy and pending rows unscoped (plasticos_documents/security/security.xml:37-41). DEC-005(d)."
+
+official_platform_evidence:
+  ref: EVID-007
+  facts:
+    - "spreadsheet.dashboard is community (LGPL-3); module data shape per addons/spreadsheet_dashboard_account/data/dashboards.xml L4-13; per-dashboard group_ids and company_ids record rules (spreadsheet_dashboard/security/security.xml)."
+    - "Dashboard data obeys model ACLs and record rules; customizing requires Dashboards/Admin; standard dashboards are reinstalled on upgrade."
+    - "Documents AI auto-sort can create invoices/vendor bills and trigger activities; AI tools execute unconditionally unless their code refuses; digitization can auto-post per vendor; IAP credits apply. 19.0 docs contradict on whether AI auto-sort needs the AI app (UNK-004)."
+    - "mail.activity activity_schedule never deduplicates; activity_search + reschedule/feedback is the idempotent pattern; done activities are archived."
+    - "Owl is the documented approach only for ir.actions.client custom layouts."
+
+open_operator_decisions: [DEC-002, DEC-004, DEC-005, DEC-011, DEC-014]
+ready_tasks: [TASK-001, TASK-002, TASK-010, TASK-011, TASK-013, TASK-020, TASK-021, TASK-060, TASK-064]
 blocked_tasks:
   TASK-012: DEC-002
-  TASK-040: [DEC-004, DEC-005]
+  TASK-040: [DEC-004, DEC-005, UNK-004]
+  TASK-061: DEC-011
 do_not_execute_from_this_receipt: true

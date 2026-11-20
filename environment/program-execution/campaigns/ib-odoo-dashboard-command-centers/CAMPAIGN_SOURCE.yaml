@@ -4,7 +4,7 @@ schema_version: 2.0.0
 metadata:
   campaign_id: "ib-odoo-dashboard-command-centers"
   title: "IB-Odoo_19 Dashboard Command Centers — correctness first, native-first UI"
-  version: "1.0.0"
+  version: "1.1.0"
   created_at: "2026-11-20T23:30:00Z"
   status: operator_intake
   owner: "Igor Beylin"
@@ -51,7 +51,13 @@ operator_directive:
     Repair every dashboard number and drill-down that is wrong today, then
     upgrade Logistics, Sales and Admin into role-specific command centers and
     add an Operations Manager command center, native Odoo 19 first, where
-    every actionable KPI opens exactly the source records it counts.
+    every actionable KPI opens exactly the source records it counts. The four
+    dashboards operate as one routed system (operator addendum 2026-11-20):
+    Logistics owns shipping execution and shipping-document exceptions,
+    Operations Manager owns Document AI / attribution exceptions, AP/AR
+    discrepancies and transaction-document exceptions, Admin oversees the
+    business, Sales is rep-scoped; every exception has exactly one accountable
+    owner who can actually resolve it, and the wrong role cannot.
   mode: controlled_autonomous_until_material_boundary
   auto_continue:
     - read_only_inspection
@@ -72,7 +78,7 @@ operator_directive:
 program:
   id: "ib-odoo-dashboard-command-centers"
   name: "IB-Odoo_19 Dashboard Command Centers"
-  version: "1.0.0"
+  version: "1.1.0"
   owner: "Igor Beylin"
   definition_status: ready
   snapshot_at: "2026-11-20"
@@ -107,7 +113,11 @@ program:
       - "plasticos_commission: sales dashboard payout projection, load and transaction navigation, sales command center"
       - "plasticos_logistics: load dashboard command center and its tests"
       - "Operations Manager command center (host per DEC-004)"
-      - "Native Odoo 19 Dashboards shipped as module data, if TASK-001 proves it"
+      - "Native Odoo 19 Dashboards shipped as spreadsheet.dashboard module data (DEC-001)"
+      - "Responsibility-based exception routing at its owners: plasticos_documents_native document sync, plasticos_documents escalations (DEC-010, DEC-012)"
+      - "Linda approval authority by command class (DEC-011)"
+      - "Operations Manager AI & Transaction Review Workbench and Logistics Live Control Tower"
+      - "Service-user refusal on business verification (N-008)"
     exclude:
       - "Production promotion (Staging to Production merge is an operator act outside this campaign)"
       - "New analytics database, duplicate transaction model or generic reporting engine"
@@ -115,7 +125,11 @@ program:
       - "plasticos_base changes"
       - "Adding company_id to plasticos.transaction, offer, intake or claim"
       - "Making plasticos.transaction.commission_payout_state authoritative (RISK-003)"
-      - "Owl components unless TASK-001 records a native gap they close"
+      - "Owl components except the Operations review comparison surface where DEC-001 allows it"
+      - "A new exception queue table, scheduler or verification writer"
+      - "Activating Documents AI auto-sort, AI server actions, bill auto-post or new email senders"
+      - "Manual vendor-bill amount checks outside the existing digitized-bill guard (RISK-005)"
+      - "Changing plasticos_base resolvers (DNB-001); reuse them"
   authority_order:
     - applicable_safety_legal_security_requirements
     - cursor_governance_canonical_law
@@ -177,12 +191,13 @@ decisions:
     authority_id: AUTH-003
     status: accepted
     options:
-      - {id: OPT-A, description: "Native-first: native list/kanban/pivot/graph views behind filtered window actions for queues; Odoo Dashboards (spreadsheet_dashboard) for the Admin analytic board only if TASK-001 proves module-data shipping; Owl only for a gap TASK-001 records."}
+      - {id: OPT-A, description: "Native-first. Analytical surface: spreadsheet.dashboard records shipped as module data (record shape of odoo/odoo 19.0 addons/spreadsheet_dashboard_account/data/dashboards.xml L4-13: spreadsheet_binary_data type=base64 file=..., main_data_model_ids, sample_dashboard_file_path, dashboard_group_id, group_ids, company_ids, sequence, is_published), JSON authored in the Enterprise spreadsheet editor on the runtime fixture and exported into the module. Work surfaces: native list/kanban(progressbar)/pivot/graph/searchpanel views behind filtered window actions; resolution on native record forms. Owl only as an ir.actions.client for the Operations side-by-side review surface if native Documents/form views cannot show original + candidate facts + current values + discrepancy together."}
       - {id: OPT-B, description: "Custom Owl dashboard framework for all four roles."}
+      - {id: OPT-C, description: "board (My Dashboard): per-user, UI-configured, domain not editable — not module-reproducible."}
     selected_option_id: OPT-A
     blocking_task_ids: []
-    required_evidence_ids: [EVID-001, EVID-003]
-    locked_consequence: "No custom analytics framework, analytics database or duplicate transaction model. Basis: Context7 /websites/odoo/19.0 Dashboards (drill to records, global filters); plasticos_odoo_standard_apps/__manifest__.py:24."
+    required_evidence_ids: [EVID-001, EVID-007]
+    locked_consequence: "No custom analytics framework, analytics database or duplicate transaction model. Dashboards carry group_ids per role and company_ids; record rules still filter their data. Shipped dashboards are updatable module records, so -u reproduces them; UI edits to them are not a source of truth. Basis: EVID-007 (official 19.0 source and docs)."
   - id: DEC-002
     question: "Which business date assigns a closed deal to a financial period (MTD/YTD revenue, margin, commission, closed counts, rep performance)?"
     authority_id: AUTH-001
@@ -218,11 +233,11 @@ decisions:
     required_evidence_ids: [EVID-001]
     locked_consequence: "One host; no circular dependency."
   - id: DEC-005
-    question: "Approve the security changes the campaign needs? (a) Operations Manager read access to plasticos.claim; (b) Ops command center menu groups; (c) company record rule on plasticos.admin.kpi. Groups and record rules are ask-first, AGENTS.md:546."
+    question: "Approve the security changes the campaign needs? (a) Operations Manager read access to plasticos.claim; (b) Ops command center menu groups; (c) company record rule on plasticos.admin.kpi; (d) company isolation for pending (non-legacy, not yet accepted) plasticos.document rows, which rule_document_operation_scope_company leaves unscoped. Groups and record rules are ask-first, AGENTS.md:546."
     authority_id: AUTH-001
     status: pending
     options:
-      - {id: OPT-A, description: "Approve (a), (b) and (c) as stated — recommended."}
+      - {id: OPT-A, description: "Approve (a), (b), (c) and (d) as stated — recommended."}
       - {id: OPT-B, description: "Approve (b) and (c) only; the Ops queue omits claims."}
     selected_option_id: null
     blocking_task_ids: [TASK-040]
@@ -273,17 +288,74 @@ decisions:
     required_evidence_ids: [EVID-001]
     locked_consequence: "Basis: admin_dashboard.py:295,336,707-721."
 
+  - id: DEC-010
+    question: "Who owns which document exception?"
+    authority_id: AUTH-001
+    status: accepted
+    options:
+      - {id: OPT-A, description: "Operator ownership matrix 2026-11-20 with two-dimensional routing (confirmed business purpose x exception type). Logistics: Linda operational edge cases; PO/SO shipping paperwork; packing lists; BOL; certified and ordinary scale tickets; carrier certifications; loading pictures and delivery documents; buyer receiving reports — when the document is confidently attributed and the exception is missing/incomplete/outdated/needs verification or wrong-load attribution. Operations Manager: unclassified or conflicting classification, unknown or conflicting references, wrong company, ambiguous association, historical verification conflicts, AP vendor-bill and AR invoice discrepancies, duplicate bills, blocked bills, transaction-level and cross-department exceptions. Uncertain classification goes to Operations even when one candidate is logistics. Admin: oversight only. Sales: rep-scoped."}
+      - {id: OPT-B, description: "Keep current routing: every review and escalation to Operations Manager."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-001, EVID-008]
+    locked_consequence: "Purpose is decided from the business association and obligation (associated model, obligation_kind, account.move move_type in_invoice vs out_invoice), never from a filename, a tag alone or an AI guess: INV lumps invoice and vendor bill and no PO/SO/carrier-cert tag exists (N-006). One original may carry several obligations, each with its own owner; the original and plasticos.document verification decisions are preserved. Logistics document handling grants no price, credit or posting authority."
+  - id: DEC-011
+    question: "Which Linda held-command classes may group_logistics_ops decide (approve/reject), and which stay Operations Manager only?"
+    authority_id: AUTH-001
+    status: pending
+    options:
+      - {id: OPT-A, description: "Recommended split. Logistics Ops may decide execution-timing commands schedule_load, dispatch_load, accept_appointment, confirm_ready, record_actual_event, propose_shipment_event, accept_shipment_event, record_gate_in, record_departure when edge_case is unverified_linda_reply, acceptance, out_of_sequence or evidence_unverified. Operations Manager only: correct_fact (correction, value_conflict), record_verified_gross_mass, record_container_tare, record_regulatory_parties, any unit_mismatch, any refusal_retry."}
+      - {id: OPT-B, description: "Logistics Ops may decide every class except correct_fact."}
+      - {id: OPT-C, description: "No change; Operations Manager only."}
+    selected_option_id: null
+    blocking_task_ids: [TASK-061]
+    required_evidence_ids: [EVID-008]
+    locked_consequence: "Authority is checked server-side per (command, edge_case) in linda_approval._require_approver, never by UI buttons; Linda stays refused; replay revalidation, FOR UPDATE locking, the pending unique index, refusal records and the archived-Linda kill switch are unchanged; unauthorized roles fail with AccessError at the server. Basis: linda_approval.py:50,265-295,374-457."
+  - id: DEC-012
+    question: "What carries an exception obligation?"
+    authority_id: AUTH-003
+    status: accepted
+    options:
+      - {id: OPT-A, description: "Existing mail.activity on the owning record, typed by a module-owned mail.activity.type per exception class (res_model set), assigned through the existing plasticos_base resolver _plasticos_escalation_manager_in_group (excludes cron and superuser, company-checked); idempotent: activity_search for the open activity, reschedule/reassign if present, create only if absent, close with activity_feedback; one accountable assignee, one current activity, deadline, reason, audit trail."}
+      - {id: OPT-B, description: "A new exception queue table."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-007, EVID-008]
+    locked_consequence: "No new queue table, scheduler or verification writer. activity_schedule never deduplicates (mail_activity_mixin.py L373-425), so every writer searches first. document_sync._manager_reviewer (which does not exclude the cron user) is retired in favour of the plasticos_base resolver."
+  - id: DEC-013
+    question: "What may Document AI and digitization do in these workflows?"
+    authority_id: AUTH-001
+    status: accepted
+    options:
+      - {id: OPT-A, description: "Operator 2026-11-20: AI may classify, propose and route only. No AI auto-sort action that creates business records, no AI server action as a decision writer, no bill auto-post, no new external sender; Linda remains the sole logistics-document chase sender. Unknown AI results stay unknown with a manual fallback. Installed capabilities and entitlements are verified (TASK-002) before any reliance."}
+      - {id: OPT-B, description: "Enable AI auto-sort and digitization auto-post."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-007, EVID-009]
+    locked_consequence: "Official 19.0 docs: AI auto-sort can create invoices/vendor bills and trigger activities; AI tools execute unconditionally unless their code refuses; digitization can auto-post per vendor. Custom code already refuses _autopost_bill (account_move.py:304-309). The campaign activates none of these."
+  - id: DEC-014
+    question: "Add business-evidence tags for PO, SO and carrier certification?"
+    authority_id: AUTH-001
+    status: pending
+    options:
+      - {id: OPT-A, description: "Add PO, SO and CARRIER_CERT plasticos.document.tag records (plasticos_documents data) so routing and counts can name them; routing still decides by association."}
+      - {id: OPT-B, description: "No new tags; PO/SO paperwork is identified only by association to purchase.order / sale.order and CERT covers carrier certifications."}
+    selected_option_id: null
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-008]
+    locked_consequence: "TASK-060 ships with OPT-B behaviour and adds tags only if OPT-A is chosen. Basis: plasticos_documents/data/document_tags_data.xml."
 unknowns:
   - id: UNK-001
     statement: >-
-      Whether an Odoo 19 Enterprise spreadsheet.dashboard (with its
-      spreadsheet JSON and group_ids) can be shipped and upgraded as custom
-      module data, reproducibly across environments.
+      Whether a dashboard JSON authored in the Staging-equivalent Enterprise
+      editor installs and upgrades from IB-Odoo_19 module data with role
+      group_ids and company_ids, reproducibly. The record shape itself is
+      established by official source (EVID-007).
     owner: AUTH-003
     status: open
     blocking_task_ids: [TASK-031]
-    resolution_method: "TASK-001 spike against the installed spreadsheet_dashboard source"
-    resolution_evidence_ids: [EVID-003]
+    resolution_method: "TASK-001: author one dashboard JSON on the runtime fixture, ship it in a throwaway module branch, install and -u twice, diff"
+    resolution_evidence_ids: [EVID-003, EVID-007]
   - id: UNK-002
     statement: >-
       Installed module versions, UI rendering and real click behaviour on
@@ -303,6 +375,18 @@ unknowns:
     resolution_method: "EXPLAIN ANALYZE on the runtime fixture in TASK-050, timing on Staging in TASK-051"
     resolution_evidence_ids: [EVID-005, EVID-006]
 
+  - id: UNK-004
+    statement: >-
+      Which Enterprise capabilities and entitlements are actually installed and
+      configured on Staging and Production: documents, ai, account_invoice_extract
+      digitization mode, per-vendor auto-post, AI auto-sort on Documents folders,
+      IAP credits. The 19.0 docs contradict each other on whether AI auto-sort
+      needs the AI app.
+    owner: AUTH-001
+    status: open
+    blocking_task_ids: [TASK-040]
+    resolution_method: "TASK-002 read-only capability inventory with operator screenshots or settings export"
+    resolution_evidence_ids: [EVID-009]
 evidence_requirements:
   - id: EVID-001
     claim: "Target revision and the re-verified findings F-001..F-010 plus three new defects are bound at admission."
@@ -359,6 +443,33 @@ evidence_requirements:
     supports: [GATE-004]
     contradicts: []
 
+  - id: EVID-007
+    claim: "Official Odoo 19.0 source and docs for spreadsheet.dashboard data shipping, access, drill-down, Documents AI, digitization and mail.activity semantics."
+    source_type: inspection
+    source_location: "odoo/odoo 19.0 @ 0a722221e608 (addons/spreadsheet_dashboard*, addons/mail); odoo.com/documentation/19.0 dashboards, documents, ai/document_sort, ai/server-actions, invoice_digitization, view_architectures, javascript_client_action"
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports: [GATE-002]
+    contradicts: []
+  - id: EVID-008
+    claim: "Addendum code claims re-verified at Staging c422140: document_sync routing, escalation owners, Linda approval authority and safeguards, chase senders, taxonomy, verification boundary, bill guard, activity helpers, company scoping."
+    source_type: repository_inspection
+    source_location: "CURRENT_STATE.yaml addendum_verification"
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports: [GATE-001]
+    contradicts: []
+  - id: EVID-009
+    claim: "Staging and Production Enterprise capability and entitlement inventory."
+    source_type: operator_attestation
+    source_location: "docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-002-capability-inventory.md"
+    collection_method: operator_assisted_inspection
+    freshness: per_task
+    producer: TASK-002
+    supports: [GATE-002]
+    contradicts: []
 workstreams:
   - id: WS-01
     name: admin_correctness_and_command_center
@@ -386,6 +497,11 @@ workstreams:
     owner: AUTH-001
     target_id: TARGET-001
 
+  - id: WS-06
+    name: exception_routing_and_authority
+    objective: "Route each exception to the one role that can resolve it, at the existing owners, and give Logistics scoped Linda authority."
+    owner: AUTH-003
+    target_id: TARGET-001
 dependency_edges:
   - {from: TASK-010, to: TASK-011, kind: same_file_serialization}
   - {from: TASK-011, to: TASK-013, kind: same_file_serialization}
@@ -396,6 +512,12 @@ dependency_edges:
   - {from: TASK-021, to: TASK-033, kind: depends_on}
   - {from: TASK-001, to: TASK-032, kind: depends_on}
   - {from: TASK-013, to: TASK-040, kind: depends_on}
+  - {from: TASK-060, to: TASK-040, kind: depends_on}
+  - {from: TASK-064, to: TASK-040, kind: depends_on}
+  - {from: TASK-002, to: TASK-040, kind: depends_on}
+  - {from: TASK-060, to: TASK-032, kind: depends_on}
+  - {from: TASK-060, to: TASK-064, kind: same_module_serialization}
+  - {from: TASK-001, to: TASK-061, kind: lane_order}
   - {from: TASK-031, to: TASK-050, kind: depends_on}
   - {from: TASK-032, to: TASK-050, kind: depends_on}
   - {from: TASK-033, to: TASK-050, kind: depends_on}
@@ -405,17 +527,17 @@ dependency_edges:
 waves:
   - id: W0
     name: native_spike
-    task_ids: [TASK-001]
+    task_ids: [TASK-001, TASK-002]
     predecessor_wave_ids: []
     exit_gate_ids: [GATE-002]
   - id: W1
     name: correctness_repairs
-    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021]
+    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064]
     predecessor_wave_ids: []
     exit_gate_ids: [GATE-001]
   - id: W2
     name: command_centers
-    task_ids: [TASK-031, TASK-032, TASK-033, TASK-040]
+    task_ids: [TASK-040, TASK-032, TASK-031, TASK-033]
     predecessor_wave_ids: [W0, W1]
     exit_gate_ids: [GATE-003]
   - id: W3
@@ -434,11 +556,14 @@ tasks:
     execution_kind: repo_local
     kernel_profile: BUILD
     objective: >-
-      Read the installed spreadsheet_dashboard (and spreadsheet_edition)
-      source, determine the exact data shape for shipping a dashboard and its
-      group_ids from a custom module, and prove or refute install and upgrade
-      reproducibility on a throwaway branch. Record native gaps (if any) that
-      would require Owl.
+      Prove the DEC-001 authoring path on the runtime fixture: author one
+      dashboard (one Odoo pivot + one global date filter + one chart with a
+      menu reference) in the Enterprise spreadsheet editor, export the JSON,
+      ship it as a spreadsheet.dashboard record in the official record shape
+      (EVID-007) on a throwaway branch with role group_ids and company_ids,
+      install and -u twice, and record whether the result is identical and
+      drill-down opens the expected records. Record native gaps (if any) that
+      would require the Owl review surface.
     authority_basis_ids: [AUTH-003]
     required_decision_ids: [DEC-001]
     blocking_unknown_ids: []
@@ -475,6 +600,49 @@ tasks:
       deploy_or_migrate: false
       destructive_change: false
       external_message: false
+    completion_gate_ids: [GATE-002]
+
+  - id: TASK-002
+    title: "Enterprise capability and entitlement inventory (UNK-004)"
+    definition_status: ready
+    workstream_id: WS-05
+    wave_id: W0
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Record, read-only, which Enterprise capabilities are installed and how
+      they are configured on Staging and Production: documents, ai,
+      account_invoice_extract digitization mode, per-vendor auto-post, AI
+      auto-sort and Actions-on-Select on Documents folders, IAP credit state.
+      Operator supplies settings exports or screenshots; the agent writes the
+      report. Nothing is enabled or changed.
+    authority_basis_ids: [AUTH-001]
+    required_decision_ids: [DEC-013]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001]
+    paths:
+      - docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-002-capability-inventory.md
+    actions:
+      - collect_operator_settings_evidence
+      - write_capability_inventory_report
+    acceptance:
+      - id: AC-002
+        statement: "Report lists each capability as INSTALLED_ON, INSTALLED_OFF, ABSENT or UNKNOWN per environment with its evidence; nothing was changed."
+        required_evidence_types: [inspection]
+    validation:
+      - id: VAL-002
+        method: command
+        command_or_inspection: test -s docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-002-capability-inventory.md
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [capability_assumed_without_evidence, setting_changed_during_inventory]
+    rollback:
+      strategy: revert_local_commit
+      trigger: validation_failure_or_scope_violation
+      validation: git status --short
+    risk: {tier: T1, reversibility: reversible, blast_radius: one_report}
+    authorization_ceiling: *ceiling_local
     completion_gate_ids: [GATE-002]
 
   - id: TASK-010
@@ -729,6 +897,152 @@ tasks:
     authorization_ceiling: *ceiling_local
     completion_gate_ids: [GATE-001]
 
+  - id: TASK-060
+    title: "Responsibility-based exception routing at its owners (DEC-010, DEC-012)"
+    definition_status: ready
+    workstream_id: WS-06
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Replace Operations-Manager-for-everything routing with DEC-010 routing at
+      the existing writers: plasticos_documents_native document_sync review
+      activities (document_sync.py:23,85-87,147-213) and plasticos_documents
+      missing-document and scale-ticket escalations (transaction_docs.py:185,
+      270-278,398-454). One routing function in plasticos_documents decides
+      (owner group, activity type) from the confirmed business purpose and the
+      exception type; confidently attributed shipping-document exceptions go to
+      Logistics, classification/attribution/company/financial ambiguity to
+      Operations Manager. Module-owned mail.activity.type per exception class;
+      assignment through the plasticos_base resolver; activities idempotent
+      (search, reschedule or reassign, create only if absent). Migrate open
+      activities to their new owner repeatably.
+    authority_basis_ids: [AUTH-001, AUTH-003]
+    required_decision_ids: [DEC-010, DEC-012]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001, EVID-008]
+    paths:
+      - plasticos_documents/models/**
+      - plasticos_documents/data/**
+      - plasticos_documents/tests/**
+      - plasticos_documents/migrations/**
+      - plasticos_documents/__manifest__.py
+      - plasticos_documents_native/models/document_sync.py
+      - plasticos_documents_native/data/**
+      - plasticos_documents_native/tests/**
+      - plasticos_documents_native/migrations/**
+      - plasticos_documents_native/__manifest__.py
+    actions:
+      - add_exception_routing_function_and_activity_types
+      - rewire_document_sync_and_escalations_to_router
+      - retire_document_sync_manager_reviewer_for_plasticos_base_resolver
+      - migrate_open_activities_repeatably
+      - routing_matrix_and_idempotency_tests
+    acceptance:
+      - id: AC-060
+        statement: "A confidently attributed BOL or scale-ticket exception creates exactly one activity for a Logistics owner; an ambiguous classification (even with a logistics candidate) creates one for Operations Manager; one original with two obligations yields two activities with distinct owners; re-running sync/crons, reassigning and resolving never duplicates, loses or wrongly closes an activity."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-060
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [all_reviews_to_operations_manager, duplicate_activity_on_rerun, tag_alone_decides_owner, cron_user_assigned]
+    rollback: *rollback_local
+    risk: {tier: T3, reversibility: reversible, blast_radius: plasticos_documents_and_native_routing}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-001]
+
+  - id: TASK-061
+    title: "Linda approval authority by command class (DEC-011)"
+    definition_status: blocked
+    workstream_id: WS-06
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Change linda_approval._require_approver (linda_approval.py:50,374-378)
+      from a single Operations Manager check to a server-side (command,
+      edge_case) authority table per DEC-011, granting group_logistics_ops only
+      the decided classes; Operations Manager keeps all. Linda stays refused.
+      On hold_for_approval, schedule one idempotent activity for the class's
+      owning role (today a pending approval notifies no one). Replay
+      revalidation, FOR UPDATE locking, the pending unique index, refusal
+      records and the kill switch stay unchanged.
+    authority_basis_ids: [AUTH-001]
+    required_decision_ids: [DEC-011, DEC-012]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-008]
+    paths:
+      - plasticos_logistics/models/linda_approval.py
+      - plasticos_logistics/views/linda_approval_views.xml
+      - plasticos_logistics/data/**
+      - plasticos_logistics/tests/test_s11_linda_approval.py
+      - plasticos_logistics/__manifest__.py
+    actions:
+      - authority_table_per_command_and_edge_case
+      - activity_on_hold_for_owning_role
+      - server_side_refusal_tests_per_class
+    acceptance:
+      - id: AC-061
+        statement: "For every (command, edge_case) class: the authorized role's approve/reject succeeds through the unchanged replay path; every other role, Linda and a plain Logistics user get AccessError at the server; a pending approval has exactly one open activity for its owning role."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-061
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [ui_only_authorization, linda_self_approval, logistics_decides_ops_only_class, replay_safeguard_bypassed]
+    rollback: *rollback_local
+    risk: {tier: T3, reversibility: reversible, blast_radius: plasticos_logistics_linda_approval}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-001]
+
+  - id: TASK-064
+    title: "Service users cannot verify business evidence (N-008)"
+    definition_status: ready
+    workstream_id: WS-06
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      plasticos.document.action_verify (document.py:701-707,1077-1101) accepts
+      any group_documents_user; Linda (via group_logistics) and the cron user
+      (group_documents_manager) hold it. Refuse verification by service users
+      (Linda, system cron, superuser context without a human) server-side, so
+      neither automation nor AI-triggered actions can verify evidence.
+    authority_basis_ids: [AUTH-003]
+    required_decision_ids: [DEC-013]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-008]
+    paths:
+      - plasticos_documents/models/document.py
+      - plasticos_documents/tests/**
+      - plasticos_documents/__manifest__.py
+    actions:
+      - refuse_service_user_verification
+      - tests_for_linda_and_cron_refusal_and_human_success
+    acceptance:
+      - id: AC-064
+        statement: "Linda and the cron user get AccessError on action_verify; a human Documents User on an exact accepted scope still verifies."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-064
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [service_user_verifies_evidence]
+    rollback: *rollback_local
+    risk: {tier: T2, reversibility: reversible, blast_radius: plasticos_documents_verification}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-001]
+
   - id: TASK-031
     title: "Admin command center: full KPI drill coverage (F-005)"
     definition_status: ready
@@ -738,11 +1052,17 @@ tasks:
     execution_kind: repo_local
     kernel_profile: BUILD
     objective: >-
-      Make every Admin KPI in sections B, C, E and F a drillable button under
-      DEC-007, distinguish zero from unavailable, and, if TASK-001 says
-      SUPPORTED, ship the Admin analytic dashboard as module data.
+      Admin Business Health & Bottleneck Intelligence: every Admin KPI in
+      sections B, C, E and F becomes a DEC-007 drill; zero is distinct from
+      unavailable. Add (a) the stage funnel Transaction -> Shipping ->
+      Documents -> Invoicing -> Payment with clickable, company-scoped counts;
+      (b) open exceptions by owner role and assignee from the DEC-012
+      activity types, drilling to the source record and its accountable
+      owner; (c) document processing throughput and Linda intervention rate
+      (approvals held vs auto-applied). Ship the analytic board as a
+      spreadsheet.dashboard record per DEC-001 once TASK-001 passes.
     authority_basis_ids: [AUTH-003]
-    required_decision_ids: [DEC-001, DEC-007]
+    required_decision_ids: [DEC-001, DEC-007, DEC-012]
     blocking_unknown_ids: [UNK-001]
     input_evidence_ids: [EVID-001, EVID-003]
     paths:
@@ -754,7 +1074,7 @@ tasks:
       - parity_test_per_kpi
     acceptance:
       - id: AC-031
-        statement: "No actionable KPI remains a plain field; each has a parity test; an unavailable metric renders differently from 0."
+        statement: "No actionable KPI remains a plain field; each has a parity test; funnel stages and exceptions-by-owner drill to the exact source records and owner; an unavailable metric renders differently from 0."
         required_evidence_types: [test_result, inspection]
     validation:
       - id: VAL-031
@@ -777,18 +1097,25 @@ tasks:
     execution_kind: repo_local
     kernel_profile: BUILD
     objective: >-
-      Upgrade plasticos.load.dashboard into a command center: today's
-      pickups and deliveries, late loads, SLA breaches, exceptions, missing
-      BOL, pending scheduling, carrier issues, each a drill to plasticos.load
-      under DEC-007, with kanban, pivot and graph views; add the module's
-      first dashboard tests.
+      Logistics Live Control Tower: default views Today, Next 48 Hours and
+      Needs Attention; pickup/delivery timeline beside Linda held commands,
+      missing shipping documents, unconfirmed carriers and loads blocked from
+      release; each count a DEC-007 drill to plasticos.load,
+      plasticos.linda.approval or the Logistics-routed exception activities
+      (DEC-012). A Linda case shows the original reply, conflicting fact,
+      affected load, proposed command and the next action, resolvable in
+      place for whichever role linda_approval authorizes at that time (TASK-061
+      widens it to Logistics per DEC-011 when decided; the Control Tower does
+      not wait for it). Kanban (progressbar), pivot,
+      graph and searchpanel views; add the module's first dashboard tests.
     authority_basis_ids: [AUTH-003]
-    required_decision_ids: [DEC-001, DEC-007]
+    required_decision_ids: [DEC-001, DEC-007, DEC-010, DEC-011, DEC-012]
     blocking_unknown_ids: []
     input_evidence_ids: [EVID-001, EVID-003]
     paths:
       - plasticos_logistics/models/load_dashboard.py
       - plasticos_logistics/views/load_dashboard_views.xml
+      - plasticos_logistics/views/linda_approval_views.xml
       - plasticos_logistics/tests/test_load_dashboard*.py
       - plasticos_logistics/tests/__init__.py
       - plasticos_logistics/__manifest__.py
@@ -798,7 +1125,7 @@ tasks:
       - add_load_dashboard_tests_incl_company_isolation
     acceptance:
       - id: AC-032
-        statement: "Each logistics counter equals search_count of its drill domain on plasticos.load; company isolation and the sales-rep own rule hold on the dashboard."
+        statement: "Each Control Tower count equals search_count of its drill domain; BOL and scale-ticket exceptions appear here with one-click navigation to the exact load and original; a Linda case is resolvable in place only by an authorized role; company isolation and the sales-rep own rule hold."
         required_evidence_types: [test_result]
     validation:
       - id: VAL-032
@@ -855,7 +1182,7 @@ tasks:
     completion_gate_ids: [GATE-003]
 
   - id: TASK-040
-    title: "Operations Manager command center"
+    title: "Operations Manager AI & Transaction Review Workbench"
     definition_status: blocked
     workstream_id: WS-04
     wave_id: W2
@@ -863,24 +1190,34 @@ tasks:
     execution_kind: repo_local
     kernel_profile: BUILD
     objective: >-
-      Cross-department execution queue for group_operations_manager: pending
-      Linda approvals, escalated and overdue claims, load exceptions and SLA
-      breaches, missing BOL, overdue or escalated document gaps, documents
-      awaiting review, delivered-uninvoiced handoffs; every item drills to
-      its source record; company scope per DEC-008.
+      Work inbox for group_operations_manager with Mine, Team, Unassigned and
+      Escalated over the Operations-routed DEC-012 activities, plus pending
+      Linda classes reserved to Operations, escalated/overdue claims, document
+      gaps and blocked vendor bills (account_move.py:166-212 block reasons:
+      duplicate reference, total mismatch, conflicting party, missing fields).
+      Each exception opens a review surface showing the original document
+      preview, candidate extracted facts when they exist (UNKNOWN stays
+      UNKNOWN), the exact linked Odoo record and current values, the
+      discrepancy, owner and due date, with actions Confirm Classification,
+      Associate to Exact Record, Request Correction, Return to Logistics and
+      Open AP/AR Record — each calling an existing authorized command. Owl
+      client action only if native form/Documents views cannot show this
+      (DEC-001). Company-scoped per DEC-008 and DEC-005(d).
     authority_basis_ids: [AUTH-001, AUTH-003]
-    required_decision_ids: [DEC-004, DEC-005, DEC-007, DEC-008]
-    blocking_unknown_ids: []
-    input_evidence_ids: [EVID-001]
+    required_decision_ids: [DEC-004, DEC-005, DEC-007, DEC-008, DEC-010, DEC-012, DEC-013]
+    blocking_unknown_ids: [UNK-004]
+    input_evidence_ids: [EVID-001, EVID-008]
     paths:
-      - "<DEC-004 host module>/**"
+      - <DEC-004 host module>/**
+      - security records approved under DEC-005
     actions:
-      - create_queue_counters_and_drills_from_existing_models
-      - apply_dec_005_security_changes
-      - tests_for_parity_role_visibility_and_company_isolation
+      - inbox_views_mine_team_unassigned_escalated
+      - review_surface_with_original_facts_record_discrepancy
+      - actions_bound_to_existing_commands
+      - parity_role_and_company_tests
     acceptance:
       - id: AC-040
-        statement: "An Operations Manager sees each queue with counts equal to its drills; a sales rep cannot open the menu; a second company's items never appear."
+        statement: "Ambiguous AI classification and a digitized vendor bill with mismatched amounts appear in the Operations inbox; the bill stays unposted until the existing guard is satisfied; Return to Logistics reassigns the one activity rather than creating a second; counts equal drills; a sales rep cannot open the menu; no cross-company item or protected detail appears."
         required_evidence_types: [test_result]
     validation:
       - id: VAL-040
@@ -888,7 +1225,7 @@ tasks:
         command_or_inspection: make check
         environment: repo_local
         expected_result: PASS
-    negative_cases: [ops_manager_cannot_open_claims, cross_company_queue_items]
+    negative_cases: [ops_inbox_duplicates_logistics_items, bill_posted_while_blocked, cross_company_queue_items, ai_result_presented_as_verified]
     rollback: *rollback_local
     risk: {tier: T3, reversibility: reversible, blast_radius: new_module_and_security}
     authorization_ceiling: *ceiling_local
@@ -973,29 +1310,31 @@ gates:
     gate_type: wave_exit
     blocking: true
     owner_authority_id: AUTH-002
-    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021]
-    required_evidence_ids: [EVID-001, EVID-002]
+    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064]
+    required_evidence_ids: [EVID-001, EVID-002, EVID-008]
     pass_criteria:
       - "Every W1 task's parity or reconciliation test passes in its lane PR's runtime stage."
       - "No drill domain names a field absent from its res_model."
       - "No module changed without a version bump."
+      - "Routing tests prove the right owner gets the activity and the wrong role cannot resolve it (server-side)."
     failure_effect: BLOCKED
   - id: GATE-002
     name: native_path_decided
     gate_type: wave_exit
     blocking: true
     owner_authority_id: AUTH-003
-    task_ids: [TASK-001]
-    required_evidence_ids: [EVID-003]
+    task_ids: [TASK-001, TASK-002]
+    required_evidence_ids: [EVID-003, EVID-007, EVID-009]
     pass_criteria:
-      - "Spike verdict recorded with source evidence; UNK-001 closed either way."
+      - "Authoring-path proof recorded; UNK-001 closed either way."
+      - "Capability inventory recorded; UNK-004 closed or its unknown rows named."
     failure_effect: BLOCKED
   - id: GATE-003
     name: command_centers_built
     gate_type: wave_exit
     blocking: true
     owner_authority_id: AUTH-002
-    task_ids: [TASK-031, TASK-032, TASK-033, TASK-040]
+    task_ids: [TASK-040, TASK-032, TASK-031, TASK-033]
     required_evidence_ids: [EVID-002, EVID-003]
     pass_criteria:
       - "Every actionable KPI on four dashboards has a parity test passing in its lane PR's runtime stage."
@@ -1010,7 +1349,7 @@ gates:
     required_evidence_ids: [EVID-004, EVID-005, EVID-006]
     pass_criteria:
       - "Runtime proof and query plans recorded."
-      - "Operator acceptance walk PASS on Staging."
+      - "Operator acceptance walk PASS on Staging, including the complete document-review and Linda-resolution paths."
       - "Production untouched by the campaign."
     failure_effect: BLOCKED
 
@@ -1044,6 +1383,27 @@ risks:
     mitigations: ["One lane owns WS-01; dependency_edges serialize the file."]
     acceptance_status: accepted
 
+  - id: RISK-005
+    statement: "Hand-entered vendor bills are not amount-checked; the guard covers digitized and emailed bills only (account_move.py:66-73)."
+    owner: AUTH-001
+    likelihood: likely
+    impact: medium
+    mitigations: ["Recorded for the accounting owner; the Operations inbox shows only what the existing guard blocks."]
+    acceptance_status: accepted
+  - id: RISK-006
+    statement: "cron_supplier_confirmation is an active external sender in the logistics area (transaction.py:1532-1595); it chases readiness, not documents."
+    owner: AUTH-001
+    likelihood: possible
+    impact: low
+    mitigations: ["No new sender is added; documented so the chase boundary is not misread."]
+    acceptance_status: accepted
+  - id: RISK-007
+    statement: "Moving open review and escalation activities to Logistics changes who is accountable for in-flight work."
+    owner: AUTH-001
+    likelihood: high
+    impact: medium
+    mitigations: ["TASK-060 repeatable migration with a before/after owner report in the PR; Staging walk S11."]
+    acceptance_status: accepted
 prohibited_paths:
   - {id: DNB-001, statement: "plasticos_base/**", rationale: "Ask-first base module; out of scope."}
   - {id: DNB-002, statement: "plasticos_gate/**", rationale: "Gate/CEG/EIE seam is owned by l9-ecosystem-fix-plan."}

@@ -1,6 +1,6 @@
 # Acceptance — ib-odoo-dashboard-command-centers
 
-Each row needs PASS with evidence, or a named defect. Rows A01–A12 are runtime/test evidence (GATE-001/003/004). Rows S01–S10 are the operator's Staging walk (TASK-051, GATE-004). Code review alone never passes a row.
+Each row needs PASS with evidence, or a named defect. Rows A01–A20 are runtime/test evidence (GATE-001/003/004). Rows S01–S13 are the operator's Staging walk (TASK-051, GATE-004). Code review alone never passes a row.
 
 | ID | Criterion | Evidence | Gate |
 |---|---|---|---|
@@ -16,6 +16,14 @@ Each row needs PASS with evidence, or a named defect. Rows A01–A12 are runtime
 | A10 | Sales counters reconcile for the logged-in rep, never include another rep | TASK-033 tests | 003 |
 | A11 | Ops queues reconcile; sales rep cannot open Ops menu; no cross-company items | TASK-040 tests | 003 |
 | A12 | Runtime tests green on the integrated Staging stack; EXPLAIN plans recorded for every rewritten KPI query | TASK-050 report | 004 |
+| A13 | Confidently attributed BOL and scale-ticket exceptions create exactly one Logistics activity with one-click navigation to the exact load and original | TASK-060, TASK-032 tests | 001/003 |
+| A14 | Ambiguous classification goes to Operations Manager even when one candidate is logistics-related | TASK-060 test | 001 |
+| A15 | One combined or multi-load original keeps one file and separately attributable obligations, each with its own owner | TASK-060 test | 001 |
+| A16 | A digitized vendor bill with mismatched amounts appears in the Operations inbox and stays unposted until the existing guard is satisfied | TASK-040 test | 003 |
+| A17 | Linda decisions succeed only for the role authorized for that exact (command, edge_case); every other role, Linda and a plain Logistics user fail at the server | TASK-061 tests | 001 |
+| A18 | Repeated processing, reassignment, resolution and reload never duplicate, lose or wrongly close an exception activity | TASK-060, TASK-061 tests | 001 |
+| A19 | Linda and the cron user cannot verify business evidence; a human Documents User on an exact accepted scope can | TASK-064 tests | 001 |
+| A20 | Admin drills from a department bottleneck (funnel stage, exceptions by owner) to the correct source records and accountable owner | TASK-031 tests | 003 |
 | S01 | Logistics: each counter click lands on the matching filtered load list; breadcrumb returns to the dashboard | operator walk | 004 |
 | S02 | Sales (as a rep): each counter click; Track Load on a multi-load deal; Open Deal | operator walk | 004 |
 | S03 | Admin: every KPI clickable; numbers match a manual count of the drill list for 5 sampled KPIs | operator walk | 004 |
@@ -26,3 +34,6 @@ Each row needs PASS with evidence, or a named defect. Rows A01–A12 are runtime
 | S08 | Refresh: Admin cron refresh and manual refresh show the same values | operator walk | 004 |
 | S09 | Native Admin dashboard (if shipped) installs/upgrades from module data on Staging with no manual edits | operator walk | 004 |
 | S10 | Production untouched by the campaign | branch check | 004 |
+| S11 | Document-review path end to end: a real BOL exception and a real ambiguous document reach the right inbox, are resolved by the right person, and the wrong person is refused | operator walk | 004 |
+| S12 | Linda-resolution path end to end for one Logistics-authorized class and one Operations-only class | operator walk | 004 |
+| S13 | No AI auto-sort record creation, bill auto-post or new external sender was activated (compare TASK-002 inventory) | operator walk | 004 |
