@@ -4,56 +4,39 @@
   "repositories": {
     "Quantum-L9/Enrichment.Inference.Engine": {
       "note": "CI canary for campaign L9-CI-UNIFIED-LEVERAGE-2026-11-20-v1.7.1 (branch canary/ci-ul-eie). override_attempt.py carries an inline nosemgrep: the pinned SDK honours it, so no semgrep-l9 rule fires there today; when the SDK refuses consumer suppressions the central rule will fire and this entry must name it.",
-      "roots": [
-        "contracts/feature_evidence/fixtures/ci_canary/",
-        "tests/canary/"
-      ],
+      "roots": ["contracts/feature_evidence/fixtures/ci_canary/", "tests/canary/"],
       "files": {
         "contracts/feature_evidence/fixtures/ci_canary/central_rule_bad.py": {
           "semgrep-l9": [
             "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true",
             "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
           ],
-          "bandit": [
-            "B602"
-          ]
+          "bandit": ["B602"]
         },
         "contracts/feature_evidence/fixtures/ci_canary/override_attempt.py": {
-          "bandit": [
-            "B602"
-          ]
+          "bandit": ["B602"]
         },
         "tests/canary/central_rule_bad_in_tests.py": {
-          "bandit": [
-            "B602"
-          ]
+          "bandit": ["B602"]
         }
       }
     },
     "Quantum-L9/Cursor-Governance": {
       "note": "CI canary for campaign L9-CI-UNIFIED-LEVERAGE-2026-11-20-v1.7.1, lane CG-CUTOVER item 4 (DO NOT MERGE branch). override_nosemgrep.py carries an inline nosemgrep and override_ignored_dir/ is in the consumer .semgrepignore: whether the central rule still fires there is the witness, so semgrep-l9 names nothing for them; bandit honours neither.",
-      "roots": [
-        "canary/ci_ul/"
-      ],
+      "roots": ["canary/ci_ul/"],
       "files": {
         "canary/ci_ul/central_rule_bad.py": {
           "semgrep-l9": [
             "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true",
             "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
           ],
-          "bandit": [
-            "B602"
-          ]
+          "bandit": ["B602"]
         },
         "canary/ci_ul/override_nosemgrep.py": {
-          "bandit": [
-            "B602"
-          ]
+          "bandit": ["B602"]
         },
         "canary/ci_ul/override_ignored_dir/central_rule_bad_ignored.py": {
-          "bandit": [
-            "B602"
-          ]
+          "bandit": ["B602"]
         }
       }
     }
