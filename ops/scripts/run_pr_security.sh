@@ -279,15 +279,26 @@ run_gitleaks() {
 
 # ── bandit ─────────────────────────────────────────────────────────────────
 run_bandit() {
-  local -a py=()
-  local f
+  local -a py=() py_rel=() fixture_rel=()
+  local f fixture_out
   for f in "${CHANGED[@]}"; do
-    [[ "$f" == *.py ]] && py+=("$WS/$f")
+    [[ "$f" == *.py ]] && py_rel+=("$f")
   done
-  if [[ ${#py[@]} -eq 0 ]]; then
+  if [[ ${#py_rel[@]} -eq 0 ]]; then
     skip "bandit (no changed .py files)"
     return 0
   fi
+  # Declared expect-fail fixtures (ops/ci_parity/expect_fail_fixtures.json):
+  # their named rules must fire and do not block; everything else is judged as
+  # before. An unreadable manifest fails closed.
+  if ! fixture_out="$(python3 "$GOV_ROOT/ops/ci_parity/fixtures.py" split --repo "$WS" "${py_rel[@]}")"; then
+    fail "bandit: the expect-fail fixture manifest could not be read"
+    return 0
+  fi
+  [[ -n "$fixture_out" ]] && mapfile -t fixture_rel <<<"$fixture_out"
+  for f in "${py_rel[@]}"; do
+    [[ " ${fixture_rel[*]} " == *" $f "* ]] || py+=("$WS/$f")
+  done
   local sev_flag="-lll"
   case "$BANDIT_SEVERITY" in
     high) sev_flag="-lll" ;;
@@ -307,19 +318,53 @@ run_bandit() {
   # real bandit failure. A scanner that could not run is missing_tool, which is
   # still a gate failure in gate mode but says the true reason.
   local bandit_out bandit_rc=0
-  bandit_out="$(run_uvx_pkg "bandit==${BANDIT_PIN}" bandit "${py[@]}" "$sev_flag" -q 2>&1)" \
+  if [[ ${#py[@]} -gt 0 ]]; then
+    bandit_out="$(run_uvx_pkg "bandit==${BANDIT_PIN}" bandit "${py[@]}" "$sev_flag" -q 2>&1)" \
+      || bandit_rc=$?
+    [ -n "$bandit_out" ] && printf '%s\n' "$bandit_out"
+    if [[ "$bandit_rc" -eq 0 ]]; then
+      ok "bandit==$BANDIT_PIN (${#py[@]} file(s), severity>=$BANDIT_SEVERITY)"
+    elif uvx_failed_to_provision "$bandit_out"; then
+      # uv exits 1 when it cannot fetch or resolve the package — the SAME code
+      # bandit uses for "issues found". Exit status alone cannot tell them apart,
+      # so the provisioning signature in uv's own output is what separates them.
+      missing_tool "bandit==$BANDIT_PIN" \
+        "uvx could not provision the pinned package — check network/TLS to PyPI"
+      return 0
+    else
+      fail "bandit reported issues in changed Python files"
+    fi
+  fi
+  [[ ${#fixture_rel[@]} -eq 0 ]] && return 0
+  run_bandit_fixtures "$sev_flag" "${fixture_rel[@]}"
+}
+
+# Bandit on declared expect-fail fixture files, judged by ops/ci_parity/fixtures.py:
+# every named rule must fire (else FAIL), a named rule never blocks, and any
+# other finding blocks as it would anywhere else.
+run_bandit_fixtures() {
+  local sev_flag="$1"
+  shift
+  local -a abs=()
+  local f report fx_out fx_rc=0 bandit_out bandit_rc=0
+  for f in "$@"; do abs+=("$WS/$f"); done
+  report="$(mktemp)"
+  bandit_out="$(run_uvx_pkg "bandit==${BANDIT_PIN}" bandit "${abs[@]}" "$sev_flag" -q -f json -o "$report" 2>&1)" \
     || bandit_rc=$?
-  [ -n "$bandit_out" ] && printf '%s\n' "$bandit_out"
-  if [[ "$bandit_rc" -eq 0 ]]; then
-    ok "bandit==$BANDIT_PIN (${#py[@]} file(s), severity>=$BANDIT_SEVERITY)"
-  elif uvx_failed_to_provision "$bandit_out"; then
-    # uv exits 1 when it cannot fetch or resolve the package — the SAME code
-    # bandit uses for "issues found". Exit status alone cannot tell them apart,
-    # so the provisioning signature in uv's own output is what separates them.
-    missing_tool "bandit==$BANDIT_PIN" \
-      "uvx could not provision the pinned package — check network/TLS to PyPI"
+  if [[ "$bandit_rc" -ne 0 && "$bandit_rc" -ne 1 ]] || uvx_failed_to_provision "$bandit_out"; then
+    [ -n "$bandit_out" ] && printf '%s\n' "$bandit_out"
+    rm -f "$report"
+    missing_tool "bandit==$BANDIT_PIN" "bandit did not run on the declared fixtures (exit $bandit_rc)"
+    return 0
+  fi
+  fx_out="$(python3 "$GOV_ROOT/ops/ci_parity/fixtures.py" bandit --repo "$WS" --report "$report" "$@" 2>&1)" \
+    || fx_rc=$?
+  rm -f "$report"
+  [ -n "$fx_out" ] && printf '%s\n' "$fx_out"
+  if [[ "$fx_rc" -eq 0 ]]; then
+    ok "bandit==$BANDIT_PIN declared expect-fail fixtures (${#abs[@]} file(s)): every named rule fired, nothing else"
   else
-    fail "bandit reported issues in changed Python files"
+    fail "bandit: declared expect-fail fixtures — a named rule did not fire or an undeclared finding is present"
   fi
 }
 
