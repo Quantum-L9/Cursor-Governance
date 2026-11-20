@@ -54,6 +54,12 @@ is public, so rows about credentials carry counts and actions only, never locati
 | T41 | The secret-scanning service monitors only the operator's personal GitHub account; no Quantum-L9 repository is monitored, so its CI check sees nothing for the organization. | observed | operator | Connect the organization in the service's GitHub integration. | OPEN, operator |
 | T42 | Codecov receives no usable report from any campaign repository; the one upload (CEG) is path-filtered, last ran 2026-03-11 and failed. | observed | cleanup wave | Retire in favour of Sonar coverage. See `CODECOV_REVIEW.md`. | OPEN, retire candidate |
 
+| T43 | Core `org-ci.yml` pins its own actions to SHAs not on Core main (`043f50a`, `a0c7178`, orphaned by the #280 squash) and provisions SDK `d09d3963`; the merged #286 plan/aggregate and #287 inheritance do not run in the required job. | observed (EIE canary, CTO verified) | lane L2f | Re-pin to main, wire plan and aggregate, advance the SDK pin, add an ancestry guard test. See `CI_CONFIG_FINDINGS.md` rows 1–2. | OPEN, assigned |
+| T44 | Central Semgrep scope is set by Semgrep's default ignore (drops `tests/` and `.semgrep/`), and consumer `# nosemgrep` and `.semgrepignore` can lower central coverage. | observed (canaries) | lane L1f | Declared scope; `--disable-nosem`; ignore consumer `.semgrepignore` for required rules. Rows 3–4. | OPEN, assigned |
+| T45 | Core `Control plane attestation` fails on every push since at least 2026-11-18 (code-owner review rule missing, ruleset not strict, immutable-release setting unreadable); Core main Sonar new-code coverage 79.6% against 80%. | observed | lane L2g, operator for settings | Meet each expectation through the settings-as-code engine, or change it with a recorded operator decision; add tests for the uncovered lines. Row 8. | OPEN, assigned |
+| T46 | `lint-autofix.yml` in Cursor-Governance and CEG opens pull requests with `GITHUB_TOKEN`, which starts no workflows, so those PRs never get their required checks (the class behind SDK #117, fixed for the SDK in #126). | observed | each repository | Use the organization App token, or stop opening PRs; add a verification check. Row 7. | OPEN |
+| T47 | EIE Sonar on main fails its gate with no coverage imported; CEG sends no coverage to Sonar. | observed (canaries) | canary agents | One test run, `coverage.xml` reused by Sonar (the Core #289 pattern). Row 6. | OPEN, assigned |
+
 ## Pending operator changes
 
 | ID | Change | Where | When | Why |
