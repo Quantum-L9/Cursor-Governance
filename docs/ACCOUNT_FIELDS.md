@@ -42,10 +42,12 @@ PYTHONUNBUFFERED=1
 
 ## 2. Setup script
 
-Paste `environment/agents/adapters/claude-code/web/setup.bootstrap.sh` verbatim.
+Paste `docs/account-fields/SETUP_FIELD.txt` — the only thing to paste. It is
+rendered from `environment/agents/adapters/claude-code/web/setup.bootstrap.sh`
+(comments and blank lines removed, no command changed) to fit the field.
 
-- Revision: `2026-11-20.3`
-- Checksum: `631456940bf13d72`
+- Revision: `2026-11-20.4`
+- Checksum: `22efd4668b1ed790`
 
 The stub records its own revision into `~/.l9/cloud-session.env`, so a later
 session can tell whether the pasted copy is current without reading the field.

@@ -240,7 +240,7 @@ def check_cross_file_secret_contract(failures: list[str]) -> None:
 
     bootstrap = HERE / "web" / "setup.bootstrap.sh"
     if bootstrap.is_file():
-        boot_text = bootstrap.read_text(encoding="utf-8")
+        boot_text = _stub_and_steps_text()
         for needle in ("export GH_TOKEN", "gh auth login --with-token"):
             if needle in boot_text:
                 _fail(
@@ -612,6 +612,7 @@ def check_no_secret_paste_instructions(failures: list[str]) -> None:
     )
     paths = (
         HERE / "web" / "setup.bootstrap.sh",
+        HERE / "web" / "setup.bootstrap_steps.sh",
         HERE / "web" / "README.md",
         HERE / "web" / "setup.sh",
     )
@@ -628,6 +629,9 @@ def check_no_secret_paste_instructions(failures: list[str]) -> None:
                 )
                 problems += 1
         if path.name == "setup.bootstrap.sh":
+            # Since stub revision 2026-11-20.4 the stub's scrub and memory notes run
+            # from setup.bootstrap_steps.sh on the hand-off; the contract is unchanged.
+            text = _stub_and_steps_text()
             if MEMORY_SERVER_KEY not in text:
                 _fail(
                     f"web/setup.bootstrap.sh must name the canonical memory server "
@@ -643,6 +647,16 @@ def check_no_secret_paste_instructions(failures: list[str]) -> None:
                 problems += 1
     if not problems:
         print("  OK: cloud stub/README do not instruct pasting Infisical or Graphiti secrets")
+
+
+def _stub_and_steps_text() -> str:
+    """The Setup stub plus the steps it hands to web/setup.sh (revision 2026-11-20.4)."""
+    parts = []
+    for name in ("setup.bootstrap.sh", "setup.bootstrap_steps.sh"):
+        path = HERE / "web" / name
+        if path.is_file():
+            parts.append(path.read_text(encoding="utf-8"))
+    return "\n".join(parts)
 
 
 def check_memory_identity_distinct(failures: list[str]) -> None:

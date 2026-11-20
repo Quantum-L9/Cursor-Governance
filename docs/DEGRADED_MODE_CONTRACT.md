@@ -626,3 +626,9 @@ Cursor-Governance as source it works either way.
   `verify_account_env.py`'s revision logic. The environment's field at
   `2026-11-20.2` against the repository's `2026-11-20.3` is how children started
   degraded. `--allow-stub-drift "<reason>"` is the logged operator override.
+- The Setup field text is `docs/account-fields/SETUP_FIELD.txt`, rendered from
+  stub revision `2026-11-20.4` (81 lines, comments and blank lines stripped). The
+  stub now only obtains the governance clone, fail-closed, and hands off;
+  normalization, scrubbing, the durable env and the notes run from
+  `web/setup.bootstrap_steps.sh` inside `web/setup.sh`, unchanged and in order.
+  Re-paste that file before launching children, or the preflight refuses.

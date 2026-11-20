@@ -31,6 +31,7 @@ PROMOTION_PATH = (
     "environment/agents/adapters/claude-code/install.sh",
     "environment/agents/adapters/claude-code/web/setup.sh",
     "environment/agents/adapters/claude-code/web/setup.bootstrap.sh",
+    "environment/agents/adapters/claude-code/web/setup.bootstrap_steps.sh",
 )
 
 #: Ratchet, measured after the remediation. A file may shed occurrences freely;
@@ -91,6 +92,8 @@ SWALLOW_BASELINE = {
     "environment/agents/adapters/claude-code/install.sh": 3,
     "environment/agents/adapters/claude-code/web/setup.sh": 19,
     "environment/agents/adapters/claude-code/web/setup.bootstrap.sh": 1,
+    # The stub's scrub, durable env and notes since revision 2026-11-20.4.
+    "environment/agents/adapters/claude-code/web/setup.bootstrap_steps.sh": 0,
 }
 
 _SWALLOW = re.compile(r"\|\| *(true|echo|:)")

@@ -14,7 +14,7 @@ field.
 |---|---|---|
 | **Network access** | `network-policy.md` | let the sandbox reach GitHub, registries, scanners |
 | **Environment variables** | `environment.env.example` | surface/memory/autonomy posture only — **no credentials** |
-| **Setup script** | `setup.bootstrap.sh` | normalize the environment, clone governance, then exec the canonical `setup.sh` from that clone |
+| **Setup script** | `setup.bootstrap.sh` | paste `docs/account-fields/SETUP_FIELD.txt` (rendered from this stub): clone governance, then run the canonical `setup.sh` from that clone, which runs the stub's former steps from `setup.bootstrap_steps.sh` |
 
 ## One adapter, thin surface callers
 
