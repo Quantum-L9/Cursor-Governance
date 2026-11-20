@@ -1,0 +1,42 @@
+# --- L9_META ---
+# l9_schema: 1
+# artifact_type: ci_config
+# component: codeql_nightly_extended
+# tags: [ci, codeql, security, governance, quantum-l9]
+# retrieval: on_demand
+# status: active
+# --- /L9_META ---
+#
+# Nightly main-only suite. This file is not used by pull requests.
+# A queries key here is safe because the nightly workflow never runs on a
+# pull request, so it does not disable pull-request overlay analysis.
+# Add a rule id here only after that query proves noisy. One reason per line.
+
+name: "L9 CodeQL nightly config (security-extended)"
+
+queries:
+  - uses: security-extended
+
+# --- suppressions ledger (add data-driven, one reason per line) ---
+# - exclude: { id: py/unused-import }   # example form; do NOT enable preemptively
+
+paths-ignore:
+  - "**/archive/**"
+  - "**/_archive/**"
+  - "**/_archived/**"
+  - "**/archived/**"
+  - "**/current_work/**"
+  - "**/C_GOV_FILES/**"
+  - "**/reports/**"
+  - "**/__pycache__/**"
+  - "**/.venv/**"
+  - "**/venv/**"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/vendor/**"
+  - "**/*.min.js"
+  - "**/tests/**"
+  - "**/test/**"
+  - "**/test_*.py"
+  - "**/*_test.py"
