@@ -29,6 +29,21 @@ PR #1088, head `4accb109c2e8d5a4421147cf69f60e33989b57dd`, both sides on the sam
 A green pair on one head is a positive witness only. Retirement also needs a negative witness: the
 same defect, injected on a disposable branch, fails both sides with the same file and rule (Gate 3).
 
+## Blocking class per local check (operator decision, 2026-11-20)
+
+Only a check that protects working or secure code may block a merge. Housekeeping keeps running and
+reporting, advisory, and is never a required check. Housekeeping means repository tidiness and
+bookkeeping: CODEOWNERS or SSOT file presence, docs obligations, generated-manifest drift, hygiene path
+rules, PR size, version drift.
+
+| Check | Class | Reason |
+|---|---|---|
+| Lint and Type Check | `BLOCKING_CORRECTNESS` | ruff check finds defects (undefined names, unused imports that mask errors, bug-prone patterns); `uv lock --check` keeps the tested dependency set equal to the declared one; the conflict-marker scan stops unparseable code; the controller-manifest guard stops a broken execution controller. The `ruff format --check` step inside it is housekeeping and is also enforced by Core `make check`; mypy is advisory already |
+| Test Suite | `BLOCKING_CORRECTNESS` | the repository's own tests are the behavior contract |
+| Root-file append-only gate | `BLOCKING_CORRECTNESS` | it is an integrity control, not tidiness: it stops the governance law (`CANONICAL_LAW.md`, `AGENTS.md`, `ORG_INVARIANTS.yaml`, `CODEOWNERS`, `.gitleaks.toml`, `pyproject.toml`, `requirements.txt`, `Repo.mk`, …) from being deleted or rewritten without an explicit justification. Those files carry the security and authority rules every agent and CI job here enforces, so silently removing a line removes a control. It protects secure operation of the repository |
+| governance-self-check | `HOUSEKEEPING`, after one split | as composed it is mixed. Housekeeping steps: ORG_INVARIANTS parse, SSOT presence, generated-artifact drift, rules budget, skills standard, skill projection, repo-docs obligations. Security steps: tracked-secret guard (`Secrets never in tracked config`), third-party action SHA pins, MCP config allowlist. The security steps move first into a required `BLOCKING_CORRECTNESS` job (or are proven covered by Core's secret scan and an action-pin rule with good/bad witnesses); then `governance-self-check` leaves the required set and keeps reporting |
+| repo-hygiene | `HOUSEKEEPING` | path names, tracked runtime state, env template count and retired directories are tidiness rules; none stops broken or insecure code |
+
 ## Disposition per local required check
 
 | Check | What it runs | Core equivalent today | Disposition | Parity receipt that must exist before retirement |
@@ -43,14 +58,23 @@ Kept as domain checks, not required today: `Exact-head memory lifecycle proof`
 (`memory-cross-repo.yml`), `L9 Projection Bundle Verify` and `Trusted Replay`, CodeQL (`codeql.yml`
 PR default and `codeql-nightly.yml` security-extended; accepted owner, not relocated to the SDK).
 
-## Proposed ruleset end state (operator applies, after `CURSOR_CANARY_PASS`)
+## Proposed ruleset end state (operator applies)
 
-1. Keep `Analyze (central Core)` required (organization ruleset 21895545).
-2. Keep required: `Root-file append-only gate`, `governance-self-check`, `repo-hygiene`.
-3. Keep `Lint and Type Check` required until the two guards run in a required check elsewhere; then drop it from
-   ruleset 20855699 in the same change that deletes the job.
-4. Keep `Test Suite` required until its three receipts exist; then drop it in the same change that
-   deletes the job.
+Required set = `BLOCKING_CORRECTNESS` checks plus `Analyze (central Core)`. Ruleset changes stay with
+the operator; this plan applies none.
+
+| Check | Now | Proposed | When |
+|---|---|---|---|
+| `Analyze (central Core)` | required (org 21895545) | required | unchanged |
+| `Lint and Type Check` | required | required | unchanged; leaves only as a `retire_duplicate` once its guards run in a required check elsewhere and the parity receipts below exist (after `CURSOR_CANARY_PASS`) |
+| `Test Suite` | required | required | unchanged; leaves only as a `retire_duplicate` after its receipts (after `CURSOR_CANARY_PASS`) |
+| `Root-file append-only gate` | required | required | unchanged |
+| `governance-self-check` | required | advisory (runs, reports, not required) | after its three security steps run in a required job, or are proven covered centrally with good/bad witnesses |
+| `repo-hygiene` | required | advisory (runs, reports, not required) | now: it is housekeeping and carries no security step |
+
+Making a housekeeping check advisory is a classification change, not a retirement: the workflow keeps
+running and reporting, so `L9-CI-CORE-004` (no consumer check retired before `CURSOR_CANARY_PASS`)
+is not engaged.
 
 No step removes a check before its successor's negative witness is recorded.
 
@@ -62,4 +86,5 @@ No step removes a check before its successor's negative witness is recorded.
 | Test profile in Core | Cursor-Governance `run_pytest_suites.sh` (Core reaches it through `Repo.mk` `repo-test`) | Select `--profile ci` on `push` and `merge_group` there, so Core and local Test Suite run the same profile; record both runs |
 | Test Suite scope on `push` and `merge_group` | Cursor-Governance `run_pytest_suites.sh` scope, with Core `run-repository-verification` event plumbing | Record both counts; a mismatch is a CTO-QUESTION to the Core owner |
 | Coverage from one run | Core lane L2b (T35) | Sonar import from the Core run, or keep local `Test Suite` as the coverage producer |
+| Security steps out of governance-self-check | Cursor-Governance (`.github/workflows/governance-self-check.yml`) | Move the tracked-secret guard, action SHA pins and MCP allowlist into one required correctness job, or record Core coverage with good/bad witnesses |
 | Negative witnesses | lane CG-CUTOVER item 4 | Disposable-branch fixtures; run URLs in `CURSOR_CANARY_RESULT.md` |
