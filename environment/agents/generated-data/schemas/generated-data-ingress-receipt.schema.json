@@ -27,30 +27,18 @@
     },
     "source_kind": {
       "description": "Which existing producer handed the source to ingress.",
-      "enum": [
-        "accepted_subagent_result",
-        "program_execution_outcome"
-      ]
+      "enum": ["accepted_subagent_result", "program_execution_outcome"]
     },
     "outcome": {
       "description": "Harvest disposition. CAPTURED = processed (see processing_status); NO_REUSABLE_DATA = successful no-op; QUARANTINED / REJECTED = refused; FAILED = processing could not complete. FAILED is never NO_REUSABLE_DATA.",
-      "enum": [
-        "CAPTURED",
-        "NO_REUSABLE_DATA",
-        "QUARANTINED",
-        "REJECTED",
-        "FAILED"
-      ]
+      "enum": ["CAPTURED", "NO_REUSABLE_DATA", "QUARANTINED", "REJECTED", "FAILED"]
     },
     "reason": {
       "type": "string",
       "minLength": 1
     },
     "processor_job_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "processing_status": {
       "enum": [
@@ -96,18 +84,12 @@
     },
     "delivery": {
       "description": "Delivery-worker result reference (route outcomes, destination receipt ids) or null when no delivery ran.",
-      "type": [
-        "object",
-        "null"
-      ]
+      "type": ["object", "null"]
     },
     "processing_error": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "type",
-        "message"
-      ],
+      "required": ["type", "message"],
       "properties": {
         "type": {
           "type": "string",
@@ -149,14 +131,10 @@
         "not": {
           "anyOf": [
             {
-              "required": [
-                "delivery"
-              ]
+              "required": ["delivery"]
             },
             {
-              "required": [
-                "packet_digest"
-              ]
+              "required": ["packet_digest"]
             }
           ]
         }
@@ -172,10 +150,7 @@
         }
       },
       "then": {
-        "required": [
-          "packet_digest",
-          "packet_evidence_path"
-        ],
+        "required": ["packet_digest", "packet_evidence_path"],
         "properties": {
           "processor_job_id": {
             "const": null
@@ -196,10 +171,7 @@
         }
       },
       "then": {
-        "required": [
-          "packet_digest",
-          "packet_evidence_path"
-        ],
+        "required": ["packet_digest", "packet_evidence_path"],
         "properties": {
           "processor_job_id": {
             "type": "string",
@@ -211,17 +183,12 @@
     {
       "description": "A processing error is only ever reported as a failure or a refusal, never as success or a no-op.",
       "if": {
-        "required": [
-          "processing_error"
-        ]
+        "required": ["processing_error"]
       },
       "then": {
         "properties": {
           "outcome": {
-            "enum": [
-              "FAILED",
-              "REJECTED"
-            ]
+            "enum": ["FAILED", "REJECTED"]
           }
         }
       }

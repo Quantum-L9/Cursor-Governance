@@ -8,10 +8,7 @@
   "donor": {
     "has_rich_design_invariants": true,
     "has_maintained_public_implementation": true,
-    "has_public_consumption_surface": [
-      "package",
-      "public API or custom element equivalent"
-    ],
+    "has_public_consumption_surface": ["package", "public API or custom element equivalent"],
     "has_documented_usage": true
   },
   "trap": [

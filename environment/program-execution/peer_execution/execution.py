@@ -115,7 +115,12 @@ def _observe_worktree_changes(contract: Mapping[str, Any]) -> list[str]:
             index += 1
             path = parts[index]
         if path:
-            paths.add(path.replace("\\", "/"))
+            normalized = path.replace("\\", "/")
+            # The pre-existing untracked wiring the runner links into every
+            # task worktree is not a repository change; the rendered contract
+            # defines it as not changes, so the observation must not count it.
+            if normalized.split("/", 1)[0] not in {".cursor-commands", ".cursor", ".l9"}:
+                paths.add(normalized)
         index += 1
     return sorted(paths)
 
@@ -492,14 +497,21 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             changed_files = []
             residuals.append("changed_files_unusable_shape")
         if not changed_files:
-            try:
-                observed = _observe_worktree_changes(contract)
-            except WorktreeObservationError:
-                observed = []
-                residuals.append("worktree_observation_failed")
-            if observed:
-                changed_files = observed
-                residuals.append("changed_files_recovered_from_worktree")
+            # An empty claim is only suspicious on a contract that could have
+            # written: recovery exists for a mutation worker that lost its
+            # list. A read-only contract's honest claim is [] and must stay
+            # the worker's, never replaced with files the runner happened to
+            # see (the pre-existing wiring among them).
+            requested = {str(item) for item in (contract.get("requested_actions") or [])}
+            if requested & {"local_write", "destructive_change", "commit"}:
+                try:
+                    observed = _observe_worktree_changes(contract)
+                except WorktreeObservationError:
+                    observed = []
+                    residuals.append("worktree_observation_failed")
+                if observed:
+                    changed_files = observed
+                    residuals.append("changed_files_recovered_from_worktree")
         try:
             validation_results = _mapping_list(
                 payload,

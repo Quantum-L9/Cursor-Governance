@@ -186,6 +186,17 @@ def build_context_manifest(
             "Execute this exact Program Execution Rendered Contract.",
             "Stay inside its worktree, requested actions, writable paths, and stop conditions.",
             "Return only JSON. changed_files MUST be a JSON array of repo-relative paths.",
+            (
+                "Run every Bash command alone, exactly as written: no `;`, `&&`, pipes, "
+                "appended echo or exit-code capture. The authority hook refuses composed "
+                "commands; if a command was refused, run it again alone, exactly as written."
+            ),
+            (
+                "changed_files lists ONLY paths this window created or modified, as shown by "
+                "`git status --porcelain` run alone. Files that merely exist in the worktree "
+                "(including pre-existing untracked wiring like .cursor-commands, .cursor/, "
+                ".l9/) are not changes; when nothing else changed, changed_files MUST be []."
+            ),
             "candidate_sha MUST be JSON null — do not git add or git commit; PE commits later.",
             "Also include validation_results (array) and residual_unknowns (array of strings).",
             (

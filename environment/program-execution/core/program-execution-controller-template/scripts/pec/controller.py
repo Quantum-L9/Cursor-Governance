@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import sys
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -1045,6 +1045,62 @@ def _evidence_valid(db: StateDB, evidence_id: str) -> bool:
     if expires_at and parse_time(expires_at) <= dt.datetime.now(dt.UTC):
         return False
     return True
+
+
+def _realize_planned_evidence(
+    db: StateDB,
+    workspace: Path,
+    task_id: str,
+    candidate_sha: str | None,
+    verification: Mapping[str, Any],
+) -> None:
+    """Declared evidence whose collection is this task's own validation.
+
+    Bootstrap materializes declared evidence requirements as ``planned`` rows.
+    A requirement collected at task validation is realized when the task its
+    gates scope verifies PASSED_LOCAL: status available, result PASS, bound
+    to the candidate revision, produced by the Controller. Without this step
+    a completion gate that requires such evidence can only ever see it
+    planned (GATE_EVIDENCE_STALE) and stays UNKNOWN.
+    """
+    lock_path = workspace / "runtime" / "program-lock.json"
+    try:
+        lock = load_json(lock_path)
+    except (OSError, ValueError):
+        return
+    gate_scopes: dict[str, set[str]] = {}
+    for gate in lock.get("gates") or []:
+        if not isinstance(gate, dict):
+            continue
+        gate_scopes[str(gate.get("id") or "")] = {
+            str(item) for item in ((gate.get("scope") or {}).get("task_ids") or [])
+        }
+    revision = str(candidate_sha or "").strip()
+    for item in lock.get("evidence") or []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("status") or "") != "planned":
+            continue
+        if str(item.get("method") or "") != "command":
+            continue
+        scoped: set[str] = set()
+        for support in item.get("supports") or []:
+            scoped |= gate_scopes.get(str(support), set())
+        if task_id not in scoped:
+            continue
+        realized = dict(item)
+        realized.update(
+            {
+                "status": "available",
+                "environment": "local_worktree",
+                "producer": "Program Execution Controller",
+                "produced_at": verification.get("verified_at") or utc_now(),
+                "revision": revision,
+                "digest": verification.get("receipt_digest"),
+                "result": "PASS",
+            }
+        )
+        db.upsert_evidence(realized)
 
 
 def _require_ledger_integrity(ledger: EventLedger) -> None:
@@ -2650,6 +2706,33 @@ def _wiring_gate(contract: dict[str, Any], task: dict[str, Any]) -> str:
     return "INCOMPLETE"
 
 
+_WIRING_SEGMENTS = (".cursor-commands", ".cursor", ".l9")
+
+
+def _is_wiring_path(path: str) -> bool:
+    """The pre-existing untracked wiring is not a repository change."""
+    return path.split("/", 1)[0] in _WIRING_SEGMENTS
+
+
+def _status_excluding_wiring(worktree: Path) -> str:
+    """`git status --porcelain` minus the pre-existing untracked wiring.
+
+    The runner links .cursor-commands / .cursor / .l9 into every task
+    worktree; the rendered contract defines them as not changes, so the
+    at-base judgment must not see them as dirt.
+    """
+    raw = run_git(worktree, "status", "--porcelain", "--untracked-files=all", check=False).stdout
+    kept: list[str] = []
+    for line in raw.splitlines():
+        path = line[3:] if len(line) >= 4 else ""
+        candidates = path.split(" -> ") if " -> " in path else [path]
+        if path and all(_is_wiring_path(item) for item in candidates if item):
+            continue
+        if line.strip():
+            kept.append(line)
+    return "\n".join(kept)
+
+
 def _kernel_and_pec_verdict(gates: dict[str, str]) -> tuple[str, str]:
     values = list(gates.values())
     if "STALE" in values:
@@ -3083,9 +3166,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 at_base = (
                     run_git(worktree, "rev-parse", "HEAD", check=False).stdout.strip()
                     == str(task["base_sha"])
-                    and not run_git(
-                        worktree, "status", "--porcelain", "--untracked-files=all", check=False
-                    ).stdout.strip()
+                    and not _status_excluding_wiring(worktree).strip()
                 )
                 satisfied = (
                     at_base
@@ -3170,6 +3251,10 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                     "notes": None,
                 }
             )
+            if verdict == "PASSED_LOCAL":
+                # Declared requirements the task's own validation collects are
+                # realized here, before any gate is evaluated against them.
+                _realize_planned_evidence(db, workspace, task_id, candidate_sha, verification)
             db.transition_task(
                 task_id,
                 verdict,

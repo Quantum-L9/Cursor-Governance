@@ -31,11 +31,7 @@
     "authority": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "issuer",
-        "issued_at",
-        "expires_at"
-      ],
+      "required": ["issuer", "issued_at", "expires_at"],
       "properties": {
         "issuer": {
           "type": "string",
@@ -151,11 +147,7 @@
     "validation": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "required_checks",
-        "independent_review_required",
-        "human_merge_required"
-      ],
+      "required": ["required_checks", "independent_review_required", "human_merge_required"],
       "properties": {
         "required_checks": {
           "type": "array",
@@ -177,11 +169,7 @@
     "base_state": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "repository",
-        "branch",
-        "commit_sha"
-      ],
+      "required": ["repository", "branch", "commit_sha"],
       "properties": {
         "repository": {
           "type": "string",

@@ -25,16 +25,10 @@
       "format": "date-time"
     },
     "before_audit_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "after_audit_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "before": {
       "type": "object"
@@ -67,10 +61,7 @@
       }
     },
     "status": {
-      "enum": [
-        "passed",
-        "failed"
-      ]
+      "enum": ["passed", "failed"]
     }
   },
   "additionalProperties": false

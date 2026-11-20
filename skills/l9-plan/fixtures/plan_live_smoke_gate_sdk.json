@@ -9,14 +9,8 @@
     "AGENTS.md Gate-only egress language unchanged or explicitly N/A"
   ],
   "scope": {
-    "in": [
-      "Gate client docs/examples/tests clarification"
-    ],
-    "out": [
-      "TransportPacket field changes",
-      "peer URL dispatch APIs",
-      "hashing input changes"
-    ]
+    "in": ["Gate client docs/examples/tests clarification"],
+    "out": ["TransportPacket field changes", "peer URL dispatch APIs", "hashing input changes"]
   },
   "code_in_scope": true,
   "pre_validation": [
@@ -43,9 +37,7 @@
     {
       "id": "T1",
       "task": "Inventory GateClient timeout and error paths",
-      "files": [
-        "src/constellation_node_sdk/"
-      ],
+      "files": ["src/constellation_node_sdk/"],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -57,14 +49,10 @@
     {
       "id": "T2",
       "task": "Add/adjust tests for timeout failure mode",
-      "files": [
-        "tests/"
-      ],
+      "files": ["tests/"],
       "effort": "M",
       "risk": "medium",
-      "dependencies": [
-        "T1"
-      ],
+      "dependencies": ["T1"],
       "operation": "Create",
       "anchor": "new test module or existing gate client tests",
       "leverage_rank": 2
@@ -72,24 +60,16 @@
     {
       "id": "T3",
       "task": "Align example docs to Gate-only egress",
-      "files": [
-        "examples/"
-      ],
+      "files": ["examples/"],
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "T1"
-      ],
+      "dependencies": ["T1"],
       "operation": "Replace",
       "anchor": "GATE_URL usage",
       "leverage_rank": 3
     }
   ],
-  "critical_path": [
-    "T1",
-    "T2",
-    "T3"
-  ],
+  "critical_path": ["T1", "T2", "T3"],
   "milestones": [
     {
       "id": "M1",
@@ -125,9 +105,7 @@
     {
       "surface": "examples/",
       "action": "update",
-      "todo_ids": [
-        "T3"
-      ]
+      "todo_ids": ["T3"]
     }
   ],
   "stress_test": {
@@ -136,25 +114,14 @@
       "Would changing defaults break existing workers relying on indefinite waits?",
       "Does any example still show peer URL dispatch?"
     ],
-    "assumed_false_ifs": [
-      "transport hash algorithm must change",
-      "peer dispatch is acceptable"
-    ],
+    "assumed_false_ifs": ["transport hash algorithm must change", "peer dispatch is acceptable"],
     "blast_radius": "worker nodes may mis-handle Gate timeouts; examples may teach illegal egress",
     "rollback": "revert docs/tests commit; no protocol migration required"
   },
   "leverage": {
-    "ranked_todo_ids": [
-      "T1",
-      "T2",
-      "T3"
-    ],
-    "shared_causes": [
-      "unclear timeout and egress contract in examples"
-    ],
-    "deletions_or_consolidations": [
-      "remove any peer-URL example snippets if found"
-    ]
+    "ranked_todo_ids": ["T1", "T2", "T3"],
+    "shared_causes": ["unclear timeout and egress contract in examples"],
+    "deletions_or_consolidations": ["remove any peer-URL example snippets if found"]
   },
   "risks": [
     {
@@ -190,18 +157,12 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": [
-      "U1"
-    ],
+    "remaining_unknown_ids": ["U1"],
     "next_skill": "l9-gmp-protocol",
     "stop_reason": "plan validated; baseline pr-check still unknown"
   },
   "gmp_handoff": {
-    "may_modify": [
-      "tests/",
-      "examples/",
-      "docs/"
-    ],
+    "may_modify": ["tests/", "examples/", "docs/"],
     "must_not_modify": [
       "src/constellation_node_sdk/transport/hashing.py",
       "src/constellation_node_sdk/transport/models.py",
@@ -212,17 +173,9 @@
       "Gate-only egress",
       "transport_hash stable across hops"
     ],
-    "validation_commands": [
-      "pytest -q",
-      ".pre-commit-config.yaml"
-    ]
+    "validation_commands": ["pytest -q", ".pre-commit-config.yaml"]
   },
   "depth": "deep",
-  "checklist": [
-    "inventory",
-    "tests",
-    "examples",
-    "pr-check"
-  ],
+  "checklist": ["inventory", "tests", "examples", "pr-check"],
   "estimate": "1 GMP"
 }

@@ -32,10 +32,7 @@
       "description": "The single static registry that aligns source extraction, inventory classification, and change impact.",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "extensions",
-        "filenames"
-      ],
+      "required": ["extensions", "filenames"],
       "properties": {
         "extensions": {
           "$ref": "#/$defs/sourceEvidenceEntries"
@@ -48,21 +45,14 @@
     "managed_regions": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "blocks",
-        "line_tokens"
-      ],
+      "required": ["blocks", "line_tokens"],
       "properties": {
         "blocks": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "id",
-              "start",
-              "end"
-            ],
+            "required": ["id", "start", "end"],
             "properties": {
               "id": {
                 "type": "string"
@@ -81,10 +71,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "id",
-              "token"
-            ],
+            "required": ["id", "token"],
             "properties": {
               "id": {
                 "type": "string"
@@ -137,12 +124,7 @@
             ]
           },
           "requirement": {
-            "enum": [
-              "required",
-              "conditional",
-              "optional",
-              "external"
-            ]
+            "enum": ["required", "conditional", "optional", "external"]
           },
           "selectors": {
             "type": "array",
@@ -174,10 +156,7 @@
             ]
           },
           "generator": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "evidence_sources": {
             "type": "array",
@@ -195,10 +174,7 @@
             "type": "boolean"
           },
           "selector_mode": {
-            "enum": [
-              "all",
-              "first_present"
-            ]
+            "enum": ["all", "first_present"]
           },
           "projection_inputs": {
             "type": "array",
@@ -214,10 +190,7 @@
           "ownership": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "semantic_owner",
-              "execution_owner"
-            ],
+            "required": ["semantic_owner", "execution_owner"],
             "properties": {
               "semantic_owner": {
                 "type": "string",
@@ -232,10 +205,7 @@
           "analysis": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "analyzer",
-              "mode"
-            ],
+            "required": ["analyzer", "mode"],
             "properties": {
               "analyzer": {
                 "type": "string",
@@ -249,9 +219,7 @@
           "mutation": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "guard"
-            ],
+            "required": ["guard"],
             "properties": {
               "guard": {
                 "type": "string",
@@ -264,9 +232,7 @@
             "deprecated": true,
             "description": "Legacy compatibility metadata. Canonical v3 policy does not emit per-surface validator names; executable assessment and obligation validation remain authoritative.",
             "additionalProperties": false,
-            "required": [
-              "validators"
-            ],
+            "required": ["validators"],
             "properties": {
               "validators": {
                 "type": "array",
@@ -288,16 +254,10 @@
                   "const": "operational_contract"
                 }
               },
-              "required": [
-                "kind"
-              ]
+              "required": ["kind"]
             },
             "then": {
-              "required": [
-                "ownership",
-                "analysis",
-                "mutation"
-              ]
+              "required": ["ownership", "analysis", "mutation"]
             }
           }
         ]
@@ -309,10 +269,7 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "patterns",
-          "surfaces"
-        ],
+        "required": ["patterns", "surfaces"],
         "properties": {
           "patterns": {
             "type": "array",
@@ -379,12 +336,7 @@
           "minItems": 1,
           "uniqueItems": true,
           "items": {
-            "enum": [
-              "PORT",
-              "PORT_WITH_HARDENING",
-              "MERGE_WITH_EXISTING",
-              "CONFIGURE"
-            ]
+            "enum": ["PORT", "PORT_WITH_HARDENING", "MERGE_WITH_EXISTING", "CONFIGURE"]
           }
         },
         "confirmed_evidence_required": {
@@ -395,9 +347,7 @@
     "capabilities": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "module_readmes"
-      ],
+      "required": ["module_readmes"],
       "properties": {
         "module_readmes": {
           "type": "object",
@@ -417,11 +367,7 @@
             "required_paths": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "generator",
-                "config",
-                "dag"
-              ],
+              "required": ["generator", "config", "dag"],
               "properties": {
                 "generator": {
                   "type": "string"
@@ -435,22 +381,13 @@
               }
             },
             "absence_behavior": {
-              "enum": [
-                "NotApplicable",
-                "BLOCKED"
-              ]
+              "enum": ["NotApplicable", "BLOCKED"]
             },
             "partial_behavior": {
-              "enum": [
-                "PARTIAL",
-                "BLOCKED"
-              ]
+              "enum": ["PARTIAL", "BLOCKED"]
             },
             "partial_repair_route": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "polyglot_extension_owner": {
               "type": "string"
@@ -462,18 +399,12 @@
     "external_bindings": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "org_profile"
-      ],
+      "required": ["org_profile"],
       "properties": {
         "org_profile": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "repository",
-            "url",
-            "copy_policy"
-          ],
+          "required": ["repository", "url", "copy_policy"],
           "properties": {
             "repository": {
               "const": "Quantum-L9/.github"
@@ -541,10 +472,7 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "language",
-          "patterns"
-        ],
+        "required": ["language", "patterns"],
         "properties": {
           "language": {
             "enum": [

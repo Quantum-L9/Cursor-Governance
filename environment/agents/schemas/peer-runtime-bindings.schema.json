@@ -11,10 +11,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "required",
-        "provider_id"
-      ],
+      "required": ["required", "provider_id"],
       "type": "object"
     },
     "binding": {
@@ -30,11 +27,7 @@
           "$ref": "#/$defs/nonEmpty"
         }
       },
-      "required": [
-        "surface",
-        "provider_ref",
-        "execution_profile_ref"
-      ],
+      "required": ["surface", "provider_ref", "execution_profile_ref"],
       "type": "object"
     },
     "deployment": {
@@ -44,9 +37,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "readiness_required"
-      ],
+      "required": ["readiness_required"],
       "type": "object"
     },
     "execution": {
@@ -59,9 +50,7 @@
                 "const": true
               }
             },
-            "required": [
-              "required"
-            ]
+            "required": ["required"]
           },
           "then": {
             "properties": {
@@ -84,10 +73,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "required",
-        "bindings"
-      ],
+      "required": ["required", "bindings"],
       "type": "object"
     },
     "generated_data": {
@@ -100,10 +86,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "required",
-        "capture_readiness_required"
-      ],
+      "required": ["required", "capture_readiness_required"],
       "type": "object"
     },
     "kebabId": {
@@ -137,14 +120,7 @@
           "$ref": "#/$defs/subagents"
         }
       },
-      "required": [
-        "agent_ref",
-        "execution",
-        "autonomy",
-        "subagents",
-        "results",
-        "generated_data"
-      ],
+      "required": ["agent_ref", "execution", "autonomy", "subagents", "results", "generated_data"],
       "type": "object"
     },
     "results": {
@@ -154,9 +130,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "readiness_required"
-      ],
+      "required": ["readiness_required"],
       "type": "object"
     },
     "subagents": {
@@ -172,9 +146,7 @@
           "$ref": "#/$defs/nonEmpty"
         }
       },
-      "required": [
-        "enabled"
-      ],
+      "required": ["enabled"],
       "type": "object"
     }
   },
@@ -201,11 +173,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "schema",
-    "schema_version",
-    "peers"
-  ],
+  "required": ["schema", "schema_version", "peers"],
   "title": "L9 Peer Runtime Bindings",
   "type": "object"
 }

@@ -228,6 +228,29 @@ class AutonomyControlPlaneBridgeTests(unittest.TestCase):
         self.assertIn("merge", campaign.scope["forbidden_operations"])
         self.assertNotIn("push_non_force_declared_branch", campaign.scope["allowed_operations"])
 
+    def test_validation_commands_grant_run_tests_to_the_campaign_scope(self) -> None:
+        """A contract that obliges its worker to run validations grants run_tests.
+
+        Without it the gateway denies every validation command with
+        CAMPAIGN_OPERATION_NOT_ALLOWED, so a read-only task's attempt can never
+        claim honest validations. An inspect contract that declares no
+        validation commands keeps the plain inspect operations.
+        """
+        module = _mapper()
+        plain = module.allowed_operations({"requested_actions": ["inspect"], "writable_paths": []})
+        self.assertEqual(plain, ["read", "search"])
+        validating = module.allowed_operations(
+            {
+                "requested_actions": ["inspect"],
+                "writable_paths": [],
+                "validation_commands": ["test -f Repo.mk"],
+            }
+        )
+        self.assertEqual(validating, ["read", "search", "run_tests"])
+        # Mutation contracts already carry run_tests through local_write.
+        mutating = module.allowed_operations(_mutating_contract())
+        self.assertIn("run_tests", mutating)
+
     def test_local_write_without_commit_does_not_allow_commit_local(self) -> None:
         """`mutation` is not one permission: commit is never inferred from write."""
         campaign = _mapper().map_program_contract(
@@ -684,6 +707,61 @@ class SubordinateLifecycleTests(unittest.TestCase):
             self.assertTrue(claims, "the executor lease held no claims to release")
             for claim in claims:
                 self.assertNotEqual(claim["status"], "HELD")
+
+    def test_recon_grant_submits_a_recon_report_and_releases_its_lease(self) -> None:
+        """A read-only task's action expects a ReconReport, not an ExecutionResult."""
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            contract = _mutating_contract()
+            contract["requested_actions"] = ["inspect"]
+            contract["writable_paths"] = []
+            contract["task_id"] = "TASK-RO"
+            contract["contract_digest"] = "digest-ro"
+            module, grant = self._granted(workspace, contract)
+            self.assertFalse(grant["mutation"])
+            result = module.submit_task_result(
+                grant,
+                changed_files=[],
+                candidate_sha=None,
+                contract_digest="digest-ro",
+                evidence={"attempt_receipt_path": "/tmp/attempt-receipt.json"},
+                status="PASS",
+            )
+            self.assertTrue(result["submitted"])
+            self.assertEqual(result["lease_status"], "RELEASED")
+            connection = sqlite3.connect(str(grant["runtime_database"]))
+            try:
+                connection.row_factory = sqlite3.Row
+                artifact = connection.execute(
+                    "SELECT kind, status, payload_json FROM artifacts WHERE artifact_id = ?",
+                    (result["artifact_id"],),
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual(artifact["kind"], "ReconReport")
+            self.assertEqual(artifact["status"], "VALID")
+            payload = json.loads(artifact["payload_json"])
+            self.assertEqual(payload["status"], "PASS")
+            self.assertIn("attempt_receipt_path", payload["evidence"])
+
+    def test_recon_lease_admits_canonical_validation_commands(self) -> None:
+        """A read-only task must be able to run its contract's validation commands.
+
+        Every shell validation command maps to test.run through the canonical
+        validation grammar, so a recon lease that does not acknowledge test.run
+        can never produce an honest validation claim.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            contract = _mutating_contract()
+            contract["requested_actions"] = ["inspect"]
+            contract["writable_paths"] = []
+            contract["task_id"] = "TASK-RO"
+            contract["contract_digest"] = "digest-ro"
+            _module, grant = self._granted(workspace, contract)
+            self.assertFalse(grant["mutation"])
+            metadata = json.loads(self._lease_row(grant)["metadata_json"])
+            self.assertIn("test.run", metadata["accepted_capabilities"])
 
     def test_terminal_result_is_bound_to_the_rendered_contract_digest(self) -> None:
         """An empty or foreign digest must not release this lease."""

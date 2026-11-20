@@ -25,13 +25,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "authority_id",
-          "kind",
-          "source",
-          "scope",
-          "precedence"
-        ],
+        "required": ["authority_id", "kind", "source", "scope", "precedence"],
         "properties": {
           "authority_id": {
             "type": "string",
@@ -88,12 +82,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "component_id",
-          "responsibilities",
-          "path_prefixes",
-          "authority_ids"
-        ],
+        "required": ["component_id", "responsibilities", "path_prefixes", "authority_ids"],
         "properties": {
           "component_id": {
             "type": "string",
@@ -175,11 +164,7 @@
             "type": "object",
             "description": "for SECURITY/POLICY_ENFORCEMENT/VALIDATION/SOURCE_OF_TRUTH boundaries: the per-PR control adequacy judgment",
             "additionalProperties": false,
-            "required": [
-              "control_type",
-              "requirement",
-              "per_pr"
-            ],
+            "required": ["control_type", "requirement", "per_pr"],
             "properties": {
               "control_type": {
                 "enum": [
@@ -199,12 +184,7 @@
               "per_pr": {
                 "type": "object",
                 "additionalProperties": {
-                  "enum": [
-                    "ADEQUATE",
-                    "UNDERBUILT",
-                    "NOT_APPLICABLE",
-                    "UNKNOWN"
-                  ]
+                  "enum": ["ADEQUATE", "UNDERBUILT", "NOT_APPLICABLE", "UNKNOWN"]
                 }
               }
             }
@@ -218,10 +198,7 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "merge_blocking",
-          "rationale"
-        ],
+        "required": ["merge_blocking", "rationale"],
         "properties": {
           "merge_blocking": {
             "type": "boolean"
@@ -257,11 +234,7 @@
     "minimum_safe_next_action": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "action",
-        "rationale",
-        "expected_evidence"
-      ],
+      "required": ["action", "rationale", "expected_evidence"],
       "properties": {
         "action": {
           "type": "string"

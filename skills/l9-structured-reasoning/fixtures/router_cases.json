@@ -139,11 +139,7 @@
     },
     "expected": {
       "reasoning_depth": "rapid",
-      "proof_contains": [
-        "evidence_chain",
-        "contradictions",
-        "recommended_correction"
-      ]
+      "proof_contains": ["evidence_chain", "contradictions", "recommended_correction"]
     }
   },
   {
@@ -239,9 +235,7 @@
     "expected": {
       "reasoning_depth": "deep",
       "action": "proceed_with_validation",
-      "proof_contains": [
-        "rollback_or_containment"
-      ]
+      "proof_contains": ["rollback_or_containment"]
     }
   },
   {

@@ -35,11 +35,7 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "min",
-          "max",
-          "mutation"
-        ],
+        "required": ["min", "max", "mutation"],
         "properties": {
           "min": {
             "type": "integer",

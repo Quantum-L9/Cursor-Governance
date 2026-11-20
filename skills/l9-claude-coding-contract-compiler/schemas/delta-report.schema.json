@@ -24,25 +24,14 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "file",
-          "change_type",
-          "before_lines",
-          "after_lines",
-          "summary"
-        ],
+        "required": ["file", "change_type", "before_lines", "after_lines", "summary"],
         "properties": {
           "file": {
             "type": "string"
           },
           "change_type": {
             "type": "string",
-            "enum": [
-              "added",
-              "modified",
-              "removed",
-              "preserved"
-            ]
+            "enum": ["added", "modified", "removed", "preserved"]
           },
           "before_lines": {
             "type": "integer"
@@ -91,10 +80,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "change",
-          "reason"
-        ],
+        "required": ["change", "reason"],
         "properties": {
           "change": {
             "type": "string"

@@ -46,12 +46,8 @@
       "description": "Validate before handoff",
       "disposition": "PORT",
       "beneficiary_destination": "validation layer",
-      "evidence_ids": [
-        "e1"
-      ],
-      "risks": [
-        "schema mismatch"
-      ],
+      "evidence_ids": ["e1"],
+      "risks": ["schema mismatch"],
       "acceptance_tests": [
         {
           "given": "invalid output",

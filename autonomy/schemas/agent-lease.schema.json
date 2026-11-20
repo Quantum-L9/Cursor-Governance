@@ -53,12 +53,7 @@
     },
     "status": {
       "type": "string",
-      "enum": [
-        "ACTIVE",
-        "RELEASED",
-        "REVOKED",
-        "EXPIRED"
-      ]
+      "enum": ["ACTIVE", "RELEASED", "REVOKED", "EXPIRED"]
     },
     "issued_at": {
       "type": "string",
@@ -73,10 +68,7 @@
       "format": "date-time"
     },
     "revoked_reason": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "metadata": {
       "type": "object"

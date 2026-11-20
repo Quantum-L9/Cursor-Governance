@@ -4,12 +4,7 @@
   "title": "L9 post-publish repository handoff (l9.session_handoff.v1)",
   "description": "The comprehensive end-of-contract brief the agent writes to .l9/memory/handoff.json after make pr. The Stop hook memory_writeback.py carries it losslessly inside the ONE continuation record it already writes for the IN-SCOPE repository's namespace. Enforced by ops/memory/session_handoff.py; this schema is its machine form. Also enforced there and not expressible here: the normalized brief is at most 32768 bytes (UTF-8 JSON). Environment, bootstrap and governance friction does not belong here: it goes in .l9/memory/governance-handoff.json (l9.governance_handoff.v1).",
   "type": "object",
-  "required": [
-    "schema",
-    "pr_number",
-    "objective",
-    "status"
-  ],
+  "required": ["schema", "pr_number", "objective", "status"],
   "additionalProperties": false,
   "properties": {
     "schema": {
@@ -33,10 +28,7 @@
       "description": "Where things stand right now, in one or two sentences."
     },
     "published": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "type": "string",
@@ -47,10 +39,7 @@
       "description": "What shipped in this PR. Empty is []. Absent or null is treated as []."
     },
     "completed": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "type": "string",
@@ -61,10 +50,7 @@
       "description": "What is done and verified. Empty is []. Absent or null is treated as []."
     },
     "next_actions": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "type": "string",
@@ -75,10 +61,7 @@
       "description": "The next concrete steps for the next session. Empty is []. Absent or null is treated as []."
     },
     "open_questions": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "type": "string",
@@ -89,10 +72,7 @@
       "description": "Questions still open for the operator. Empty is []. Absent or null is treated as []."
     },
     "risks": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "type": "string",
@@ -103,10 +83,7 @@
       "description": "Known risks introduced or left. Empty is []. Absent or null is treated as []."
     },
     "verification": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "type": "string",
@@ -117,10 +94,7 @@
       "description": "Commands run and their results. Empty is []. Absent or null is treated as []."
     },
     "not_completed": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "description": "Work not completed, each with why. A bare string is accepted and becomes {\"item\": <string>}.",
@@ -133,9 +107,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "item"
-            ],
+            "required": ["item"],
             "properties": {
               "item": {
                 "type": "string",
@@ -144,10 +116,7 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "reason": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
@@ -158,10 +127,7 @@
       "description": "Work not completed, each with why. Empty is []. Absent or null is treated as []."
     },
     "blocked": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "description": "Work blocked, each with its blocker and what unblocks it. A bare string is accepted and becomes {\"item\": <string>}.",
@@ -174,9 +140,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "item"
-            ],
+            "required": ["item"],
             "properties": {
               "item": {
                 "type": "string",
@@ -185,17 +149,11 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "blocker": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               },
               "unblock": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
@@ -206,10 +164,7 @@
       "description": "Work blocked, each with its blocker and what unblocks it. Empty is []. Absent or null is treated as []."
     },
     "decisions": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "description": "Decisions made, each with its rationale. A bare string is accepted and becomes {\"decision\": <string>}.",
@@ -222,9 +177,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "decision"
-            ],
+            "required": ["decision"],
             "properties": {
               "decision": {
                 "type": "string",
@@ -233,10 +186,7 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "rationale": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
@@ -247,10 +197,7 @@
       "description": "Decisions made, each with its rationale. Empty is []. Absent or null is treated as []."
     },
     "conflicts": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "description": "Conflicts encountered, each with how it was resolved (or 'open'). A bare string is accepted and becomes {\"conflict\": <string>}.",
@@ -263,9 +210,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "conflict"
-            ],
+            "required": ["conflict"],
             "properties": {
               "conflict": {
                 "type": "string",
@@ -274,10 +219,7 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "resolution": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
@@ -288,10 +230,7 @@
       "description": "Conflicts encountered, each with how it was resolved (or 'open'). Empty is []. Absent or null is treated as []."
     },
     "human_actions": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "description": "What the human must do elsewhere: where, why, and what to do on coming back. A bare string is accepted and becomes {\"action\": <string>}.",
@@ -304,9 +243,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "action"
-            ],
+            "required": ["action"],
             "properties": {
               "action": {
                 "type": "string",
@@ -315,24 +252,15 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "where": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               },
               "why": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               },
               "then": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
@@ -349,12 +277,8 @@
       "pr_number": 42,
       "objective": "what this contract set out to do",
       "status": "where things stand right now, in one or two sentences",
-      "published": [
-        "what shipped in this PR"
-      ],
-      "completed": [
-        "what is done and verified"
-      ],
+      "published": ["what shipped in this PR"],
+      "completed": ["what is done and verified"],
       "not_completed": [
         {
           "item": "…",
@@ -388,18 +312,10 @@
           "then": "what to do when coming back"
         }
       ],
-      "next_actions": [
-        "the next concrete step for the next session"
-      ],
-      "open_questions": [
-        "…"
-      ],
-      "risks": [
-        "…"
-      ],
-      "verification": [
-        "commands run and their results"
-      ]
+      "next_actions": ["the next concrete step for the next session"],
+      "open_questions": ["…"],
+      "risks": ["…"],
+      "verification": ["commands run and their results"]
     }
   ]
 }

@@ -3,20 +3,12 @@
   "title": "DPKTaskContract",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "task",
-    "intent",
-    "scope"
-  ],
+  "required": ["task", "intent", "scope"],
   "properties": {
     "task": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "title",
-        "type"
-      ],
+      "required": ["id", "title", "type"],
       "properties": {
         "id": {
           "type": "string"
@@ -26,23 +18,14 @@
         },
         "type": {
           "type": "string",
-          "enum": [
-            "behavior-change",
-            "bugfix",
-            "refactor",
-            "feature",
-            "migration"
-          ]
+          "enum": ["behavior-change", "bugfix", "refactor", "feature", "migration"]
         }
       }
     },
     "intent": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "problem",
-        "desired_outcome"
-      ],
+      "required": ["problem", "desired_outcome"],
       "properties": {
         "problem": {
           "type": "string"
@@ -55,10 +38,7 @@
     "scope": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "allowed",
-        "prohibited"
-      ],
+      "required": ["allowed", "prohibited"],
       "properties": {
         "allowed": {
           "type": "array",

@@ -23,29 +23,18 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "given",
-                "when",
-                "then",
-                "must_not"
-              ],
+              "required": ["given", "when", "then", "must_not"],
               "type": "object"
             },
             "type": "array"
           },
           "beneficiary_destination": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "compounding": {
             "maximum": 5,
             "minimum": 1,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "description": {
             "type": "string"
@@ -74,10 +63,7 @@
           "leverage": {
             "maximum": 5,
             "minimum": 1,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "name": {
             "type": "string"
@@ -114,15 +100,8 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "target",
-                  "probe",
-                  "failure_behavior"
-                ],
-                "type": [
-                  "object",
-                  "null"
-                ]
+                "required": ["target", "probe", "failure_behavior"],
+                "type": ["object", "null"]
               },
               "incidental_implementation_independent": {
                 "type": "boolean"
@@ -136,19 +115,13 @@
               "donor_runtime_required",
               "external_dependency"
             ],
-            "type": [
-              "object",
-              "null"
-            ]
+            "type": ["object", "null"]
           },
           "problem": {
             "type": "string"
           },
           "rank_score": {
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "risks": {
             "items": {
@@ -157,16 +130,10 @@
             "type": "array"
           },
           "semantic_contract": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "beneficiary_fit": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": ["object", "null"],
             "additionalProperties": false,
             "properties": {
               "comparison": {
@@ -179,10 +146,7 @@
                 ]
               },
               "existing_owner": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "merge_decision": {
                 "type": "string"
@@ -191,12 +155,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "comparison",
-              "existing_owner",
-              "merge_decision",
-              "compatibility_risk"
-            ]
+            "required": ["comparison", "existing_owner", "merge_decision", "compatibility_risk"]
           }
         },
         "required": [
@@ -228,11 +187,7 @@
             "type": "string"
           },
           "epistemic": {
-            "enum": [
-              "CONFIRMED",
-              "INFERENCE",
-              "UNKNOWN"
-            ]
+            "enum": ["CONFIRMED", "INFERENCE", "UNKNOWN"]
           },
           "id": {
             "minLength": 1,
@@ -241,22 +196,13 @@
           "locator": {
             "properties": {
               "kind": {
-                "enum": [
-                  "path_lines",
-                  "symbol",
-                  "url",
-                  "artifact",
-                  "unknown"
-                ]
+                "enum": ["path_lines", "symbol", "url", "artifact", "unknown"]
               },
               "value": {
                 "type": "string"
               }
             },
-            "required": [
-              "kind",
-              "value"
-            ],
+            "required": ["kind", "value"],
             "type": "object"
           },
           "secret_redacted": {
@@ -268,22 +214,14 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "epistemic",
-          "source",
-          "locator"
-        ],
+        "required": ["id", "epistemic", "source", "locator"],
         "title": "Evidence",
         "type": "object"
       },
       "type": "array"
     },
     "highest_leverage_nugget": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "inventory": {
       "type": "array",
@@ -312,10 +250,7 @@
             ]
           },
           "owner": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "consumers": {
             "type": "array",
@@ -324,22 +259,12 @@
             }
           },
           "importance": {
-            "type": [
-              "integer",
-              "null"
-            ],
+            "type": ["integer", "null"],
             "minimum": 1,
             "maximum": 5
           },
           "action": {
-            "enum": [
-              "keep",
-              "merge",
-              "migrate",
-              "archive",
-              "delete",
-              "unknown"
-            ]
+            "enum": ["keep", "merge", "migrate", "archive", "delete", "unknown"]
           },
           "evidence_ids": {
             "type": "array",
@@ -348,12 +273,7 @@
             }
           }
         },
-        "required": [
-          "path",
-          "classification",
-          "action",
-          "evidence_ids"
-        ]
+        "required": ["path", "classification", "action", "evidence_ids"]
       }
     },
     "request": {
@@ -363,10 +283,7 @@
       "properties": {
         "access_mode": {
           "default": "read-only",
-          "enum": [
-            "read-only",
-            "dry-run-allowed"
-          ]
+          "enum": ["read-only", "dry-run-allowed"]
         },
         "beneficiary": {
           "minLength": 1,
@@ -378,11 +295,7 @@
         },
         "depth": {
           "default": "exhaustive",
-          "enum": [
-            "sample",
-            "standard",
-            "exhaustive"
-          ]
+          "enum": ["sample", "standard", "exhaustive"]
         },
         "donor": {
           "minLength": 1,
@@ -402,18 +315,10 @@
         },
         "secrets_policy": {
           "default": "redact",
-          "enum": [
-            "redact",
-            "forbid-mention"
-          ]
+          "enum": ["redact", "forbid-mention"]
         }
       },
-      "required": [
-        "request_id",
-        "donor",
-        "beneficiary",
-        "harvest_target"
-      ],
+      "required": ["request_id", "donor", "beneficiary", "harvest_target"],
       "title": "HarvestRequest",
       "type": "object"
     },
@@ -430,12 +335,7 @@
       "type": "object"
     },
     "status": {
-      "enum": [
-        "PASS",
-        "PARTIAL",
-        "BLOCKED",
-        "FAIL"
-      ]
+      "enum": ["PASS", "PARTIAL", "BLOCKED", "FAIL"]
     },
     "surfaces": {
       "type": "array",
@@ -452,19 +352,13 @@
             "minLength": 1
           },
           "visibility": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "is_wrapper": {
             "type": "boolean"
           },
           "resolved_target": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "dependencies": {
             "type": "array",
@@ -485,13 +379,7 @@
             }
           }
         },
-        "required": [
-          "item",
-          "source",
-          "is_wrapper",
-          "resolved_target",
-          "evidence_ids"
-        ]
+        "required": ["item", "source", "is_wrapper", "resolved_target", "evidence_ids"]
       }
     },
     "system": {
@@ -499,10 +387,7 @@
       "additionalProperties": false,
       "properties": {
         "identity": {
-          "type": [
-            "string",
-            "object"
-          ]
+          "type": ["string", "object"]
         },
         "workflows": {
           "type": "array",

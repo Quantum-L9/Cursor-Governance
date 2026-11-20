@@ -5,10 +5,7 @@
   "properties": {
     "access_mode": {
       "default": "read-only",
-      "enum": [
-        "read-only",
-        "dry-run-allowed"
-      ]
+      "enum": ["read-only", "dry-run-allowed"]
     },
     "beneficiary": {
       "minLength": 1,
@@ -20,11 +17,7 @@
     },
     "depth": {
       "default": "exhaustive",
-      "enum": [
-        "sample",
-        "standard",
-        "exhaustive"
-      ]
+      "enum": ["sample", "standard", "exhaustive"]
     },
     "donor": {
       "minLength": 1,
@@ -44,18 +37,10 @@
     },
     "secrets_policy": {
       "default": "redact",
-      "enum": [
-        "redact",
-        "forbid-mention"
-      ]
+      "enum": ["redact", "forbid-mention"]
     }
   },
-  "required": [
-    "request_id",
-    "donor",
-    "beneficiary",
-    "harvest_target"
-  ],
+  "required": ["request_id", "donor", "beneficiary", "harvest_target"],
   "title": "HarvestRequest",
   "type": "object"
 }

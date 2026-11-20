@@ -5,11 +5,7 @@
   "description": "Campaign-level condition gating seal on generated-data processing (law §25).",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "campaign_id",
-    "requirements",
-    "can_seal"
-  ],
+  "required": ["campaign_id", "requirements", "can_seal"],
   "properties": {
     "campaign_id": {
       "type": "string",
@@ -82,10 +78,7 @@
       "default": []
     },
     "evaluated_at": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     }
   }
 }

@@ -15,8 +15,6 @@
   "same_target_branch": true,
   "internal_handoff_state": "committed_and_validated",
   "terminal_delivery_count": 1,
-  "terminal_delivery_command": [
-    "make pr"
-  ],
+  "terminal_delivery_command": ["make pr"],
   "errors": []
 }

@@ -92,9 +92,7 @@
     {
       "id": "T1",
       "task": "Add a cloud-only installer-drift self-heal to SessionStart: when the receipt names a different workspace or an older governance revision than live, re-run install.sh bounded and fail-open, then re-read the receipt",
-      "files": [
-        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
-      ],
+      "files": ["environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"],
       "effort": "M",
       "risk": "medium",
       "dependencies": [],
@@ -106,9 +104,7 @@
     {
       "id": "T2",
       "task": "Replace the SSOT SKILL.md file count with a loadable-skill probe over the real discovery paths and report both numbers",
-      "files": [
-        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
-      ],
+      "files": ["environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -120,9 +116,7 @@
     {
       "id": "T3",
       "task": "Mark receipt-derived statuses STALE in the SessionStart projection when receipt.workspace differs from the session project dir, instead of printing READY verbatim",
-      "files": [
-        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
-      ],
+      "files": ["environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -134,9 +128,7 @@
     {
       "id": "T4",
       "task": "Detect and remove a pre-commit-generated .git/hooks/pre-commit during cloud SessionStart, matching the prohibition the helper already documents",
-      "files": [
-        "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh"
-      ],
+      "files": ["environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh"],
       "effort": "S",
       "risk": "medium",
       "dependencies": [],
@@ -148,10 +140,7 @@
     {
       "id": "T5",
       "task": "Make .mcp.json a managed artifact: reconcile it from mcp.template.json when it carries the L9 managed marker, and update the committed workspace .mcp.json to the 6-server broker template",
-      "files": [
-        "environment/agents/adapters/claude-code/install.sh",
-        ".mcp.json"
-      ],
+      "files": ["environment/agents/adapters/claude-code/install.sh", ".mcp.json"],
       "effort": "M",
       "risk": "high",
       "dependencies": [],
@@ -163,9 +152,7 @@
     {
       "id": "T6",
       "task": "Allow gate_shape and note on the precondition definition in the memory-enforcement schema so the contract the doctrine requires validates",
-      "files": [
-        "environment/agents/adapters/claude-code/memory/memory-enforcement.schema.json"
-      ],
+      "files": ["environment/agents/adapters/claude-code/memory/memory-enforcement.schema.json"],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -177,14 +164,10 @@
     {
       "id": "T7",
       "task": "Invoke validate_claude_env.py from install.sh and downgrade a receipt status on non-zero, so adapter self-validation failures surface instead of sitting unread",
-      "files": [
-        "environment/agents/adapters/claude-code/install.sh"
-      ],
+      "files": ["environment/agents/adapters/claude-code/install.sh"],
       "effort": "S",
       "risk": "medium",
-      "dependencies": [
-        "T6"
-      ],
+      "dependencies": ["T6"],
       "operation": "Insert",
       "anchor": "before the receipt write block at install.sh:250",
       "leverage_rank": 5,
@@ -193,9 +176,7 @@
     {
       "id": "T8",
       "task": "Extend the MCP inventory scan set to the Claude Code surface (.mcp.json in workspace and $HOME/.claude.json) so it stops reporting an empty server list",
-      "files": [
-        "ops/scripts/inventory_mcp_servers.py"
-      ],
+      "files": ["ops/scripts/inventory_mcp_servers.py"],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -229,13 +210,7 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": [
-        "T1",
-        "T2",
-        "T3",
-        "T4",
-        "T5"
-      ],
+      "dependencies": ["T1", "T2", "T3", "T4", "T5"],
       "operation": "Create",
       "anchor": "extend the existing bootstrap diagnostic contract suite",
       "leverage_rank": 10,
@@ -260,9 +235,7 @@
     {
       "id": "T12",
       "task": "Add api.context7.io to the environment's Custom allowed-domains list; the same edit forces a setup-script cache rebuild, which is what lands the T1 installer fix",
-      "files": [
-        "environment/agents/adapters/claude-code/web/network-policy.md"
-      ],
+      "files": ["environment/agents/adapters/claude-code/web/network-policy.md"],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -272,14 +245,7 @@
       "shared_root_cause": "the account Setup script is cached, so installer fixes never reach a live environment"
     }
   ],
-  "critical_path": [
-    "T1",
-    "T2",
-    "T3",
-    "T5",
-    "T7",
-    "T10"
-  ],
+  "critical_path": ["T1", "T2", "T3", "T5", "T7", "T10"],
   "milestones": [
     {
       "id": "M1",
@@ -332,33 +298,22 @@
     {
       "surface": "environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md",
       "action": "update",
-      "todo_ids": [
-        "T1",
-        "T2",
-        "T3"
-      ]
+      "todo_ids": ["T1", "T2", "T3"]
     },
     {
       "surface": "environment/agents/adapters/claude-code/web/network-policy.md",
       "action": "update",
-      "todo_ids": [
-        "T12"
-      ]
+      "todo_ids": ["T12"]
     },
     {
       "surface": "environment/agents/adapters/claude-code/README.md",
       "action": "update",
-      "todo_ids": [
-        "T5",
-        "T9"
-      ]
+      "todo_ids": ["T5", "T9"]
     },
     {
       "surface": "rules/02-slash-commands.mdc",
       "action": "update",
-      "todo_ids": [
-        "T9"
-      ]
+      "todo_ids": ["T9"]
     },
     {
       "surface": "CANONICAL_LAW.md",
@@ -390,20 +345,7 @@
     "rollback": "Every change is confined to four adapter files plus two ops scripts and a new reconciler; git revert of the feature branch restores d424f588-equivalent behaviour. The self-heal is gated on CLAUDE_CODE_REMOTE=true and on an explicit drift comparison, so setting L9_CLAUDE_SELFHEAL=0 disables it without a code change. .mcp.json changes are recoverable from mcp.template.json. No infrastructure, credential or remote state is mutated, so there is nothing to roll back outside the repository."
   },
   "leverage": {
-    "ranked_todo_ids": [
-      "T1",
-      "T12",
-      "T2",
-      "T3",
-      "T5",
-      "T7",
-      "T4",
-      "T6",
-      "T8",
-      "T9",
-      "T10",
-      "T11"
-    ],
+    "ranked_todo_ids": ["T1", "T12", "T2", "T3", "T5", "T7", "T4", "T6", "T8", "T9", "T10", "T11"],
     "shared_causes": [
       "the account Setup script is cached, so installer fixes never reach a live environment",
       "readiness asserted from source presence rather than load-path presence",
@@ -513,11 +455,7 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": [
-      "U1",
-      "U3",
-      "U4"
-    ],
+    "remaining_unknown_ids": ["U1", "U3", "U4"],
     "next_skill": "l9-ynp",
     "stop_reason": "U2 is resolved by the platform contract: the environment cache rebuilds on a setup-script or allowed-hosts change and at ~7 days, so T12 and the T1 rollout are one lever and B-01 self-heals passively within a week. U3 is no longer 'is there an issuer' but 'when do sessions run in the ccpool_ pool the broker already targets' \u2014 an operator scheduling question. T11 stays infrastructure-blocked with a precise cause. T1-T10 and T12 are unblocked and require no architectural change."
   },
