@@ -511,6 +511,51 @@ def _read_changed(path: Path) -> list[str]:
     return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
+def unsafe_changed_path(path: str) -> str | None:
+    """Reject a changed-file entry that could escape the workspace or be a pytest flag."""
+    if path.startswith("-"):
+        return "path must not be a pytest argument"
+    if path.startswith(("/", "\\")):
+        return "path must be repository-relative"
+    if "\x00" in path:
+        return "path contains NUL"
+    parts = path.replace("\\", "/").split("/")
+    if any(part == ".." for part in parts):
+        return "path escapes the workspace"
+    return None
+
+
+def scope_refusal(changed: list[str]) -> str | None:
+    """Return why a changed-file list cannot be selected, or None when it can."""
+    if not changed:
+        return "changed-file list is empty"
+    for path in changed:
+        reason = unsafe_changed_path(path)
+        if reason is not None:
+            return f"{reason}: {path}"
+    return None
+
+
+def classify_pr_scope(
+    changed: list[str], *, registry: Path = REGISTRY_PATH
+) -> tuple[str, list[str]]:
+    """Classify one changed-file list as SELECTED, CRITICAL_ONLY, or UNKNOWN.
+
+    SELECTED carries the explicit pytest targets. CRITICAL_ONLY is a
+    documentation-only list: no suite is selected and the caller runs the
+    bound contract witness. UNKNOWN is an empty or unsafe list; the caller
+    exits nonzero and must not substitute ``--profile ci``.
+    """
+    if scope_refusal(changed) is not None:
+        return "UNKNOWN", []
+    selected = select_pr_pytest_paths(changed, registry=registry)
+    if selected:
+        return "SELECTED", selected
+    if all(path.endswith(DOC_SUFFIXES) for path in changed):
+        return "CRITICAL_ONLY", []
+    return "SELECTED", selected
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--changed-file", type=Path, required=True)

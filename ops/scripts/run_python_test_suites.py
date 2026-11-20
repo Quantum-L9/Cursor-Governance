@@ -9,7 +9,8 @@ declared suites in order under two profiles:
                       with --changed-file, injects ``-n auto --dist loadgroup``
                       when two or more pytest files are selected (CI already
                       declares xdist)
-    --profile ci      applies the locked coverage / xdist / timeout arguments
+    --profile ci      applies the locked coverage / xdist / timeout arguments.
+                      Refused when GITHUB_EVENT_NAME=pull_request.
 
 Guarantees:
   * repository root is resolved from this script's location, never the caller's cwd
@@ -510,6 +511,49 @@ def _run_drift_validator() -> int:
     return completed.returncode
 
 
+def _pull_request_event() -> bool:
+    return os.environ.get("GITHUB_EVENT_NAME") == "pull_request"
+
+
+def _refuse_pull_request_deep(profile: str) -> int | None:
+    """Refuse a full-suite override on a pull request before any suite starts."""
+    if not _pull_request_event():
+        return None
+    if os.environ.get("L9_CI_FULL_SUITE") == "1":
+        print("POLICY_PR_DEEP_FORBIDDEN: L9_CI_FULL_SUITE=1", file=sys.stderr)
+        return 2
+    if profile == "ci":
+        print("POLICY_PR_DEEP_FORBIDDEN: --profile ci", file=sys.stderr)
+        return 2
+    return None
+
+
+def _run_critical_witness() -> int:
+    """Docs-only scope: one contract witness, never the full suite."""
+    witness = REPO_ROOT / "ops" / "scripts" / "tests" / "test_sonarcloud_workflow.py"
+    print(
+        "[runner] NOT_APPLICABLE: documentation-only change; "
+        f"witness={witness.relative_to(REPO_ROOT)}"
+    )
+    if not witness.is_file():
+        print(f"[runner] FATAL: critical witness missing: {witness}", file=sys.stderr)
+        return 2
+    try:
+        completed = subprocess.run(  # noqa: S603 - fixed argv, no shell
+            [sys.executable, str(witness)],
+            cwd=str(REPO_ROOT),
+            timeout=SUITE_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        print(f"[runner] FATAL: critical witness did not complete: {exc}", file=sys.stderr)
+        return 2
+    if completed.returncode != 0:
+        print("[runner] FATAL: critical witness failed", file=sys.stderr)
+        return completed.returncode or 1
+    return 0
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run the canonical Cursor-Governance Python test suites.",
@@ -547,6 +591,9 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
     profile, user_args = args.profile, args.pytest_args
+    refused = _refuse_pull_request_deep(profile)
+    if refused is not None:
+        return refused
     if args.changed_file is not None and profile != "local":
         print("[runner] FATAL: --changed-file is valid only with --profile local", file=sys.stderr)
         return 2
@@ -577,7 +624,16 @@ def main(argv: list[str] | None = None) -> int:
         try:
             selector = _load_selector()
             changed = _read_changed(args.changed_file)
-            scoped_paths = selector.select_pr_pytest_paths(changed)
+            if not changed and not _pull_request_event():
+                scoped_paths = []
+            else:
+                status, scoped_paths = selector.classify_pr_scope(changed)
+                if status == "UNKNOWN":
+                    refusal = selector.scope_refusal(changed) or "unclassified changed-file list"
+                    print(f"[runner] PR_SCOPE_UNKNOWN: {refusal}", file=sys.stderr)
+                    return 2
+                if status == "CRITICAL_ONLY":
+                    return _run_critical_witness()
         except (OSError, SystemExit, RegistryError) as exc:
             print(f"[runner] FATAL: scoped pytest selection failed: {exc}", file=sys.stderr)
             return 2

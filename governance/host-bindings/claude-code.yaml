@@ -6,7 +6,7 @@
 #   owner: governance-control-plane
 #   status: active
 #   version: 1.0.0
-#   updated: 2026-11-12
+#   updated: 2026-11-20
 # The Claude Code host's default projection binding: what every Claude Code session reads
 # without opting in. SessionStart binds it automatically; no skill or command is involved.
 # It selects meaning; it grants no permission and admits nothing.
@@ -21,11 +21,9 @@ host:
   identity: claude-code
   actor_ref: l9.actor-registry/global@1#claude-code
   surface_refs:
-    - l9.surface-registry/global@1#claude-code-desktop
+    # Operator decision 2026-11-20: Claude Code has two surfaces, web and cli.
     - l9.surface-registry/global@1#claude-code-cli
-    - l9.surface-registry/global@1#claude-code-ide
     - l9.surface-registry/global@1#claude-code-web
-    - l9.surface-registry/global@1#claude-code-mobile
 # Not a mirror of Quantum-L9/.github l9.domain-consumer-binding/claude-code@1. That binding
 # declares no predecessor and a different domain set; this contract binds only the admitted
 # operating plane, by the owner's decision below. Its domains are reachable through the

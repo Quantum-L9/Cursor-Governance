@@ -52,9 +52,6 @@ peers:
         - surface: claude-code-web
           provider_ref: claude-code-direct
           execution_profile_ref: worker-default
-        - surface: claude-code-mobile
-          provider_ref: claude-code-direct
-          execution_profile_ref: worker-default
     autonomy:
       required: true
       provider_id: root-autonomy-control-plane

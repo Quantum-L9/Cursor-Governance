@@ -15,7 +15,7 @@ projection:
 output:
   path: generated/governance/canonical_identity.yaml
   schema: l9.projection.cursor-governance-identity/v1
-  digest: sha256:9d7491d507b7204caeaa9892019ab39a5e459cf507c59fa192fa238e3a953c5c
+  digest: sha256:8874ac71da756a78bfd0ecbc0966bbcd80b86c9f52fb10ce3b14ca945d86de9f
 generator:
   id: cursor-governance.canonical-identity-projector/v1
   deterministic: true
