@@ -1,5 +1,5 @@
 {
-  "generation_id": "b44968403c169804d00937a27b95170d3bd16d72c3dcc730e3f51ca582ab34e1",
+  "generation_id": "6607ddd4a3764077bf04d468b7439b22afbd2370d01ce5e2c93015a81920f935",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1271,7 +1271,7 @@
       "path": "skills/l9-plan",
       "reason": "Program Execution campaign planner (PROGRAM_EXECUTION_PLANNER_V1) \u2014 renders a PLAN_DOCUMENT as a campaign-source.v2 that make campaign admits unchanged \u2014 and owner of the PLAN_DOCUMENT schema, validator and renderers that l9-plan-simple runs; a campaign runs only on the operator's own words and its broad planning description would hijack l9-plan-simple routing \u2014 user-invoked only",
       "skill_md": "skills/l9-plan/SKILL.md",
-      "skill_sha256": "4c2e6371e2457e4f78633ff1a92c31b4bbbde1e7fb5262cee39f54417d5f4c27",
+      "skill_sha256": "365f3054e05ff593188411fdb50dae1a43072e678ef7aec180242a917934e75f",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1577,5 +1577,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "0cfc1ca9eca7517332b01ad272c4805734be5f748919dc1bf8cb67acce34a5c7",
-  "source_skill_corpus_sha256": "088fdc7f5cd943e9ec69bac76ae881841b565c65ddcd46f27130609cbfd280fd"
+  "source_skill_corpus_sha256": "1d8a698e3e0f504a8a4f5f5c934fd0fd9a5efaf4a99976ab94cc215e4da8b0fb"
 }
