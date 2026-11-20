@@ -131,9 +131,7 @@ class SonarCloudWorkflowTests(unittest.TestCase):
             step for step in self.steps if step["name"] == "Reject duplicate dispatch key"
         )
         checkout = next(
-            step
-            for step in self.steps
-            if step.get("uses", "").startswith("actions/checkout@")
+            step for step in self.steps if step.get("uses", "").startswith("actions/checkout@")
         )
         self.assertLess(self.steps.index(reject), self.steps.index(checkout))
         self.assertEqual(reject["env"]["GH_REPO"], "${{ github.repository }}")
