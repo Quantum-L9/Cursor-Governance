@@ -145,3 +145,9 @@ connector tool: `write` → `memory.ingest`, `ingest_candidate` →
 The relay outbox keeps `memory.write_agent`, because an agent carries those
 entries and writes as itself. Decision item 3's "tool names are the relay's `CONNECTOR_TOOLS`" wording
 above is superseded for the hosted carrier only.
+
+Live after: a memory release that includes REMOTE_MCP_CONTRACT §2b
+(`L9_MEMORY_HOOK_PRINCIPALS_JSON`; on l9-graphiti-memory `main` since
+2026-11-20, not in tags v3.0.0 or v3.0.1) plus its redeploy, both owned by the
+operator. Until then the deployed server refuses the hook principal, so the
+hook carrier keeps using the relay.
