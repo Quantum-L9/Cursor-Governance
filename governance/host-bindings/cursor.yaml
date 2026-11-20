@@ -38,7 +38,7 @@ decided: >-
 session_start:
   autobind: true
   depends_on_skill: false
-  manual_bindings: [/coding-agent, /lcto, /architect]
+  manual_bindings: [/coding-agent, /lcto, /architect, /planner]
 # The admitted operating-plane profile stays the base. It keeps its own binding
 # (governance/authority-bindings/operating-plane-v2.yaml) and consumer adapter; this file
 # adds the domain projections on top of it and does not replace it.
