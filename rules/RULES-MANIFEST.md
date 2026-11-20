@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-11-20T00:48:07Z`. Source: `rules/*.mdc`.
+Generated: `2026-11-20T02:49:30Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -66,7 +66,7 @@ Generated: `2026-11-20T00:48:07Z`. Source: `rules/*.mdc`.
 | `76-wire-workflow-guard.mdc` | `l9.rule.76.wire.workflow.guard` | global | governance | auto_attached | 55 | `f94087db811a` |
 | `77-cursor-subagent-orchestration.mdc` | `l9.rule.77.cursor.subagent.orchestration` | global | governance | always | 28 | `ee79f4d8ce9b` |
 | `78-perplexity-run-harness.mdc` | `l9.rule.78.perplexity.run.harness` | global | general | agent_requested | 62 | `ff0c6fe1e02f` |
-| `79-output-discipline.mdc` | `l9.rule.output-discipline` | global | output | always | 25 | `28cb0c912f44` |
+| `79-output-discipline.mdc` | `l9.rule.output-discipline` | global | output | always | 26 | `e04073c9ccca` |
 | `80-gmp-execution.mdc` | `l9.rule.80.gmp.execution` | global | ci | always | 85 | `e5a0e63b42c1` |
 | `81-gmp-audit.mdc` | `l9.rule.81.gmp.audit` | global | governance | agent_requested | 93 | `88df5734c81a` |
 | `82-deployment-manifest.mdc` | `l9.rule.82.deployment.manifest` | global | deployment | agent_requested | 72 | `b57f632b093e` |

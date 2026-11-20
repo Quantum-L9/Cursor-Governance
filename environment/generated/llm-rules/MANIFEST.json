@@ -438,9 +438,9 @@
       "alias": null,
       "class": "always",
       "output": "79-output-discipline.md",
-      "output_sha256": "d9d23ed731e283733b7a3c4c68e104e241acac75094cd6503ffd30d632c08cc1",
+      "output_sha256": "afea0681af4dae418aded5eea6275363cded6df164fc9a309bed8cf63a36cd6e",
       "source": "rules/79-output-discipline.mdc",
-      "source_sha256": "28cb0c912f4463bcbe4757aff54c02a3ea2b20f0f57e5bf46a17ed209a1e225a",
+      "source_sha256": "e04073c9cccaf257c04749cfc2256504af2bdff0e4317d1a46935632a2d27485",
       "stem": "79-output-discipline"
     },
     {
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 14,
     "source_mdc": 68
   },
-  "tree_sha256": "72ff5c2a849e1eb756815e3187d52cafa4a9a31b1cd528c736afaf73020f0513"
+  "tree_sha256": "92dca7d495f105ce08ad39be2d50f41a606fca2898461126d8795c16f290a602"
 }
