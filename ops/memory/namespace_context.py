@@ -378,7 +378,99 @@ def locate_clone_for_namespace(
     return None
 
 
+#: Exclusion reason for a second checkout of an already-selected repository.
+DROPPED_DUPLICATE_NAMESPACE = "duplicate_namespace"
+
+
+@dataclass(frozen=True)
+class WorkspaceNamespaces:
+    """Per-repository write namespaces for a workspace that may hold several.
+
+    A namespace identifies a REPOSITORY, never a container. A cloud container
+    root (several checkouts side by side) is correctly ambiguous for one write
+    hint, so callers that report readiness must resolve each repository root
+    instead. Root selection is the shared ``select_workspace_roots`` with the
+    same cap and predicate the SessionStart prefetch hydrates under, so this
+    report and the hydrated set cannot disagree.
+    """
+
+    workspace: str
+    multi_repo: bool
+    namespaces: tuple[tuple[str, str], ...]
+    excluded: tuple[tuple[str, str], ...]
+
+    @property
+    def resolved(self) -> bool:
+        return bool(self.namespaces)
+
+
+def resolve_workspace_namespaces(
+    workspace: str | Path,
+    *,
+    cap: int | None = None,
+    registry: Mapping[str, Any] | None = None,
+) -> WorkspaceNamespaces:
+    """Write namespace per repository root under ``workspace``.
+
+    A single repository yields its own namespace. A container yields one entry
+    per child repository that resolves to a namespace of its own, up to
+    ``cap`` (default: the shared ``DEFAULT_MAX_ROOTS``); every excluded child is
+    returned with the rule that excluded it (``cap`` or ``no_namespace``).
+    """
+
+    from ops.scripts.lib.workspace_roots import (  # noqa: PLC0415
+        DEFAULT_MAX_ROOTS,
+        is_repository,
+        select_workspace_roots,
+    )
+
+    path = Path(workspace).expanduser().resolve()
+    reg = load_registry() if registry is None else registry
+
+    owned: dict[Path, str | None] = {}
+    claimed: dict[str, Path] = {}
+    duplicates: list[tuple[str, str]] = []
+
+    def _own(root: Path) -> str | None:
+        if root not in owned:
+            owned[root] = resolve_namespace_context(root, registry=reg, env={}).write_namespace_hint
+        return owned[root]
+
+    def _eligible(root: Path) -> bool:
+        # A second checkout of one repository (a linked worktree beside its
+        # clone) names the same namespace. It must not take a slot under the
+        # cap and push a distinct repository out of scope.
+        namespace = _own(root)
+        if not namespace:
+            return False
+        if namespace in claimed:
+            duplicates.append((str(root), DROPPED_DUPLICATE_NAMESPACE))
+            return False
+        claimed[namespace] = root
+        return True
+
+    selection = select_workspace_roots(
+        path,
+        cap=DEFAULT_MAX_ROOTS if cap is None else cap,
+        predicate=_eligible,
+    )
+    pairs = [(str(root), ns) for root in selection.selected if (ns := _own(root))]
+    duplicate_paths = {item[0] for item in duplicates}
+    excluded = [
+        (str(root), reason)
+        for root, reason in selection.dropped
+        if str(root) not in duplicate_paths
+    ]
+    return WorkspaceNamespaces(
+        workspace=str(path),
+        multi_repo=not is_repository(path) and bool(pairs),
+        namespaces=tuple(pairs),
+        excluded=tuple(excluded + duplicates),
+    )
+
+
 __all__ = [
+    "DROPPED_DUPLICATE_NAMESPACE",
     "ENV_NAMESPACE_REQUEST",
     "METHOD_AMBIGUOUS",
     "METHOD_EXPLICIT",
@@ -386,6 +478,7 @@ __all__ = [
     "METHOD_UNRESOLVED",
     "REGISTRY_PATH",
     "NamespaceContext",
+    "WorkspaceNamespaces",
     "aliases_for",
     "child_git_roots",
     "forbidden_namespaces",
@@ -398,5 +491,6 @@ __all__ = [
     "repository_matches",
     "repository_state_digest",
     "resolve_namespace_context",
+    "resolve_workspace_namespaces",
     "shared_read_namespaces",
 ]
