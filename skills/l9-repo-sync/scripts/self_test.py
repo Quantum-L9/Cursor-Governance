@@ -212,8 +212,12 @@ def test_ignored_colliding_untracked_is_parked() -> int:
     return 0
 
 
-def _velocity_fixture(tmp: Path, origin_paths: int) -> tuple[Path, Path]:
-    """A clone behind origin/main by `origin_paths` newly tracked files."""
+def _origin_clone_and_peer(tmp: Path) -> tuple[Path, Path, Path]:
+    """A bare origin on `main` with one base commit, a clone, and a peer clone.
+
+    The peer pushes to origin so the clone falls behind; every behind-origin
+    scenario starts from this shape.
+    """
     remote = tmp / "remote.git"
     clone = tmp / "clone"
     run(["git", "init", "--bare", str(remote)])
@@ -231,6 +235,12 @@ def _velocity_fixture(tmp: Path, origin_paths: int) -> tuple[Path, Path]:
     run(["git", "clone", str(remote), str(other)])
     git(other, "config", "user.email", "test@example.com")
     git(other, "config", "user.name", "Test")
+    return remote, clone, other
+
+
+def _velocity_fixture(tmp: Path, origin_paths: int) -> tuple[Path, Path]:
+    """A clone behind origin/main by `origin_paths` newly tracked files."""
+    remote, clone, other = _origin_clone_and_peer(tmp)
     for i in range(origin_paths):
         (other / f"landed{i:03d}.md").write_text(f"origin {i}\n", encoding="utf-8")
     git(other, "add", "-A")
@@ -676,23 +686,7 @@ def test_unrelated_history_with_dirty() -> int:
 def test_origin_tracked_env_local_does_not_clobber() -> int:
     """If origin starts tracking .env.local, /ff must not move or overwrite the local copy."""
     with tempfile.TemporaryDirectory() as tmp:
-        remote = Path(tmp) / "remote.git"
-        clone = Path(tmp) / "clone"
-        run(["git", "init", "--bare", str(remote)])
-        run(["git", "clone", str(remote), str(clone)])
-        git(clone, "config", "user.email", "test@example.com")
-        git(clone, "config", "user.name", "Test")
-        (clone / "tracked.txt").write_text("v1\n", encoding="utf-8")
-        git(clone, "add", "tracked.txt")
-        git(clone, "commit", "-m", "base")
-        git(clone, "branch", "-M", "main")
-        git(clone, "push", "-u", "origin", "main")
-        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
-
-        other = Path(tmp) / "other"
-        run(["git", "clone", str(remote), str(other)])
-        git(other, "config", "user.email", "test@example.com")
-        git(other, "config", "user.name", "Test")
+        remote, clone, other = _origin_clone_and_peer(Path(tmp))
         (other / "tracked.txt").write_text("v2\n", encoding="utf-8")
         (other / ".env.local").write_text(
             "DEEPSEEK_API_KEY=sk-ORIGIN-SHOULD-NOT-WIN\n", encoding="utf-8"
@@ -728,23 +722,7 @@ def test_origin_tracked_env_local_does_not_clobber() -> int:
 def test_feature_branch_switches_to_main() -> int:
     """Off-main clone: catch up main, return to the feature branch, restore dirt."""
     with tempfile.TemporaryDirectory() as tmp:
-        remote = Path(tmp) / "remote.git"
-        clone = Path(tmp) / "clone"
-        run(["git", "init", "--bare", str(remote)])
-        run(["git", "clone", str(remote), str(clone)])
-        git(clone, "config", "user.email", "test@example.com")
-        git(clone, "config", "user.name", "Test")
-        (clone / "tracked.txt").write_text("v1\n", encoding="utf-8")
-        git(clone, "add", "tracked.txt")
-        git(clone, "commit", "-m", "base")
-        git(clone, "branch", "-M", "main")
-        git(clone, "push", "-u", "origin", "main")
-        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
-
-        other = Path(tmp) / "other"
-        run(["git", "clone", str(remote), str(other)])
-        git(other, "config", "user.email", "test@example.com")
-        git(other, "config", "user.name", "Test")
+        remote, clone, other = _origin_clone_and_peer(Path(tmp))
         (other / "tracked.txt").write_text("v2\n", encoding="utf-8")
         git(other, "add", "tracked.txt")
         git(other, "commit", "-m", "origin ahead")
@@ -1003,23 +981,7 @@ def test_colliding_plan_stays_in_place_and_reset_proceeds() -> int:
     dirty-tracked must also finish and keep those bytes.
     """
     with tempfile.TemporaryDirectory() as tmp:
-        remote = Path(tmp) / "remote.git"
-        clone = Path(tmp) / "clone"
-        run(["git", "init", "--bare", str(remote)])
-        run(["git", "clone", str(remote), str(clone)])
-        git(clone, "config", "user.email", "test@example.com")
-        git(clone, "config", "user.name", "Test")
-        (clone / "tracked.txt").write_text("v1\n", encoding="utf-8")
-        git(clone, "add", "tracked.txt")
-        git(clone, "commit", "-m", "base")
-        git(clone, "branch", "-M", "main")
-        git(clone, "push", "-u", "origin", "main")
-        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
-
-        other = Path(tmp) / "other"
-        run(["git", "clone", str(remote), str(other)])
-        git(other, "config", "user.email", "test@example.com")
-        git(other, "config", "user.name", "Test")
+        remote, clone, other = _origin_clone_and_peer(Path(tmp))
         (other / "tracked.txt").write_text("v2\n", encoding="utf-8")
         plan = other / "docs" / "plans"
         plan.mkdir(parents=True)
