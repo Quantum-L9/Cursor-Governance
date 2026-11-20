@@ -218,6 +218,44 @@ def test_make_pr_runs_only_the_core_blocking_lanes() -> None:
     assert body.index("is_cursor_host_surface") < body.index('"$pkg/run.py"')
 
 
+def test_receipt_reminder_matches_sinks_and_does_not_start_a_scan() -> None:
+    post = _load("ci_parity_posttool")
+    assert post.diff_is_security_relevant("+ logging.info(token)\n")
+    assert post.diff_is_security_relevant("+ subprocess.run(cmd)\n")
+    assert post.diff_is_security_relevant("+ os.path.join(root, name)\n")
+    assert post.diff_is_security_relevant("+ from pathlib import Path\n")
+    assert post.diff_is_security_relevant("+ import requests\n")
+    assert post.diff_is_security_relevant("+ import httpx\n")
+    assert not post.diff_is_security_relevant("+ value = 1\n")
+    reminder = post._RECEIPT_REMINDER
+    assert "python3 ops/ci_parity/run.py --status" in reminder
+    assert "database create failed" in reminder
+    assert "second scan" in reminder
+    assert "codeql database" not in reminder
+
+
+def test_receipt_reminder_is_not_emitted_off_claude(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    post = _load("ci_parity_posttool")
+    for name in (
+        "L9_GOVERNANCE_SURFACE",
+        "CLAUDECODE",
+        "CLAUDE_CODE_ENTRYPOINT",
+        "CLAUDE_CODE_SESSION_ID",
+        "CLAUDE_CODE_REMOTE",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("CURSOR_AGENT", "1")
+    rc = _run_main(
+        post,
+        {"tool_name": "Bash", "cwd": str(tmp_path), "tool_input": {"command": "git commit"}},
+        monkeypatch,
+    )
+    assert rc == 0
+    assert capsys.readouterr().out == ""
+
+
 def test_deps_hook_self_heals_and_fingerprints_package_lock_json() -> None:
     deps = (HOOKS / "session_deps_cloud.sh").read_text()
     assert '"$_CI_PARITY_INSTALL" --check' in deps and "setsid" in deps

@@ -11,31 +11,42 @@
 # `.github/workflows/codeql.yml`. Repo-agnostic: no per-repo edits required.
 # The reusable workflow auto-detects the repo's languages. Delete any pre-existing
 # `.github/codeql/codeql-config.yml` in the target repo (config is centralized).
+#
+# This caller has no schedule. Overlay stays available only while pull requests
+# use the default suite. Copy codeql-nightly-caller-template.yml as
+# `.github/workflows/codeql-nightly.yml` for the nightly security-extended scan.
+# Do not put that schedule back on this file.
+#
+# The job runs for the repository default branch, whatever its name is.
+# A hardcoded `branches: [main]` filter would skip a repo whose default
+# branch is not main.
 
-name: "CodeQL (security + code quality)"
+name: "CodeQL (default suite)"
 
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
     paths-ignore:            # skip docs-only PRs (save CI)
       - "**/*.md"
       - "docs/**"
       - "**/*.mdc"
-  schedule:
-    - cron: "24 3 * * 1"     # weekly, Monday 03:24 UTC
   workflow_dispatch: {}
 
 permissions:
   contents: read
   security-events: write
-  actions: read
+  actions: write
 
 jobs:
   codeql:
-    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@main
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch) ||
+      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == github.event.repository.default_branch)
+    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@24f0c4db99ba3ba170e5f872cd1c402684e47b81
+    with:
+      config-file: Quantum-L9/Cursor-Governance/.github/codeql/codeql-config.yml@52d87ce2e217c16a96f0ef131f4da097ef7cd5e2
     permissions:
       contents: read
       security-events: write
-      actions: read
+      actions: write
