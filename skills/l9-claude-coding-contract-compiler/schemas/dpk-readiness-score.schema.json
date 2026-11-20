@@ -3,12 +3,7 @@
   "title": "DPKReadinessScore",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "total",
-    "band",
-    "categories",
-    "red_line_triggered"
-  ],
+  "required": ["total", "band", "categories", "red_line_triggered"],
   "properties": {
     "total": {
       "type": "integer",
@@ -17,11 +12,7 @@
     },
     "band": {
       "type": "string",
-      "enum": [
-        "independently_operable",
-        "conditionally_clear",
-        "rejected"
-      ]
+      "enum": ["independently_operable", "conditionally_clear", "rejected"]
     },
     "categories": {
       "type": "object",

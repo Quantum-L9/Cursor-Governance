@@ -3,12 +3,7 @@
   "$id": "l9.result-acceptance-receipt.v1",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schema",
-    "assignment_id",
-    "status",
-    "receipt_digest"
-  ],
+  "required": ["schema", "assignment_id", "status", "receipt_digest"],
   "properties": {
     "schema": {
       "const": "l9.result-acceptance-receipt.v1"
@@ -17,22 +12,13 @@
       "type": "string"
     },
     "campaign_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "graph_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "action_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "agent_id": {
       "type": "string"
@@ -41,16 +27,10 @@
       "type": "string"
     },
     "lease_id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "base_sha": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "surface": {
       "type": "string"
@@ -65,22 +45,13 @@
       "type": "string"
     },
     "raw_result_path": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "raw_result_digest": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "status": {
-      "enum": [
-        "ACCEPTED",
-        "REJECTED"
-      ]
+      "enum": ["ACCEPTED", "REJECTED"]
     },
     "reason": {
       "type": "string"

@@ -158,6 +158,13 @@ def test_v3_pipeline_passes_when_the_gar_run_and_declarations_are_present() -> N
         _clear(hold)
 
 
+def test_admit_exempts_built_shelf_regardless_of_case(tmp_path: Path) -> None:
+    plan = tmp_path / "BUILT" / "already_filed.plan.md"
+    plan.parent.mkdir()
+    plan.write_text("# Filed\n\nAlready on the built shelf.\n", encoding="utf-8")
+    assert check_plan(plan) == []
+
+
 def test_v4_admit_rejects_a_title_and_paragraph() -> None:
     hold = _hold("v4")
     hold.mkdir(parents=True, exist_ok=True)
@@ -316,3 +323,30 @@ def test_v6_renderer_default_stays_program_execution() -> None:
     )
     assert proc.returncode == 0, proc.stderr
     assert "## Execute via @environment/program-execution" in proc.stdout
+
+
+def test_v9_plan_written_through_a_symlink_out_of_the_checkout_warns(
+    tmp_path: Path, capsys
+) -> None:
+    """`.cursor/plans` in a governance worktree links to the primary SSOT clone."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("run_plan_pipeline_v9", PIPELINE)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    checkout = tmp_path / "checkout"
+    elsewhere = tmp_path / "ssot" / "docs" / "plans"
+    elsewhere.mkdir(parents=True)
+    (checkout / ".cursor").mkdir(parents=True)
+    (checkout / ".cursor" / "plans").symlink_to(elsewhere)
+    (checkout / "docs" / "plans").mkdir(parents=True)
+
+    module._warn_outside_checkout(checkout / ".cursor" / "plans" / "x.plan.md", checkout)
+    err = capsys.readouterr().err
+    assert "WARN: plan written outside this checkout" in err
+    assert "docs/plans/<slug>.plan.md" in err
+
+    module._warn_outside_checkout(checkout / "docs" / "plans" / "x.plan.md", checkout)
+    assert capsys.readouterr().err == ""

@@ -8,13 +8,8 @@
     "plan_fail_shallow.json FAIL with G_STRESS or G_CRITICAL_PATH"
   ],
   "scope": {
-    "in": [
-      "l9-plan skill pack schemas scripts fixtures"
-    ],
-    "out": [
-      "Gate SDK transport contract changes",
-      "auto-commit from plan mode"
-    ]
+    "in": ["l9-plan skill pack schemas scripts fixtures"],
+    "out": ["Gate SDK transport contract changes", "auto-commit from plan mode"]
   },
   "code_in_scope": true,
   "pre_validation": [
@@ -35,9 +30,7 @@
     {
       "id": "T1",
       "task": "Add schema",
-      "files": [
-        "schemas/plan-document.schema.json"
-      ],
+      "files": ["schemas/plan-document.schema.json"],
       "effort": "S",
       "risk": "medium",
       "dependencies": [],
@@ -50,24 +43,17 @@
     {
       "id": "T2",
       "task": "Add validator",
-      "files": [
-        "scripts/validate_plan_document.py"
-      ],
+      "files": ["scripts/validate_plan_document.py"],
       "effort": "M",
       "risk": "high",
-      "dependencies": [
-        "T1"
-      ],
+      "dependencies": ["T1"],
       "operation": "Create",
       "anchor": "new file",
       "layer": "assurance",
       "leverage_rank": 2
     }
   ],
-  "critical_path": [
-    "T1",
-    "T2"
-  ],
+  "critical_path": ["T1", "T2"],
   "milestones": [
     {
       "id": "M1",
@@ -103,9 +89,7 @@
     {
       "surface": "l9-plan SKILL.md",
       "action": "update",
-      "todo_ids": [
-        "T2"
-      ]
+      "todo_ids": ["T2"]
     }
   ],
   "stress_test": {
@@ -114,23 +98,14 @@
       "Can a plan converge with unknown final validation?",
       "Does GMP receive ungrounded TODOs?"
     ],
-    "assumed_false_ifs": [
-      "agents ignore JSON and skip validator"
-    ],
+    "assumed_false_ifs": ["agents ignore JSON and skip validator"],
     "blast_radius": "bad plans cause implementation rework across GMP phases",
     "rollback": "revert skill pack to previous tag; keep consumer repos unchanged"
   },
   "leverage": {
-    "ranked_todo_ids": [
-      "T1",
-      "T2"
-    ],
-    "shared_causes": [
-      "prose-only readiness"
-    ],
-    "deletions_or_consolidations": [
-      "remove rapid omit-depth routing"
-    ]
+    "ranked_todo_ids": ["T1", "T2"],
+    "shared_causes": ["prose-only readiness"],
+    "deletions_or_consolidations": ["remove rapid omit-depth routing"]
   },
   "risks": [
     {
@@ -160,31 +135,13 @@
     "stop_reason": "plan validated structurally; implementation not yet run"
   },
   "gmp_handoff": {
-    "may_modify": [
-      "schemas/",
-      "scripts/",
-      "fixtures/",
-      "references/",
-      "SKILL.md"
-    ],
-    "must_not_modify": [
-      "src/constellation_node_sdk/"
-    ],
-    "preserved_contracts": [
-      "planning-only no code edits",
-      "Gate-only egress in SDK"
-    ],
-    "validation_commands": [
-      "python3 scripts/self_test.py",
-      ".pre-commit-config.yaml"
-    ]
+    "may_modify": ["schemas/", "scripts/", "fixtures/", "references/", "SKILL.md"],
+    "must_not_modify": ["src/constellation_node_sdk/"],
+    "preserved_contracts": ["planning-only no code edits", "Gate-only egress in SDK"],
+    "validation_commands": ["python3 scripts/self_test.py", ".pre-commit-config.yaml"]
   },
   "depth": "deep",
-  "checklist": [
-    "schema",
-    "validator",
-    "fixtures"
-  ],
+  "checklist": ["schema", "validator", "fixtures"],
   "estimate": "1 GMP",
   "owner": "igor_beylin",
   "execution_envelope": {

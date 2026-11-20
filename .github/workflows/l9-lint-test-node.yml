@@ -50,6 +50,5 @@ jobs:
     uses: Quantum-L9/l9-ci-sdk/.github/workflows/l9-biome-scan.yml@f546f122d33601ea5a4b2592e3482c5c39eddd82
     with:
       scan-path: "."
-      # Advisory-to-blocking rollout: false = full scan + annotate + exit 0.
-      # Flip to true to make Biome findings blocking once the repo is clean.
-      enforce-biome: false
+      # Blocking, matching Analyze (central Core). Findings fail the job.
+      enforce-biome: true

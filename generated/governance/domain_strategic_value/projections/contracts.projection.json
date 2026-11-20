@@ -1,0 +1,124 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "contracts": [
+      {
+        "applicability": {
+          "does_not_apply_to": [
+            "generic_numerical_reasoning_without_strategic_value_claim",
+            "unrelated_governed_decision_evaluation",
+            "unrelated_strategic_planning_activity"
+          ],
+          "method_conditional": "probability_mass_only_for_probabilistic_methods;_belief_state_QV_only_if_QV_selected;_portfolio_rules_only_for_joint_action_claims",
+          "trigger": "an_assessment_makes_a_material_strategic_value_claim",
+          "unavailable_claim": "conditional_or_unknown_without_imposing_unrelated_method"
+        },
+        "applies_to": [
+          "assessments_asserting_applicable_objective_relative_quantitative_strategic_value_claims"
+        ],
+        "forbidden": [
+          "separately_subtracting_direct_cost_or_risk_loss_already_embedded_in_utility_flows",
+          "treating_unmapped_material_accounting_consequences_as_zero",
+          "requiring_belief_state_QV_optimizer_for_every_legitimate_strategic_assessment",
+          "treating_any_supported_method_as_valid_for_claims_it_cannot_establish",
+          "demanding_mathematical_proof_of_general_real_world_forecast_adequacy",
+          "value_rank_overrides_hard_constraints",
+          "undefined_leverage_score_in_machine_contract",
+          "summing_period_stock_levels_as_if_new_flow_utility",
+          "inventing_missing_scenario_probability_or_unmodelled_future_as_zero",
+          "applying_realization_probability_twice_to_one_effect",
+          "treating_heuristic_pseudoreceipt_as_a_real_numerical_owner_result",
+          "declaring_a_truncated_future_or_unverified_actor_response_model_complete",
+          "double_counted_unattributed_or_unreconciled_material_state_delta",
+          "information_gain_as_automatic_positive_utility",
+          "forecast_claimed_as_observed_or_authoritative_truth",
+          "projected_semantics_redefined_by_consumer",
+          "evaluation_result_promoted_to_plan_commitment_or_action_authorization",
+          "treating_arbitrarily_paired_scenarios_as_identified_causal_effects",
+          "counting_third_party_benefits_without_authorized_welfare_aggregation",
+          "using_future_observations_to_rank_prior_action_policies",
+          "summing_jointly_interacting_action_values_as_independent",
+          "claiming_a_precise_winner_when_material_uncertainty_can_reverse_preference",
+          "treating_projection_attestation_as_executed_numerical_model_or_calibration_proof",
+          "imposing_strategic_value_specific_math_on_unrelated_evaluations"
+        ],
+        "guarantees": [
+          "assessment_is_derived_and_non_authoritative",
+          "assessment_preserves_question_appropriate_result_shape",
+          "declared_aggregate_distinguished_from_trajectory_calculation_and_verified_prediction",
+          "excluded_infeasible_actions_distinguished_from_unresolved_comparisons",
+          "source_and_evidence_revision_changes_invalidate_affected_evaluations"
+        ],
+        "id": "l9.contract/strategic-value-assessment@1",
+        "outcomes": {
+          "satisfied": "traceable_nonduplicative_evaluation_with_governed_authority_boundary",
+          "unresolved": "missing_evidence_probability_mass_causal_attribution_or_model_unknown",
+          "violated": "incompatible_or_double_counted_or_misrepresented_value_claim"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Govern objective-relative quantitative Strategic Value assessment without transferring Numerical Reasoning, business policy, planning authority, or execution authority to a projection or consumer.",
+        "requires": [
+          "explicit_objective_utility_units_and_feasible_baseline",
+          "declared_utility_flow_basis_and_mandatory_mutually_exclusive_exhaustive_accounting_partition",
+          "method_appropriate_probability_scenario_uncertainty_or_robustness_model_or_declared_only_status",
+          "applicable_future_counterfactual_valuation_under_owner_admitted_method_or_explicit_declared_only_status",
+          "compatible_temporal_utility_basis_and_declared_discount_where_applicable",
+          "complete_probability_mass_when_probabilistic_method_applies_or_explicit_unresolved_missing_mass",
+          "defensible_counterfactual_comparability_under_selected_method",
+          "legitimate_recurrence_identified_by_distinct_time_indexed_state_deltas",
+          "bounded_tail_and_early_stop_coverage_or_explicit_unresolved_consequences",
+          "bounded_horizon_and_revision_bound_model_inputs",
+          "formal_admissibility_and_mandatory_constraint_check",
+          "relevant_alternative_and_counterfactual_comparison",
+          "exactly_one_accounting_home_per_material_effect_with_gross_net_reconciliation",
+          "effect_identity_provenance_attribution_and_overlap_handling",
+          "explicit_material_unknowns_and_uncertainty",
+          "negative_propagation_and_coordinating_drag_where_material",
+          "separate_predicted_and_realized_outcomes",
+          "method_appropriate_handling_of_material_strategic_actor_responses_or_conditional_unknown",
+          "qv_belief_state_model_coordinates_only_when_qv_method_selected",
+          "finite_question_appropriate_bounds_with_qv_specific_branch_belief_controls_only_when_selected",
+          "numerical_owner_receipts_for_claims_of_executed_lookahead_or_calibration",
+          "no_novelty_echo_or_circular_value_inflation",
+          "counterfactual_worlds_share_defensible_initial_conditions_time_basis_and_identification_assumptions",
+          "beneficiary_scope_and_welfare_aggregation_when_cross_actor_effects_material",
+          "nonanticipative_conditional_policies_when_sequential_actions_are_evaluated",
+          "joint_portfolio_counterfactual_and_resource_interactions_for_nonadditive_actions",
+          "uncertainty_sensitivity_or_conditional_frontier_when_preference_can_flip",
+          "method_identity_input_lineage_executed_method_evidence_and_applicable_independently_reviewable_model_validation_evidence_for_strong_numerical_claims",
+          "model_coverage_ledger_has_nonoverlapping_IEV_SFV_DC_ERL_OC_effect_assignments",
+          "costs_risk_and_opportunity_losses_embedded_in_net_flows_are_excluded_from_separate_subtraction",
+          "unknown_or_unreconciled_accounting_effects_preclude_a_complete_sv_claim",
+          "numerical_method_selection_is_question_appropriate_not_universally_QV",
+          "applicable_independently_reviewable_validation_evidence_suitable_to_model_and_claim",
+          "interpret_retained_former_candidate_semantics_conditionally_under_strategic_value_model",
+          "when_learning_or_computing_is_an_alternative_compare_expected_marginal_decision_improvement_net_of_costs"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-SV-001",
+          "L9-SV-002",
+          "L9-AUTH-001",
+          "L9-AUTH-002",
+          "L9-HARD-001",
+          "L9-UNKNOWN-001",
+          "L9-STRATEGY-001",
+          "L9-PROJECTION-001",
+          "L9-PROV-001",
+          "L9-EVIDENCE-001",
+          "L9-ASSURANCE-001",
+          "L9-COORD-001"
+        ]
+      }
+    ]
+  },
+  "projection_digest": "sha256:eb292dcf77d79e8b3f030a14627bed8e239df51c84738b39e76aa48fb2a7adaa",
+  "projection_profile_digest": "sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4",
+  "projection_profile_ref": "l9.projection/strategic-value@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
+  "source_ref": "l9.source/contracts@1"
+}

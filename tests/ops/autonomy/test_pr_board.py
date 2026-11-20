@@ -749,3 +749,80 @@ def test_protection_probe_real_break_still_fails_closed(monkeypatch) -> None:
         pass
     else:
         raise AssertionError("a broken protection probe must raise BoardError")
+
+
+# --- #797: superseded check-runs on the same SHA ---------------------------
+
+
+def _run(name, conclusion, started, run_id, suite):
+    return {
+        "id": run_id,
+        "name": name,
+        "status": "completed",
+        "conclusion": conclusion,
+        "started_at": started,
+        "app": {"id": 15368},
+        "check_suite": {"id": suite},
+    }
+
+
+def test_rest_fallback_superseded_cancelled_runs_do_not_count(monkeypatch) -> None:
+    """A concurrency-cancelled sibling run must not outvote the live run."""
+    monkeypatch.setattr(
+        pr_board,
+        "_gh_json",
+        _rest_only_gh(
+            _PULL,
+            check_runs=[
+                _run("Pure Python Tests", "success", "2026-10-30T10:05:00Z", 124289319462, 2),
+                _run("CI Gate Result", "success", "2026-10-30T10:09:00Z", 124290761548, 2),
+                _run("Pure Python Tests", "cancelled", "2026-10-30T10:00:00Z", 124287800495, 1),
+                _run("CI Gate Result", "failure", "2026-10-30T10:04:00Z", 124289287795, 1),
+            ],
+        ),
+    )
+    view = pr_board._pr_view("Quantum-L9/Cursor-Governance", "512")
+    assert _rollup_states_of(view) == {
+        "Pure Python Tests": "SUCCESS",
+        "CI Gate Result": "SUCCESS",
+    }
+
+
+def test_rest_fallback_newer_failure_still_wins(monkeypatch) -> None:
+    """Collapsing keeps the latest run, so a fresh red is never hidden."""
+    monkeypatch.setattr(
+        pr_board,
+        "_gh_json",
+        _rest_only_gh(
+            _PULL,
+            check_runs=[
+                _run("Test Suite", "success", "2026-10-30T10:00:00Z", 10, 1),
+                _run("Test Suite", "failure", "2026-10-30T10:05:00Z", 11, 2),
+            ],
+        ),
+    )
+    view = pr_board._pr_view("Quantum-L9/Cursor-Governance", "512")
+    assert _rollup_states_of(view) == {"Test Suite": "FAILURE"}
+
+
+def test_rest_fallback_queued_rerun_ranks_newest(monkeypatch) -> None:
+    """A re-run not yet started outranks the old red: it is pending, never green."""
+    queued = {
+        "id": 12,
+        "name": "Test Suite",
+        "status": "queued",
+        "conclusion": None,
+        "started_at": None,
+        "app": {"id": 15368},
+        "check_suite": {"id": 3},
+    }
+    monkeypatch.setattr(
+        pr_board,
+        "_gh_json",
+        _rest_only_gh(
+            _PULL,
+            check_runs=[_run("Test Suite", "failure", "2026-10-30T10:00:00Z", 10, 1), queued],
+        ),
+    )
+    view = pr_board._pr_view("Quantum-L9/Cursor-Governance", "512")
+    assert _rollup_states_of(view) == {"Test Suite": "QUEUED"}

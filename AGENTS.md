@@ -435,11 +435,11 @@ provision a second GitHub PAT in AWS while this ref works.
 - `ops/hooks/session_start_bootstrap.sh` — activation entry point (§2.1)
 - `ops/scripts/resolve_governance_paths.sh` — path resolution (GitHub clone
   only, no Dropbox fallback)
-- `ORG_INVARIANTS.yaml` — canonical Quantum-L9 org policy
+- `ORG_INVARIANTS.yaml` — consumer mirror of `Quantum-L9/.github` `policies/ORG_INVARIANTS.yaml` at `ec3f5c6734530a3a90438a80827ebd8edd876734`; this repository does not author organization policy
 - `ops/autonomy/surface_profile.yaml` — autonomy / L4 / campaign / overlap
 - [`requirements.txt`](requirements.txt) — toolchain pins
 - `ARCHITECTURE.md` — this-repo map (index; does not outrank this file or `CANONICAL_LAW.md`)
-- `INVARIANTS.md` — this-repo invariant index (`ORG_INVARIANTS.yaml` remains the machine org-policy SSOT)
+- `INVARIANTS.md` — this-repo invariant index (organization policy is authored in `Quantum-L9/.github`; `ORG_INVARIANTS.yaml` is the local consumer mirror)
 
 Agents must keep code and these docs aligned — see `TODO.md` for known drift
 not yet reconciled.
@@ -2456,3 +2456,153 @@ scan used this repository's rules, not Core's.
   seven findings Core reported.
 - **Unchanged.** An absent tool or an unstageable gate is a reported skip, not
   a pass and not a block. `L9_CI_PARITY=0` disables it. CI stays authoritative.
+
+<!-- PROGRAM_EXECUTION_MANUAL_STAGE_V1 -->
+## Program Execution manual stage (2026-11-12) — supersedes "Program Execution eviction reachability (2026-10-07)" and item 6 of the 2026-10-06 L4 / publication assurance correction
+
+Append-only. Operating form of CANONICAL_LAW `PROGRAM_EXECUTION_MANUAL_STAGE_V1`.
+Items 1–5 of the 2026-10-06 correction are unchanged.
+
+- Program Execution is connected to root autonomy and runs **only when the
+  operator explicitly asks for a campaign**. Do not start, resume or offer to
+  run one on your own initiative. Do not set `L9_PE_OPERATOR_INVOCATION`
+  yourself: it carries the operator's words for that run, verbatim.
+- When the operator does ask, the entry is
+  `environment/program-execution/scripts/run_campaign.py`. There is still no
+  `make campaign` and no live `l9-pe-*` skill; `l9-plan`,
+  `l9-pe-campaign-activate` and `l9-pe-nuggets` stay archived.
+- The runner refuses, and the refusal is the answer, when: the surface profile
+  has no `campaign_execution` block or an unknown stage; no operator statement
+  is present; the coding-agent execution projection is not verified and
+  admitted (it needs a `Quantum-L9/.github` checkout whose HEAD is its main,
+  `L9_AUTHORITY_ROOT`); the concurrency policy exceeds the autonomy profile's
+  lanes. Do not work around any of them.
+- A campaign ends at verified local commits. Publish separately with
+  `PR_REMEDIATE=0 make pr`.
+- Root autonomy, L4, publication, readiness and the host hook wrapper still do
+  not require `environment/program-execution/`. Program Execution's tests are
+  not yet part of the generic `make pr` gate; run them directly.
+
+<!-- PROGRAM_EXECUTION_MAKE_PR_FINISH_V1 -->
+## Program Execution finishes with the SSOT make pr (2026-11-13) — supersedes "A campaign ends at verified local commits" in the 2026-11-12 manual-stage section and the §3.3 campaign `PR_BASE` rule for Program Execution
+
+Append-only. Operating form of CANONICAL_LAW `PROGRAM_EXECUTION_MAKE_PR_FINISH_V1`.
+
+- A campaign the operator asked for runs to its `pr` stage by default and
+  publishes itself: the runner calls the governance SSOT
+  `make -C <SSOT> pr WS=<campaign integration worktree>` with
+  `PR_REMEDIATE=0`. Do not publish a campaign by hand, and do not open a
+  second pull request for it.
+- The pull request's head is `campaign/<campaign_id>`; its base is the
+  target's remote default (`origin/main` here). It is converged and merged
+  like any other pull request, through `/l9-pr-remediation`.
+- `until=execute` still stops at verified local commits.
+- When the `pr` stage fails, read `runtime/publication.log` in the campaign's
+  pec workspace and repair what the gate reported, then resume the campaign.
+  Do not push or open the pull request another way.
+
+<!-- PROGRAM_EXECUTION_REGISTERED_STAGE_V1 -->
+## Program Execution registered stage (2026-11-13) — supersedes "There is still no `make campaign`" in the 2026-11-12 manual-stage section
+
+Append-only. Operating form of CANONICAL_LAW `PROGRAM_EXECUTION_REGISTERED_STAGE_V1`.
+
+- When the operator asks for a campaign, the entry is:
+  `L9_PE_OPERATOR_INVOCATION="<their words>" make -C "$HOME/.cursor-governance" campaign INTENT=<path> WS="$PWD"`.
+  Classify the input first with `make campaign-check-input INTENT=<path> WS="$PWD"`.
+  `INTENT` is resolved against `WS` when relative.
+- `/coding-agent on` must be active in that session and that `WS` first. The
+  runner refuses `CODING_AGENT_MODE_OFF` otherwise; turn it on, do not work
+  around it, and never set `L9_PE_MODE_WORKSPACE` to a workspace the operator
+  did not turn it on in.
+- Do not start, resume or offer to run a campaign on your own initiative, and
+  never set `L9_PE_OPERATOR_INVOCATION` yourself.
+
+<!-- PROGRAM_EXECUTION_PLANNER_V1 -->
+## l9-plan plans campaigns; Program Execution eviction withdrawn (2026-11-13) — supersedes the "stay archived" clause of the 2026-11-12 manual-stage section, "Program Execution's tests are not yet part of the generic `make pr` gate", the 2026-10-07 eviction-reachability section, and the `make campaign INTENT=` → `l9-pe-campaign-activate` row
+
+Append-only. Operating form of CANONICAL_LAW `PROGRAM_EXECUTION_PLANNER_V1` and
+`PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1`.
+
+- When the operator invokes `/l9-plan` for a campaign, write the PLAN_DOCUMENT
+  with per-todo `validation` and `acceptance`, then run
+  `python3 skills/l9-plan/scripts/render_campaign_source.py <plan.json>`. Only
+  `ADMITTED` is a deliverable; hand the operator the printed `make campaign`
+  line. Do not run it yourself.
+- `make campaign` runs the campaign itself (`ops/make/campaign.mk`); it no longer
+  routes through the archived `l9-pe-campaign-activate` skill. Those archived
+  packs are the runner's compile library, not skills to invoke.
+- Program Execution's tests are part of the generic gate: the
+  `claude-code-autonomy` and `program-execution-controller` suites in
+  `ops/config/python-contract.json` run them in `make pr` and CI.
+- Program Execution is not an eviction target. Do not plan its removal. Keep
+  root autonomy, L4 and publication independent of it.
+- The `make program-execution-*` targets in §13 live in the uncomposed
+  `ops/make/program-execution.mk`; run them from the governance root as
+  `make -f ops/make/program-execution.mk PYTHON=.venv/bin/python <target>`.
+
+<!-- CI_PARITY_CONSTELLATION_SCOPE_V1 -->
+## `semgrep-l9` stages Core's constellation-scoped policy (2026-11-13) — amends CI_PARITY_HOSTED_CLAUDE_V1 and its 2026-11-06 amendment
+
+Append-only. l9-ci-core #237 (activated by #238) binds the four Gate routing
+rules (`requests-direct-node-dispatch`, `httpx-direct-node-dispatch`,
+`hardcoded-peer-node-url`, `gateclient-bypass-execute`) only to a repository
+whose `.l9/ci.json` declares `product_kind: node`. The lane kept staging the
+unscoped policy, so `make pr` blocked Gate_SDK and Constellation.Gate on rules
+Analyze (central Core) does not block them on.
+
+- **Core's resolver, not a copy.** `semgrep-l9` fetches Core's
+  `resolve-consumer-metadata` and `resolve-governance` actions at `core_ref`
+  (byte for byte, cached per Core commit) and runs them the way org-ci does:
+  the first reads the scanned tree's `.l9/ci.json`, the second takes its
+  `product-kind` and stages the policy and identity maps. No rule list or
+  scoping logic lives in this repository.
+- **Non-node.** The Gate routing rules run and are reported as `note`; they
+  cannot block. Every other rule blocks exactly as before.
+- **Node.** The policy is unchanged; the routing rules block.
+- **Refusal blocks.** When a Core action exits non-zero (for example an
+  inadmissible `product_kind`), Core fails the job before Semgrep runs, so the
+  lane blocks with Core's message (`core/resolve-consumer-metadata` or
+  `core/resolve-governance`). This narrows the 2026-11-06 "an unstageable gate
+  is a reported skip" only for Core's own refusal; failing to fetch Core or the
+  SDK is still a reported skip.
+
+## Memory hook relay on cloud sessions (2026-11-16) — CANONICAL_LAW §8.11
+
+Append-only. On a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`) hook-lane
+memory writes are not written locally: they are queued in
+`<repo>/.l9/memory/relay/outbox.jsonl`, and the Stop hook asks you to make each
+listed call on the account-managed L9 Memory connector and acknowledge it with
+`python -m ops.memory.relay ack <id> --receipt <receipt_id>`. Shared-store
+hydration is `memory_hydrate` on that connector. `L9_MEMORY_HOOK_CARRIER=local|relay`
+overrides the default. ADR-0054.
+
+<!-- MEMORY_RELEASE_300_HOSTED_V1 -->
+## Memory 3.0.0 hosted release (2026-11-16)
+
+Append-only. Tag `v3.0.0` is the admitted hosted Memory release (source
+`d8b33870c33dc4625f177282c5e99c888356efd8`), deployed 2026-11-16 by
+Quantum-L9/l9-deploy run `43786931510`. Hosted MCP is authenticated
+Streamable HTTP (CANONICAL_LAW §8.10 and §8.13). This checkout's bound
+package remains `l9-graphite-memory==2.6.0` until a separate rebind. The
+3.0.0 wheel is not on PyPI. Do not install 3.0.0 over that pin.
+
+<!-- INFISICAL_VAULT_IS_THE_GRANT_V1 -->
+## A vault name is the grant (2026-11-19)
+
+Append-only. A name in Infisical project `cursor-governance` prod `/` is
+authorized to bind when the task needs that system. `allowed_names()` is the
+committed `root_env_keys` mirror plus one `viewSecretValue=false` listing, so
+a new vault name is usable before the next commit. A listing failure uses the
+mirror. Values stay in-process.
+
+`CLAUDE_INFISICAL_CLIENT_SECRET`, `INFISICAL_CLIENT_SECRET`, and
+`L9_INFISICAL_CLIENT_SECRET` are refused. The identity is used, never
+re-issued. `operator_only_keys` is empty. `GITHUB_TOKEN` is the default GitHub
+credential. `GITHUB_CLASSIC_PAT` binds when the task needs it. `make pr` still
+does not require `SONAR_TOKEN` or `SEMGREP_APP_TOKEN`.
+
+SessionStart prints the authorized name catalog and still probes only
+`SEMGREP_APP_TOKEN`, `SONAR_TOKEN`, `GITHUB_TOKEN`, and `CONTEXT7_API_KEY`.
+Stdio MCP servers whose env name is a vault name spawn through
+`run_vault_mcp_bridge.sh spawn`. The child environment receives the bind.
+`master.mcp.json` and a rendered config keep placeholders.

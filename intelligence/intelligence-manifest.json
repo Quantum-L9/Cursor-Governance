@@ -10,10 +10,7 @@
     "security": "/security/",
     "pipeline": "/pipeline/"
   },
-  "files": [
-    "adaptive-reasoning.md",
-    "system-reflection.md"
-  ],
+  "files": ["adaptive-reasoning.md", "system-reflection.md"],
   "telemetry": {
     "audit_log": "/ops/logs/meta_audit.json",
     "reasoning_metrics": "/ops/logs/reasoning_metrics.json"

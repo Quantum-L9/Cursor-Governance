@@ -5,12 +5,7 @@
   "description": "Explicit routing and promotion decision for one generated data unit (law §15-§18).",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "unit_id",
-    "routes",
-    "promotion_decision",
-    "risk_class"
-  ],
+  "required": ["unit_id", "routes", "promotion_decision", "risk_class"],
   "properties": {
     "unit_id": {
       "type": "string",
@@ -18,10 +13,7 @@
       "pattern": "^[A-Za-z0-9._:-]+$"
     },
     "primary_class": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "routes": {
       "type": "array",
@@ -44,36 +36,21 @@
     },
     "promotion_decision": {
       "type": "string",
-      "enum": [
-        "promote",
-        "retain",
-        "defer",
-        "reject"
-      ]
+      "enum": ["promote", "retain", "defer", "reject"]
     },
     "risk_class": {
       "type": "string",
-      "enum": [
-        "low",
-        "medium",
-        "high"
-      ]
+      "enum": ["low", "medium", "high"]
     },
     "authority_required": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "authority_satisfied": {
       "type": "boolean",
       "default": false
     },
     "rejection_reason": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "blocking_conflict_ids": {
       "type": "array",
@@ -91,16 +68,10 @@
       "description": "unit_ids this decision supersedes, merges, or strengthens (dedup lineage, law §19)."
     },
     "decided_by": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "decided_at": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     }
   }
 }

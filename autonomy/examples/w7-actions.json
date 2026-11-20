@@ -11,10 +11,7 @@
       "claims": [],
       "completion": {
         "artifact_kind": "CampaignStatus",
-        "required_fields": [
-          "campaign_id",
-          "state"
-        ],
+        "required_fields": ["campaign_id", "state"],
         "require_base_sha_match": true
       },
       "priority_weight": 10
@@ -23,9 +20,7 @@
       "id": "context-compile-task046",
       "role": "context_compiler",
       "kind": "work",
-      "depends_on": [
-        "campaign-coordinator"
-      ],
+      "depends_on": ["campaign-coordinator"],
       "mutation": false,
       "resource_class": "context_compile",
       "claims": [
@@ -53,9 +48,7 @@
       "id": "ro-stack-inventory",
       "role": "recon",
       "kind": "work",
-      "depends_on": [
-        "context-compile-task046"
-      ],
+      "depends_on": ["context-compile-task046"],
       "mutation": false,
       "resource_class": "repository_recon",
       "claims": [
@@ -67,12 +60,7 @@
       ],
       "completion": {
         "artifact_kind": "ReconReport",
-        "required_fields": [
-          "status",
-          "feeds",
-          "evidence",
-          "impl_checklist"
-        ],
+        "required_fields": ["status", "feeds", "evidence", "impl_checklist"],
         "require_base_sha_match": true,
         "require_empty_blockers": false
       },
@@ -82,9 +70,7 @@
       "id": "ro-m0-gap",
       "role": "recon",
       "kind": "work",
-      "depends_on": [
-        "context-compile-task046"
-      ],
+      "depends_on": ["context-compile-task046"],
       "mutation": false,
       "resource_class": "repository_recon",
       "claims": [
@@ -96,12 +82,7 @@
       ],
       "completion": {
         "artifact_kind": "ReconReport",
-        "required_fields": [
-          "status",
-          "feeds",
-          "evidence",
-          "impl_checklist"
-        ],
+        "required_fields": ["status", "feeds", "evidence", "impl_checklist"],
         "require_base_sha_match": true,
         "require_empty_blockers": false
       },
@@ -111,9 +92,7 @@
       "id": "ro-owner-schemas",
       "role": "recon",
       "kind": "work",
-      "depends_on": [
-        "context-compile-task046"
-      ],
+      "depends_on": ["context-compile-task046"],
       "mutation": false,
       "resource_class": "repository_recon",
       "claims": [
@@ -125,12 +104,7 @@
       ],
       "completion": {
         "artifact_kind": "ReconReport",
-        "required_fields": [
-          "status",
-          "feeds",
-          "evidence",
-          "impl_checklist"
-        ],
+        "required_fields": ["status", "feeds", "evidence", "impl_checklist"],
         "require_base_sha_match": true,
         "require_empty_blockers": false
       },
@@ -140,9 +114,7 @@
       "id": "ro-gate-actions",
       "role": "recon",
       "kind": "work",
-      "depends_on": [
-        "context-compile-task046"
-      ],
+      "depends_on": ["context-compile-task046"],
       "mutation": false,
       "resource_class": "repository_recon",
       "claims": [
@@ -154,12 +126,7 @@
       ],
       "completion": {
         "artifact_kind": "ReconReport",
-        "required_fields": [
-          "status",
-          "feeds",
-          "evidence",
-          "impl_checklist"
-        ],
+        "required_fields": ["status", "feeds", "evidence", "impl_checklist"],
         "require_base_sha_match": true,
         "require_empty_blockers": false
       },
@@ -169,12 +136,7 @@
       "id": "synthesize-m0",
       "role": "synthesis",
       "kind": "synthesis",
-      "depends_on": [
-        "ro-stack-inventory",
-        "ro-m0-gap",
-        "ro-owner-schemas",
-        "ro-gate-actions"
-      ],
+      "depends_on": ["ro-stack-inventory", "ro-m0-gap", "ro-owner-schemas", "ro-gate-actions"],
       "mutation": false,
       "resource_class": "synthesis",
       "claims": [],
@@ -200,9 +162,7 @@
       "id": "execute-m0",
       "role": "executor",
       "kind": "work",
-      "depends_on": [
-        "synthesize-m0"
-      ],
+      "depends_on": ["synthesize-m0"],
       "mutation": true,
       "resource_class": "repository_mutation",
       "claims": [
@@ -232,20 +192,14 @@
       },
       "priority_weight": 10,
       "metadata": {
-        "operations": [
-          "edit_scoped",
-          "run_tests",
-          "commit_local"
-        ]
+        "operations": ["edit_scoped", "run_tests", "commit_local"]
       }
     },
     {
       "id": "verify-m0-scope",
       "role": "verifier",
       "kind": "validation",
-      "depends_on": [
-        "execute-m0"
-      ],
+      "depends_on": ["execute-m0"],
       "mutation": false,
       "resource_class": "verification",
       "claims": [
@@ -257,13 +211,7 @@
       ],
       "completion": {
         "artifact_kind": "VerificationReport",
-        "required_fields": [
-          "verification_type",
-          "target_sha",
-          "checks",
-          "verdict",
-          "evidence"
-        ],
+        "required_fields": ["verification_type", "target_sha", "checks", "verdict", "evidence"],
         "require_base_sha_match": false,
         "require_empty_blockers": true
       },
@@ -273,11 +221,7 @@
       "id": "verify-m0-live",
       "role": "verifier",
       "kind": "validation",
-      "depends_on": [
-        "execute-m0",
-        "ro-stack-inventory",
-        "ro-gate-actions"
-      ],
+      "depends_on": ["execute-m0", "ro-stack-inventory", "ro-gate-actions"],
       "mutation": false,
       "resource_class": "live_runtime",
       "claims": [
@@ -306,10 +250,7 @@
       "id": "review-m0-independent",
       "role": "reviewer",
       "kind": "validation",
-      "depends_on": [
-        "verify-m0-scope",
-        "verify-m0-live"
-      ],
+      "depends_on": ["verify-m0-scope", "verify-m0-live"],
       "mutation": false,
       "resource_class": "review",
       "claims": [
@@ -333,18 +274,14 @@
         "require_base_sha_match": false,
         "require_empty_blockers": false
       },
-      "independent_from": [
-        "execute-m0"
-      ],
+      "independent_from": ["execute-m0"],
       "priority_weight": 10
     },
     {
       "id": "poll-m0",
       "role": "poller",
       "kind": "poll",
-      "depends_on": [
-        "review-m0-independent"
-      ],
+      "depends_on": ["review-m0-independent"],
       "mutation": false,
       "resource_class": "poll_remote",
       "claims": [
@@ -356,13 +293,7 @@
       ],
       "completion": {
         "artifact_kind": "PollReport",
-        "required_fields": [
-          "pr_number",
-          "head_sha",
-          "checks",
-          "review_threads",
-          "terminal_state"
-        ],
+        "required_fields": ["pr_number", "head_sha", "checks", "review_threads", "terminal_state"],
         "require_base_sha_match": false,
         "require_empty_blockers": false
       },
@@ -373,9 +304,7 @@
       "id": "base-sha-sentinel",
       "role": "sentinel",
       "kind": "validation",
-      "depends_on": [
-        "campaign-coordinator"
-      ],
+      "depends_on": ["campaign-coordinator"],
       "mutation": false,
       "resource_class": "sentinel",
       "claims": [
@@ -404,10 +333,7 @@
       "id": "evidence-writer",
       "role": "evidence_writer",
       "kind": "work",
-      "depends_on": [
-        "review-m0-independent",
-        "base-sha-sentinel"
-      ],
+      "depends_on": ["review-m0-independent", "base-sha-sentinel"],
       "mutation": false,
       "resource_class": "evidence",
       "claims": [],

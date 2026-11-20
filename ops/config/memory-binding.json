@@ -1,10 +1,10 @@
 {
   "schema_version": "1.0.0",
-  "description": "Cursor-Governance binding to the canonical memory control plane (l9-graphiti-memory). Release 2.6.0 (tag v2.6.0; signed-agent door, canonical identity assertion, L9_MEMORY_MCP_COMMAND launcher, graph MCP operations, memory.write_agent / memory.write_governed). Control-plane contract and memory schema are unchanged.",
+  "description": "Cursor-Governance binding to the canonical memory control plane (l9-graphiti-memory). Release 3.0.1 (tag v3.0.1; published wheel, not the unpublished 3.0.0 upload). Control-plane contract and memory schema are unchanged.",
   "distribution": "l9-graphite-memory",
   "import_package": "l9_graphite_memory",
   "console_script": "l9-memory",
-  "expected_package_version": "2.6.0",
+  "expected_package_version": "3.0.1",
   "expected_contract_version": "memory-control-plane/v1",
   "required_cli_operations": [
     "resolve",
@@ -24,14 +24,8 @@
     "_note": "CLI subcommands the bound release ships for the hook lane but does not advertise in capabilities.transports[cli].operations, verified against the merged source at the bound ref. runtime_binding cannot require them through the capabilities receipt; tests/ops/memory/test_cross_repo_lifecycle.py proves each against the real runtime. When upstream advertises one, move it into required_cli_operations.",
     "distill": {
       "subcommand": "distill",
-      "positional": [
-        "path"
-      ],
-      "options": [
-        "--group-id",
-        "--repository",
-        "--dry-run"
-      ],
+      "positional": ["path"],
+      "options": ["--group-id", "--repository", "--dry-run"],
       "record_bound": "preflight-dry-run",
       "record_bound_note": "The bound parser defines no input record cap (no --max-records at e3a79626). The hook lane bounds max_records by running the same deterministic distill with --dry-run first — memory extracts and counts, nothing persists — and refuses the committing pass before any write when candidate_count exceeds the surface's remaining allowance. Emitting an option outside `options` is a contract break (audit F-604-DISTILL-CAP); ops/memory/control_plane_client.py DISTILL_CLI_OPTIONS mirrors this list and tests/ops/memory/test_cross_repo_lifecycle.py proves it against the exact bound parser."
     }
@@ -39,8 +33,8 @@
   "source": {
     "kind": "git",
     "repository": "Quantum-L9/l9-graphiti-memory",
-    "ref": "846f283f7dade101b324b87008ab4f5901f97074",
-    "ref_note": "Annotated tag v2.6.0 (object 9c1b37727b03d3c9754c379f2cb54d934c5f2e2b) peels to 846f283f7dade101b324b87008ab4f5901f97074. Pin is that full commit SHA. The official wheel is the PyPI upload from the Publish workflow (python -m build). uv build --wheel --build-constraint memory-build-constraints.txt (that file contains build_backend_constraint setuptools==84.0.0) under the recorded SOURCE_DATE_EPOCH reproduces that digest, so the cross-repo job still rebuilds and refuses any other bytes."
+    "ref": "96ed99eb172bb3b7433600db8581991c4c890737",
+    "ref_note": "Annotated tag v3.0.1 (object 5df53ff67edccc5cb606d040e5f674a4dfc764bf) peels to 96ed99eb172bb3b7433600db8581991c4c890737. Pin is that full commit SHA. The official wheel is the PyPI upload from publish run 44388642735. scripts/build_release_artifacts.sh under the recorded SOURCE_DATE_EPOCH reproduces that digest. uv build --wheel --build-constraint setuptools==84.2.1 does not, so the cross-repo job runs the release recipe and refuses any other bytes."
   },
   "binding_policy": {
     "production": "exact release artifact locked in uv.lock; runtime_mode=pinned_environment",
@@ -70,21 +64,21 @@
     "default_timeout_seconds": 180
   },
   "release_evidence": {
-    "description": "Exact-head proof of the binding (audit P1-01/P2-02). artifact_sha256 is the official published wheel (PyPI and the Publish workflow artifact from python -m build on source.ref). Writing release_evidence.build_backend_constraint (setuptools==84.0.0) into a requirements file and running uv build --wheel --build-constraint on that path under the fixed SOURCE_DATE_EPOCH reproduces those bytes. .github/workflows/memory-cross-repo.yml resolves source.ref, rebuilds with that command, refuses any other digest, installs that wheel into a clean environment, and runs tests/ops/memory/test_cross_repo_lifecycle.py with L9_MEMORY_CROSS_REPO_REQUIRED=1 (a skip is a failure) and no provider credential in the environment. A digest here without that job green on the same Cursor head is a claim, not a proof.",
-    "memory_sha": "846f283f7dade101b324b87008ab4f5901f97074",
-    "memory_tag": "v2.6.0",
-    "memory_tag_object_sha": "9c1b37727b03d3c9754c379f2cb54d934c5f2e2b",
-    "package_version": "2.6.0",
-    "artifact": "l9_graphite_memory-2.6.0-py3-none-any.whl",
-    "artifact_sha256": "d493573254cecedafb66ad3e1ccc380841ec8c617e9501adb5d993c989653d15",
-    "build": "published python -m build; reproduced by printf '%s\\n' 'setuptools==84.0.0' > memory-build-constraints.txt && SOURCE_DATE_EPOCH=1784592000 uv build --wheel --build-constraint memory-build-constraints.txt",
-    "build_backend_constraint": "setuptools==84.0.0",
-    "build_backend_note": "The source requires setuptools>=68, so an isolated uv build resolves the newest release: setuptools 84.2.1 (2026-10-20) builds 9021eebb..., not the official wheel. Built from the PyPI 2.6.0 sdist under SOURCE_DATE_EPOCH=1784592000, setuptools 84.0.0 reproduces artifact_sha256 exactly. Rebinding the release re-proves this pin.",
+    "description": "Exact-head proof of the binding (audit P1-01/P2-02). artifact_sha256 is the official published wheel (PyPI 3.0.1 and publish run 44388642735). uv build --wheel --build-constraint setuptools==84.2.1 under SOURCE_DATE_EPOCH=1784592000 produces e44d3cafafab3723796bb325dd860280c58ab3093fc3df26b4a482c4ddbcf37d, not this digest. .github/workflows/memory-cross-repo.yml resolves source.ref, runs scripts/build_release_artifacts.sh at source_date_epoch, refuses any other digest, installs that wheel into a clean environment, and runs tests/ops/memory/test_cross_repo_lifecycle.py with L9_MEMORY_CROSS_REPO_REQUIRED=1 (a skip is a failure) and no provider credential in the environment. build_backend_constraint stays the exact setuptools pin in the memory [build-system] requires; the job refuses a checkout whose pin differs. A digest here without that job green on the same Cursor head is a claim, not a proof.",
+    "memory_sha": "96ed99eb172bb3b7433600db8581991c4c890737",
+    "memory_tag": "v3.0.1",
+    "memory_tag_object_sha": "5df53ff67edccc5cb606d040e5f674a4dfc764bf",
+    "package_version": "3.0.1",
+    "artifact": "l9_graphite_memory-3.0.1-py3-none-any.whl",
+    "artifact_sha256": "4822b889dc8d590cedc0194d1d802e20b173d385ad377f80f4a0852502b1c957",
+    "build": "SOURCE_DATE_EPOCH=1784592000 bash scripts/build_release_artifacts.sh <out-dir> at 96ed99eb172bb3b7433600db8581991c4c890737 (python -m build, then tools/assurance/reproducible_artifacts.py canonicalize). [build-system] requires setuptools==84.2.1.",
+    "build_backend_constraint": "setuptools==84.2.1",
+    "build_backend_note": "setuptools==84.0.0 is the 2.6.0 fact: it reproduces d493573254cecedafb66ad3e1ccc380841ec8c617e9501adb5d993c989653d15, and setuptools==84.2.1 without the canonicalizer builds 9021eebb... on that source. The 3.0.1 tree pins setuptools==84.2.1. The same uv build --build-constraint command on 96ed99eb produces e44d3cafafab3723796bb325dd860280c58ab3093fc3df26b4a482c4ddbcf37d. The admitted digest is the release recipe, not that uv build.",
     "source_date_epoch": 1784592000,
     "proved_by": "tests/ops/memory/test_cross_repo_lifecycle.py",
     "proof_workflow": ".github/workflows/memory-cross-repo.yml",
-    "proved_at": "2026-10-08",
-    "rebound_at": "2026-09-13 (ADR-0031 signed-agent door + write_agent/write_governed; candidate SHA pending PyPI); 2026-10-01 (pin v2.5.0 / 78b304a3948214fa4b17bf97ed0529c5b0c22673; uv build --wheel digest, PyPI upload still pending); 2026-10-08 (pin v2.6.0 / 846f283f7dade101b324b87008ab4f5901f97074; official PyPI wheel, vendored override removed)",
+    "proved_at": "2026-11-18",
+    "rebound_at": "2026-09-13 (ADR-0031 signed-agent door + write_agent/write_governed; candidate SHA pending PyPI); 2026-10-01 (pin v2.5.0 / 78b304a3948214fa4b17bf97ed0529c5b0c22673; uv build --wheel digest, PyPI upload still pending); 2026-10-08 (pin v2.6.0 / 846f283f7dade101b324b87008ab4f5901f97074; official PyPI wheel, vendored override removed); 2026-11-18 (pin v3.0.1 / 96ed99eb172bb3b7433600db8581991c4c890737; official PyPI wheel 4822b889dc8d590cedc0194d1d802e20b173d385ad377f80f4a0852502b1c957; 3.0.0 was not uploaded)",
     "operator_gated": [],
     "installed_record_digest": null,
     "artifact_provenance_note": "In-place artifact proof needs a PEP 610 archive hash, which pip/uv record for index and URL installs but NOT for the local-file install the proof workflow performs. So the workflow proves the artifact instead, and more strongly: it rebuilds the wheel from source.ref and refuses any sha256 other than artifact_sha256 before installing. The binding reports 'compatible' there and says why. L9_MEMORY_REQUIRE_EXACT_ARTIFACT=1 remains for environments whose installer records provenance.",
@@ -92,27 +86,13 @@
   },
   "contract_model_aliases": {
     "_note": "Cursor view name -> the model names the bound release actually exports, discovered from the schema probe's `available` list in the memory-cross-repo job. Cursor requests its own name; the probe accepts any alias, and the schema is keyed by the Cursor name so validation lookup is unchanged. A name this side guessed is not a contract the release owes.",
-    "HealthReceipt": [
-      "HealthReport"
-    ],
-    "HydrationReceipt": [
-      "HydrationResult"
-    ],
-    "CapabilitiesReceipt": [
-      "ControlPlaneCapabilities"
-    ],
-    "ConflictsReceipt": [
-      "ConflictReport"
-    ],
-    "CandidateReceipt": [
-      "MemoryCandidateIngestionResult"
-    ],
-    "PhaseLockVerificationReceipt": [
-      "PhaseLockVerification"
-    ],
-    "ResolveReceipt": [
-      "GroupResolution"
-    ],
+    "HealthReceipt": ["HealthReport"],
+    "HydrationReceipt": ["HydrationResult"],
+    "CapabilitiesReceipt": ["ControlPlaneCapabilities"],
+    "ConflictsReceipt": ["ConflictReport"],
+    "CandidateReceipt": ["MemoryCandidateIngestionResult"],
+    "PhaseLockVerificationReceipt": ["PhaseLockVerification"],
+    "ResolveReceipt": ["GroupResolution"],
     "_verified": "All five aliases plus PhaseLockVerification and GroupResolution were read from the merged source at ref 7691c076, then proved end to end: the schema probe resolves 11 of 11 CANONICAL_RECEIPT_MODELS against the installed 2.3.1 wheel."
   },
   "contract_model_modules": [

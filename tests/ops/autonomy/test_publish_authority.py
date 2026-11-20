@@ -168,6 +168,60 @@ def test_required_git_hook_types_accepts_pre_push_and_commit_msg(tmp_path: Path)
     assert entry["required_git_hook_types"] == ["commit-msg", "pre-push"]
 
 
+# --- gmp_report_dir -----------------------------------------------------------------
+
+
+def test_registry_declares_odoo_gmp_report_dir() -> None:
+    entry = pa.load_registry(REGISTRY)["repositories"][ODOO_KEY]
+    assert entry["gmp_report_dir"] == "docs/reports/gmp-reports"
+    assert "AGENTS.md" in entry["gmp_report_authority"]
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["", "/abs/dir", "../out", "docs/../reports", "docs//reports", "./docs", "docs/", "a\\b", 3],
+)
+def test_gmp_report_dir_rejects_unsafe_paths(tmp_path: Path, value: object) -> None:
+    bad = tmp_path / "bad.json"
+    document = _native_document({"gmp_report_dir": value, "gmp_report_authority": "x"})
+    bad.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(pa.RegistryError, match="gmp_report_dir must be"):
+        pa.load_registry(bad)
+
+
+def test_gmp_report_dir_requires_its_authority(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text(
+        json.dumps(_native_document({"gmp_report_dir": "docs/reports/gmp-reports"})),
+        encoding="utf-8",
+    )
+    with pytest.raises(pa.RegistryError, match="gmp_report_authority"):
+        pa.load_registry(bad)
+
+
+def test_gmp_report_dir_resolves_by_origin(tmp_path: Path) -> None:
+    registry = tmp_path / "reg.json"
+    document = _native_document(
+        {"gmp_report_dir": "docs/reports/gmp-reports", "gmp_report_authority": "x"}
+    )
+    registry.write_text(json.dumps(document), encoding="utf-8")
+    odoo = _repo(tmp_path, "odoo", SPELLINGS[0])
+    other = _repo(tmp_path, "other", "https://github.com/acme/other")
+    bare = _repo(tmp_path, "bare", None)
+    assert pa.gmp_report_dir(odoo, registry) == "docs/reports/gmp-reports"
+    assert pa.gmp_report_dir(other, registry) is None
+    assert pa.gmp_report_dir(bare, registry) is None
+
+
+def test_gmp_report_dir_fails_closed_on_an_invalid_registry(tmp_path: Path) -> None:
+    """A silent default would write the report where the repository forbids it."""
+    broken = tmp_path / "broken.json"
+    broken.write_text("{", encoding="utf-8")
+    odoo = _repo(tmp_path, "odoo", SPELLINGS[1])
+    with pytest.raises(pa.RegistryError):
+        pa.gmp_report_dir(odoo, broken)
+
+
 def test_missing_registry_parse_governance_run_invalid(tmp_path: Path) -> None:
     """A clone that lost the registry has no policy, not an empty one."""
     repo = _repo(tmp_path, "odoo", SPELLINGS[1])
@@ -210,6 +264,31 @@ def test_native_route_requires_a_declared_ceremony(tmp_path: Path) -> None:
     )
     with pytest.raises(pa.RegistryError, match="ceremony"):
         pa.load_registry(bad)
+
+
+@pytest.mark.parametrize(
+    "helpers",
+    [{}, [], {"/abs/helper.sh": ["g"]}, {"scripts/h.sh": []}, {"scripts/h.sh": [""]}, {"": ["g"]}],
+)
+def test_helper_requires_must_map_relative_paths_to_guards(tmp_path: Path, helpers: object) -> None:
+    document = _native_document({})
+    document["repositories"][ODOO_KEY]["ceremony"]["helper_requires"] = helpers
+    bad = tmp_path / "bad.json"
+    bad.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(pa.RegistryError, match="helper_requires"):
+        pa.load_registry(bad)
+
+
+def test_registry_pins_the_base_refusal_in_the_stack_parent_helper() -> None:
+    """IB-Odoo_19 d0e1a37 (2026-11-04) moved its base refusal out of the kernel into
+    scripts/pr_stack_parent.sh. The registry pins the call and the helper's guard, so
+    neither a kernel that drops the call nor a helper that drops the refusal verifies."""
+    ceremony = pa.load_registry(REGISTRY)["repositories"][ODOO_KEY]["ceremony"]
+    assert 'bash scripts/pr_stack_parent.sh name "${BASE}"' in ceremony["kernel_requires"]
+    guards = ceremony["helper_requires"]["scripts/pr_stack_parent.sh"]
+    assert any("destination must be Staging" in guard for guard in guards)
+    entry = pa.load_registry(REGISTRY)["repositories"][ODOO_KEY]
+    assert "pr_stack_parent.sh" in entry["reason"] and "refuses Production" in entry["reason"]
 
 
 def test_listed_origin_resolves_native(tmp_path: Path) -> None:
@@ -366,6 +445,7 @@ def test_preflight_stops_native_repo_with_route_drift(tmp_path: Path) -> None:
 
 
 KERNEL = "scripts/make_push_pipeline.sh"
+HELPER = "scripts/pr_stack_parent.sh"
 
 
 def _gov_receipt(repo: Path) -> Path:
@@ -376,10 +456,16 @@ def _gov_receipt(repo: Path) -> Path:
 
 
 def _stub_consumer(
-    tmp_path: Path, *, check_target: bool = True, kernel: bool = True, invokes_kernel: bool = True
+    tmp_path: Path,
+    *,
+    check_target: bool = True,
+    kernel: bool = True,
+    invokes_kernel: bool = True,
+    helper: bool = True,
 ) -> Path:
     """A repository spelling the Odoo origin, with (by default) its real ceremony shape:
-    a `pr` recipe that invokes the pinned kernel, and a kernel carrying the pinned guards."""
+    a `pr` recipe that invokes the pinned kernel, a kernel carrying the pinned guards,
+    and the stack-parent helper carrying the base refusal the kernel delegates to it."""
     repo = _repo(tmp_path, "odoo", SPELLINGS[0])
     call = f"@bash {KERNEL} '' '' $(base) 1 0\n" if invokes_kernel else ""
     recipe = (
@@ -392,14 +478,27 @@ def _stub_consumer(
     if check_target:
         recipe += "pr-check:\n\t@echo NATIVE_CHECK base=$(base)\n"
     (repo / "Makefile").write_text(recipe, encoding="utf-8")
+    (repo / KERNEL).parent.mkdir(parents=True)
     if kernel:
-        (repo / KERNEL).parent.mkdir(parents=True)
         (repo / KERNEL).write_text(
             "#!/usr/bin/env bash\n"
             'BASE="${3:-Staging}"\n'
-            '[[ "$BASE" == "Staging" ]] || refuse "destination must be Staging (got $BASE)"\n'
+            f'bash {HELPER} name "${{BASE}}"\n'
             'status="$(git status --porcelain)"\n'
             "exit 0\n",
+            encoding="utf-8",
+        )
+    if helper:
+        (repo / HELPER).write_text(
+            "#!/usr/bin/env bash\n"
+            'refuse() { echo "refusing to publish: $*" >&2; exit 1; }\n'
+            'base="${2:-}"\n'
+            '[[ "${base}" == "Staging" ]] && exit 0\n'
+            "case \"$(printf '%s' \"${base}\" | tr '[:upper:]' '[:lower:]')\" in\n"
+            "  staging|production|main)\n"
+            '    refuse "destination must be Staging or a stacked parent branch (got ${base})"\n'
+            "    ;;\n"
+            "esac\n",
             encoding="utf-8",
         )
     # The consumer ceremony refuses an unclean tree; the fixture commits so the
@@ -488,6 +587,7 @@ def test_native_runner_refuses_missing_consumer_target(tmp_path: Path) -> None:
     [
         ({"kernel": False}, "unreadable"),
         ({"invokes_kernel": False}, "does not invoke"),
+        ({"helper": False}, f"publication helper {HELPER} unreadable"),
     ],
 )
 def test_a_copied_origin_without_the_ceremony_is_not_the_native_route(
@@ -523,6 +623,62 @@ def test_kernel_without_the_pinned_guards_is_not_the_ceremony(tmp_path: Path) ->
     proc = _runner(repo, OPEN_PR="1")
     assert proc.returncode == 2
     assert "PUBLISH_CEREMONY_UNVERIFIED" in proc.stderr and "lacks guard" in proc.stderr
+
+
+def test_a_helper_the_kernel_never_runs_is_not_the_ceremony(tmp_path: Path) -> None:
+    """Helper guards count only when the kernel invokes the helper, even for an entry
+    whose kernel_requires does not pin that call."""
+    repo = _stub_consumer(tmp_path)
+    (repo / KERNEL).write_text(
+        '#!/usr/bin/env bash\nstatus="$(git status --porcelain)"\nexit 0\n', encoding="utf-8"
+    )
+    ceremony = {
+        "kernel": KERNEL,
+        "kernel_requires": ["git status --porcelain"],
+        "helper_requires": {HELPER: ["destination must be Staging"]},
+    }
+    decision = pa.Decision(
+        route="native",
+        origin=ODOO_KEY,
+        native_target="pr",
+        declared_base="Staging",
+        ceremony=ceremony,
+    )
+    problems = pa.verify_ceremony(repo, decision)
+    assert problems == [f"kernel {KERNEL} does not invoke helper {HELPER}"]
+    # Restoring the call clears it: the helper itself still carries its guard.
+    (repo / KERNEL).write_text(
+        f'#!/usr/bin/env bash\nbash {HELPER} name "$3"\nstatus="$(git status --porcelain)"\n',
+        encoding="utf-8",
+    )
+    assert pa.verify_ceremony(repo, decision) == []
+
+
+def test_helper_without_the_base_refusal_is_not_the_ceremony(tmp_path: Path) -> None:
+    """The kernel still calls the helper, but the helper no longer refuses a protected
+    base: pinning the call alone would have passed this."""
+    repo = _stub_consumer(tmp_path)
+    (repo / HELPER).write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repo),
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@t",
+            "commit",
+            "-qam",
+            "h",
+        ],
+        check=True,
+    )
+    proc = _runner(repo, OPEN_PR="1")
+    assert proc.returncode == 2
+    assert "PUBLISH_CEREMONY_UNVERIFIED" in proc.stderr
+    assert f"helper {HELPER} lacks guard" in proc.stderr
+    assert "NATIVE_PR" not in proc.stdout
 
 
 def test_native_runner_refuses_other_base_before_running_anything(tmp_path: Path) -> None:

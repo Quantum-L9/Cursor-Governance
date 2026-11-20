@@ -1,0 +1,78 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "authority_separation": {
+      "invariant_ref": "L9-STRATEGY-001",
+      "resolution_ref": "authority_model.yaml#strategic_cognition_authority",
+      "strategic_plan_owner": "plan_keeper",
+      "strategic_plan_reasoning_analysis_owner": "strategic_plan_metacognitive_reasoner",
+      "teaching_relation": {
+        "authority_effect": "none",
+        "carries": "planning_cognition_lessons",
+        "from": "strategic_plan_metacognitive_reasoner",
+        "to": "plan_keeper"
+      }
+    },
+    "global_rules": {
+      "metacognition_is_advisory_to_strategic_authority": true,
+      "metacognitive_analysis_is_advisory_and_cannot_mutate_strategy": true,
+      "plan_revision_candidate_is_not_strategy_until_admitted_under_strategic_authority": true,
+      "planning_episode_is_non_authoritative_reasoning_record": true,
+      "projection_consumption_does_not_transfer_truth_source_ownership": true,
+      "reasoning_capability_does_not_confer_strategic_authority": true,
+      "semantic_compiler_remains_independent_of_reasoning_plane": true,
+      "strategic_cognition_does_not_own_runtime_execution": true,
+      "strategic_cognition_does_not_own_underlying_truth_sources": true,
+      "strategic_label_does_not_create_authority_or_ownership": true,
+      "strategic_roles_are_semantic_roles_not_actor_identities": true
+    },
+    "roles": {
+      "plan_keeper": {
+        "actor_identity_binding": "none",
+        "authority_source": "strategic_authority",
+        "definition": "The reasoning role responsible for maintaining the Strategic Plan within granted Strategic Authority.",
+        "does_not_own": [
+          "underlying_truth_sources",
+          "capability_semantics",
+          "evidence",
+          "memory",
+          "architecture",
+          "execution",
+          "environment_truth"
+        ],
+        "may": [
+          "revise_strategic_plan_within_granted_strategic_authority",
+          "emit_strategic_planning_episode",
+          "emit_strategic_plan_revision_candidate",
+          "consume_planning_cognition_lessons"
+        ],
+        "may_not": [
+          "acquire_truth_source_ownership_by_consuming_projections",
+          "derive_authority_from_reasoning_capability",
+          "become_execution_or_implementation_authority_by_implication",
+          "treat_planning_episode_as_strategic_plan_content",
+          "treat_revision_candidate_as_authorized_plan_revision_without_admission",
+          "revise_strategic_plan_beyond_granted_strategic_authority"
+        ],
+        "owns": [
+          "strategic_plan"
+        ],
+        "reasons_over": [
+          "current_meta_view",
+          "strategic_intent",
+          "strategic_plan"
+        ],
+        "role_kind": "semantic_role"
+      }
+    }
+  },
+  "projection_digest": "sha256:2060f1b27971e5b65be743e7fd2d00543d63c011f55c21f11d110a7f7c42855b",
+  "projection_profile_digest": "sha256:68c2727e15edebb7b60bf30bb15e6aa1b00e0ef3967a5e194f37842741d5c036",
+  "projection_profile_ref": "l9.projection/technical-coordination@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:af540e9607915878b66cb7632fd3ca63f57f80707b1c605fc21536d06ec81a7d",
+  "source_ref": "l9.source/strategic-cognition-model@1"
+}

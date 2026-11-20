@@ -1,7 +1,7 @@
 ---
 # === L9 GOVERNANCE RUNTIME ===
 runtime: "L9 Governance"
-version: "10.0.0"
+version: "11.0.0"
 component_name: "Session End Protocol"
 layer: "intelligence"
 domain: "workspace_management"
@@ -9,299 +9,134 @@ enforcement_level: active
 type: "executable_protocol"
 status: "active"
 created: "2026-01-07T00:00:00Z"
-updated: "2026-07-04T00:00:00Z"
+updated: "2026-11-14T00:00:00Z"
 author: "Igor Beylin"
 maintainer: "Igor Beylin"
 sister_file: "ops/hooks/session_start_bootstrap.sh"
-execution_mode: "manual_and_automatic"
+execution_mode: "automatic_with_manual_repair"
 ---
 
-# SESSION END PROTOCOL v2.1
-# Structured handoff for reliable session resume
-# Total: 5 phases | Duration: ~1 min
+# SESSION END PROTOCOL v3.0
+# Every session closes automatically on both hosts. /end-session repairs a
+# close that did not land. Nothing on session end stages, commits or pushes
+# (CANONICAL_LAW §5.1). Authority: CANONICAL_LAW §5.1 / §8.6 / §8.9,
+# ADR-0028 (amended 2026-09-07), ADR-0030, ADR-0031, ADR-0032.
 
 # ═══════════════════════════════════════════════════════════
-# TRIGGERS (dual path — automatic + manual)
+# TRIGGERS
 # ═══════════════════════════════════════════════════════════
 triggers:
-  sessionEnd:
+  cursor_session_end:
     type: cursor_hook
     event: sessionEnd
     enabled: true
     fail_open: true
-    hook_script: "$GLOBAL_COMMANDS/ops/hooks/session_end_governance_backup.sh"
-    hook_link: "$HOME/.cursor/hooks/governance-backup.sh"
-    hooks_config: "$HOME/.cursor/hooks.json"
     template: "$GLOBAL_COMMANDS/ops/hooks/hooks.json.template"
     installed_by: "$GLOBAL_COMMANDS/ops/scripts/setup_workspace_symlinks.sh"
-    runs: "phase_4_governance_github only"
-    commit_message: "chore(governance): session-end sync $(date +%Y-%m-%d)"
-    log: "$HOME/.cursor-governance/backup.log"
-    verify: "tail -5 $HOME/.cursor-governance/backup.log"
+    runs:
+      - "ops/hooks/graphiti-session-end.sh -> ops/graphiti/hydration/close_session.py (surface cursor-session-end)"
+      - "ops/hooks/session_end_governance_backup.sh -> ops/scripts/session_end_preserve.py (authored paths -> refs/l9/preserved/session/<sid>)"
+    pushes: false
 
-  end_session:
+  claude_session_end:
+    type: claude_code_hook
+    event: SessionEnd
+    enabled: true
+    fail_open: true
+    timeout_seconds: 60  # host cap; the default SessionEnd budget is 1.5 s
+    template: "environment/agents/adapters/claude-code/settings.template.json"
+    runs:
+      - "environment/agents/adapters/claude-code/hooks/session_end_close.py: preserve first, then close_session (surface claude-session-end)"
+    pushes: false
+
+  authored_path_ledger:
+    description: "Feeds the preserve. Session-scoped; never porcelain (rules/49 item 8)."
+    ledger: "$HOME/.cursor/l9/sessions/<session_id>/authored.json"
+    writers:
+      - "Cursor postToolUse + afterShellExecution -> ops/hooks/session_authored_paths.py"
+      - "Claude PostToolUse (Write|Edit|MultiEdit|NotebookEdit) -> session_authored_paths_wrap.py"
+
+  close_gap_visibility:
+    description: "The next SessionStart reads the prior session's close receipt locally (no memory call) and prints CLOSE_GAP <reason> + REPAIR: /end-session."
+    cursor: "ops/hooks/session_start_memory_orchestrator.sh"
+    claude: "environment/agents/adapters/claude-code/hooks/memory_prefetch.py"
+
+  end_session_repair:
     type: slash_command
     command: "/end-session"
-    command_file: "skills/l9-end-session/SKILL.md"
-    protocol: "end-session.yaml"
-    runs: "all phases (1–5)"
-    commit_message: "chore(governance): end-session $(date +%Y-%m-%d)"
-    invoke: "Type /end-session in Cursor chat"
-
-  governance_backup_only:
-    type: shell
-    description: "Manual Phase 4 only — no handoff/memory steps"
-    command: |
-      bash .cursor-commands/ops/scripts/backup_to_github.sh \
-        "chore(governance): manual backup $(date +%Y-%m-%d)"
-    aliases:
-      - "make governance-backup"
+    command_file: "commands/end-session.md"
+    skill: "skills/l9-end-session/SKILL.md"
+    when: "SessionStart printed CLOSE_GAP, or the automatic close failed"
+    pushes: false
 
 # ═══════════════════════════════════════════════════════════
-# EXECUTION SUMMARY
+# CLOSE SEMANTICS
 # ═══════════════════════════════════════════════════════════
-# Phase 1: PICKUP_CONTEXT - Structured handoff packet (REQUIRED)
-# Phase 2: LESSONS - Extract lessons/errors (IF ANY)
-# Phase 3: GIT_STATE - Capture uncommitted work (AUTO)
-# Phase 4: GOVERNANCE_GITHUB - Push GlobalCommands to Cursor-Governance (REQUIRED)
-#   → automatic: sessionEnd hook | manual: /end-session or governance_backup_only
-# Phase 5: CONFIRMATION - Display summary (AUTO)
+close_semantics:
+  idempotency: "per transcript head — an identical head is idempotent_skip"
+  resume: "a resumed conversation has a new head; its close supersedes the session's previous continuation (exactly one stays ACTIVE)"
+  identity: "derived from host markers (ops/memory/agent_identity.py); never configured"
+  resume_ssot: "canonical continuation record (ContinuationCapsuleV2) via python -m ops.memory.cli hydrate"
 
 # ═══════════════════════════════════════════════════════════
-# PHASE 1: PICKUP CONTEXT (Structured Handoff)
+# REPAIR (/end-session)
 # ═══════════════════════════════════════════════════════════
-phase_1_pickup_context:
-  name: "Write Structured Pickup Context"
-  priority: 1
+phase_1_repair_continuation:
+  name: "Repair the continuation record"
   required: true
-  description: |
-    Write structured pickup + learnings to Graphiti — the sole resume SSOT.
-    memory-bank/ is RETIRED (2026-08-11); never write it on Graphiti failure
-    (warn and continue). See MEMORY_BANK_POLICY.md and ADR-0005.
-
-  primary_target: |
-    python -m ops.memory.cli health
-    # If healthy: write PICKUP (see `template` below) + one atomic write per
-    # learning fact to Graphiti. This is the only memory write.
-
-  memory_bank_target: |
-    RETIRED — do not write. If Graphiti is down, log WARN and continue
-    backup/handoff without a local T0 file.
-
-  memory_bank_update: |
-    RETIRED — no-op. Do not append to memory-bank/*.md.
-
-  memory_bank_gitignore_check: |
-    RETIRED — no-op. memory-bank/ is not a write target.
-
-  memory_bank_push: |
-    RETIRED — no-op. Do not open PRs to push memory-bank/ content.
-
-  template: |
-    PICKUP|date={YYYY-MM-DD}|task={current_task}|files={file1,file2,file3}|next={next_action}|blocker={blocker_or_none}|gmps={GMP-XX,GMP-YY}|outcome={success|partial|blocked}
-
-  example: |
-    PICKUP|date=2026-01-16|task=WMToGraphSync bidirectional sync|files=api/server.py,core/integration/wm_to_graph_sync.py,runtime/Dockerfile|next=Deploy container detection fix to VPS|blocker=none|gmps=GMP-68|outcome=success
-
   command: |
-    # Primary (default path when GRAPHITI_MEMORY_ENABLED=1):
-    python -m ops.memory.cli health
-    python -m ops.memory.cli write \
-      "PICKUP|date={DATE}|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|gmps={GMPS}|outcome={OUTCOME}" \
-      --kind pickup_context
-    # If health/write fails: WARN only — do not write memory-bank/ (retired).
+    GOV="$HOME/.cursor-governance"; PY="$GOV/.venv/bin/python"
+    WS="${CURSOR_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}}"
+    SID="$("$PY" -c 'import json,sys; print(json.load(open(sys.argv[1])).get("session_id") or "")' "$WS/.l9/memory/previous_opened.json")"
+    (cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.memory.cli health --workspace "$WS")
+    (cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.graphiti.hydration.cli repair-write \
+      --project-dir "$WS" --session-id "$SID" --objective "{TASK}" --next "{NEXT}")
+  notes:
+    - "repair-write writes the continuation AND stamps the close receipt; ops.memory.cli write does neither"
+    - "no --agent-id / L9_MEMORY_AGENT_ID: a configured identity that differs from the derived one is refused"
+    - "a receipt already closed_canonically is skipped unless --supersede"
 
-  fields:
-    date: "YYYY-MM-DD format"
-    task: "What was being worked on (single phrase)"
-    files: "Top 3-5 files modified (comma-separated)"
-    next: "Single most important next action"
-    blocker: "What's blocking progress, or 'none'"
-    gmps: "GMP IDs completed this session (comma-separated)"
-    outcome: "success|partial|blocked"
-
-  search_at_resume: |
-    # Graphiti only (memory-bank retired)
-    python -m ops.memory.cli search "PICKUP|" --limit 3
-
-# ═══════════════════════════════════════════════════════════
-# PHASE 2: LESSONS & ERRORS (If Any)
-# ═══════════════════════════════════════════════════════════
 phase_2_lessons:
-  name: "Extract Lessons and Errors"
-  priority: 2
+  name: "Durable lessons (optional)"
   required: false
-  description: "Only write if significant lessons or errors occurred"
-
-  lesson_template: |
-    LESSON|topic={topic}|learned={what_was_learned}|context={when_this_applies}
-
-  error_template: |
-    ERROR|type={error_type}|cause={root_cause}|fix={how_fixed}
-
-  commands:
-    lesson: |
-      python -m ops.memory.cli write \
-        "LESSON|topic={TOPIC}|learned={LEARNED}|context={CONTEXT}" \
-        --kind lesson
-
-    # --kind error was an alias that resolved to the same class as --kind
-    # lesson (procedural), so an error and a lesson were indistinguishable.
-    # The ERROR| content prefix carries the distinction; the class does not.
-    error: |
-      python -m ops.memory.cli write \
-        "ERROR|type={TYPE}|cause={CAUSE}|fix={FIX}" \
-        --kind lesson
-
-  examples:
-    lesson: "LESSON|topic=governance|learned=ContextVar must be set via async context manager before handler calls|context=FastAPI routes with RLS"
-    error: "ERROR|type=container_detection|cause=/.dockerenv missing in slim images|fix=Use L9_CONTAINER_ENV=true env var"
-
-# ═══════════════════════════════════════════════════════════
-# PHASE 3: GIT STATE (Automated)
-# ═══════════════════════════════════════════════════════════
-phase_3_git_state:
-  name: "Capture Git State"
-  priority: 3
-  required: true
-  auto: true
-  description: "Automatically capture git state for context"
-
   command: |
-    # Run these commands to gather git state:
-    BRANCH=$(git branch --show-current)
-    COMMIT=$(git log -1 --format="%h %s")
-    UNCOMMITTED=$(git status --short | wc -l | tr -d ' ')
-    STAGED=$(git diff --cached --name-only | wc -l | tr -d ' ')
+    # Arguments built by the contract builder (l9.agent_memory_write.v1),
+    # passed unchanged to MCP memory.write_agent on l9-graphite-memory.
+    (cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.memory.agent_write build \
+      --namespace "{namespace from ops.memory.cli resolve}" --class insight \
+      --content "{one terse fact}" --tag "{topic}")
+  notes:
+    - "one atomic fact per write (ADR-0037)"
+    - "memory.phase_lock -> memory.write_governed only for a conflict-sensitive fact"
 
-    # Write to memory if uncommitted changes exist
-    if [ "$UNCOMMITTED" -gt 0 ]; then
-      python -m ops.memory.cli write \
-        "GIT|branch=$BRANCH|commit=$COMMIT|uncommitted=$UNCOMMITTED|staged=$STAGED" \
-        --kind git_state
-    fi
-
-  display: |
-    IF uncommitted > 0:
-      ⚠️ Uncommitted changes: {count} files
-      Branch: {branch}
-      Last commit: {commit}
-      → Scoped-commit the paths you authored (rule 99: always on, no ask).
-        Report dirty paths you did not author; never push unasked.
-    ELSE:
-      ✅ Working tree clean
-
-# ═══════════════════════════════════════════════════════════
-# PHASE 4: GOVERNANCE GITHUB BACKUP
-# ═══════════════════════════════════════════════════════════
-phase_4_governance_github:
-  name: "Backup GlobalCommands to GitHub"
-  priority: 4
-  required: true
-  triggers:
-    automatic: triggers.sessionEnd
-    manual:
-      - triggers.end_session
-      - triggers.governance_backup_only
-  description: |
-    Push SSOT (.cursor-commands / GlobalCommands) to Quantum-L9/Cursor-Governance.
-    Runs on sessionEnd hook (automatic) or via /end-session / manual backup command.
+phase_3_handoffs:
+  name: "Handoffs (only after a publication)"
+  required: false
   command: |
-    bash .cursor-commands/ops/scripts/backup_to_github.sh \
-      "chore(governance): end-session $(date +%Y-%m-%d)"
-  skip_env: GOVERNANCE_BACKUP_SKIP=1
-  log: "$HOME/.cursor-governance/backup.log"
-  verify:
-    log: "tail -5 $HOME/.cursor-governance/backup.log"
-    github: "gh api repos/Quantum-L9/Cursor-Governance/commits --jq '.[0].sha'"
-    pass_criteria:
-      - "New log lines with today's timestamp (sessionEnd hook fired)"
-      - "OK: pushed... or OK: nothing to commit — SSOT matches index"
+    "$PY" "$GOV/ops/autonomy/session_debt.py" handoff --workspace "$WS" \
+      --pr {PR} --objective "{TASK}" --status "{STATUS}" --next "{NEXT}"
+    (cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.reports.publish handoffs --workspace "$WS")
 
-# ═══════════════════════════════════════════════════════════
-# PHASE 5: CONFIRMATION
-# ═══════════════════════════════════════════════════════════
-phase_5_confirmation:
-  name: "Session End Confirmation"
-  priority: 5
+phase_4_report:
+  name: "Report"
   required: true
-  auto: true
-
   output_template: |
-    ╔═══════════════════════════════════════════════════════════╗
-    ║           ✅ SESSION CLOSED - HANDOFF COMPLETE           ║
-    ╚═══════════════════════════════════════════════════════════╝
-
-    📦 PICKUP CONTEXT STORED
-    ├─ Task: {task}
-    ├─ Files: {files}
-    ├─ Next: {next_action}
-    ├─ GMPs: {gmps}
-    └─ Outcome: {outcome}
-
-    📝 LESSONS: {lesson_count} written
-    🔧 ERRORS: {error_count} documented
-
-    📂 GIT STATE
-    ├─ Branch: {branch}
-    ├─ Uncommitted: {uncommitted_count} files
-    └─ Last commit: {commit}
-
-    🎯 NEXT SESSION RESUME:
-       python -m ops.memory.cli search "PICKUP|"
-
-    👋 Ready to resume anytime.
+    ## Session close repaired
+    - session: {SID} — receipt {status} (write_count {n})
+    - lessons written: {count}
+    - handoffs: {delivered | not applicable}
 
 # ═══════════════════════════════════════════════════════════
-# QUICK REFERENCE
+# RETIRED — never part of session end
 # ═══════════════════════════════════════════════════════════
-quick_reference:
-  memory_cli: |
-    # Canonical memory control plane (realignment stage C11). Run from the
-    # governance clone with its locked venv; --workspace names the repo:
-    #   cd "$HOME/.cursor-governance" && .venv/bin/python -m ops.memory.cli <op> --workspace "$WS"
-  triggers:
-    automatic: "Close Cursor window → sessionEnd hook → ~/.cursor-governance/backup.log"
-    manual_full: "/end-session — all phases + governance backup"
-    manual_backup: "bash .cursor-commands/ops/scripts/backup_to_github.sh"
-  minimal_end: |
-    # Minimum viable session end (30 seconds)
-    python -m ops.memory.cli write \
-      "PICKUP|date=$(date +%Y-%m-%d)|task=TASK|files=FILES|next=NEXT|blocker=none|gmps=none|outcome=success" \
-      --kind pickup_context
-
-  resume_search: |
-    # At next session start
-    python -m ops.memory.cli search "PICKUP|" --limit 3
-
-  memory_kinds:
-    - pickup_context: "Session handoff (MOST IMPORTANT)"
-    - lesson: "What was learned"
-    - error: "Errors encountered and fixed"
-    - git_state: "Uncommitted work snapshot"
-
-# ═══════════════════════════════════════════════════════════
-# ANTI-PATTERNS
-# ═══════════════════════════════════════════════════════════
-anti_patterns:
-  dont:
-    - "❌ DON'T write free-form text (hard to search)"
-    - "❌ DON'T skip pickup_context (breaks resume)"
-    - "❌ DON'T skip cache_set_session_context (breaks cross-window resume)"
-    - "❌ DON'T forget uncommitted changes"
-
-  do:
-    - "✅ DO use structured PICKUP| format"
-    - "✅ DO keep task/next to single phrases"
-    - "✅ DO write next_steps into Redis session context and PICKUP packet"
-    - "✅ DO run git status before closing"
-
-# ═══════════════════════════════════════════════════════════
-# SEARCH PATTERNS FOR RESUME
-# ═══════════════════════════════════════════════════════════
-resume_searches:
-  recent_pickup: "PICKUP|"
-  recent_lessons: "LESSON|"
-  recent_errors: "ERROR|"
-  by_date: "PICKUP|date=2026-01-"
-  by_gmp: "gmps=GMP-68"
+retired:
+  - item: "governance backup push (git add -A + git push of the SSOT)"
+    why: "session end does not push (CANONICAL_LAW §5.1); rules/49 forbids git add -A; publication is make pr. /governance-backup stays an explicit operator action."
+  - item: "PICKUP records / --kind pickup_context"
+    why: "provider-era format; stamps no close receipt, so a close-gap stays open"
+  - item: "Redis cache_set_session_context"
+    why: "not a resume layer; the continuation record is the resume SSOT"
+  - item: "memory-bank/"
+    why: "retired 2026-08-11"
+  - item: "configured agent identity (--agent-id cursor / L9_MEMORY_AGENT_ID=cursor)"
+    why: "identity is derived; a configured value is refused as drift"

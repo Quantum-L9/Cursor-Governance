@@ -437,3 +437,47 @@ def test_open_pr_after_gate_fires_the_hook_after_the_summary() -> None:
     assert "pr_publish_memory_write.py" in text
     assert text.index("write_pr_summary.py") < text.index("pr_publish_memory_write.py")
     assert "graphiti_memory_client" not in text
+
+
+def test_relayed_publish_is_reported_as_relayed_not_warn(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """CANONICAL_LAW §8.11: a relay carrier queues the fact; that is not a failed write."""
+    (tmp_path / ".l9" / "pr").mkdir(parents=True)
+    (tmp_path / hook.SUMMARY_REL).write_text(json.dumps(_summary()), encoding="utf-8")
+    monkeypatch.delenv("L9_PR_PUBLISH_MEMORY", raising=False)
+    monkeypatch.setenv("L9_MEMORY_ENABLED", "1")
+    relayed = json.dumps({"operation": "write", "status": "RELAYED", "ok": False})
+    monkeypatch.setattr(
+        hook,
+        "run_write",
+        lambda argv, cwd: SimpleNamespace(returncode=0, stdout=relayed, stderr=""),
+    )
+    assert hook.main(["--workspace", str(tmp_path), "--gov-root", str(tmp_path)]) == 0
+    out = capsys.readouterr()
+    assert "pr publish memory: RELAYED" in out.out
+    assert "WRITE FAILED" not in out.out + out.err
+    receipt = json.loads((tmp_path / hook.RECEIPT_REL).read_text(encoding="utf-8"))
+    assert receipt["status"] == "RELAYED"
+
+
+def test_publish_fact_is_attributed_to_the_derived_agent_not_cursor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A Claude Code host was tagged agent:cursor by the old literal fallback."""
+    (tmp_path / ".l9" / "pr").mkdir(parents=True)
+    (tmp_path / hook.SUMMARY_REL).write_text(json.dumps(_summary()), encoding="utf-8")
+    monkeypatch.delenv("L9_PR_PUBLISH_MEMORY", raising=False)
+    monkeypatch.delenv("L9_MEMORY_AGENT_ID", raising=False)
+    monkeypatch.setenv("L9_MEMORY_ENABLED", "1")
+    monkeypatch.setattr(hook, "_derived_agent_id", lambda: "claude-code")
+    seen: dict[str, list[str]] = {}
+
+    def fake(argv, cwd, **_k):
+        seen["argv"] = argv
+        return SimpleNamespace(returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(hook, "run_write", fake)
+    hook.main(["--workspace", str(tmp_path), "--gov-root", str(tmp_path)])
+    argv = seen["argv"]
+    assert argv[argv.index("--agent-id") + 1] == "claude-code"

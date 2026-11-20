@@ -1,5 +1,5 @@
 {
-  "generation_id": "69f52c9881392962a99028a730ebbeea1f93ae671b9ea1412847be748a6a0ca6",
+  "generation_id": "b44968403c169804d00937a27b95170d3bd16d72c3dcc730e3f51ca582ab34e1",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -181,7 +181,7 @@
           "pe autonomy",
           "/l9-plan"
         ],
-        "note": "Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple. /l9-plan, make campaign, Program Lock, and PE+autonomy have no live owner. l9-plan-simple does not absorb them. Negative signals keep those requests off this route.\n",
+        "note": "Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple. Campaign planning for make campaign, Program Lock and PE+autonomy belongs to the explicit-only /l9-plan (PROGRAM_EXECUTION_PLANNER_V1), which is never routed ambiently. l9-plan-simple does not absorb it. Negative signals keep those requests off this route.\n",
         "positive_signals": [
           "create an execution plan",
           "write a plan first",
@@ -768,6 +768,36 @@
         "supporting": [
           "l9-structured-reasoning"
         ]
+      },
+      {
+        "hint_allowed": true,
+        "id": "governance_violation",
+        "negative_signals": [
+          "code review",
+          "passing test",
+          "feature work"
+        ],
+        "note": "explicit_only + hint_allowed \u2014 Record or review a governance or skill-process breach inside the l9-violations pack. Never an always-on reviewer, and a hint never records a violation on its own.\n",
+        "positive_signals": [
+          "/l9-violations",
+          "governance violation",
+          "record a governance violation",
+          "skipped a required skill",
+          "bypassed a required workflow",
+          "violation brief"
+        ],
+        "primary": "l9-violations",
+        "required_any": [
+          "/l9-violations",
+          "governance violation",
+          "skill violation",
+          "record a violation",
+          "review a violation"
+        ],
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
       }
     ],
     "supporting_skills": [
@@ -864,7 +894,7 @@
       "path": "skills/l9-bounded-autonomy",
       "reason": "parallel Tasks and background PR-poll under an explicit authorization packet \u2014 high blast radius, explicit only",
       "skill_md": "skills/l9-bounded-autonomy/SKILL.md",
-      "skill_sha256": "607e1543eb8a5bcf5fcfb591b6d6c909b8cd8a1a22766f4949e64a248e4f5358",
+      "skill_sha256": "06436f8670b00e97d901180f4ce4cdd3720b9cfa13c2b47f92cb3d7f97abc4ca",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1013,14 +1043,14 @@
     },
     {
       "composition_role": "general",
-      "description": "force-retry session close \u2014 canonical repair-write of the continuation record plus governed learning writes when auto sessionEnd failed or hydrate printed REPAIR. use for recovery, richer handoff, or governance backup \u2014 not required for normal X-out.",
+      "description": "repair a session close that did not land \u2014 canonical repair-write of the continuation record (receipt stamped) plus optional governed lesson writes. use when SessionStart printed CLOSE_GAP or the automatic sessionEnd / SessionEnd close failed. never pushes; not required for a normal session end.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-end-session",
       "path": "skills/l9-end-session",
       "reason": "session lifecycle boundary",
       "skill_md": "skills/l9-end-session/SKILL.md",
-      "skill_sha256": "c95b3aff0e742349877fa5d4fdc809d447668cf1f5558763994a4c5a61176de0",
+      "skill_sha256": "f1c960f7e5d50d63d8e7cba58ce167ad3127965732de55dadc0dba252b01f715",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1098,7 +1128,7 @@
       "path": "skills/l9-graphiti-memory",
       "reason": "",
       "skill_md": "skills/l9-graphiti-memory/SKILL.md",
-      "skill_sha256": "1e110580ed09a69ba1803f46d184c69a73739c1d87119c91f44b41c4f03b642c",
+      "skill_sha256": "b7ff4a5c5d988c438ac4e6478440fa012fc24c4e0cacf7d4a3776f15a164b76e",
       "user_invocable": true,
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     },
@@ -1215,7 +1245,7 @@
       "path": "skills/l9-pipeline-audit",
       "reason": "on-demand plans harvest can emit a compiled plan; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; Program Execution campaigns are not a live audit surface; disable-model-invocation",
       "skill_md": "skills/l9-pipeline-audit/SKILL.md",
-      "skill_sha256": "0615e1ddc215b3503c90803dba72104cb85ede0808df7187d6f7134fd72ccd82",
+      "skill_sha256": "35c96415bef0e9adba42ddd728c6578e09f17be8795fa1f94ce5a893978bded4",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1234,14 +1264,14 @@
     },
     {
       "composition_role": "general",
-      "description": "explicit-only owner of the PLAN_DOCUMENT schema, validator and projection renderer that l9-plan-simple runs. use when the user explicitly invokes /l9-plan or a task must change that schema, validator or renderer. Program Execution planning (PE+autonomy, make campaign) has no live successor; ordinary plans are l9-plan-simple.",
+      "description": "explicit-only Program Execution campaign planner and owner of the PLAN_DOCUMENT schema, validator and renderers that l9-plan-simple runs. use when the user explicitly invokes /l9-plan to plan a make campaign (it renders the validated plan as a campaign-source.v2 that make campaign admits unchanged) or a task must change that schema, validator or renderer. ordinary plans are l9-plan-simple.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-plan",
       "path": "skills/l9-plan",
-      "reason": "live owner of the PLAN_DOCUMENT schema, validator and projection renderer that l9-plan-simple runs; its Program Execution planning has no live successor and its broad planning description would hijack l9-plan-simple routing \u2014 user-invoked only",
+      "reason": "Program Execution campaign planner (PROGRAM_EXECUTION_PLANNER_V1) \u2014 renders a PLAN_DOCUMENT as a campaign-source.v2 that make campaign admits unchanged \u2014 and owner of the PLAN_DOCUMENT schema, validator and renderers that l9-plan-simple runs; a campaign runs only on the operator's own words and its broad planning description would hijack l9-plan-simple routing \u2014 user-invoked only",
       "skill_md": "skills/l9-plan/SKILL.md",
-      "skill_sha256": "00bbc652be530af0503b4fc404d976ee0de8036774554a075aef39b192f2a999",
+      "skill_sha256": "4c2e6371e2457e4f78633ff1a92c31b4bbbde1e7fb5262cee39f54417d5f4c27",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1254,7 +1284,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "fc2f8a49dfbaa7e228b24e1d2c8d15b16c0aadeef0b1896b2310093eccf4c942",
+      "skill_sha256": "60b90982550d9d204909cb0f8a3ca74bf69da5655095267658d6b6913e569029",
       "user_invocable": true,
       "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
@@ -1267,7 +1297,7 @@
       "path": "skills/l9-pr-audit",
       "reason": "deep revision-bound PR audit that emits evidence bundles and Fable handoffs; never mutates audited PRs; slash or explicit invoke only; disable-model-invocation",
       "skill_md": "skills/l9-pr-audit/SKILL.md",
-      "skill_sha256": "549128088d129a9fd2fff95f66486fb525a58bf07bd73a5ca3abf0bb539d0707",
+      "skill_sha256": "bb9f6f71c9367cfa20af14d14fd49f307b9232a2d67966c5798b37603276f315",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1306,7 +1336,7 @@
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked) \u2014 each PR only under human authorization bound to its exact head; the operator typing /l9-pr-remediation is that authorization for the repo's open PRs (CANONICAL_LAW \u00a76.2.15), an agent's own Skill call never is. The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "90bd60e94f2c986d46f4e6dafeb43fb47733614e978b4f9a93599275b6b31b47",
+      "skill_sha256": "a6399efa7bddee67c2399902a38816c3c6cfc44273252fa7488725380de3d77a",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1423,7 +1453,7 @@
       "path": "skills/l9-secrets",
       "reason": "",
       "skill_md": "skills/l9-secrets/SKILL.md",
-      "skill_sha256": "c5a0405c8099f7d108a3e173f65674e8d6987e57d9bf431384c553c59c152bc8",
+      "skill_sha256": "fcfe32c41c235fcf6e4bea1eaab419a8ac9e7feaeafca9a24277ddf28a4a208d",
       "user_invocable": true,
       "when_to_use": "a command must bind or check a named credential (api key, token, password) from Infisical, a new secret must be added, or a legacy openclaw-igorbot ref must be translated \u2014 never printing values"
     },
@@ -1452,6 +1482,19 @@
       "skill_sha256": "08e1a9438382a8b55502b60cfba8dcb7473f969ecc44c1ad24a9704a79a9c371",
       "user_invocable": true,
       "when_to_use": "creating or improving a reusable skill, making a skill portable across Claude Code, Manus, or Cursor, sharpening activation and reject signals, extracting expert heuristics, eliminating drift or stubs, or producing a validated ZIP"
+    },
+    {
+      "composition_role": "general",
+      "description": "Govern evidence-grounded strategic plans, portfolio graphs, causal dependencies, readiness, priorities, Strategic Value assessments, bounded successor revisions, and strategic handoffs. Use for strategic zoom-in, branch expansion, plan graph reviews, strategic prioritization, and cross-session strategic continuity. Distinct from l9-plan and l9-plan-simple execution planners. No unapproved strategy admission, execution, publication, or deployment.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-strategic-plan",
+      "path": "skills/l9-strategic-plan",
+      "reason": "UNTRIAGED \u2014 auto-registered by sync_generated_artifacts as the safe default when this pack appeared on disk with no tier. No one has decided whether it should be auto_invoke. Resolve via l9-wire-into-repo (Skill targets): give it a real reason here, or move it to tiers.auto_invoke.",
+      "skill_md": "skills/l9-strategic-plan/SKILL.md",
+      "skill_sha256": "f67242331495b848eb9f1f1505753b8d306840984bbf93f9ff344166bdce34dc",
+      "user_invocable": true,
+      "when_to_use": ""
     },
     {
       "composition_role": "primary",
@@ -1493,6 +1536,19 @@
       "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
     {
+      "composition_role": "general",
+      "description": "Report a governance or skill-process violation and keep the brief only inside this pack until it is addressed. Use when an agent skips a required skill, bypasses a named workflow, or when asked to record, restore, or review a violation. Do not use for ordinary code review, a passing test, or feature work with no broken contract.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-violations",
+      "path": "skills/l9-violations",
+      "reason": "Record a governance or skill-process breach inside this pack. Explicit only \u2014 invoke when an agent skipped a required skill or the user asks to record or review a violation. Not an always-on reviewer.",
+      "skill_md": "skills/l9-violations/SKILL.md",
+      "skill_sha256": "2c1dd27dd6ca5f9ccf567877a6caf9ba1fdef2cf73892f2926e6626494c23afb",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "wire, rewire, verify, or unwire an existing repository artifact or capability by locating its authoritative owner, selecting the highest-leverage upstream integration point, propagating through existing manifests, generators, exports, adapters, and discovery surfaces, and proving downstream reachability. use when something exists but is not discoverable, reachable, registered, exported, invoked, configured, hooked up, or consistently consumed across intended repository surfaces.",
       "disable_model_invocation": false,
@@ -1520,6 +1576,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "8c72990f0c3be9cc3c201121f6fb3d5ad61c8bd791d28bb618d1b05e9fb50acc",
-  "source_skill_corpus_sha256": "03961a9fa5f134c65d49271413e1f2bca87e47c99af405eb55e8e60b9c02e0f7"
+  "source_manifest_sha256": "0cfc1ca9eca7517332b01ad272c4805734be5f748919dc1bf8cb67acce34a5c7",
+  "source_skill_corpus_sha256": "088fdc7f5cd943e9ec69bac76ae881841b565c65ddcd46f27130609cbfd280fd"
 }

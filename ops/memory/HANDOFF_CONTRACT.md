@@ -101,26 +101,41 @@ As a result, a degraded bootstrap is recorded even when the agent wrote no brief
    session's only if that file post-dates the session's prefetch receipt.
 2. **First Stop after the publication.** If either file is missing or invalid,
    `memory_writeback.py` blocks that Stop **once**. Its single request gives both
-   shapes and says why each file was refused. Only this hook ever blocks, because
-   Claude Code does not document how two parallel `decision: block` outputs
-   combine. `governance_handoff_writeback.py` only arms its ledger and stays
-   silent.
+   shapes and says why each file was refused. Of the two handoff hooks only this
+   one blocks, because Claude Code does not document how two parallel
+   `decision: block` outputs combine. `governance_handoff_writeback.py` only
+   arms its ledger and stays silent. Other Stop hooks may block too (a cloud
+   launcher registers its own git check), and Claude Code then sets
+   `stop_hook_active` on the next Stop; the request is bounded by this
+   publication's ledger, never by that flag, so it is still made once.
 3. **Next Stop.**
    - The repository close runs with the brief if it is valid; otherwise it
      closes without it and says so.
    - The governance hook writes its record, or reports what is missing.
    - Both hooks run in parallel, and each announces its own outcome.
-4. **Published report.** In the same Stop, each hook renders its brief as
-   markdown into the clone and pushes it to the PR head branch
-   (`ops/reports/publish.py`; folders created when absent):
-   - repository handoff → `reports/end-session/session-handoff/<date>-pr<N>-<sha12>.md`
-   - governance handoff → `reports/end-session/governance-handoff/<date>-pr<N>-<sha12>.md`
+4. **Delivered report.** In the same Stop, each hook renders its brief as
+   markdown and delivers it to its owner (`ops/reports/publish.py` →
+   `ops/reports/handoff_delivery.py`). Nothing is committed or pushed, so the
+   PR head never moves for a handoff:
+   - repository handoff → one PR comment on the publication, keyed by
+     `<!-- l9-handoff:session-handoff:<owner/repo>#<N> -->` and edited in place
+     on later publications of the same PR;
+   - governance handoff → the Cursor-Governance friction intake: one open issue
+     per normalized friction id (`[session-friction] <id>`, keyed by
+     `<!-- l9-friction-id:<id> -->`), one comment per session that met it. The
+     brief's friction, blockers and governance actions become items; a brief
+     with none sends nothing (the memory record still carries it). When the
+     intake cannot be reached, the brief is posted as the PR's governance
+     comment instead and the announcement says so.
 
-   Only that file is committed (`git commit -- <path>`), never force-pushed, and
-   never to a branch other than the PR head. `L9_REPORT_PUBLISH=commit|write`
-   stops short of the push / the commit. The outcome is a line in the hook's
-   announcement. On a surface without these Stop hooks (Cursor, manual
+   A local copy stays under the git directory
+   (`<git-dir>/l9-reports/end-session/<kind>/<date>-pr<N>-<sha12>.md`). Every
+   call is REST through `gh api`; a failure is reported in the hook's
+   announcement and never raised. `L9_FRICTION_INTAKE_REPO` overrides the intake
+   repository. On a surface without these Stop hooks (Cursor, manual
    `/end-session`) run `python -m ops.reports.publish handoffs --workspace <repo>`.
+   Reports committed under `reports/end-session/` before this change are
+   historical; none are added.
 5. **After that.** Nothing more for that publication. Each hook keeps its own
    ledger: `.l9/memory/handoffs/` and `.l9/memory/governance-handoffs/`.
 

@@ -62,6 +62,10 @@ OBLIGATION_FIELDS = (
     "payload_digest",
     "continuation_status",
     "continuation_reference",
+    # Which hook carrier admitted continuation_reference (local / relay). A
+    # reference from the container-local store is unknown to the hosted store,
+    # so a relayed close must never ask the hosted store to supersede it.
+    "continuation_carrier",
     "failure_class",
     "last_error_code",
 )

@@ -36,6 +36,10 @@ Record:
 
 ### 3. Update policy and grammar together
 
+Organization policy changes are authored in `Quantum-L9/.github`. This
+repository updates its consumer pin and local evaluation vocabulary. It does
+not author a competing organization policy.
+
 A policy field must not be introduced without schema support.
 
 A schema field must not silently alter existing policy meaning.

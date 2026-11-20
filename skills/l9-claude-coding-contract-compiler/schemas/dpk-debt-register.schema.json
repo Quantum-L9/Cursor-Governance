@@ -3,23 +3,14 @@
   "title": "DPKDebtRegister",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "debt"
-  ],
+  "required": ["debt"],
   "properties": {
     "debt": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "title",
-          "affected_paths",
-          "target_state",
-          "owner",
-          "status"
-        ],
+        "required": ["id", "title", "affected_paths", "target_state", "owner", "status"],
         "properties": {
           "id": {
             "type": "string"
@@ -56,12 +47,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "accepted",
-              "in_progress",
-              "resolved",
-              "deferred"
-            ]
+            "enum": ["accepted", "in_progress", "resolved", "deferred"]
           }
         }
       }

@@ -1,0 +1,418 @@
+audit_status: PartiallySucceeded
+readiness_status: Unknown
+convergence_status: Partial
+target_binding:
+  target: L9_Operator_Alignment_CTO_Campaign_v1.0.0.zip
+  source_sha256: sha256:dec6475c2aa3415e08468170511d07e605d9accaaf31b048ca6b5d00ca01c72f
+  artifact_type: 14-file ZIP campaign runbook and YAML; bounded source-currentness snapshots
+  correction_target: L9_Operator_Alignment_CTO_Campaign_v1.1.0.zip
+  inspection_scope: all fourteen prior pack files and supplied 892-line kernel; code owner sources via prior
+    read-only connector evidence
+authorized_scope:
+  inspection: complete original 14-file campaign package; relevant exact GitHub owner-code and governance contracts
+  modification: successor ZIP only, no GitHub or runtime mutation
+excluded_scope:
+- live Cursor execution, PR merges, GitHub CI completion, runtime access validation
+- new global L9 law or ninth domain
+- Plan or Memory truth mutation
+- production deployment
+source_authority_used:
+- source: user supplied recursive_architecture_alignment_auditor@1.0
+  sha256: sha256:ce9f7d2face6e7007c27313cbc885a5d11df85335877851e60ddb87b84adb639
+  kind: user-supplied audit criteria
+- source: Quantum-L9/.github@dd780b957b301acf5443013708105b7a76e3aa7b
+  paths:
+  - semantics/authority_model.yaml
+  - semantics/strategic_cognition_model.yaml
+  - .claude/skills/l9-projection-admission/SKILL.md
+  - docs/PROJECTION_PUBLICATION.md
+  kind: revision-bound observed global authority; not operator admission proof
+- source: Quantum-L9/l9-semantic-compiler-engine@f3883cbbb4f4e982f96bfac0b3eca08ad7e711a6
+  paths:
+  - src/l9_semantic_compiler/engine/registry.py
+  - src/l9_semantic_compiler/cli.py
+  - src/l9_semantic_compiler/passes/projection.py
+  kind: current-at-snapshot projection mechanism
+- source: Quantum-L9/Cursor-Governance@58e7340f846dfe960a3c58fb4e4f2ef11b221084
+  paths:
+  - governance/cto-mode/MODE.yaml
+  - ops/autonomy/projection_mode.py
+  - tools/authority/produce_projection_bundle.py
+  - ops/make/publish.mk
+  - skills/l9-pr-remediation/SKILL.md
+  - ops/config/merge-authority.json
+  kind: current-at-snapshot consumer/swarm/merge owner
+architecture_adapters:
+- id: l9-global-authority-and-admission
+  status: Applied
+  source: Quantum-L9/.github semantics/authority_model.yaml and .claude/skills/l9-projection-admission/SKILL.md
+- id: cursor-cto-swarm-and-publication
+  status: Applied
+  source: Cursor-Governance governance/cto-mode/MODE.yaml and ops/make/publish.mk
+- id: operator-instance-approval
+  status: PartiallyApplied
+  source: explicit operator v1 approval and approved five-file digest manifest; not live admission decision
+    on main
+normalized_context:
+  objective: adopt exact operator-owned Doctrine/Intent and activate verified, bounded alignment views without
+    globalizing operator meaning
+  target_owners:
+  - .github = operator content storage and separately global semantics
+  - l9-semantic-compiler-engine = sole projection producer
+  - Cursor-Governance = consumer, modes and CTO swarm
+  human_grant: three named existing PR merges on current eligible heads; newly published PRs separately governed
+artifact_inventory:
+  original_count: 14
+  original_members:
+  - CTO_LAUNCH.md
+  - EVIDENCE_COLLECTION.md
+  - GATES.md
+  - LANES.md
+  - PR_MERGE_RUNBOOK.md
+  - README.md
+  - RUNBOOK.md
+  - SECURITY_AND_AUTHORITY.md
+  - campaign.yaml
+  - evidence/approved_v1_exact_subject_manifest.json
+  - evidence/open_pr_snapshot.json
+  - evidence/source_revision_pins.json
+  - manifest.sha256
+  - tools/verify_campaign.py
+  coverage: complete original ZIP member inspection; remote runtime not inspected
+boundary_map:
+  source_content: operator, single writer in private .github strategy/
+  global_law: .github semantics/, separate owner admission skill
+  producer: l9-semantic-compiler-engine
+  consumer: Cursor-Governance verifies and loads, never reselects canonical source
+  orchestration: single CTO with four controlled Task slots
+  merges: CTO subject to current merge control and GitHub checks
+  privacy: real host credential/ACL boundary, not prompt/preview
+alignment_summary:
+  status: static campaign gaps corrected; external authorization/producer/host Unknown and blocked facts preserved
+  root_causes:
+  - repo writable path authorization conflicted with mandatory child host prohibition
+  - ambiguous child access boundaries
+  - underspecified interface-freeze and collision checks
+  - static verifier weak relative to claimed campaign guarantees
+  - new PR merge-authority ambiguity
+alignment_score:
+  weighted_overall_score: null
+  reason: Live runtime and external admission scopes are Unknown, so an invented aggregate would mask blocking
+    evidence. No numeric PASS inference.
+  domains:
+    intent_and_scope: Passed_local
+    communication_contracts: Unknown_external
+    routing_and_integration: PartiallyApplied
+    ownership_and_authority: Passed_local_boundary
+    structure_and_source_of_truth: Passed_local
+    schema_and_configuration: Passed_local
+    security: Unknown_live_ACL
+    reliability_and_observability: Unknown_live_Cursor
+    testing_and_validation: Passed_local_Unknown_external
+critical_violations: []
+high_violations:
+- id: AL-001
+  severity: High
+  confidence: Confirmed
+  governing_rule: Kernel ownership_and_authority; .github projection-admission skill global-only
+  source_rule: uploaded kernel plus cited owner source (see source_authority_used)
+  affected_artifact: RUNBOOK.md
+  direct_evidence:
+  - file: RUNBOOK.md
+    detail: B can design adapter but predecessor did not require proving new operator-source semantics before
+      implementation
+  - file: compiler:src/l9_semantic_compiler/engine/registry.py@f3883cbbb4f4e982f96bfac0b3eca08ad7e711a6
+    detail: CanonicalAuthority.resolve_source only resolves registered canonical projectable source classes
+  observed: unverified compatibility assumption for strategy/
+  expected: no projection without exact approved operator-scoped source authority
+  impact: false producer PASS or unauthorized new global law
+  root_cause: operator instance not an admitted global source class
+  smallest_safe_correction: Add source-contract handoff and STOP if no authorized interface; disallow invented
+    profile/receipt/schema
+  owner: Compiler owner with CTO review
+  prerequisites: []
+  blocks_campaign_release: true
+  closing_validation: Current contract + native producer and negative-controls proof
+  status: Resolved_in_pack; runtime Unknown
+- id: AL-002
+  severity: High
+  confidence: Confirmed
+  governing_rule: Kernel security; Cursor CTO child mode mandatory .github checkout
+  source_rule: uploaded kernel plus cited owner source (see source_authority_used)
+  affected_artifact: SECURITY_AND_AUTHORITY.md
+  direct_evidence:
+  - file: SECURITY_AND_AUTHORITY.md
+    detail: documents inherent GitHub whole-repo read vs protected strategy path
+  - file: Cursor-Governance:governance/cto-mode/MODE.yaml@58e7340f846dfe960a3c58fb4e4f2ef11b221084
+    detail: children need readable .github checkout to enable coding-agent mode
+  observed: worker may read strategy/ even if view has no source pointers
+  expected: confidentiality claim requires enforced negative read test
+  impact: unintended strategy disclosure if context minimization treated as ACL
+  root_cause: source-permission boundary not a view-selection boundary
+  smallest_safe_correction: Keep coding role BLOCKED_PRIVACY without actual read isolation; do not block independent
+    roles
+  owner: Cursor runtime identity and access owner
+  prerequisites: []
+  blocks_campaign_release: true
+  closing_validation: actual negative credential/API/git/filesystem denial, not preview content
+  status: Blocked_external
+- id: AL-008
+  severity: High
+  confidence: Confirmed
+  governing_rule: Current Cursor-Governance governance/cto-mode/MODE.yaml#operating_protocol.child_system_prompt
+    prohibits Quantum-L9/.github clone/branch/push even on Cursor
+  source_rule: Cursor-Governance main @58e7340f846dfe960a3c58fb4e4f2ef11b221084, direct code inspection; kernel
+    ownership/authority and routing
+  affected_artifact: LANES.md / lanes/A.md / campaign.yaml
+  direct_evidence:
+  - file: governance/cto-mode/MODE.yaml@58e7340f846dfe960a3c58fb4e4f2ef11b221084
+    detail: 'verbatim host child prompt: Quantum-L9/.github is still never cloned, branched, or pushed'
+  - file: previous LANES.md
+    detail: Lane A was assigned .github candidate remediation, branch and push in direct conflict with mandatory
+      child prompt
+  observed: a coding-agent child cannot honor both the host prohibition and required .github writing
+  expected: current host and repository write authorization must agree before mutation
+  impact: 'source adoption and #255 remediation blocked without allowed writer; global policy bypass risk'
+  root_cause: repo path scope confused with executable role permission
+  smallest_safe_correction: make Lane A read-only; fail closed on writing, require independently proven existing
+    allowed .github writer; do not mutate child system prompt
+  owner: Cursor host/governance owner and .github source publisher
+  prerequisites: []
+  blocks_campaign_release: true
+  closing_validation: live host actor allowed .github PR publication via verified authorized path; current
+    child never bypasses the prohibition
+  status: Superseded_by_pack_1.2.0
+  supersession: The quoted never-clone sentence is absent from the child prompt rendered from $HOME/.cursor-governance at origin/main. Pack v1.2.0 assigns .github publication to Lane A through make pr. This finding stays on the register as the v1.0.0 defect.
+medium_violations:
+- id: AL-003
+  severity: Medium
+  confidence: Confirmed
+  governing_rule: GAR implementation delegation first-position repository_access; kernel scope/permissions
+  source_rule: uploaded kernel plus cited owner source (see source_authority_used)
+  affected_artifact: LANES.md
+  direct_evidence:
+  - file: LANES.md
+    detail: aggregate lane text lacked first-position per-child repository access header
+  observed: implicit read/write authority in child briefs
+  expected: explicit bounded writable/read-only repos as first delegation content
+  impact: collision or unauthorized repo write during swarm dispatch
+  root_cause: aggregated brief used instead of scoped worker handoff
+  smallest_safe_correction: Add standalone lanes/A-D first-position access headers plus host enforcement caveat
+  owner: CTO/host
+  prerequisites: []
+  blocks_campaign_release: false
+  closing_validation: static header tests + real tool permission grants
+  status: Resolved_in_pack
+- id: AL-004
+  severity: Medium
+  confidence: Confirmed
+  governing_rule: Kernel concurrency ownership and verification
+  source_rule: uploaded kernel plus cited owner source (see source_authority_used)
+  affected_artifact: LANES.md
+  direct_evidence:
+  - file: LANES.md
+    detail: prose only said disjoint, no machine-checked live PR diff collision witness
+  - file: Cursor-Governance#1030
+    detail: PR modifies tool/driver + commands and generated bundles shared with Planner consumers
+  observed: C and D could inadvertently edit same repository path in separate branches
+  expected: live changed-file census frozen and actual planned D paths checked before edit and publication
+  impact: merge conflicts and silent overwrite of producer receipts
+  root_cause: no mechanically checked lane-owner claims
+  smallest_safe_correction: Add lane claims and test mutual exclusivity; CTO freezes live PR diff
+  owner: CTO
+  prerequisites: []
+  blocks_campaign_release: false
+  closing_validation: static verifier refuses ownership collision; host live diff collision refusal
+  status: Resolved_in_pack; host Unknown
+- id: AL-005
+  severity: Medium
+  confidence: Confirmed
+  governing_rule: Kernel tests_and_validation require semantic witnesses not words
+  source_rule: uploaded kernel plus cited owner source (see source_authority_used)
+  affected_artifact: tools/verify_campaign.py
+  direct_evidence:
+  - file: tools/verify_campaign.py
+    detail: prior verifier checked phrases, count, SHA manifest only, no ownership/approval/negative mutation
+      semantics
+  observed: local PASS did not catch wrong merge set/new permission claim
+  expected: local PASS tests structured invariants, rejects mutated invalid campaign fixtures
+  impact: false-green handoff
+  root_cause: verification did not exercise declared orchestration constraints
+  smallest_safe_correction: Replace verifier with structural and 10 negative mutations; external runtime Unknown
+  owner: pack author
+  prerequisites: []
+  blocks_campaign_release: false
+  closing_validation: pack verification PASS and negative controls 10/10
+  status: Resolved_in_pack
+- id: AL-006
+  severity: Medium
+  confidence: Confirmed
+  governing_rule: Kernel authority boundaries; Cursor merge-authority switch and user grant
+  source_rule: uploaded kernel plus cited owner source (see source_authority_used)
+  affected_artifact: PR_MERGE_RUNBOOK.md
+  direct_evidence:
+  - file: PR_MERGE_RUNBOOK.md
+    detail: existing three approved PRs vs newly published admission/integration PRs ambiguously described
+      as within implementation grant
+  observed: implementation authorization and future-head merge authority could be conflated
+  expected: new PR merge separately routed under live policy and actual owner authorization
+  impact: unauthorized merge attempt or prolonged operator noise
+  root_cause: approval scope not distinguished from merge permission
+  smallest_safe_correction: Separate named PR merge set and new PR MERGE_PENDING logic
+  owner: CTO
+  prerequisites: []
+  blocks_campaign_release: false
+  closing_validation: current switch verified; exact-head merge approval and mainline receipt
+  status: Resolved_in_pack; live authorization Unknown
+- id: AL-007
+  severity: Medium
+  confidence: Confirmed
+  governing_rule: Kernel routing/contract fidelity
+  source_rule: uploaded kernel plus cited owner source (see source_authority_used)
+  affected_artifact: RUNBOOK.md
+  direct_evidence:
+  - file: RUNBOOK.md
+    detail: B producer/D consumer handshake left output/receipt and owner responsibility implicit
+  observed: D might invent a competing projector or JSON format
+  expected: CTO freezes actual producer-owned interface and independent verification before D depends on it
+  impact: dueling source truth and unverifiable view
+  root_cause: conditional adapter authorization not a concrete consumer compatibility gate
+  smallest_safe_correction: Add contract handoff with exact questions but no invented schema
+  owner: Compiler+Cursor owner
+  prerequisites: []
+  blocks_campaign_release: false
+  closing_validation: producer-owned receipt and consumer independent verification
+  status: Resolved_in_pack; runtime Unknown
+low_violations: []
+unknowns:
+- id: U00
+  question: Lane A publishes .github through make pr. Which origin/main SHA rendered the child prompt at R0?
+  impact: 'candidate #255 remediation and operator strategy/ admission on main'
+  required_evidence: R0 record of $HOME/.cursor-governance origin/main SHA and the make pr receipt for the Lane A checkout
+  disposition: closed_by_pack_1.2.0
+- id: U01
+  question: Does a currently authorized operator-scoped producer contract exist and support actual receipts?
+  impact: G3/G4 and all producer-backed host activations
+  required_evidence: exact pinned compiler contract and native producer+independent verifier run
+- id: U02
+  question: Does the coding-worker runtime hold `.github` whole-repository read?
+  impact: confidentiality of strategy/ to coding agents
+  required_evidence: identity-bound negative GitHub API/git/filesystem ACL probe; deny without bypass
+- id: U03
+  question: After integration tests pass, were all in-scope PRs merged, and did #254 stay excluded?
+  impact: G1, G2 and downstream integrations
+  required_evidence: current-head PR checks, threads, mainline merge receipts and current merge-authority resolver
+- id: U04
+  question: Does an eligible Meta Planner runtime consumer currently exist?
+  impact: Meta Planner activation only
+  required_evidence: exact current host consumer contract and verified actor binding
+- id: U05
+  question: Are all current global domain projection inputs admitted/current at Cursor mode activation?
+  impact: G0/G4/G6 host mode ACTIVE
+  required_evidence: current owner-mode verifier results at exact source revisions
+intent_and_scope_compliance: Passed_local
+communication_contract_compliance: Unknown_external
+routing_and_integration_compliance: PartiallyApplied
+authority_boundary_compliance: Passed_local
+structure_and_source_of_truth_compliance: Passed_local
+schema_and_configuration_compliance: Passed_local
+security_compliance: Unknown_external_ACL
+reliability_observability_compliance: Unknown_external
+testing_validation_compliance: Passed_local_only
+overbuilt_vs_underbuilt:
+  overbuilt_verified: []
+  underbuilt_before:
+  - no executable child access header at first position
+  - no independent structural collision tests
+  - unclear new-PR merge rung
+  - no compiler/consumer handshake checklist
+  bounded_corrective_principle: fix campaign handoff and validation; no extra release authority, projection
+    engine, plan writer or runner
+leverage_analysis: Four independent lanes retained. A/C unlock source/Planner joins while B resolves producer;
+  D only touches disjoint paths before producer contract. No added fifth coordination lane.
+minimum_safe_next_action:
+  action: 'CTO read-only R0 preflight: verify current .github writer/host eligibility against child_system_prompt
+    before dispatching any source remediation; run concurrent read-only A and independent B/C/D after path
+    census.'
+  why: Prevents unauthorized .github mutation while preserving parallel progress on compiler and Planner work.
+validation_gates:
+  target_bound: Passed_local_exact_zip_SHA
+  authority_resolved: PartiallyApplied_revision_bound_not_producer_validated
+  inventory_complete: Passed_local
+  boundary_map_complete: Passed_local
+  architecture_adapters_correctly_applied: Passed_local
+  findings_evidence_backed: Passed_local
+  severity_consistent: Passed_local
+  contracts_aligned: Unknown_runtime
+  routing_and_authority_aligned: Unknown_runtime
+  source_of_truth_aligned: Passed_local
+  schema_and_configuration_aligned: Passed_local
+  security_aligned: Unknown_runtime
+  testing_and_validation_aligned: Passed_local_not_runtime
+  correction_roadmap_actionable: Passed_local
+  convergence_verified: Partial_external_unknown
+  overall_audit: Unknown_runtime
+residual_risks:
+- Current coding children cannot publish .github PRs; strategy admission blocked until actually authorized
+  writer proved
+- Full repository read of .github reveals strategy/ to coding agents
+- Unadmitted operator-scoped projection mechanism may require formal new owner contract
+- Newly created PRs lack blanket exact-head merge authority
+- Real Cursor mode and external CI/review not executed
+convergence:
+  passes:
+  - context_and_scope_lock
+  - authority_and_policy_resolution
+  - communication_and_contract_alignment
+  - routing_integration_and_ownership_alignment
+  - artifact_structure_and_source_of_truth_alignment
+  - schema_and_configuration_alignment
+  - security_reliability_and_observability_alignment
+  - testing_and_validation_alignment
+  - leverage_and_simplicity_review
+  - reconciliation_and_convergence
+  status: Partial
+  reason: Full local pack alignment is reviewable; remote runtime/provenance/permissions require future CTO
+    evidence
+  skipped: []
+correction_roadmap:
+- id: AL-008
+  owner: Cursor host/governance owner and .github source publisher
+  status: Superseded_by_pack_1.2.0
+  target: lane A .github writer ability
+  close_when: Lane A publishes .github with make pr; the rendered child prompt is from origin/main
+- id: AL-001
+  owner: Compiler owner with CTO review
+  status: Resolved_in_pack; runtime Unknown
+  target: RUNBOOK.md
+  close_when: Current contract + native producer and negative-controls proof
+- id: AL-002
+  owner: Cursor runtime identity and access owner
+  status: Blocked_external
+  target: SECURITY_AND_AUTHORITY.md
+  close_when: actual negative credential/API/git/filesystem denial, not preview content
+- id: AL-003
+  owner: CTO/host
+  status: Resolved_in_pack
+  target: LANES.md
+  close_when: static header tests + real tool permission grants
+- id: AL-004
+  owner: CTO
+  status: Resolved_in_pack; host Unknown
+  target: LANES.md
+  close_when: static verifier refuses ownership collision; host live diff collision refusal
+- id: AL-005
+  owner: pack author
+  status: Resolved_in_pack
+  target: tools/verify_campaign.py
+  close_when: pack verification PASS and negative controls 10/10
+- id: AL-006
+  owner: CTO
+  status: Resolved_in_pack; live authorization Unknown
+  target: PR_MERGE_RUNBOOK.md
+  close_when: current switch verified; exact-head merge approval and mainline receipt
+- id: AL-007
+  owner: Compiler+Cursor owner
+  status: Resolved_in_pack; runtime Unknown
+  target: RUNBOOK.md
+  close_when: producer-owned receipt and consumer independent verification

@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import sys
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -474,6 +474,28 @@ def _admission_errors(blueprint: Path, *, admission_draft: bool) -> list[str]:
     return []
 
 
+_TEMPLATE_PLACEHOLDER = re.compile(r"\{\{[A-Z_]+\}\}")
+
+
+def _controller_identity(definition: dict[str, Any], program_id: str) -> str:
+    """The identity this runtime's receipts carry for their Controller.
+
+    An instantiated Controller declares its own id and that id is used as is.
+    A campaign hosted directly by the sealed template has no instantiation
+    step, so the declared id is still the unrendered template variable; every
+    handoff and closure receipt then named `{{CONTROLLER_ID}}` as its issuer.
+    A runtime hosted by the template is identified by the Program it was
+    bootstrapped for, in the form `TEMPLATE_VARIABLES.yaml` requires of an id.
+    """
+    declared = str(definition.get("id") or "").strip()
+    if declared and not _TEMPLATE_PLACEHOLDER.search(declared):
+        return declared
+    slug = re.sub(r"[^a-z0-9]+", "-", program_id.lower()).strip("-")
+    if not slug:
+        raise ControllerError("cannot derive a Controller id: the Program Lock names no program id")
+    return f"controller-{slug}"
+
+
 def bootstrap(
     workspace: Path,
     blueprint: Path,
@@ -524,7 +546,7 @@ def bootstrap(
         "schema": "program-execution-controller.runtime-config.v2",
         "template_root": str(template_root),
         "blueprint_root": str(blueprint),
-        "controller_id": controller_definition["id"],
+        "controller_id": _controller_identity(controller_definition, program_id),
         "controller_contract": controller_definition["contracts"]["controller"],
         "global_halt": False,
     }
@@ -916,6 +938,46 @@ def validate_runtime(workspace: Path) -> dict[str, Any]:
     return {"status": "PASS" if not errors else "FAIL", "errors": errors}
 
 
+def _porcelain(repo: Path) -> str:
+    return run_git(repo, "status", "--porcelain", check=False).stdout
+
+
+def ensure_clean_repository(repo: Path, workspace: Path) -> Path:
+    """The checkout a campaign executes in. A dirty tree is never that checkout.
+
+    Uncommitted files in the operator checkout stay there. They are not the
+    campaign, and carrying them forward is what blocks ``make pr``. A clean
+    repository is used as itself. A dirty one is left untouched, and a detached
+    worktree at the same HEAD — empty porcelain — becomes the execution root.
+    """
+    if not _porcelain(repo).strip():
+        return repo
+    head = run_git(repo, "rev-parse", "HEAD").stdout.strip()
+    dest = workspace / "worktrees" / "_execution"
+    if dest.exists():
+        current = run_git(dest, "rev-parse", "HEAD", check=False)
+        if (
+            (dest / ".git").exists()
+            and not _porcelain(dest).strip()
+            and current.returncode == 0
+            and current.stdout.strip() == head
+        ):
+            return dest
+        stamp = re.sub(r"[^0-9TZ]", "", utc_now())
+        parked = workspace / "recovery" / f"_execution-{stamp}"
+        parked.parent.mkdir(parents=True, exist_ok=True)
+        dest.rename(parked)
+        run_git(repo, "worktree", "prune", check=False)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    added = run_git(repo, "worktree", "add", "--detach", str(dest), head, check=False)
+    if added.returncode != 0:
+        detail = added.stderr.strip() or added.stdout.strip()
+        raise ControllerError(f"cannot create a clean execution worktree from {repo}: {detail}")
+    if _porcelain(dest).strip():
+        raise ControllerError(f"execution worktree {dest} was created dirty")
+    return dest
+
+
 def reconcile_repositories(workspace: Path, mappings: list[str]) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     results: list[dict[str, Any]] = []
@@ -936,6 +998,7 @@ def reconcile_repositories(workspace: Path, mappings: list[str]) -> dict[str, An
             repo = Path(raw_path).expanduser().resolve()
             if run_git(repo, "rev-parse", "--git-dir", check=False).returncode != 0:
                 raise ControllerError(f"not a Git repository: {repo}")
+            repo = ensure_clean_repository(repo, workspace)
             branch = run_git(repo, "branch", "--show-current").stdout.strip()
             head = run_git(repo, "rev-parse", "HEAD").stdout.strip()
             dirty = bool(run_git(repo, "status", "--porcelain").stdout.strip())
@@ -982,6 +1045,62 @@ def _evidence_valid(db: StateDB, evidence_id: str) -> bool:
     if expires_at and parse_time(expires_at) <= dt.datetime.now(dt.UTC):
         return False
     return True
+
+
+def _realize_planned_evidence(
+    db: StateDB,
+    workspace: Path,
+    task_id: str,
+    candidate_sha: str | None,
+    verification: Mapping[str, Any],
+) -> None:
+    """Declared evidence whose collection is this task's own validation.
+
+    Bootstrap materializes declared evidence requirements as ``planned`` rows.
+    A requirement collected at task validation is realized when the task its
+    gates scope verifies PASSED_LOCAL: status available, result PASS, bound
+    to the candidate revision, produced by the Controller. Without this step
+    a completion gate that requires such evidence can only ever see it
+    planned (GATE_EVIDENCE_STALE) and stays UNKNOWN.
+    """
+    lock_path = workspace / "runtime" / "program-lock.json"
+    try:
+        lock = load_json(lock_path)
+    except (OSError, ValueError):
+        return
+    gate_scopes: dict[str, set[str]] = {}
+    for gate in lock.get("gates") or []:
+        if not isinstance(gate, dict):
+            continue
+        gate_scopes[str(gate.get("id") or "")] = {
+            str(item) for item in ((gate.get("scope") or {}).get("task_ids") or [])
+        }
+    revision = str(candidate_sha or "").strip()
+    for item in lock.get("evidence") or []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("status") or "") != "planned":
+            continue
+        if str(item.get("method") or "") != "command":
+            continue
+        scoped: set[str] = set()
+        for support in item.get("supports") or []:
+            scoped |= gate_scopes.get(str(support), set())
+        if task_id not in scoped:
+            continue
+        realized = dict(item)
+        realized.update(
+            {
+                "status": "available",
+                "environment": "local_worktree",
+                "producer": "Program Execution Controller",
+                "produced_at": verification.get("verified_at") or utc_now(),
+                "revision": revision,
+                "digest": verification.get("receipt_digest"),
+                "result": "PASS",
+            }
+        )
+        db.upsert_evidence(realized)
 
 
 def _require_ledger_integrity(ledger: EventLedger) -> None:
@@ -1114,10 +1233,8 @@ def _lease_base_sha(workspace: Path, repo: dict[str, Any], task_id: str) -> str:
     kind = run_git(repo_path, "cat-file", "-t", sha, check=False)
     if kind.returncode != 0 or kind.stdout.strip() != "commit":
         raise ControllerError(f"campaign integration head is not a commit: {branch}={sha}")
-    if run_git(repo_path, "status", "--porcelain").stdout.strip():
-        raise ControllerError(
-            "repository must be clean before leasing from the campaign integration branch"
-        )
+    # The lease base is the commit. Porcelain in the parent checkout does not
+    # enter the task worktree `git worktree add` creates from this SHA.
     recorded = str(repo.get("head_sha") or "")
     if recorded and recorded != sha:
         ancestry = run_git(repo_path, "merge-base", "--is-ancestor", recorded, sha, check=False)
@@ -1402,8 +1519,9 @@ def task_readiness_detail(
         if repo is None or not repo.get("head_sha"):
             # Setup not prepared yet; `pec reconcile` deterministically clears it.
             entries.append((_WAITING, "repository_not_reconciled"))
-        elif repo.get("dirty"):
-            entries.append((_BLOCKING, "repository_dirty"))
+        # `dirty` stays on the repository row as evidence. It does not block:
+        # reconcile binds a clean execution worktree, and a task worktree is
+        # created from the commit SHA, so parent porcelain is not the campaign.
         if task["scope_status"] != "exact" or not task.get("source_contract_path"):
             # Setup not prepared yet; draft/register-contract deterministically clears it.
             entries.append((_WAITING, "source_contract_incomplete"))
@@ -1907,10 +2025,6 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         if repo is None:
             raise ControllerError("repository not reconciled")
         repo_path = Path(repo["local_path"])
-        current_dirty = bool(run_git(repo_path, "status", "--porcelain").stdout.strip())
-        if current_dirty:
-            _stale_and_release(db, task_id, lease, "repository_state_changed")
-            raise ControllerError("repository state changed after reconciliation")
         # Campaign lineage (an existing campaign/<id> integration branch) means
         # task bases come from that branch, not the checked-out HEAD — the
         # equality check below only applies to standalone runtimes. STACK.json
@@ -1960,6 +2074,11 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
                     f"(worktree={worktree}, branch={lease['branch']}, "
                     f"base_sha={lease['base_sha']}; residue cleanup already attempted — "
                     "run `pec fresh-workspace` to reset every task worktree)"
+                )
+            _strip_session_residue(worktree)
+            if _porcelain(worktree).strip():
+                raise ControllerError(
+                    f"task worktree {worktree} was created dirty; a campaign starts clean"
                 )
         db.update_lease(lease["lease_id"], worktree=str(worktree))
         db.update_task(task_id, worktree=str(worktree))
@@ -2587,6 +2706,33 @@ def _wiring_gate(contract: dict[str, Any], task: dict[str, Any]) -> str:
     return "INCOMPLETE"
 
 
+_WIRING_SEGMENTS = (".cursor-commands", ".cursor", ".l9")
+
+
+def _is_wiring_path(path: str) -> bool:
+    """The pre-existing untracked wiring is not a repository change."""
+    return path.split("/", 1)[0] in _WIRING_SEGMENTS
+
+
+def _status_excluding_wiring(worktree: Path) -> str:
+    """`git status --porcelain` minus the pre-existing untracked wiring.
+
+    The runner links .cursor-commands / .cursor / .l9 into every task
+    worktree; the rendered contract defines them as not changes, so the
+    at-base judgment must not see them as dirt.
+    """
+    raw = run_git(worktree, "status", "--porcelain", "--untracked-files=all", check=False).stdout
+    kept: list[str] = []
+    for line in raw.splitlines():
+        path = line[3:] if len(line) >= 4 else ""
+        candidates = path.split(" -> ") if " -> " in path else [path]
+        if path and all(_is_wiring_path(item) for item in candidates if item):
+            continue
+        if line.strip():
+            kept.append(line)
+    return "\n".join(kept)
+
+
 def _kernel_and_pec_verdict(gates: dict[str, str]) -> tuple[str, str]:
     values = list(gates.values())
     if "STALE" in values:
@@ -2780,6 +2926,46 @@ def _verify_state_error(task: dict[str, Any] | None, task_id: str) -> Controller
         f"Attempts recorded: {task.get('attempts', 0)}. "
         f"Retry safe: {'yes' if state in {'FAILED', 'PASSED_LOCAL', 'COMPLETED'} else 'not as-is'}."
     )
+
+
+def _evidence_causality_module() -> Any:
+    path = Path(__file__).resolve().parents[4] / "scripts" / "evidence_causality.py"
+    if not path.is_file():
+        raise ControllerError(f"evidence causality checker missing: {path}")
+    spec = importlib.util.spec_from_file_location("evidence_causality", path)
+    if spec is None or spec.loader is None:
+        raise ControllerError(f"cannot load evidence causality checker: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _satisfy_produced_catalog(
+    db: StateDB,
+    task_id: str,
+    *,
+    candidate_sha: str,
+    receipt_path: Path,
+    produced_at: str,
+    digest: str | None,
+) -> None:
+    """A passing task records the catalog ids it produces, not only a new runtime id.
+
+    Successors wait on the exact catalog id. ``EVID-RUNTIME-<task>-<attempt>``
+    does not satisfy that wait.
+    """
+    module = _evidence_causality_module()
+    updates = module.catalog_updates_for_passed_task(
+        db.evidence_items(),
+        task_id,
+        db.tasks(),
+        revision=candidate_sha,
+        source=str(receipt_path),
+        produced_at=produced_at,
+        digest=digest,
+    )
+    for item in updates:
+        db.upsert_evidence(item)
 
 
 def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
@@ -3001,6 +3187,35 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 )
             else:
                 gates["validation"] = "INCOMPLETE"
+            if not changed:
+                # A writing task that changes nothing has normally not done its
+                # work, so `scope` is FAIL above. The one exception is a task
+                # whose objective already holds on its base (the change landed on
+                # the target before the campaign ran): the Controller's own run
+                # of the task's validation commands passes on the unchanged
+                # worktree and the worker declared no changed files. That is
+                # proof the change is unnecessary, not a claim, so it is the
+                # in-scope outcome `already_satisfied`. With no commands, or a
+                # failing one, a do-nothing attempt still FAILs.
+                #
+                # "Unchanged" must mean the base itself: HEAD is the task's base
+                # and the tree carries nothing uncommitted. An earlier attempt's
+                # leftover can make validation pass while this attempt changes
+                # nothing against its own baseline; that work would integrate as
+                # nothing and be lost, so it is not `already_satisfied`.
+                at_base = (
+                    run_git(worktree, "rev-parse", "HEAD", check=False).stdout.strip()
+                    == str(task["base_sha"])
+                    and not _status_excluding_wiring(worktree).strip()
+                )
+                satisfied = (
+                    at_base
+                    and bool(required_commands)
+                    and gates.get("validation") == "PASS"
+                    and gates.get("changed_files_exact") == "PASS"
+                )
+                gates["scope"] = "PASS" if satisfied else "FAIL"
+                gates["no_change_required"] = "PASS" if satisfied else "FAIL"
             gates["wiring"] = _wiring_gate(contract, task)
             # Controller-owned candidate identity. The worker cannot git add or
             # git commit (permission_renderer denials) and must return
@@ -3028,6 +3243,9 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             "candidate_sha": candidate_sha,
             "declared_changed_files": sorted(set(receipt.get("changed_files") or [])),
             "observed_changed_files": changed,
+            "outcome": (
+                "already_satisfied" if gates.get("no_change_required") == "PASS" else "changed"
+            ),
             "observed_file_digests": observed_digests,
             "validations": validations,
             "unenforced_prohibitions": unenforced_prohibitions,
@@ -3073,6 +3291,18 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                     "notes": None,
                 }
             )
+            if verdict == "PASSED_LOCAL":
+                _satisfy_produced_catalog(
+                    db,
+                    task_id,
+                    candidate_sha=candidate_sha or "",
+                    receipt_path=target,
+                    produced_at=verification["verified_at"],
+                    digest=verification["receipt_digest"],
+                )
+                # Declared requirements the task's own validation collects are
+                # realized here, before any gate is evaluated against them.
+                _realize_planned_evidence(db, workspace, task_id, candidate_sha, verification)
             db.transition_task(
                 task_id,
                 verdict,

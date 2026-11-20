@@ -1037,7 +1037,7 @@ def test_the_binding_names_the_release_tag_and_the_commit_it_resolves_to() -> No
     For a candidate SHA pin, source.ref == release_evidence.memory_sha (40-hex).
     For a release tag pin, source.ref is vX.Y.Z and memory_sha is the peeled commit.
     A moved tag fails the proof instead of silently rebinding.
-    Live target: package 2.6.0 at 846f283f…, official published wheel.
+    Live target: package 3.0.1 at 96ed99eb…, official published wheel.
     """
     manifest = rb.BindingManifest.load()
     raw = json.loads(rb.DEFAULT_MANIFEST_PATH.read_text(encoding="utf-8"))
@@ -1054,7 +1054,7 @@ def test_the_binding_names_the_release_tag_and_the_commit_it_resolves_to() -> No
         assert evidence["memory_tag"] == ref
     assert evidence["package_version"] == raw["expected_package_version"]
     assert evidence["artifact_sha256"] == (
-        "d493573254cecedafb66ad3e1ccc380841ec8c617e9501adb5d993c989653d15"
+        "4822b889dc8d590cedc0194d1d802e20b173d385ad377f80f4a0852502b1c957"
     )
 
 
@@ -1074,9 +1074,16 @@ def test_a_tag_ref_is_re_resolved_on_the_remote_every_proof() -> None:
     ).read_text(encoding="utf-8")
     assert "print(f\"memory_sha={ev['memory_sha']}\")" in workflow
     assert "floating refs are forbidden" in workflow
-    assert "refs/tags/${MEMORY_REF}^{}" in workflow
-    assert "does not exist on" in workflow
-    assert 'if [ "${resolved}" != "${MEMORY_SHA}" ]' in workflow
+    # The private clone is a non-persisted checkout of the memory repository.
+    # The projection token never appears in this pull_request workflow, and no
+    # secret is placed in a run step. Checkout peels a tag; the next step
+    # refuses any HEAD other than release_evidence.memory_sha.
+    assert "secrets.L9_GITHUB_READ_TOKEN" not in workflow
+    assert "token: ${{ secrets.GH_TOKEN }}" in workflow
+    assert "persist-credentials: false" in workflow
+    assert "repository: Quantum-L9/l9-graphiti-memory" in workflow
+    assert 'if [ "${actual}" != "${MEMORY_SHA}" ]' in workflow
+    assert "the tag moved or the manifest is stale" in workflow
 
 
 def test_probe_resolves_an_alias_from_a_second_declared_module(tmp_path: Path) -> None:

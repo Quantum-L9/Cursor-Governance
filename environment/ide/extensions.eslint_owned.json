@@ -2,8 +2,5 @@
   "schema": 1,
   "class": "eslint_owned",
   "comment": "Additional extensions for workspaces classified eslint_owned (heuristic: eslint config, no biome.json). Biome is still installed from the core set but is never set as defaultFormatter for these workspaces.",
-  "extensions": [
-    "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode"
-  ]
+  "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
 }

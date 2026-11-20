@@ -3,7 +3,7 @@ schema: 1
 parent: l9-pr-audit
 layer: reference
 role: semantic-lane
-version: 1.1.0
+version: 1.2.0
 status: active
 -->
 
@@ -37,8 +37,21 @@ probes, and judging the PR against what the requester asked for, are the lane's 
 
 - **Read-only.** Never edit, commit, push, comment, review, label, close or merge. Never write in
   the audited clone. To execute, copy the head: `git -C CLONE archive origin/pr/N | tar -x -C SCRATCH/pr-N`.
-- **GitHub is REST only.** `gh api --method GET repos/...`; threads via `pulls/N/ccr/review_threads`,
-  bodies via `pulls/comments/ID`; job logs via `actions/jobs/ID/logs`.
+- **Transport follows `protocol.rest_only`.** Review threads come from the GraphQL `reviewThreads`
+  query unless `rest_only` is true, then `pulls/N/ccr/review_threads`; if the selected transport
+  fails, the collector tries the other once and exits non-zero when both fail. A GraphQL HTTP 200
+  whose envelope has `errors`, a null `repository` / `pullRequest` / `reviewThreads`, or a
+  malformed `nodes` / `pageInfo` is a failure, not an empty thread list. Comment ids stored from
+  GraphQL are `databaseId` (the numeric REST id). Bodies travel with that node and are fetched
+  again via `pulls/comments/ID` using that id, never the GraphQL node id. Job logs via
+  `actions/jobs/ID/logs`. Classic branch protection is recorded only on evidence: `ABSENT`
+  requires the exact 404 body `Branch not protected`; a 200 merges its required checks; every
+  other result is `UNKNOWN` and withholds complete READY.
+- **Admitted remediation coupling.** `scripts/collect_snapshot.py` imports `rest_only` from
+  `skills/l9-pr-remediation/scripts/protocol.py`. The selector is not copied into this pack.
+  That import is the one runtime dependency on `l9-pr-remediation`: transport selection only.
+  It does not grant remediation, mutation, convergence, or merge. A standalone audit pack that
+  is not shipped beside `l9-pr-remediation` cannot select the review-thread transport.
 - **No secret values** in any field; give the locator only.
 - **Exact heads.** Judge the `head_sha` in the snapshot. If the head moved, stop: the parent re-collects.
 
@@ -49,11 +62,11 @@ probes, and judging the PR against what the requester asked for, are the lane's 
 | `scope_fidelity` | **Every** changed file, one disposition each. `SCOPE_EXTENSION` must be named by a finding's `implementation_surfaces`. The assembler refuses a missing file. |
 | `ci` | Every failing check with causality from its job log. Set `finding_id` when a finding explains it; only linked failures enter `failed_check_evidence`. |
 | `review_threads` | Every thread, resolved or not, with a semantic disposition proven on the head. UI state is evidence, not closure. |
-| `validation_runs` | Exact `tested_revision` (40-hex) or `UPSTREAM` for out-of-repo checks. |
+| `validation_runs` | Exact `tested_revision` (40-hex) or `UPSTREAM` for out-of-repo checks. A claimed `PASS` is prose until the verification-run receipt proves a separate run executed it on the head; the assembler records it `NOT_EXECUTED` without the receipt. |
 | `objective_source` | Where the requester's ask came from: `ISSUE` (linked by "Closes #N"; required when the snapshot lists linked issues, unless an `ORIGINAL_PROMPT` or `USER` ask outranks it), `ORIGINAL_PROMPT`, `USER`, or `PR_BODY` when only the author's own description exists (recorded as a gap). |
 | `requirements` | The requester's ask broken into checkable requirements, each `MET`, `PARTIAL`, `NOT_MET` or `UNKNOWN` with evidence on the head. `PARTIAL`/`NOT_MET` must name a `COMPLETENESS` or `SCOPE` finding. This is the completeness verdict; there is no separate one. |
-| `probes` | All five probes below, each `DONE` (with the command, input or locator and what it showed), `NOT_APPLICABLE` (with why), or `NOT_DONE` (with why). A `NOT_DONE` probe withholds READY and is recorded as a gap. |
-| `readiness` | `READY` only when you found nothing blocking and judged the head mergeable. The assembler still checks the ruleset gates on the head before projecting READY. |
+| `probes` | All five probes below, each `DONE` (with the command, input or locator and what it showed), `NOT_APPLICABLE` (with why), or `NOT_DONE` (with why). A `NOT_DONE` probe withholds READY and is recorded as a gap. A `DONE` sentence is prose: it never projects SURVIVED or PASS by itself — only the verification-run receipt does. |
+| `readiness` | `READY` only when you found nothing blocking and judged the head mergeable. The assembler still checks the ruleset gates, classic branch protection resolution and the verification-run receipt on the head before projecting READY. |
 
 ## The five probes
 
@@ -81,6 +94,41 @@ probes, and judging the PR against what the requester asked for, are the lane's 
 
 Before writing, re-verify every retained finding against the exact head and drop what does not
 reproduce. Reply to the parent in at most 15 lines: readiness per PR, blocking findings, unknowns.
+
+## Verification-run receipt
+
+`SURVIVED`, `validation_result PASS`, the `VERIFICATION` audit pass and `CONVERGED` are never
+projected from a READY lane or from a prose `DONE`. They require a separate run-directory receipt:
+a verification run (not the semantic lane) that actually executed the probes and validations
+writes `[RUN]/runs/verification/receipt.json`:
+
+```json
+{
+  "schema": "l9.pr-audit.verification-run-receipt/v1",
+  "head_by_pr": {"1": "<40-hex frozen head>", "2": "<40-hex frozen head>"},
+  "commands": [
+    {
+      "command": "the command that ran",
+      "head_sha": "<one frozen head>",
+      "exit_code": 0,
+      "measured_result": "what the command showed",
+      "provenance": "independent-verifier"
+    }
+  ],
+  "claim_ids": ["<every claim_id of the audit>"],
+  "obligation_ids": ["<every obligation_id, incl. OB-O-<n>, OB-TD-<n>, OB-<cid>>"],
+  "probe_ids": {"1": ["adversarial_input", "base_discrimination", "merged_tree", "ci_causality", "ingress_reachability"], "2": ["..."]},
+  "observed_finding_ids": ["<finding ids re-observed>"]
+}
+```
+
+The assembler reads only `runs/verification/receipt.json`. Another `runs/*/receipt.json` is not
+this verification. Each command must name a frozen head, an integer exit code, a measured
+result, and a provenance that is not the lane or the author. The id lists must cover every
+claim, obligation, and probe before any PASS, SURVIVED, or READY is projected. Missing, unbound,
+empty, or incomplete: probes and validation runs record `NOT_EXECUTED`, the VERIFICATION pass
+says `verification not executed`, nothing is stamped `SURVIVED`, READY is withheld, and
+`U-RECEIPT` blocks readiness and convergence.
 
 ## Independent verifier lane
 

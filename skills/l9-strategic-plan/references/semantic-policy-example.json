@@ -1,0 +1,31 @@
+{
+  "authority_ref": "example:operator-approved-invariants",
+  "assertions": [
+    {
+      "id": "expected-order",
+      "kind": "edge_exists",
+      "file": "graph.json",
+      "source": "a",
+      "target": "b",
+      "relation": "depends_on"
+    },
+    {
+      "id": "no-reverse",
+      "kind": "edge_absent",
+      "file": "graph.json",
+      "source": "b",
+      "target": "a",
+      "relation": "depends_on"
+    },
+    {
+      "id": "priority-sync",
+      "kind": "matches_file",
+      "file": "graph.json",
+      "pointer": "/priority",
+      "other_file": "dashboard.json",
+      "other_pointer": "/priority"
+    }
+  ],
+  "must_remain_unchanged": ["protected.json"],
+  "allowed_changed_paths": ["graph.json", "dashboard.json"]
+}

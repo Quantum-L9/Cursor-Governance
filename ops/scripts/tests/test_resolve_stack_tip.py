@@ -104,6 +104,34 @@ class ResolveFromPrsTests(unittest.TestCase):
         self.assertIn("feat/one", str(ctx.exception))
         self.assertIn("feat/two", str(ctx.exception))
 
+    def test_ancestry_picks_the_chain_head_builds_on_among_sibling_roots(self) -> None:
+        """#921: an open Dependabot PR is a sibling root this branch never built on."""
+        prs = [
+            _pr(977, "dependabot/uv/opentelemetry-api-1.45.2", "main", "77" * 20),
+            _pr(980, "agent/claude-code/cto-send-message-allow", "main", "80" * 20),
+            _pr(982, "agent/claude-code/end-session-alignment", "main", "82" * 20),
+        ]
+        mine = {"82" * 20}
+        result = resolve_from_prs(prs, default_ref="origin/main", descends=mine.__contains__)
+        self.assertEqual(result.ref, "agent/claude-code/end-session-alignment")
+        self.assertEqual(result.reason, "unique_chain_tip")
+
+    def test_ancestry_breaks_a_fork_mid_chain(self) -> None:
+        prs = [
+            _pr(1, "feat/base", "main", "11" * 20),
+            _pr(2, "feat/left", "feat/base", "22" * 20),
+            _pr(3, "feat/right", "feat/base", "33" * 20),
+        ]
+        mine = {"11" * 20, "33" * 20}
+        result = resolve_from_prs(prs, default_ref="origin/main", descends=mine.__contains__)
+        self.assertEqual(result.ref, "feat/right")
+
+    def test_ancestry_that_names_no_single_chain_still_refuses(self) -> None:
+        prs = [_pr(10, "feat/one", "main"), _pr(11, "feat/two", "main")]
+        for mine in (set(), {f"{10:040d}", f"{11:040d}"}):
+            with self.subTest(mine=sorted(mine)), self.assertRaises(TipError):
+                resolve_from_prs(prs, default_ref="origin/main", descends=mine.__contains__)
+
     def test_sibling_fork_mid_chain_exit(self) -> None:
         prs = [
             _pr(1, "feat/base", "main"),

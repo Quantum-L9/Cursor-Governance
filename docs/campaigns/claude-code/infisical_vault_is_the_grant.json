@@ -1,0 +1,318 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "The Infisical vault is the grant",
+  "objective": "A name present in Infisical project cursor-governance prod / is authorized for Cursor and Claude to bind when the task needs that system. The committed allow-list matches the vault. Agents see the name catalog at session start and are not asked to wait for a reminder. Values are never printed, exported, or written into mcp.json.",
+  "success_criteria": [
+    "V1 passes: capability_bind allows every name in the vault-list fixture, including AUTH0_CLIENT_SECRET, GITHUB_CLASSIC_PAT, L9_MEMORY_NEO4J_URI, and VANILLASOFT_API, and refuses CLAUDE_INFISICAL_CLIENT_SECRET",
+    "V2 passes: operator_only_iam --check exits 0 with an empty operator_only_keys list and no hosted forbid privilege required",
+    "V3 passes: the session report lists PERPLEXITY_API_KEY as an authorized name and the report text contains no secret value",
+    "V4 passes: the changed-file catalog in .pre-commit-config.yaml exits 0"
+  ],
+  "scope": {
+    "in": [
+      "Sync root_env_keys to the live prod / names and accept a live listing as authorization even when the committed list is stale",
+      "Remove the operator-only bind refusal and the hosted IAM forbid on AUTH0_CLIENT_DOMAIN, AUTH0_CLIENT_ID, and AUTH0_CLIENT_SECRET",
+      "Publish the authorized name catalog from one viewSecretValue=false list at SessionStart",
+      "Append the grant rule to skills/l9-secrets/SKILL.md and AGENTS.md",
+      "Spawn vault-named MCP servers through a child-env bind so N8N_API_KEY, NOTION_API_KEY, PERPLEXITY_API_KEY, SEMGREP_APP_TOKEN, and GITHUB_TOKEN are usable without a second copy of the value"
+    ],
+    "out": [
+      "Creating FIRECRAWL_API_KEY or TAVILY_MCP_URL; those names are not in the vault and are not a grant",
+      "hydrate --export, printing values, or writing values into mcp.json, receipts, or chat",
+      "Deleting AWS Secrets Manager objects",
+      "Rewriting CANONICAL_LAW.md; GITHUB_TOKEN stays the default GitHub credential",
+      "Making make pr require SONAR_TOKEN or SEMGREP_APP_TOKEN",
+      "Implementing this change on the dirty feat/pr-review-permission checkout"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "ops/hooks/plan_memory_prefetch.py --workspace Cursor-Governance --task vault presence authorizes bind",
+      "pass_criteria": "namespace=cursor-governance snapshot_digest=9a45f66406e67cfb8d46e5ed6fbf708b52632d5dba590f90335bccf6314e1243 checked_record_count=363 conflicts=0 policy_version=memory-phase-lock/v2",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "bind workspace /Users/ib-mac/Cursor-Governance branch feat/pr-review-permission HEAD f925f796",
+      "pass_criteria": "planning binds this checkout; implementation starts on a new branch from origin/main and does not edit this dirty tree",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "list Infisical prod / with viewSecretValue=false and compare to root_env_keys",
+      "pass_criteria": "93 names at / and 2 path-local aliases; this working tree allow-list has 84; nine vault names are outside it",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Make the live prod / listing the allow-list. Mirror those names into root_env_keys, union a viewSecretValue=false list into allowed_names so a new vault name is authorized before the next commit, and add CLAUDE_INFISICAL_CLIENT_SECRET to REFUSED_NAMES beside the other machine-identity secrets. Drop L9_MEMORY_HOOK_CLIENT_ID and L9_MEMORY_HOOK_CLIENT_SECRET from the committed mirror because they are not in the vault; the live list authorizes them on the day they appear. Register AUTH0_CLIENT_NAME, GITHUB_CLASSIC_PAT, L9_MEMORY_NEO4J_URI, L9_MEMORY_NEO4J_USER, L9_MEMORY_NEO4J_PASSWORD, L9_STATE_MONGO_URI, MONGODB_ATLAS_CLIENT_ID, MONGODB_ATLAS_CLIENT_SECRET, and VANILLASOFT_API.",
+      "files": [
+        "ops/secrets/capability_bind.py",
+        "ops/secrets/infisical-cursor-governance.yaml",
+        "tests/ops/secrets/test_capability_bind.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "allowed_names",
+      "leverage_rank": 1,
+      "layer": "policy",
+      "shared_root_cause": "allow-list narrower than the vault"
+    },
+    {
+      "id": "T2",
+      "task": "Remove the operator-only bind refusal and the hosted IAM forbid. Empty operator_only_keys. operator_only_iam.py --check passes when the forbid privilege is absent, and --apply deletes it. AUTH0_CLIENT_DOMAIN, AUTH0_CLIENT_ID, and AUTH0_CLIENT_SECRET bind on Cursor and Claude. Values stay in-process.",
+      "files": [
+        "ops/secrets/capability_bind.py",
+        "ops/secrets/operator_only_iam.py",
+        "ops/secrets/infisical-cursor-governance.yaml",
+        "ops/secrets/test_session_start_secrets.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T1"],
+      "operation": "Replace",
+      "anchor": "operator_only_names",
+      "leverage_rank": 2,
+      "layer": "policy",
+      "shared_root_cause": "allow-list narrower than the vault"
+    },
+    {
+      "id": "T3",
+      "task": "Publish the authorized name catalog from that one list at SessionStart. The runtime report names every non-refused vault key and states that a listed name is authorized to bind when the task needs that system. Do not fetch values and do not add ninety individual binds. Append the same rule to skills/l9-secrets/SKILL.md and an AGENTS.md fragment. GITHUB_TOKEN remains the default GitHub credential; GITHUB_CLASSIC_PAT is bindable when the task needs that credential. Do not rewrite the make-pr sentence that says SONAR_TOKEN and SEMGREP_APP_TOKEN are not required.",
+      "files": [
+        "ops/secrets/session_start_secrets.py",
+        "ops/scripts/session_start_runtime_report.py",
+        "skills/l9-secrets/SKILL.md",
+        "AGENTS.md"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T1"],
+      "operation": "Insert",
+      "anchor": "BIND_NAMES",
+      "leverage_rank": 3,
+      "layer": "docs",
+      "shared_root_cause": "agents are not shown the grant"
+    },
+    {
+      "id": "T4",
+      "task": "Spawn MCP servers whose env name is a vault name through a child-env bind. Cover PERPLEXITY_API_KEY, NOTION_API_KEY, N8N_API_KEY, N8N_API_URL, SEMGREP_APP_TOKEN, and GITHUB_TOKEN mapped onto GITHUB_PERSONAL_ACCESS_TOKEN. The wrapper binds into the child environment only. master.mcp.json and the rendered Cursor config keep placeholders and never receive values. Leave FIRECRAWL_API_KEY and TAVILY_MCP_URL unwired.",
+      "files": [
+        "ops/secrets/vault_mcp_bridge.py",
+        "ops/secrets/vault-mcp-bridges.json",
+        "environment/mcp/master.mcp.json",
+        "ops/memory/mcp_instantiation.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T1"],
+      "operation": "Wrap",
+      "anchor": "mcpServers",
+      "leverage_rank": 4,
+      "layer": "runtime",
+      "shared_root_cause": "agents are not shown the grant"
+    }
+  ],
+  "critical_path": ["T1", "T2", "T3", "T4"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "A vault name binds without a committed allow-list edit, and the identity client secret does not",
+      "unlocks": "T2 and T3"
+    },
+    {
+      "id": "M2",
+      "outcome": "Cursor and Claude can bind every non-refused prod / name, and the session names those grants",
+      "unlocks": "MCP child-env spawn"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T1",
+      "evidence_required": "V1 pytest shows a fixture vault name absent from the yaml is allowed and CLAUDE_INFISICAL_CLIENT_SECRET is refused",
+      "no_go_action": "stop before the IAM privilege is removed"
+    },
+    {
+      "id": "C2",
+      "after": "T2",
+      "evidence_required": "V2 operator_only_iam --check exits 0 and a hosted-identity probe of AUTH0_CLIENT_ID is no longer required to fail",
+      "no_go_action": "leave the forbid privilege in place and report the identity that could not delete it"
+    },
+    {
+      "id": "C3",
+      "after": "T4",
+      "evidence_required": "V3 session report lists PERPLEXITY_API_KEY and V4 pre-commit catalog passes",
+      "no_go_action": "do not render secret values into mcp.json to force a pass"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "update",
+      "todo_ids": ["T3"],
+      "reason": "Append one fragment: vault presence authorizes bind. Do not rewrite the existing make-pr token sentence."
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "GITHUB_TOKEN remains the default GitHub credential. This plan does not edit the constitution."
+    },
+    {
+      "surface": "skills/l9-secrets/SKILL.md",
+      "action": "update",
+      "todo_ids": ["T3"],
+      "reason": "The grant is vault presence. The skill must say so, including the identity-secret refusal."
+    },
+    {
+      "surface": "INVARIANTS.md",
+      "action": "n_a",
+      "reason": "The make-pr row that says the scanner tokens are not required stays true."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does unioning the live list let a name through before anyone reviews it?",
+      "Does opening AUTH0_CLIENT_SECRET to Claude hand the Memory tenant admin client to a hosted session?",
+      "Does the session catalog print a value if the list call is made with viewSecretValue=true?",
+      "Does the MCP wrapper write the bound value back into mcp.json?"
+    ],
+    "assumed_false_ifs": [
+      "A committed allow-list that matches today's 93 names stays true after the next vault write",
+      "Removing the IAM forbid is optional because the repo refusal was the real boundary",
+      "FIRECRAWL_API_KEY becomes usable because the MCP template mentions it"
+    ],
+    "blast_radius": "Cursor and Claude can bind every non-refused prod / secret, including the Auth0 Memory admin client and GITHUB_CLASSIC_PAT. A bug in the MCP child environment can expose one bound value to that child process. The session report can leak a value only if the list call requests values.",
+    "rollback": "Revert the branch. Restore operator_only_keys and run operator_only_iam.py --apply to put the forbid privilege back. No vault value is rotated by this change. The machine-identity secrets were never issued."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T1", "T2", "T3", "T4"],
+    "shared_causes": ["allow-list narrower than the vault", "agents are not shown the grant"],
+    "deletions_or_consolidations": [
+      "Delete the operator-only bind refusal and the hosted forbid privilege instead of adding AUTH0 to a reminder list",
+      "One list call replaces ninety SessionStart binds",
+      "Do not keep a second copy of vault values in mcp.json"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Claude can bind the Auth0 client that administers the Memory tenant",
+      "mitigation": "Bind stays in-process. The session catalog prints names only. Rollback restores the forbid privilege with operator_only_iam.py --apply."
+    },
+    {
+      "risk": "The live-list union authorizes a newly created vault name with no review commit",
+      "mitigation": "That is the operator rule. The committed mirror is still updated in the same change so review sees today's names, and REFUSED_NAMES still blocks the identity secrets."
+    },
+    {
+      "risk": "The hook carrier expects L9_MEMORY_HOOK_CLIENT_ID and L9_MEMORY_HOOK_CLIENT_SECRET, which are not in the vault",
+      "mitigation": "Drop them from the committed mirror and leave the carrier calling bind. It stays unbound until those names exist in the vault, at which point the live list authorizes them."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Can this surface's machine identity delete the hosted forbid privilege, or can only a project admin?",
+      "decision_effect": "If --apply cannot delete it, Claude bind of the Auth0 names still fails at Infisical after the repo refusal is gone.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": ".venv/bin/python -m pytest tests/ops/secrets/test_capability_bind.py -q",
+      "pass_criteria": "PASS, including a vault-list name absent from the yaml and a refusal of CLAUDE_INFISICAL_CLIENT_SECRET",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": ".venv/bin/python ops/secrets/operator_only_iam.py --check",
+      "pass_criteria": "exit 0 when operator_only_keys is empty and the forbid privilege is not required",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": ".venv/bin/python ops/scripts/session_start_runtime_report.py",
+      "pass_criteria": "report lists PERPLEXITY_API_KEY as authorized and contains no secret value",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "bash ops/scripts/run_pr_precommit.sh .pre-commit-config.yaml",
+      "pass_criteria": ".pre-commit-config.yaml changed-file catalog exits 0",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1"],
+    "next_skill": "l9-plan-simple",
+    "stop_reason": "Plan is ready for Cursor Build. Implementation has not run. U1 is bounded: if the IAM delete fails, report it and do not claim Claude can read the Auth0 names."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/secrets/capability_bind.py",
+      "ops/secrets/infisical-cursor-governance.yaml",
+      "ops/secrets/operator_only_iam.py",
+      "ops/secrets/session_start_secrets.py",
+      "ops/secrets/vault_mcp_bridge.py",
+      "ops/secrets/vault-mcp-bridges.json",
+      "ops/scripts/session_start_runtime_report.py",
+      "ops/memory/mcp_instantiation.py",
+      "environment/mcp/master.mcp.json",
+      "skills/l9-secrets/SKILL.md",
+      "AGENTS.md",
+      "tests/ops/secrets/test_capability_bind.py",
+      "ops/secrets/test_session_start_secrets.py"
+    ],
+    "must_not_modify": ["CANONICAL_LAW.md", "INVARIANTS.md", "ops/autonomy/pr_board.py"],
+    "preserved_contracts": [
+      "Values never go to stdout, stderr, mcp.json, receipts, or chat",
+      "GITHUB_TOKEN remains the default GitHub credential",
+      "make pr does not require SONAR_TOKEN or SEMGREP_APP_TOKEN",
+      "Machine-identity client secrets are used by the plane and are not re-issued",
+      "A name absent from the vault is not a grant"
+    ],
+    "validation_commands": [
+      ".venv/bin/python -m pytest tests/ops/secrets/test_capability_bind.py -q",
+      ".venv/bin/python ops/secrets/operator_only_iam.py --check",
+      ".venv/bin/python ops/scripts/session_start_runtime_report.py",
+      "bash ops/scripts/run_pr_precommit.sh"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "live vault list is the allow-list",
+    "identity client secret stays refused",
+    "operator-only forbid is removed",
+    "session catalog prints names only",
+    "MCP child env does not write values to disk"
+  ],
+  "estimate": "1 Build",
+  "owner": "igor_beylin",
+  "execution_envelope": {
+    "network": {
+      "mode": "bounded_external_write",
+      "allowed_services": ["app.infisical.com"]
+    },
+    "secrets": {
+      "access": "read_only_named"
+    }
+  },
+  "complexity": {
+    "architectural_boundaries_crossed": [
+      "secrets bind gate",
+      "hosted Infisical IAM",
+      "SessionStart report",
+      "MCP spawn"
+    ],
+    "external_systems_touched": ["Infisical project cursor-governance"],
+    "migration_required": true
+  }
+}

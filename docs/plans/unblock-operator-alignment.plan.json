@@ -1,0 +1,355 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Unblock operator alignment producer and consumer",
+  "objective": "Clear the producer-dependent campaign blockers with a successor operator-scoped source contract, a compiler adapter, and a fail-closed consumer binding. MEMORY_PREFETCH namespace=cursor-governance snapshot_digest=165b1c81c2544136df8f02a8ec78e4c784b836946ebce25cec7af680790ea6c0 checked_record_count=366 conflicts=0 policy_version=memory-phase-lock/v2. Route depth is deep and omit_gates is empty.",
+  "owner": "repository owner",
+  "estimate": "two implementation sessions after Build",
+  "code_in_scope": true,
+  "success_criteria": [
+    "V1: the compiler emits an operator-scoped receipt for strategy YAML and rejects that YAML as a global canonical source",
+    "V2: the Cursor consumer accepts only that frozen receipt and still rejects a missing, forged, or mismatched view",
+    "V3: the five sealed YAML digests stay equal to the approved subject manifest",
+    "V4: Planner and CTO activation defaults stay false while a verified view can be loaded on opt-in",
+    "V5: Coding Agent privacy stays BLOCKED_PRIVACY and Meta Planner stays BLOCKED_NO_CONSUMER"
+  ],
+  "scope": {
+    "in": [
+      "Successor operator-scoped compiler contract in Quantum-L9/.github",
+      "Smallest compiler adapter and tests in l9-semantic-compiler-engine",
+      "Fail-closed consumer extension in Cursor-Governance ops/autonomy/operator_alignment.py and its tests",
+      "Opt-in load of one verified operator view without changing activation defaults"
+    ],
+    "out": [
+      "Registering strategy/ in semantics/canonical_sources.yaml",
+      "Rewriting l9.compiler/generic@1 in place or editing the five sealed YAML files",
+      "Replacing strategy/ADMISSION.md or reordering the #256 release manifest",
+      "Inventing a Meta Planner mode or setting Planner activation.default to true",
+      "Claiming Coding Agent confidentiality while the authority checkout can read strategy/",
+      "Landing this work on feat/pr-review-permission",
+      "Program Execution campaign invocation, Program Lock, or a new global domain"
+    ]
+  },
+  "execution_envelope": {
+    "network": {
+      "mode": "named_services_only",
+      "allowed_services": [
+        "github.com"
+      ]
+    },
+    "secrets": {
+      "access": "none"
+    }
+  },
+  "complexity": {
+    "architectural_boundaries_crossed": [
+      "Quantum-L9/.github semantic contract",
+      "l9-semantic-compiler-engine producer",
+      "Cursor-Governance consumer"
+    ],
+    "external_systems_touched": [
+      "GitHub"
+    ],
+    "migration_required": false
+  },
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git status on /Users/ib-mac/Cursor-Governance",
+      "pass_criteria": "branch feat/pr-review-permission at d23fd617 is the planning workspace and is not the execution branch",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "route_plan.py --risk high --evidence partial",
+      "pass_criteria": "depth deep and omit_gates empty",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "plan_memory_prefetch.py",
+      "pass_criteria": "HIT conflicts=0 snapshot_digest 165b1c81c2544136df8f02a8ec78e4c784b836946ebce25cec7af680790ea6c0",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "name .pre-commit-config.yaml as the hook catalog for Cursor-Governance edits",
+      "pass_criteria": "catalog present in this checkout",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Add a successor compiler-contract artifact that names an operator-scoped source class distinct from the global canonical registry. Do not change the admitted l9.compiler/generic@1 inputs.",
+      "files": [
+        "semantics/compiler_contract successor in the Quantum-L9/.github authority checkout"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new successor artifact beside the admitted generic contract",
+      "layer": "policy",
+      "leverage_rank": 1,
+      "shared_root_cause": "missing operator-scoped source class",
+      "acceptance": "The successor names the source class, selector, and receipt schema, and it does not list strategy/ as a canonical source."
+    },
+    {
+      "id": "T2",
+      "task": "Implement only the compiler adapter the successor contract names, with a negative test that strategy YAML is not a canonical source.",
+      "files": [
+        "src/l9_semantic_compiler/engine/registry.py",
+        "tests/test_operator_source_projection.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T1"],
+      "operation": "Insert",
+      "anchor": "CanonicalAuthority source resolution",
+      "layer": "runtime",
+      "leverage_rank": 2,
+      "shared_root_cause": "missing operator-scoped source class",
+      "acceptance": "V1 passes on the compiler checkout cut from its origin/main."
+    },
+    {
+      "id": "T3",
+      "task": "Extend the existing fail-closed consumer in place. Record the producer receipt bytes only after T2 emits them. Keep the receipt set empty until those exact bytes exist.",
+      "files": [
+        "ops/autonomy/operator_alignment.py",
+        "tests/ops/autonomy/test_operator_alignment.py",
+        "governance/operator-alignment/STATUS.yaml"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T2"],
+      "operation": "Insert",
+      "anchor": "ADMITTED_PRODUCER_RECEIPTS",
+      "layer": "control_plane",
+      "leverage_rank": 3,
+      "shared_root_cause": "missing operator-scoped source class",
+      "acceptance": "V2 passes on a branch cut from Cursor-Governance origin/main, not from feat/pr-review-permission."
+    },
+    {
+      "id": "T4",
+      "task": "Allow an opt-in operator view to be cited by CTO, Architect, and Planner after the consumer verifies the receipt. Do not set activation.default to true and do not edit mode contracts or child prompts.",
+      "files": [
+        "ops/autonomy/projection_mode.py",
+        "tests/ops/autonomy/test_operator_view_opt_in.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T3"],
+      "operation": "Insert",
+      "anchor": "verified view load",
+      "layer": "control_plane",
+      "leverage_rank": 4,
+      "acceptance": "V4 passes and Planner remains inactive until an explicit opt-in."
+    },
+    {
+      "id": "T5",
+      "task": "Add tests that keep Coding Agent confidentiality and Meta Planner as explicit blocked results. Do not add a mode and do not hide strategy/ from the authority checkout.",
+      "files": [
+        "tests/ops/autonomy/test_alignment_role_blocks.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T3"],
+      "operation": "Create",
+      "anchor": "new test module",
+      "layer": "assurance",
+      "leverage_rank": 5,
+      "acceptance": "V5 passes with BLOCKED_PRIVACY and BLOCKED_NO_CONSUMER."
+    }
+  ],
+  "critical_path": ["T1", "T2", "T3", "T4"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Successor contract exists and does not globalize strategy/",
+      "unlocks": "compiler adapter"
+    },
+    {
+      "id": "M2",
+      "outcome": "Producer receipt bytes exist",
+      "unlocks": "consumer binding and opt-in view"
+    },
+    {
+      "id": "M3",
+      "outcome": "Consumer and opt-in view are verified, with privacy and Meta Planner still blocked",
+      "unlocks": "Build publish on a branch from origin/main"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T1",
+      "evidence_required": "The successor artifact is a new id and strategy/ is absent from the global canonical registry",
+      "no_go_action": "Stop before any compiler edit"
+    },
+    {
+      "id": "C2",
+      "after": "T2",
+      "evidence_required": "Receipt bytes and a negative canonical-source result",
+      "no_go_action": "Leave ADMITTED_PRODUCER_RECEIPTS empty"
+    },
+    {
+      "id": "C3",
+      "after": "T4",
+      "evidence_required": "V1 through V5 pending commands have been run and the five YAML digests still match",
+      "no_go_action": "Do not publish and do not claim the five roles active"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No operating-instruction change. Activation defaults stay false."
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "This plan does not amend law. The successor contract is a .github semantic artifact."
+    },
+    {
+      "surface": "docs/campaigns/11-17-26/L9_Operator_Alignment_CTO_Campaign_v1.1.0/EVIDENCE_COLLECTION.md",
+      "action": "update",
+      "todo_ids": ["T3", "T5"],
+      "reason": "Record the receipt coordinates and the two roles that remain blocked after Build."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does the successor still classify strategy YAML as canonical because the registry is the only input the compiler accepts?",
+      "Does opt-in view loading turn Planner or CTO on without an explicit mode request?",
+      "Does a consumer test pass by parsing a hand-written JSON preview instead of producer receipt bytes?",
+      "Would replacing the #256 admission text be required for V1 through V5? If yes, the plan has widened past its scope."
+    ],
+    "assumed_false_ifs": [
+      "The five sealed YAML bytes remain the approved manifest bytes",
+      "Quantum-L9/.github remains the owner of the successor contract",
+      "No existing Meta Planner consumer is discovered during T5",
+      "The authority checkout can still open strategy/"
+    ],
+    "blast_radius": "A wrong contract would make operator doctrine look like global semantic law, or a consumer would present an unverified view as admitted.",
+    "rollback": "Revert the successor artifact, the compiler adapter, and the consumer receipt insertion. The admitted generic contract, the five YAML files, and the #256 admission text stay untouched, so rollback does not restore them."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T1", "T2", "T3", "T4", "T5"],
+    "shared_causes": [
+      "One missing operator-scoped source class blocks the producer, the consumer, and opt-in Architect, Planner, and CTO alignment views"
+    ],
+    "deletions_or_consolidations": [
+      "Do not add a second consumer module or a second planner",
+      "Do not open a companion-rewrite pull request inside this plan"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "The successor contract is guessed instead of being the owner's artifact",
+      "mitigation": "C1 stops the compiler work if the artifact is missing or if it registers strategy/ as canonical"
+    },
+    {
+      "risk": "Build starts on the dirty feat/pr-review-permission checkout and mixes the Context7 gate registration with this work",
+      "mitigation": "T3 and T4 require a branch cut from Cursor-Governance origin/main"
+    },
+    {
+      "risk": "Privacy or Meta Planner is marked active to make the closeout look finished",
+      "mitigation": "V5 passes only when both remain blocked"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Which GitHub identity can be denied read of Quantum-L9/.github strategy/ so Coding Agent confidentiality can become true?",
+      "decision_effect": "Privacy stays BLOCKED_PRIVACY in this plan. A later access-control change is a different plan.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Is there an existing Meta Planner consumer to bind, or only an absent mode?",
+      "decision_effect": "T5 records BLOCKED_NO_CONSUMER and does not create a mode. Discovery of a real consumer stops T5 and requires a new plan.",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V0",
+      "command": "pre-commit run --config .pre-commit-config.yaml --files ops/autonomy/operator_alignment.py ops/autonomy/projection_mode.py",
+      "pass_criteria": ".pre-commit-config.yaml hook catalog passes on the consumer files",
+      "status": "pending"
+    },
+    {
+      "id": "V1",
+      "command": "python3 -m pytest tests/test_operator_source_projection.py",
+      "pass_criteria": "operator-scoped receipt is emitted and the same YAML is rejected as a global canonical source",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python3 -m pytest tests/ops/autonomy/test_operator_alignment.py",
+      "pass_criteria": "missing, forged, and mismatched views are rejected and the frozen receipt is accepted",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "python3 -m pytest tests/ops/autonomy/test_operator_alignment.py",
+      "pass_criteria": "five sealed YAML digests equal the approved subject manifest",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "python3 -m pytest tests/ops/autonomy/test_operator_view_opt_in.py",
+      "pass_criteria": "activation defaults stay false and an opt-in verified view loads",
+      "status": "pending"
+    },
+    {
+      "id": "V5",
+      "command": "python3 -m pytest tests/ops/autonomy/test_alignment_role_blocks.py",
+      "pass_criteria": "results are BLOCKED_PRIVACY and BLOCKED_NO_CONSUMER",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1", "U2"],
+    "next_skill": "cursor-build",
+    "stop_reason": "Producer, consumer, and opt-in view are plannable. Privacy and Meta Planner stay blocked on purpose."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "Quantum-L9/.github successor compiler contract",
+      "l9-semantic-compiler-engine registry adapter and tests/test_operator_source_projection.py",
+      "ops/autonomy/operator_alignment.py",
+      "ops/autonomy/projection_mode.py",
+      "tests/ops/autonomy/test_operator_alignment.py",
+      "tests/ops/autonomy/test_operator_view_opt_in.py",
+      "tests/ops/autonomy/test_alignment_role_blocks.py",
+      "governance/operator-alignment/STATUS.yaml"
+    ],
+    "must_not_modify": [
+      "semantics/canonical_sources.yaml",
+      "the five sealed strategy YAML files",
+      "strategy/ADMISSION.md",
+      "strategy/OPERATOR_RELEASE_MANIFEST.json",
+      "governance/cto-mode/MODE.yaml",
+      "governance/planner-mode/MODE.yaml",
+      "commands/lcto.md",
+      "commands/planner.md",
+      "child system prompts"
+    ],
+    "preserved_contracts": [
+      "l9.compiler/generic@1 stays admitted and unchanged",
+      "L9-REVISION-001 successor rather than rewrite",
+      "L9-GLOBALIZATION-001 no global law from this plan",
+      "activation.default remains false"
+    ],
+    "validation_commands": [
+      "python3 -m pytest tests/test_operator_source_projection.py",
+      "python3 -m pytest tests/ops/autonomy/test_operator_alignment.py",
+      "python3 -m pytest tests/ops/autonomy/test_operator_view_opt_in.py",
+      "python3 -m pytest tests/ops/autonomy/test_alignment_role_blocks.py"
+    ]
+  }
+}

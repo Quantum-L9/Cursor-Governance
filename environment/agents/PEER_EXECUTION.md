@@ -64,9 +64,16 @@ contract. The provider capability receipt remains TTL-fresh and digest-bound.
 
 ## Peer Execution Core
 
-`environment/program-execution/peer_execution/` is not the canonical runtime.
-Root `autonomy/` is the surviving provider-neutral autonomy authority.
-Execution topology stays in `environment/agents/PEER_RUNTIME_BINDINGS.yaml`.
+Root `autonomy/` is the provider-neutral autonomy authority and depends on
+nothing below it. Execution topology stays in
+`environment/agents/PEER_RUNTIME_BINDINGS.yaml`.
+
+`environment/program-execution/peer_execution/` is the peer/provider runtime of
+Program Execution, which is an operator-invoked consumer of root autonomy
+(`CANONICAL_LAW.md` `PROGRAM_EXECUTION_MANUAL_STAGE_V1`). It resolves bindings
+from the registry above, takes a subordinate root lease per task, and
+authorizes each worker effect through the root gateway. Nothing in root
+autonomy resolves through it.
 
 ## Thin provider law
 

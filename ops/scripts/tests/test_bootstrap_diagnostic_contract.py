@@ -232,9 +232,8 @@ class BootstrapFixture(unittest.TestCase):
             "for arg in args:\n"
             "    if arg.startswith('-') or (tool.endswith('/chmod') and arg == '+x'):\n"
             "        continue\n"
-            "    path = Path(os.path.abspath(arg))\n"
-            "    if path == root or not path.is_relative_to(root) or "
-            "not path.resolve().is_relative_to(root):\n"
+            "    path = Path(os.path.abspath(arg)).resolve()\n"
+            "    if path == root or not path.is_relative_to(root):\n"
             "        raise SystemExit('FORBIDDEN external mutation: ' + arg)\n"
             "raise SystemExit(subprocess.run([tool, *args], check=False).returncode)\n",
         )
@@ -476,7 +475,7 @@ class SessionStartPlansStoreTests(BootstrapFixture):
         # and the hook reports the links-only heal, not the full-setup fallback
         # (setup_workspace_symlinks.sh migrates unconditionally).
         self._assert_workspace_wired(home, evidence)
-        self.assertIn("- wire: auto-wired links-only", context, evidence)
+        self.assertIn("- links: auto-wired links-only;", context, evidence)
         self.assertNotIn("auto-wired (full setup)", context, evidence)
 
     def test_links_only_plans_mode_wires_without_touching_the_store(self) -> None:
@@ -625,7 +624,7 @@ class PublishPathProbeStateTests(BootstrapFixture):
         self.install_gate(
             "import os\nfrom pathlib import Path\n"
             "def publish_path_workflow_deny(command):\n"
-            f"    assert Path.cwd() == Path({str(self.workspace)!r})\n"
+            f"    assert Path.cwd().resolve() == Path({str(self.workspace)!r}).resolve()\n"
             "    assert os.environ['L9_GOVERNANCE_SURFACE'] == 'claude-code'\n"
             "    assert os.environ['PYTHONDONTWRITEBYTECODE'] == '1'\n"
             "    assert command in ('make push', 'make pr'), command\n"

@@ -1,0 +1,160 @@
+schema: l9.campaign-handoff/local-v1
+campaign_id: L9-ORG-AUTHORITY-CUTOVER-2026-11-18-v1
+status: execution_handoff_not_run
+execution_surface: Cursor-Governance CTO/LCTO mode
+owner: operator
+created_at: '2026-11-18'
+objective: >-
+  Admit Quantum-L9 organization-wide L9-ORG policy into .github as its unique
+  canonical source, release it immutably with source-owner authority, migrate
+  existing direct consumers, and prove actual operating and organization CI enforcement.
+architecture_frozen: true
+allowed_repositories:
+  writable:
+    - https://github.com/Quantum-L9/.github
+    - https://github.com/Quantum-L9/Cursor-Governance
+    - https://github.com/Quantum-L9/l9-ci-core
+    - https://github.com/Quantum-L9/L9-Ops-MCP
+  read_only:
+    - https://github.com/Quantum-L9/l9-ci-sdk
+    - https://github.com/Quantum-L9/l9-repo-template
+  unlisted_repositories: no_access
+observed_start_revisions:
+  Quantum-L9/.github: 00500268eb24de29a5e647a447d6f992d609f6f5
+  Quantum-L9/Cursor-Governance: 48c9e134bfbb5520adc18645ded9e68cdcb1056a
+  Quantum-L9/l9-ci-core: 027e86543701740c4a238e593bd33c03f59eda00
+  Quantum-L9/L9-Ops-MCP: e372d303ee03cefc56f0179098eb6a2ebb011257
+launch_base_revisions:
+  Quantum-L9/.github: 00500268eb24de29a5e647a447d6f992d609f6f5
+  Quantum-L9/Cursor-Governance: 59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd
+  Quantum-L9/l9-ci-core: 027e86543701740c4a238e593bd33c03f59eda00
+  Quantum-L9/L9-Ops-MCP: e372d303ee03cefc56f0179098eb6a2ebb011257
+  cursor_merged_onto_launch_base: [1037, 1038, 1039]
+live_start_observations:
+  org_ruleset_id: 21895545
+  required_job: Analyze (central Core)
+  cursor_main_ruleset_id: 20855699
+  org_policy_gate_deployed: not_proven
+  signed_org_policy_release: not_proven
+  complete_live_denial_proof: not_proven
+locked_source_files:
+  - 01_ARCHITECTURE_LOCK.md
+  - 02_VERIFIED_SOURCE_BASELINE.md
+  - 03_ADMISSION_AND_RELEASE_CONTRACT.md
+  - 04_CONSUMER_AND_LEGACY_CUTOVER.md
+  - 05_CI_RELATIONSHIP_AND_ROLLOUT.md
+  - 06_ACCEPTANCE_AND_PROOF.md
+publication:
+  single_ceremony: make pr
+  owner: Quantum-L9/Cursor-Governance
+  verify_current_source_before_call: true
+  target_worktree: WS
+  requires_open_pr: true
+  prohibit_gate_only_smoke_rehearsal: true
+  prohibit_raw_push_and_gh_pr_create_bypass: true
+  require_pr_url_and_exact_head_receipt: true
+  pr_stack: predecessor_or_overlapping_open_pr
+  open_pr: 1
+  pr_remediate: 0
+  merge_authority: operator_only
+  unmerged_prs_block_progress: false
+  command: >-
+    PR_REMEDIATE=0 OPEN_PR=1 make -C "$HOME/.cursor-governance" pr WS="$WT"
+execution_binding:
+  document: 09_EXECUTION_BINDING.md
+  checked_at: '2026-11-18'
+  state: bound_pending_operator_launch
+  baseline_shas_match_origin_main: false
+  launch_base_matches_origin_main: true
+  start_from: fetched_origin_main
+  dotgithub_push_proven: dry_run_only
+  child_prompt_forbids_pool_writes_to_dotgithub: true
+  mode_contract_edited: false
+  cto_session_lanes: [A, B, F]
+  pool_lanes: [S, E, C, M]
+  pool_size: 4
+  pool_cap: 5
+  swarm_launch: not_authorized_by_this_binding
+  stack_authorization: >-
+    operator 2026-11-18: stack on open PRs; unmerged PRs do not block
+permissions:
+  exact_owner_admission_required: true
+  agent_may_not_self_authorize_admission: true
+  agent_may_not_self_authorize_bypass: true
+  authenticated_owner_author_may_authorize: true
+  new_repository_authorizations: explicit_only
+  scope_expansion: forbidden_without_operator_override
+concurrency:
+  scout_parallelism: four_pool_tasks_cap_five
+  mutate_parallelism: one_writer_per_worktree_within_pool_cap
+  max_mutating_agents_per_worktree: 1
+  workspace_lock: repo_and_target_branch_and_owned_paths
+  collisions: serialize_file_owner_changes_and_rebase_only_with_fresh_evidence
+  independent_lanes_may_prepare_before_activation: true
+  only_cto_reconciles_cross_repo_integration: true
+lanes:
+  - id: S
+    file: lanes/S_READ_ONLY_RECONNAISSANCE.md
+    depends_on: []
+    writable: []
+    worktree_lock: none
+    output: revision_bound_evidence_census
+  - id: A
+    file: lanes/A_UPSTREAM_POLICY_ADMISSION.md
+    depends_on: [S]
+    writable: [Quantum-L9/.github]
+    worktree_lock: dotgithub-policy
+    output: approved_and_merged_canonical_policy_source
+  - id: B
+    file: lanes/B_IMMUTABLE_POLICY_RELEASE.md
+    depends_on: [A]
+    writable: [Quantum-L9/.github]
+    worktree_lock: dotgithub-policy
+    output: verified_signed_and_attested_immutable_release
+  - id: E
+    file: lanes/E_CORE_REQUIRED_POLICY_CHECK.md
+    depends_on: [A]
+    activation_requires: [B]
+    writable: [Quantum-L9/l9-ci-core]
+    worktree_lock: ci-core-gate
+    output: required_core_job_enforces_signed_policy
+  - id: C
+    file: lanes/C_OPERATING_PLANE_CONSUMER.md
+    depends_on: [B]
+    writable: [Quantum-L9/Cursor-Governance]
+    worktree_lock: cursor-governance-consumer
+    output: current_policy_binding_and_operating_action_denials
+  - id: M
+    file: lanes/M_LEGACY_OPS_MCP.md
+    depends_on: [B]
+    writable: [Quantum-L9/L9-Ops-MCP]
+    worktree_lock: ops-mcp-consumer
+    output: legacy_mirror_signed_source_provenance_and_compatibility
+  - id: F
+    file: lanes/F_LIVE_ORG_RULESET_AND_COVERAGE.md
+    depends_on: [B, C, M, E]
+    writable: [Quantum-L9/.github]
+    worktree_lock: dotgithub-policy
+    output: live_org_ruleset_denial_coverage_and_final_census
+mandatory_acceptance_ids:
+  - D01
+  - D02
+  - D03
+  - D04
+  - D05
+  - D06
+  - D07
+  - D08
+  - D09
+  - D10
+  - D11
+  - D12
+  - D13
+  - D14
+  - D15
+  - D16
+closure:
+  complete_only_when_every_mandatory_acceptance_passes: true
+  blocked_lanes_must_record_owner_and_minimum_next_action: true
+  no_fabricated_validation_or_platform_claims: true
+  status_values: [PASS, PARTIAL, BLOCKED]

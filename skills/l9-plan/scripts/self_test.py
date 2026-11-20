@@ -25,6 +25,7 @@ INVOKED = [
     "route_plan.py",
     "validate_plan_document.py",
     "validate_plan_kernel_receipt.py",
+    "render_campaign_source.py",
     "self_test.py",
 ]
 
@@ -235,6 +236,42 @@ def main() -> int:
     )
     if bad_mode.returncode == 0:
         errors.append("invalid --execute-via unexpectedly succeeded")
+
+    # Campaign mode: the fixture plan renders as a campaign-source.v2 that
+    # Program Execution's own front door, compiler and launchability admit, and
+    # a writing todo without validation is refused rather than synthesized.
+    with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
+        out = Path(tmp) / "CAMPAIGN_SOURCE.yaml"
+        admitted = run(
+            [
+                sys.executable,
+                "scripts/render_campaign_source.py",
+                "fixtures/plan_campaign.json",
+                "--out",
+                str(out),
+            ]
+        )
+        if admitted.returncode != 0 or "ADMITTED" not in admitted.stdout:
+            errors.append(
+                "render_campaign_source.py did not admit fixtures/plan_campaign.json:\n"
+                f"{admitted.stdout}\n{admitted.stderr}"
+            )
+        broken = json.loads((ROOT / "fixtures" / "plan_campaign.json").read_text("utf-8"))
+        broken["todos"][0].pop("validation", None)
+        broken_path = Path(tmp) / "plan_campaign_no_validation.json"
+        broken_path.write_text(json.dumps(broken), encoding="utf-8")
+        refused = run(
+            [
+                sys.executable,
+                "scripts/render_campaign_source.py",
+                str(broken_path),
+                "--out",
+                str(Path(tmp) / "refused.yaml"),
+                "--no-check",
+            ]
+        )
+        if refused.returncode != 1 or "no validation command" not in refused.stderr:
+            errors.append("render_campaign_source.py accepted a writing todo without validation")
 
     # Local Cursor mirror: optional, but fail-closed when present and drifted.
     sync = run([sys.executable, "scripts/sync_cursor_plan_template.py", ".", "--check"])

@@ -400,8 +400,14 @@ def authorize_release(root: Path) -> dict[str, Any]:
         raise RuntimeError("no L4 phase — run: python3 ops/autonomy/l4_local.py begin")
     branch = current_branch(root)
     if branch != state.get("stacked_branch"):
+        # Name the remedy (#957): a phase is bound to one branch, so work that
+        # moved to another branch starts its own phase there.
         raise RuntimeError(
-            f"branch drift: phase started on {state.get('stacked_branch')!r}, now on {branch!r}"
+            f"branch drift: phase started on {state.get('stacked_branch')!r}, "
+            f"now on {branch!r}. If {branch!r} is the branch to publish, start its "
+            "phase here: python3 ops/autonomy/l4_local.py begin --contract-id <id>, "
+            "then re-run authorize-release; otherwise switch back to "
+            f"{state.get('stacked_branch')!r}."
         )
     head = current_head(root)
     digest = tree_digest(root)

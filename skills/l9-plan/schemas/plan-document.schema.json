@@ -36,11 +36,7 @@
       "minLength": 1
     },
     "mode": {
-      "enum": [
-        "plan",
-        "spec",
-        "ticket"
-      ]
+      "enum": ["plan", "spec", "ticket"]
     },
     "title": {
       "type": "string",
@@ -61,10 +57,7 @@
     "scope": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "in",
-        "out"
-      ],
+      "required": ["in", "out"],
       "properties": {
         "in": {
           "type": "array",
@@ -126,11 +119,7 @@
         "target": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "lifecycle",
-            "logical_target_id",
-            "future_repository_intent"
-          ],
+          "required": ["lifecycle", "logical_target_id", "future_repository_intent"],
           "properties": {
             "lifecycle": {
               "const": "pre_birth_local_execution_workspace"
@@ -156,12 +145,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "command_or_action",
-          "pass_criteria",
-          "status"
-        ],
+        "required": ["id", "command_or_action", "pass_criteria", "status"],
         "properties": {
           "id": {
             "type": "string"
@@ -173,14 +157,7 @@
             "type": "string"
           },
           "status": {
-            "enum": [
-              "pending",
-              "passed",
-              "failed",
-              "skipped",
-              "not_applicable",
-              "unknown"
-            ]
+            "enum": ["pending", "passed", "failed", "skipped", "not_applicable", "unknown"]
           }
         }
       }
@@ -218,12 +195,7 @@
             "type": "string"
           },
           "risk": {
-            "enum": [
-              "low",
-              "medium",
-              "high",
-              "irreversible"
-            ]
+            "enum": ["low", "medium", "high", "irreversible"]
           },
           "dependencies": {
             "type": "array",
@@ -232,13 +204,7 @@
             }
           },
           "operation": {
-            "enum": [
-              "Insert",
-              "Replace",
-              "Delete",
-              "Wrap",
-              "Create"
-            ]
+            "enum": ["Insert", "Replace", "Delete", "Wrap", "Create"]
           },
           "anchor": {
             "type": "string"
@@ -268,6 +234,19 @@
               "external_system"
             ],
             "description": "Architecture layer this todo touches; projected to the Architecture impact table."
+          },
+          "validation": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Terminal validation for this todo: single admissible shell commands (no pipes, chaining, redirection, -c/-e, or mutating git). Required for every todo that writes files when the plan is rendered as a Program Execution campaign-source.v2."
+          },
+          "acceptance": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Observable acceptance statement for this todo; projected to the campaign task's acceptance."
           }
         }
       }
@@ -285,11 +264,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "outcome",
-          "unlocks"
-        ],
+        "required": ["id", "outcome", "unlocks"],
         "properties": {
           "id": {
             "type": "string"
@@ -309,12 +284,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "after",
-          "evidence_required",
-          "no_go_action"
-        ],
+        "required": ["id", "after", "evidence_required", "no_go_action"],
         "properties": {
           "id": {
             "type": "string"
@@ -337,19 +307,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "surface",
-          "action"
-        ],
+        "required": ["surface", "action"],
         "properties": {
           "surface": {
             "type": "string"
           },
           "action": {
-            "enum": [
-              "update",
-              "n_a"
-            ]
+            "enum": ["update", "n_a"]
           },
           "todo_ids": {
             "type": "array",
@@ -366,12 +330,7 @@
     "stress_test": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "disconfirming_questions",
-        "assumed_false_ifs",
-        "blast_radius",
-        "rollback"
-      ],
+      "required": ["disconfirming_questions", "assumed_false_ifs", "blast_radius", "rollback"],
       "properties": {
         "disconfirming_questions": {
           "type": "array",
@@ -399,11 +358,7 @@
     "leverage": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "ranked_todo_ids",
-        "shared_causes",
-        "deletions_or_consolidations"
-      ],
+      "required": ["ranked_todo_ids", "shared_causes", "deletions_or_consolidations"],
       "properties": {
         "ranked_todo_ids": {
           "type": "array",
@@ -432,10 +387,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "risk",
-          "mitigation"
-        ],
+        "required": ["risk", "mitigation"],
         "properties": {
           "risk": {
             "type": "string"
@@ -451,12 +403,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "question",
-          "decision_effect",
-          "resolution"
-        ],
+        "required": ["id", "question", "decision_effect", "resolution"],
         "properties": {
           "id": {
             "type": "string"
@@ -468,12 +415,7 @@
             "type": "string"
           },
           "resolution": {
-            "enum": [
-              "ask",
-              "probe",
-              "block",
-              "accept_bounded"
-            ]
+            "enum": ["ask", "probe", "block", "accept_bounded"]
           }
         }
       }
@@ -484,12 +426,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "command",
-          "pass_criteria",
-          "status"
-        ],
+        "required": ["id", "command", "pass_criteria", "status"],
         "properties": {
           "id": {
             "type": "string"
@@ -501,14 +438,7 @@
             "type": "string"
           },
           "status": {
-            "enum": [
-              "pending",
-              "passed",
-              "failed",
-              "skipped",
-              "not_applicable",
-              "unknown"
-            ]
+            "enum": ["pending", "passed", "failed", "skipped", "not_applicable", "unknown"]
           }
         }
       }
@@ -516,19 +446,10 @@
     "convergence": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "status",
-        "remaining_unknown_ids",
-        "next_skill",
-        "stop_reason"
-      ],
+      "required": ["status", "remaining_unknown_ids", "next_skill", "stop_reason"],
       "properties": {
         "status": {
-          "enum": [
-            "converged",
-            "partial",
-            "blocked"
-          ]
+          "enum": ["converged", "partial", "blocked"]
         },
         "remaining_unknown_ids": {
           "type": "array",
@@ -547,12 +468,7 @@
     "gmp_handoff": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "may_modify",
-        "must_not_modify",
-        "preserved_contracts",
-        "validation_commands"
-      ],
+      "required": ["may_modify", "must_not_modify", "preserved_contracts", "validation_commands"],
       "properties": {
         "may_modify": {
           "type": "array",
@@ -581,11 +497,7 @@
       }
     },
     "depth": {
-      "enum": [
-        "rapid",
-        "standard",
-        "deep"
-      ]
+      "enum": ["rapid", "standard", "deep"]
     },
     "checklist": {
       "type": "array",
@@ -605,18 +517,12 @@
       "type": "object",
       "additionalProperties": false,
       "description": "Network and secrets envelope projected to the Execution envelope section.",
-      "required": [
-        "network",
-        "secrets"
-      ],
+      "required": ["network", "secrets"],
       "properties": {
         "network": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "mode",
-            "allowed_services"
-          ],
+          "required": ["mode", "allowed_services"],
           "properties": {
             "mode": {
               "enum": [
@@ -639,16 +545,10 @@
         "secrets": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "access"
-          ],
+          "required": ["access"],
           "properties": {
             "access": {
-              "enum": [
-                "none",
-                "read_only_named",
-                "runtime_injected_only"
-              ]
+              "enum": ["none", "read_only_named", "runtime_injected_only"]
             }
           }
         }
@@ -680,6 +580,25 @@
         },
         "migration_required": {
           "type": "boolean"
+        }
+      }
+    },
+    "campaign": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Program Execution campaign binding, read by scripts/render_campaign_source.py when the plan is rendered as l9.program-execution.campaign-source.v2 for make campaign.",
+      "properties": {
+        "campaign_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{2,62}$"
+        },
+        "target_repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+        },
+        "source_of_truth": {
+          "type": "string",
+          "minLength": 1
         }
       }
     }

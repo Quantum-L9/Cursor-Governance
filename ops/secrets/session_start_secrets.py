@@ -97,6 +97,11 @@ IDENTITY_MESSAGES = {
 }
 
 
+def catalog_names() -> list[str]:
+    """Allow-list names an agent may bind. Refused identity secrets stay off the catalog."""
+    return sorted(name for name in cb.allowed_names() if name not in cb.REFUSED_NAMES)
+
+
 def _bind_line(binds: list[dict[str, Any]]) -> str:
     """NAME=source for each probed name, built from module literals only."""
     by_name = {str(b.get("name")): b.get("source") for b in binds}
@@ -174,6 +179,7 @@ def run_plane(env: Mapping[str, str] | None = None) -> dict[str, Any]:
         "identity": identity,
         "login": login_state,
         "binds": binds,
+        "authorized_names": catalog_names(),
         "plane_ok": plane_ok,
         "surface_class": klass,
         "state": STATE_OK if plane_ok else STATE_FAILED,
@@ -202,6 +208,11 @@ def receipt_payload(result: dict[str, Any]) -> dict[str, Any]:
             "summary": str(identity.get("summary") or ""),
         },
         "binds": binds,
+        "authorized_names": [
+            name
+            for name in result.get("authorized_names") or []
+            if isinstance(name, str) and name in cb.allowed_names() and name not in cb.REFUSED_NAMES
+        ],
         **({"aws": result["aws"]} if isinstance(result.get("aws"), dict) else {}),
     }
 

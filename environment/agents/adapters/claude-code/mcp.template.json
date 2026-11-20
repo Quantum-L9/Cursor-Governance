@@ -50,17 +50,12 @@
     "the projection removes them from .mcp.json instead of preserving them as",
     "consumer-owned."
   ],
-  "_retired_servers": [
-    "graphiti-memory",
-    "l9-graphite-memory"
-  ],
+  "_retired_servers": ["graphiti-memory", "l9-graphite-memory"],
   "mcpServers": {
     "context7": {
       "type": "stdio",
       "command": "${HOME}/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh",
-      "args": [
-        "context7"
-      ]
+      "args": ["context7"]
     }
   }
 }

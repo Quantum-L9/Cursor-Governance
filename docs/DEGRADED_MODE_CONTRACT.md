@@ -480,3 +480,83 @@ throwaway bare repository). Both transports failing is still an error. Callers:
 back to the governance fork's copy on this surface). The guard in
 `ops/scripts/tests/test_org_dotgithub.py` fails any other module that calls the
 REST route directly.
+
+## Org `.github` reads, 2026-11-16 — `Quantum-L9/.github` is private; supersedes the git and raw rows of 2026-10-21
+
+The owner made `Quantum-L9/.github` private. The 2026-10-21 git row (`ls-remote`
+answered with no credential) and raw row (`200`) held only because the repository
+was public, so the anonymous transport the reader fell back to no longer exists.
+
+| Probe | Session started **without** `.github` (owner's screenshot, 2026-11-16) | Session started **with** `.github` (this container, `Quantum-L9/Cursor-Governance` @ `890c2ba`) |
+|---|---|---|
+| `gh api repos/Quantum-L9/.github/contents/.github/pull_request_template.md` | `403` — "GitHub access to this repository is not enabled for this session" | `200`; `repos/Quantum-L9/.github` reports `private: true` |
+| `git ls-remote https://github.com/Quantum-L9/.github HEAD`, `GIT_TERMINAL_PROMPT=0` | `fatal: could not read Username for 'https://github.com': terminal prompts disabled` | `dd780b9…` |
+| `add_repo Quantum-L9/.github` | refused: name begins with `.` | not needed |
+| same `ls-remote` with `-c credential.helper='!gh auth git-credential'` | not probed | `dd780b9…` (the helper does not disturb the proxy's own git credential) |
+| `gh api repos/Quantum-L9/.github/actions/permissions/access` | not probed | `403` — "Access to this GitHub Actions path is not permitted through this proxy" |
+
+**Consequence.**
+
+- On a Claude Code cloud session `<owner>/.github` is reachable only when the
+  session was **started** with it selected; nothing inside the session can widen
+  that. `org_dotgithub.read_org_file` now says so in its error when REST reports
+  the session-scope refusal and git also fails.
+- Both readers (`org_dotgithub.git_read`, `ensure_authority_checkout.sh`) offer
+  `gh auth git-credential` after any helper already configured, so local surfaces
+  whose `gh` can read the repository keep working. Still fail-closed; still no
+  stale fallback.
+- In GitHub Actions a repository's `GITHUB_TOKEN` cannot read `.github`. Trusted
+  (non-PR) checkouts pass `secrets.GH_TOKEN`, never persisted. PR-triggered verify
+  jobs hold no secret by contract and cannot read it; that needs an owner decision.
+- GitHub serves org-wide default community-health files only from a **public**
+  `.github` (GitHub docs, "Creating a default community health file"). Repositories
+  without their own copies stop inheriting them.
+- Reusable workflows under `Quantum-L9/.github/.github/workflows/` resolve for
+  other repositories only when the repository's Actions access setting is
+  "Accessible from repositories in the organization" — a human setting this
+  surface cannot read or change.
+
+## Swarm child launch, 2026-11-17 — coding-agent mode binds only when the child starts from `.github`
+
+Evidence for the `child_launch` rule and the `repositories_attached_at_launch`
+invariant in `governance/cto-mode/MODE.yaml` 1.3.0, and for
+`cto_mode.py launch-spec`. Rows record what each session observed; earlier rows
+stand as written. This section contradicts three statements of the protocol v2
+text it amends: that a child is launched with its primary repository as the
+session source, that `.github` reaches every pool agent through the campaign
+environment's repository list, and that a child never calls `add_repo` for
+Cursor-Governance.
+
+| Session | Sources at start | Observed |
+|---|---|---|
+| `session_017xwbxuuFEgQyuo4WWHaGNH` | `[l9-graphiti-memory]` | coding-agent mode BLOCKED on `l9.projection/coding-agent-execution@1`: no reachable `Quantum-L9/.github` authority checkout (as reported to the CTO session) |
+| `session_017xwbxuvTfannDBGFVqH8ct` | `[.github]`, then `cursor-governance` via `add_repo` | `.github` reachable at `dd780b9` (as reported to the CTO session) |
+| `session_017xwbxuvn1zQGzdYT5aPg5e` (this lane) | `[.github]`, created in environment `env_01MraPSE4aEFGiZ9G917SNR6`, whose repository list is `[.github, Cursor-Governance]` (environment listing as reported by the CTO session) | Only `.github` was attached at start, so the environment's repository list did not attach Cursor-Governance to this `create_session` child. SessionStart governance refresh `fetch-failed`; `/root/.cursor-governance` at the snapshot `1d79d50`, lacking `ops/autonomy/session_role.py`; `ff.sh --ssot` failed `could not read Username for 'https://github.com': terminal prompts disabled` until Cursor-Governance was attached. The first `add_repo Quantum-L9/Cursor-Governance` (push), issued on a system-notification turn, was refused by the auto-mode classifier; after the operator allowed `add_repo` it attached. `ff.sh --ssot` then reached `005f3ca`; `ensure_authority_checkout.sh` printed `AUTHORITY: PROVISIONED path=/root/.l9/authority/.github main=dd780b9`, non-shallow, HEAD = origin/main; `coding_agent_mode.py on` reported `ACTIVE`, `ADMITTED_AND_CURRENT`, bundle `@f8e44d1536cb` at origin/main `@dd780b957b30` |
+
+**Consequence.**
+
+- A Claude Code cloud swarm child is created with `source_url`
+  `https://github.com/Quantum-L9/.github`. Nothing inside a session can add it later
+  (`add_repo` refuses dot-named repositories; scope is fixed at start), and an
+  environment's repository list does not attach it.
+- In the bootstrap sitting, before role registration, the child attaches its
+  primary repository (push) and Cursor-Governance (read, or push when primary) with
+  `add_repo`, then catches its governance clone up with `ff.sh --ssot` when
+  `session_role.py` is missing. Attachment stays in the bootstrap sitting, never
+  mid-lane.
+- The authority checkout is resolved in the same order as
+  `ops/scripts/coding_projection_status.py`: an explicit path, then
+  `L9_AUTHORITY_ROOT`, then `L9_AUTHORITY_MANAGED_ROOT` or the managed
+  `$HOME/.l9/authority/.github`, then `.github` inside or beside the workspace.
+  The child passes that resolved path to both the non-shallow check and
+  `--authority-root`. `ensure_authority_checkout.sh` does not create the default
+  path when `L9_AUTHORITY_ROOT` is set, and it provisions `L9_AUTHORITY_MANAGED_ROOT`
+  when that variable relocates the managed checkout. The row above records the
+  default path this container provisioned; that path is the fallback. The child
+  never clones `.github` itself.
+- A Cursor Task is not a Claude Code cloud session. It does not call `add_repo`
+  or `register_repo_root`. It registers its role from the local lane checkout the
+  Task was given. The attachment bullets above are the Claude Code cloud path.
+- `add_repo` may still prompt or be refused by the host's permission layer
+  (observed above). That is the `permission_precondition` in the contract: reported
+  once at launch, not worked around.

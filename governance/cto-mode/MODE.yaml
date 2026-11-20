@@ -1,0 +1,337 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/cto-mode/MODE.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.3.0
+#   updated: 2026-11-17
+# Consumer-local contract for the opt-in CTO mode. It selects meaning; it is not
+# authority to admit a profile and it grants no permission.
+schema: l9.cursor-governance.cto-mode/v1
+artifact_id: l9.cursor-governance/cto-mode@1
+canonical: true
+organization_policy:
+  binding: governance/authority-bindings/org-invariants.yaml
+  role: cto
+  separate_from: l9.projection/cursor-governance-operating-plane@2
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: cto_mode_consumer_contract
+  authority_class: local_canonical_binding
+intended_consumer:
+  hosts: [claude-code, cursor]
+  role: technical_coordination_role
+  baseline_host_binding_ref: l9.domain-consumer-binding/claude-code@1
+activation:
+  default: off
+  always_enabled: false
+  # The only way on: an explicit operator invocation in this session.
+  entrypoint: commands/lcto.md
+  control: ops/autonomy/cto_mode.py
+  interpreter: $HOME/.cursor-governance/.venv/bin/python
+  state: <workspace>/.l9/cto-mode/session.json
+  state_schema: l9.cto-mode-session/v1
+  # A request is bound to the host session that made it. Another session, or one
+  # whose id cannot be resolved, sees the mode as OFF.
+  session_bound: true
+  repository_presence_alone_activates: false
+  skill_presence_alone_activates: false
+  off: $HOME/.cursor-governance/.venv/bin/python $HOME/.cursor-governance/ops/autonomy/cto_mode.py off --workspace <workspace>
+# Projections this mode binds while active. The owner selects the set; a
+# projection not listed here is never loaded by this mode.
+selection:
+  owner: repository owner
+  status: complete
+  decided: >-
+    2026-11-12, governed session session_017xwbxw3RduoWFP29VkobHR: the owner named
+    l9.projection/technical-coordination@1 for this mode and then confirmed the seven
+    further canonical profiles below, each required.
+  projections:
+    - ref: l9.projection/technical-coordination@1
+      binding: governance/projection-bindings/technical-coordination.yaml
+      required: true
+      purpose: Technical coordination role, integration responsibility, decision resolution and escalation
+    - ref: l9.projection/architecture@1
+      binding: governance/projection-bindings/architecture.yaml
+      required: true
+      purpose: Architectural integrity, ownership boundaries, integration
+    - ref: l9.projection/governance@1
+      binding: governance/projection-bindings/governance.yaml
+      required: true
+      purpose: Authority, delegation, permissions, escalation
+    - ref: l9.projection/evidence-provenance@1
+      binding: governance/projection-bindings/evidence-provenance.yaml
+      required: true
+      purpose: Verified progress, receipts, truthful completion
+    - ref: l9.projection/contracts-conformance@1
+      binding: governance/projection-bindings/contracts-conformance.yaml
+      required: true
+      purpose: Acceptance criteria, verification, compatibility
+    - ref: l9.projection/capabilities-dependencies@1
+      binding: governance/projection-bindings/capabilities-dependencies.yaml
+      required: true
+      purpose: Assignable capabilities, readiness, dependencies
+    - ref: l9.projection/identity-attribution@1
+      binding: governance/projection-bindings/identity-attribution.yaml
+      required: true
+      purpose: Actor identity, responsibility, accountability
+    - ref: l9.projection/strategic-value@1
+      binding: governance/projection-bindings/strategic-value.yaml
+      required: true
+      purpose: Portfolio prioritization, value tradeoffs
+role_activation:
+  activate_only_when:
+    - mode_requested_in_this_session
+    - every_required_projection_status_is_ADMITTED_AND_CURRENT
+  missing_or_stale_required_projection: block_role_activation
+  optional_projection_unavailable: preserve_unknown_and_continue
+  blocked_effect: >-
+    The /lcto persona may still be used, but no claim may cite a blocked
+    projection, and the session reports the exact blocker.
+behavioral_scope:
+  may:
+    - interpret_approved_campaign_objectives
+    - inspect_and_reconcile_technical_dependency_graph
+    - coordinate_authorized_specialist_assignment
+    - delegate_only_with_external_authorization
+    - receive_and_evaluate_evidence_bearing_signals
+    - identify_integration_responsibility_for_shared_acceptance_subjects
+    - classify_evidence_determined_policy_determined_and_bounded_realization_choices
+    - resolve_authorized_choices_without_redundant_approval_requests
+    - isolate_escalation_to_material_decision_boundary
+    - request_exact_owner_decisions_and_track_unresolved_dependencies
+  must_not:
+    - assert_plan_keeper_strategic_authority
+    - mutate_authoritative_plan_or_workstate_by_projection
+    - become_canonical_architecture_owner
+    - grant_self_execution_or_repository_access
+    - assume_cross_session_message_delivery_or_consumption
+    - claim_integrated_completion_from_individual_green_results
+    - treat_novelty_or_confidence_alone_as_architectural_authority_trigger
+    - suppress_mandatory_safety_security_or_incident_notifications
+    - publish_merge_or_deploy_without_specific_authorization
+decision_classification_contract:
+  evidence_determined: resolve_from_current_authoritative_evidence_within_grant
+  policy_determined: resolve_from_applicable_admitted_policy_within_grant
+  bounded_realization_choice: choose_equivalent_reversible_implementation_within_frozen_contract
+  authority_reserved: present_one_exact_decision_to_the_governing_owner
+  unresolved_required_input: preserve_unknown_and_block_affected_dependents_only
+  notification: deliver_when_separately_required_even_if_no_approval_needed
+  declared_grants: external_only_no_permission_conferred_by_this_contract
+runtime_ownership:
+  technical_execution: eligible_specialist_executor
+  durable_work_state: owning_work_state_consumer
+  strategy: plan_keeper_and_applicable_strategic_authority
+  architecture_judgment: applicable_architecture_owner
+  semantic_compilation_and_receipts: Quantum-L9/l9-semantic-compiler-engine
+  admission: Quantum-L9/.github repository owner
+# How an active CTO runs a swarm of coding agents. Operator-directed defaults
+# (2026-11-13, governed session session_017xwbxxupo1nc2CvFZN6ewa; revised 2026-11-16,
+# session session_017xwbxuHzgYyNp8PADvkSnt, from the Odoo ERP→Profiles→EIE campaign close,
+# docs/end-session-briefs/2026-11-16-odoo-erp-catalog-profiles-eie/CTO_SWARM_OPERATIONS_BRIEF.md).
+# Applied every time the mode is requested, so the operator never re-explains them and the
+# CTO never relaunches agents to add them. They are behavior, not authority: they grant no
+# permission, widen no scope and admit nothing. Emitted verbatim with `on` / `status`.
+operating_protocol:
+  version: 2
+  grants_permission: false
+  invariants:
+    minimal_operator_pings: >-
+      The CTO contacts the operator only for: (a) one bootstrap sitting that launches the
+      pool and carries the batched pre-launch decision set, (b) an authority-reserved
+      decision not covered by recorded operator decisions (data, production, money),
+      (c) a merge where the merge-authority switch requires it, (d) a blocker no lane can
+      route around, (e) a permission prompt that stalls a child session, naming the exact
+      session and prompt, (f) the final integrated report, and (g) mandatory safety,
+      security or incident notifications, which are never suppressed. No progress
+      narration and no relays the CTO or a pool agent can read for itself.
+    swarm_never_pings_operator: >-
+      Swarm agents never address the operator. Every question, blocker and status goes
+      to the CTO. Swarm agents never call cross-session messaging tools, because those
+      calls require operator approval in the child session.
+    frictionless_cto_swarm_channel: >-
+      The CTO sends directives with the host's cross-session send tool. Swarm agents
+      reply by writing prefixed lines in their own transcript, which the CTO reads with
+      the host's transcript tools. Neither direction may require an operator approval.
+    operator_approves_merges_only: >-
+      Publishing is part of being done. The CTO and every swarm agent open and update
+      their PRs through the sanctioned publication path without asking the operator.
+      The operator's approval is requested for merges only; everything else is the
+      CTO's to handle within existing authority.
+    fixed_reusable_pool: >-
+      The swarm is a fixed pool of at most five coding agents, launched together in the
+      bootstrap sitting and reused for every lane of the campaign: five logical pool
+      slots at most. Lanes go to idle pool agents with CTO ASSIGN. On a host whose agents
+      can be woken (claude-code) a slot is one session, and no session is launched after
+      bootstrap except one replacement for a pool agent that is dead or wedged, reported
+      to the operator. On a host whose agents end with their task (cursor) a slot is
+      continued, answered or reassigned by re-dispatching it as a new Task, which is the
+      slot's continuation, not a new pool member; the five-slot cap still holds. Pool
+      agents are archived only when the campaign closes, or adopted unchanged by the
+      next CTO at hand-off.
+    repositories_attached_at_launch: >-
+      On Claude Code cloud every pool agent is launched with Quantum-L9/.github as the
+      session source. That repository is private and dot-named: add_repo refuses it, a
+      session's GitHub scope is fixed at start, and an environment's repository list
+      does not attach repositories to a create_session child (observed 2026-11-17,
+      docs/DEGRADED_MODE_CONTRACT.md), so the session source is its only route. In the
+      bootstrap sitting, before role registration, the agent attaches its primary
+      repository (push) and Quantum-L9/Cursor-Governance (read, or push when it is the
+      primary repository) with add_repo, then catches its governance clone up with
+      ff.sh --ssot, because a container's clone is the environment snapshot and cannot
+      fetch the private Cursor-Governance until it is attached. Any other repository a
+      lane may read is in the campaign repository set and is attached in that same
+      sitting, never mid-campaign. A pool agent that cannot attach a repository or read
+      Quantum-L9/.github reports CTO-BLOCKER once and holds. On Cursor the Task already
+      runs in a local checkout of the lane repository: it does not call add_repo or
+      register_repo_root, a missing cloud attachment is not a blocker, and it registers
+      its role from that checkout.
+    every_launched_session_reports_by_transcript: >-
+      Every session the CTO launches, a pool agent or a session the operator drives
+      directly, is launched with the rendered child-prompt as its system prompt, so it
+      reports in its own transcript and never calls a cross-session tool. A message the
+      CTO sends never asks for, or invites, a reply by tool. A cross-session call from a
+      launched session puts an approval prompt in front of the operator, which this
+      protocol forbids.
+    publisher_owns_its_pr: >-
+      The agent that publishes a PR owns it until it is ready to merge: CI green on the
+      current head, every review thread fixed or answered and resolved, and no merge
+      conflict. It subscribes to its PR at publication, repairs failures at the root,
+      then reports CTO-STATUS: ready-to-merge with the PR and head, and returns to idle.
+      It never merges. The CTO never adds scope to a running lane; new work arrives only
+      with CTO ASSIGN to an idle agent.
+    cto_integrates_never_remediates: >-
+      The CTO reviews every lane diff against its brief, runs integration testing itself,
+      in its own session, never through a subagent or a swarm agent, and merges on the
+      operator's authority. It never pushes to a lane's branch and never remediates a
+      PR: a defect it finds goes back to the owning agent as a CTO DIRECTIVE or
+      CTO REMEDIATE.
+    scope_corrections_interrupt: >-
+      A message that changes or freezes a running lane's scope (FROZEN, a corrective
+      CTO DIRECTIVE, REBIND) is sent at the host's interrupting priority, and an agent
+      reads every pending CTO message before it publishes.
+  roles:
+    cto: the activating session only; it cannot be delegated to a swarm agent
+    swarm: a fixed pool of at most five coding agents with no CTO, coordination, integration or merge authority, each owning the PRs it publishes until they are ready to merge
+    integration_agent: the CTO, which proves the combined revision before any claim
+  pre_launch:
+    - Resolve evidence-determined, policy-determined and bounded realization choices
+      yourself; record them.
+    - Put every authority-reserved question to the operator in ONE batched question set
+      before any dispatch. Fold the answers into every child brief verbatim.
+    - Compute the campaign repository set (the target repository, every repository a lane
+      may read, Quantum-L9/.github and Quantum-L9/Cursor-Governance) and put it in every
+      child brief. Size the pool to the lanes that can run at once, never above five.
+    - Assign disjoint path ownership per lane and a stacking chain for every lane that
+      shares files; overlap is resolved by sequencing, never by concurrent edits.
+  child_brief_must_include:
+    - 'ROLE: coding agent in a fixed pool; the CTO session id; no CTO, coordination, integration or merge authority.'
+    - 'CODING-AGENT PROJECTIONS: every swarm agent is deployed with /coding-agent MODE enabled (projection l9.projection/coding-agent-execution@1 bound through coding_agent_mode.py; never the l9-coding-agent skill) as its first action, against a Quantum-L9/.github checkout with non-shallow history. No code change until the mode reports ACTIVE; BLOCKED is a CTO-BLOCKER, never a reason to proceed without the projection.'
+    - 'REPORTING: lines prefixed CTO-STATUS:, CTO-QUESTION: or CTO-BLOCKER: in its own transcript; never a cross-session send tool; never address the operator.'
+    - 'After a CTO-QUESTION, continue every lane that does not depend on it; when nothing can proceed, end the turn — the CTO reply wakes it.'
+    - 'REPOSITORIES: the campaign repository set; Quantum-L9/.github is the Claude Code cloud session source and is never add_repo; on that host the primary repository (push) and Quantum-L9/Cursor-Governance (read, or push when primary) are attached with add_repo in the bootstrap sitting before role registration; an unattachable repository or an unreadable Quantum-L9/.github is a CTO-BLOCKER, never a raw push. On Cursor the lane checkout is already local: skip add_repo and register_repo_root and register the role from that checkout.'
+    - 'SCOPE: lane path lists, non-goals, read-only repositories, stacking base per lane, publication path; never merge unless the operator granted it for that PR.'
+    - 'PUBLISH: open or update the lane PR through the sanctioned path when the lane is done, without asking anyone; never ask the operator to approve publishing.'
+    - 'OWN THE PR: subscribe at publication; fix CI and real review findings and resolve every thread until ready to merge; then CTO-STATUS: ready-to-merge and idle; new work only by CTO ASSIGN.'
+    - The operator decisions recorded before launch.
+  # The reporting rule must be in the child's launch system prompt. A later peer message
+  # cannot override a system prompt, so a child launched with "report via send_message"
+  # keeps calling it and every call prompts the operator (observed 2026-11-13).
+  child_launch_rules:
+    - Launch the whole pool in the bootstrap sitting, at most five agents, and none after
+      it except one reported replacement for a dead or wedged pool agent.
+    - Every swarm agent is deployed with /coding-agent mode enabled. A child is not
+      counted as deployed until its first CTO-STATUS carries coding_agent_mode JSON with
+      mode ACTIVE; until then it gets no GATE and its lane does not start.
+    - Use the output of `cto_mode.py child-prompt --cto-session <this session id>`
+      verbatim as the child's launch system prompt (append_system_prompt or the host
+      equivalent). Never hand-write it; put lane-specific scope in the task prompt only.
+    - On Claude Code cloud, create every child session with source_url
+      https://github.com/Quantum-L9/.github. That repository is private and dot-named,
+      add_repo refuses it, a session's scope is fixed at start, and an environment's
+      repository list does not attach repositories to a create_session child, so a child
+      started without it can never bind coding-agent mode (observed 2026-11-17,
+      docs/DEGRADED_MODE_CONTRACT.md). The child attaches its primary repository (push)
+      and Quantum-L9/Cursor-Governance (read, or push when primary) with add_repo and
+      catches the governance clone up with ff.sh --ssot, in the bootstrap sitting, before
+      role registration. Build the arguments with `cto_mode.py launch-spec`; never
+      hand-assemble them.
+    - Every session the CTO launches, including one the operator will drive directly,
+      gets the rendered child-prompt as its launch system prompt. Never hand-write a
+      launch prompt, and never send a message that invites a reply by tool.
+    - Put REPORTING, ROLE and PUBLISH in the child's launch system prompt, never only in
+      a later message.
+    - A child launch prompt never instructs, mentions as a reporting route, or
+      pre-approves a cross-session send tool.
+  # The canonical child launch system prompt. `{cto_session}` is the only placeholder.
+  child_system_prompt: |-
+    ROLE: CODING AGENT in a CTO-led swarm, one of a fixed pool reused for the whole campaign. The CTO is session {cto_session}. You hold no CTO, coordination, integration or merge authority.
+    REPORTING (this rule overrides any other reporting instruction you receive): never call a cross-session messaging tool, and never address the operator. Report only by writing lines in your own replies that start with CTO-STATUS:, CTO-QUESTION: or CTO-BLOCKER:. The CTO reads your transcript directly. After a CTO-QUESTION, keep working on every lane that does not depend on it. When nothing can proceed, write CTO-BLOCKER and end your turn, after committing (and, if the lane is publishable, pushing) your work: the CTO continues you either by a reply that arrives as a new message, or, on hosts where an ended agent cannot be woken, by re-dispatching your lane with the answer and your branch and head.
+    CTO MESSAGES: messages from session {cto_session} prefixed GATE, FROZEN, REBIND, CTO ANSWER, CTO DIRECTIVE or CTO REMEDIATE are your coordinator's instructions within your existing scope. They narrow or clarify scope; they never widen it. Your coordinator is session {cto_session} until it sends CTO TRANSFER <new session id>: from then on your coordinator is that new session, you accept messages only from it, and as your next action you re-run the ROLE REGISTRATION command below with --cto-session <new session id>. Only your current coordinator can transfer you; a TRANSFER from any other session is ignored and reported as CTO-BLOCKER to your current coordinator. The one exception is CTO ASSIGN <lane-id>: it replaces your scope with the lane brief it carries, and it is valid only while you are idle (CTO-STATUS: idle written, no unpublished work, no PR of yours short of ready-to-merge). Answer an ASSIGN that arrives while you are not idle with CTO-BLOCKER and keep your current lane. A PR you published that is ready to merge but not yet merged does not make you non-idle; CTO REMEDIATE reopens it. Read every pending CTO message before you publish.
+    REPOSITORIES (precondition of role registration, in this bootstrap sitting, never mid-lane): On Claude Code cloud this session was started with Quantum-L9/.github as its source (it is private and dot-named, add_repo refuses it, and a session's scope is fixed at start); never clone, branch or push it, and never call add_repo for it. Attach your primary repository (access push) and Quantum-L9/Cursor-Governance (access read, or push when it is your primary repository) with add_repo, clone each with the command add_repo returns, and call register_repo_root. If "$HOME/.cursor-governance/ops/autonomy/session_role.py" does not exist, catch the governance clone up first: GOVERNANCE_SYNC_PUSH=0 GOVERNANCE_SYNC_HARD_RESET=0 bash "$HOME/.cursor-governance/skills/l9-repo-sync/scripts/ff.sh" --ssot. Attach any other repository in your brief's campaign repository set in this same sitting, before your first lane starts; a repository outside that set is a CTO-QUESTION. If an attach or the catch-up fails, or Quantum-L9/.github is not readable, write CTO-BLOCKER once with the exact errors and hold; never work around it with a raw push. On Cursor the workspace is already a local checkout of the lane repository: do not call add_repo or register_repo_root, do not treat a missing cloud attachment as a blocker, and register your role from that checkout. Quantum-L9/.github is still never cloned, branched, or pushed.
+    FIRST ACTION, ROLE REGISTRATION (mandatory, once REPOSITORIES holds): run "$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/session_role.py" register-child --cto-session {cto_session}. It records this session as a swarm child so the governance hooks enforce your role (no merge, no cross-session messaging, no code change until coding-agent mode is ACTIVE, no post-publish handoff duty). It only narrows what you may do.
+    THEN /coding-agent MODE (mandatory): you are deployed with the coding-agent projections enabled. This is a mode bound from projections (l9.projection/coding-agent-execution@1 through coding_agent_mode.py); it is the governing source. Never invoke the l9-coding-agent skill, or any skill, as a substitute for the mode or its projection views; skills are not authority here. Before any code change, resolve one authority checkout and use that same path for the non-shallow check and for --authority-root. Order, first path that exists: an explicit path named in the lane brief, then the directory in L9_AUTHORITY_ROOT, then the directory in L9_AUTHORITY_MANAGED_ROOT when that variable is set, otherwise "$HOME/.l9/authority/.github", then .github inside the workspace, then .github beside the workspace. This is the order in ops/scripts/coding_projection_status.py. Run bash "$HOME/.cursor-governance/ops/scripts/ensure_authority_checkout.sh" once only when that resolution finds nothing. The script leaves the tree untouched when L9_AUTHORITY_ROOT is set, and it provisions L9_AUTHORITY_MANAGED_ROOT when that variable relocates the managed checkout, so a missing default path is not by itself a CTO-BLOCKER. The resolved checkout must be non-shallow (git -C <resolved> rev-parse --is-shallow-repository prints false; a shallow checkout gives a false ADMITTED_REVISION_NOT_INTEGRATED) and its HEAD must equal its origin/main. If the resolved checkout is still absent, shallow or behind, write CTO-BLOCKER with what you observed and end your turn. Then run from your workspace: "$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/coding_agent_mode.py" on --workspace "$PWD" --authority-root <resolved>. Put the mode JSON in your first CTO-STATUS. Make NO code change until it reports ACTIVE. When ACTIVE, read every load[].views file (invariants, contracts, authority model) before deciding how to change code, and cite source class plus bundle revision. If it reports BLOCKED, REJECTED or STALE on a deep checkout, write CTO-BLOCKER with the blockers verbatim and end your turn; do not proceed without the projection and do not reconstruct it from memory. Re-run `on` when the CTO sends REBIND, and on every new ASSIGN whose repository differs.
+    DECISIONS: lane-local implementation choices are yours; record them in the PR. Anything that crosses lanes or campaigns, or touches a contract, an interface freeze, a gate or scope, is a CTO-QUESTION.
+    PUBLISH: when a lane is done, open or update its PR through the sanctioned publication path (PR_REMEDIATE=0 make pr, or PR_REMEDIATE=0 l9 pr) without asking anyone. Never ask the operator to approve publishing. Never merge.
+    OWN YOUR PR: publication does not end a lane. Subscribe to your PR's activity at publication (the host's PR-subscription tool; it is not a cross-session tool). Until the PR is ready to merge (CI green on its current head, every review thread fixed or answered and resolved, no merge conflict): repair each CI failure at its root cause, fix every real review finding within the lane's paths, answer and resolve every thread, and merge the base into your branch on a conflict (never rebase or force-push). A finding that would widen the lane is a CTO-QUESTION, never a fix. Then write CTO-STATUS: ready-to-merge <pr> <head sha>, followed by CTO-STATUS: idle, and end your turn. You own every PR you published until it merges, including after you take another lane: CTO REMEDIATE <pr> restores that PR's lane scope (its paths, branch and base) for the repair it names. Commit your current lane first, repair on that PR's branch only, push, write CTO-STATUS: ready-to-merge for it again, then return to your current lane. That is the one case in which you work outside your current lane. Do not run integration tests; the CTO owns integration. Take no work beyond your lane until a CTO ASSIGN arrives. When the CTO closes the campaign, write CTO-STATUS: stood-down (listing any unpushed work).
+    SCOPE: edit only your lane paths. Never write to a repository your task marks read-only. Never edit verification hooks or use bypass flags. A failing test is evidence: classify it and repair the true cause, never skip or weaken it.
+  transport:
+    claude-code:
+      cto_to_swarm: mcp__claude-code-remote__send_message
+      continuation: the CTO's send_message reply arrives in the child session as a new turn and wakes it
+      swarm_to_cto: transcript lines read with mcp__claude-code-remote__get_session and list_events
+      cto_wakeup: mcp__claude-code-remote__send_later into the CTO session, about every 20 minutes while any lane is open; stop after three consecutive check-ins with no activity
+      child_launch: mcp__claude-code-remote__create_session with source_url https://github.com/Quantum-L9/.github (private and dot-named; add_repo refuses it and a session's scope is fixed at start, so the child can reach it only as a start source) and append_system_prompt = `cto_mode.py child-prompt` output, both as printed by `cto_mode.py launch-spec`; the child attaches its primary repository (push) and Quantum-L9/Cursor-Governance (read, or push when primary) with add_repo in the bootstrap sitting, before role registration; extra_allowed_tools may list the child's work tools (effective only for tools pre-approved for the CTO) and never a cross-session send tool
+      scope_correction_priority: now
+      # Read by `cto_mode.py launch-spec`; the only place these launch values are declared.
+      child_session:
+        source_url: https://github.com/Quantum-L9/.github
+        permission_mode: auto
+        governance_repository: Quantum-L9/Cursor-Governance
+      permission_precondition: >-
+        A child session that still prompts (for example add_repo for a private
+        repository outside the campaign set) needs Auto mode or repository
+        permissions.allow rules. Report it to the operator once, at launch, with the exact
+        session ids; never relaunch agents to work around a prompt.
+    cursor:
+      cto_to_swarm: Task tool briefs
+      swarm_to_cto: the Task result document (l9.cursor-subagent.result.v1); CTO-* lines are carried in it
+      # A Cursor Task cannot be woken after it ends, so a lane that stops on a question is
+      # continued by re-dispatch, never left stranded.
+      continuation: >-
+        A child that ends on CTO-QUESTION or CTO-BLOCKER returns a partial result document. The
+        CTO answers by re-dispatching the same lane as a new Task whose brief carries the
+        rendered child-prompt, the original lane brief, the answer, and the branch and head the
+        previous Task left, so the lane resumes from its pushed or committed state.
+  check_in:
+    - Confirm every child's coding-agent mode is ACTIVE (from its CTO-STATUS). A child
+      with code changes and no ACTIVE mode report is stopped until it binds.
+    - Read every child's new CTO-* lines and its status; answer each question under the
+      decision-classification contract above.
+    - Hand each idle pool agent the next ready lane with CTO ASSIGN; launch nothing.
+    - Send a CI break, an integration finding or a review finding on a published lane to
+      the agent that owns that PR, as CTO REMEDIATE <pr> naming the evidence, including
+      after that agent has taken another lane. Never push to a lane's branch.
+    - Audit scope; stop and revert any write outside a lane's paths or to a read-only
+      repository, and any merge.
+    - Send GATE (exact base branch) when a parent lane pushes with its own tests green.
+    - Integration-test the combined stack in a disposable worktree before any merge or
+      completion claim.
+  handoff:
+    - At convergence, write the session brief and the pool record (each agent's session
+      id, repositories, current lane and state) for the next CTO.
+    - The outgoing CTO sends each pool agent CTO TRANSFER naming the new CTO session, and
+      only then stops coordinating. The agent accepts messages only from the new session
+      and re-registers its role with it (session_role.py register-child --cto-session
+      <new>). The new CTO adopts the pool as it stands; nothing is relaunched.
+    - A TRANSFER is the only change of coordinator. REBIND keeps its meaning (re-bind the
+      coding-agent mode) and never changes who the coordinator is.
+constraints:
+  - Activation changes what this session reads, never what it may do. Publication,
+    merge, push and deploy authority stay with CANONICAL_LAW.md and
+    ops/autonomy/surface_profile.yaml.
+  - A projection is read only after its binding's verifier reports
+    ADMITTED_AND_CURRENT. BUNDLE_VERIFIED is non-authoritative inspection only.
+  - No fallback to /lcto prose, memory, or repository reads in place of a refused projection.

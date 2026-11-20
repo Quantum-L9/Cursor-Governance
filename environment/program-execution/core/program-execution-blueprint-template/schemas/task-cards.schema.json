@@ -90,6 +90,9 @@
               "AUDIT"
             ]
           },
+          "projection_context": {
+            "type": "boolean"
+          },
           "objective": {
             "type": "string",
             "minLength": 1

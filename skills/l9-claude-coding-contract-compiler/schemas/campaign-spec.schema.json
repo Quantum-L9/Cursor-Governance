@@ -4,10 +4,7 @@
   "description": "Canonical, hand-authored input for compile_contract.py. One spec is the single source of truth for a whole contract chain; JSON instances, CLAUDE.md, settings.json and preflight.sh are derived outputs. IDs, handoff seams, source_commits and chain_digest are NEVER authored here \u2014 the compiler derives them from item order.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "campaign",
-    "items"
-  ],
+  "required": ["campaign", "items"],
   "properties": {
     "campaign": {
       "type": "object",
@@ -44,22 +41,14 @@
             {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "id",
-                "required_state"
-              ],
+              "required": ["id", "required_state"],
               "properties": {
                 "id": {
                   "type": "string"
                 },
                 "required_state": {
                   "type": "string",
-                  "enum": [
-                    "merged_and_green",
-                    "merged",
-                    "present",
-                    "committed_and_validated"
-                  ]
+                  "enum": ["merged_and_green", "merged", "present", "committed_and_validated"]
                 }
               }
             }
@@ -94,10 +83,7 @@
         "dpk": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "manifest",
-            "rollback_target"
-          ],
+          "required": ["manifest", "rollback_target"],
           "properties": {
             "manifest": {
               "$ref": "dpk-manifest.schema.json"
@@ -110,28 +96,20 @@
               "type": "boolean"
             },
             "evaluation_suite": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             }
           }
         },
         "validation": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "cold_resume",
-            "commit_gate"
-          ],
+          "required": ["cold_resume", "commit_gate"],
           "description": "Explicit target-repository validation authority. The compiler projects these commands verbatim and MUST NOT infer an ecosystem or package manager.",
           "properties": {
             "cold_resume": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "commands"
-              ],
+              "required": ["commands"],
               "properties": {
                 "commands": {
                   "type": "array",
@@ -148,9 +126,7 @@
             "commit_gate": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "commands"
-              ],
+              "required": ["commands"],
               "properties": {
                 "commands": {
                   "type": "array",
@@ -175,14 +151,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "key",
-          "title",
-          "allowed_files",
-          "verify_proof",
-          "sizing",
-          "readiness"
-        ],
+        "required": ["key", "title", "allowed_files", "verify_proof", "sizing", "readiness"],
         "properties": {
           "key": {
             "type": "string",
@@ -199,10 +168,7 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "deliverable",
-                "path"
-              ],
+              "required": ["deliverable", "path"],
               "properties": {
                 "deliverable": {
                   "type": "string"
@@ -233,21 +199,14 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "path",
-                "guarantee"
-              ],
+              "required": ["path", "guarantee"],
               "properties": {
                 "path": {
                   "type": "string"
                 },
                 "guarantee": {
                   "type": "string",
-                  "enum": [
-                    "behavior_unchanged",
-                    "comment_only",
-                    "schema_compatible_only"
-                  ]
+                  "enum": ["behavior_unchanged", "comment_only", "schema_compatible_only"]
                 }
               }
             }
@@ -260,12 +219,7 @@
           "sizing": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "new_files",
-              "modified_files",
-              "test_cases",
-              "commits"
-            ],
+            "required": ["new_files", "modified_files", "test_cases", "commits"],
             "properties": {
               "new_files": {
                 "type": "integer",
@@ -293,9 +247,7 @@
           "readiness": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "categories"
-            ],
+            "required": ["categories"],
             "description": "REAL DPK readiness assessment (required). No fabricated defaults.",
             "properties": {
               "categories": {

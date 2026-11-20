@@ -34,32 +34,16 @@
     "target": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind",
-        "path",
-        "selector",
-        "present"
-      ],
+      "required": ["kind", "path", "selector", "present"],
       "properties": {
         "kind": {
-          "enum": [
-            "file",
-            "generated_file",
-            "external",
-            "surface"
-          ]
+          "enum": ["file", "generated_file", "external", "surface"]
         },
         "path": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "selector": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "present": {
           "type": "boolean"
@@ -69,12 +53,7 @@
     "owner": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "authority_class",
-        "execution_mode",
-        "executor"
-      ],
+      "required": ["id", "authority_class", "execution_mode", "executor"],
       "properties": {
         "id": {
           "type": "string",
@@ -85,31 +64,17 @@
           "minLength": 1
         },
         "execution_mode": {
-          "enum": [
-            "owner_native",
-            "generator",
-            "specialist",
-            "external",
-            "none"
-          ]
+          "enum": ["owner_native", "generator", "specialist", "external", "none"]
         },
         "executor": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       }
     },
     "ownership": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "obligation_owner",
-        "semantic_owner",
-        "execution_owner",
-        "mutation_guard"
-      ],
+      "required": ["obligation_owner", "semantic_owner", "execution_owner", "mutation_guard"],
       "properties": {
         "obligation_owner": {
           "type": "string",
@@ -124,38 +89,20 @@
           "minLength": 1
         },
         "mutation_guard": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       }
     },
     "assessment": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "analyzer",
-        "status",
-        "findings",
-        "disposition",
-        "mutation_guard"
-      ],
+      "required": ["analyzer", "status", "findings", "disposition", "mutation_guard"],
       "properties": {
         "analyzer": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "status": {
-          "enum": [
-            "NOT_REQUIRED",
-            "NOT_APPLICABLE",
-            "PASS",
-            "NEEDS_IMPROVEMENT",
-            "BLOCKED"
-          ]
+          "enum": ["NOT_REQUIRED", "NOT_APPLICABLE", "PASS", "NEEDS_IMPROVEMENT", "BLOCKED"]
         },
         "findings": {
           "type": "array",
@@ -182,10 +129,7 @@
                 "minLength": 1
               },
               "severity": {
-                "enum": [
-                  "material",
-                  "blocking"
-                ]
+                "enum": ["material", "blocking"]
               },
               "property": {
                 "type": "string",
@@ -205,28 +149,16 @@
                 "uniqueItems": true
               },
               "remediation_class": {
-                "enum": [
-                  "SURGICAL",
-                  "HANDOFF"
-                ]
+                "enum": ["SURGICAL", "HANDOFF"]
               }
             }
           }
         },
         "disposition": {
-          "enum": [
-            "IMPROVE",
-            "PRESERVE",
-            "HANDOFF",
-            "UNKNOWN",
-            "NOT_APPLICABLE"
-          ]
+          "enum": ["IMPROVE", "PRESERVE", "HANDOFF", "UNKNOWN", "NOT_APPLICABLE"]
         },
         "mutation_guard": {
-          "type": [
-            "object",
-            "null"
-          ],
+          "type": ["object", "null"],
           "additionalProperties": false,
           "required": [
             "id",
@@ -244,34 +176,19 @@
               "minLength": 1
             },
             "status": {
-              "enum": [
-                "RESOLVED",
-                "BLOCKED"
-              ]
+              "enum": ["RESOLVED", "BLOCKED"]
             },
             "source": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "rule": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "tier": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "justification_marker": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "evidence_ids": {
               "type": "array",
@@ -290,11 +207,7 @@
     "trigger": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "rules",
-        "source_changes",
-        "basis"
-      ],
+      "required": ["rules", "source_changes", "basis"],
       "properties": {
         "rules": {
           "type": "array",
@@ -311,11 +224,7 @@
           "uniqueItems": true
         },
         "basis": {
-          "enum": [
-            "changed_files",
-            "baseline",
-            "run_mutation"
-          ]
+          "enum": ["changed_files", "baseline", "run_mutation"]
         }
       }
     },
@@ -335,36 +244,19 @@
       ],
       "properties": {
         "kind": {
-          "enum": [
-            "deterministic",
-            "semantic"
-          ]
+          "enum": ["deterministic", "semantic"]
         },
         "status": {
-          "enum": [
-            "QUALIFIED",
-            "AWAITING",
-            "NOT_REQUIRED",
-            "BLOCKED"
-          ]
+          "enum": ["QUALIFIED", "AWAITING", "NOT_REQUIRED", "BLOCKED"]
         },
         "semantic_owner": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "harvest_target": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "harvest_request_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "concept_ids": {
           "type": "array",
@@ -378,12 +270,7 @@
     "required_action": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "type",
-        "mode",
-        "owner",
-        "executor"
-      ],
+      "required": ["type", "mode", "owner", "executor"],
       "properties": {
         "type": {
           "enum": [
@@ -398,22 +285,14 @@
           ]
         },
         "mode": {
-          "enum": [
-            "OWNER_NATIVE",
-            "SEMANTICALLY_QUALIFIED",
-            "EXTERNAL_OWNER",
-            "NONE"
-          ]
+          "enum": ["OWNER_NATIVE", "SEMANTICALLY_QUALIFIED", "EXTERNAL_OWNER", "NONE"]
         },
         "owner": {
           "type": "string",
           "minLength": 1
         },
         "executor": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       }
     },
@@ -426,11 +305,7 @@
     "lifecycle": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "status",
-        "reason",
-        "terminal"
-      ],
+      "required": ["status", "reason", "terminal"],
       "properties": {
         "status": {
           "enum": [
@@ -457,10 +332,7 @@
     "validation": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "required",
-        "results"
-      ],
+      "required": ["required", "results"],
       "properties": {
         "required": {
           "type": "array",
@@ -474,25 +346,14 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "name",
-              "status",
-              "evidence_ids",
-              "detail"
-            ],
+            "required": ["name", "status", "evidence_ids", "detail"],
             "properties": {
               "name": {
                 "type": "string",
                 "minLength": 1
               },
               "status": {
-                "enum": [
-                  "PASS",
-                  "FAIL",
-                  "BLOCKED",
-                  "UNKNOWN",
-                  "NotApplicable"
-                ]
+                "enum": ["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NotApplicable"]
               },
               "evidence_ids": {
                 "type": "array",
@@ -535,16 +396,10 @@
           "minLength": 1
         },
         "base_ref": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "base_sha": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "source_head_sha": {
           "type": "string",
@@ -555,26 +410,14 @@
           "minLength": 1
         },
         "comparison_mode": {
-          "enum": [
-            "merge_base_to_head",
-            "worktree_to_head",
-            "snapshot",
-            "unknown"
-          ]
+          "enum": ["merge_base_to_head", "worktree_to_head", "snapshot", "unknown"]
         }
       }
     },
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "type",
-        "source",
-        "locator",
-        "epistemic",
-        "supports"
-      ],
+      "required": ["id", "type", "source", "locator", "epistemic", "supports"],
       "properties": {
         "id": {
           "type": "string",
@@ -599,20 +442,10 @@
         "locator": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "value"
-          ],
+          "required": ["kind", "value"],
           "properties": {
             "kind": {
-              "enum": [
-                "path",
-                "rule",
-                "sha",
-                "symbol",
-                "artifact",
-                "value"
-              ]
+              "enum": ["path", "rule", "sha", "symbol", "artifact", "value"]
             },
             "value": {
               "type": "string",
@@ -621,11 +454,7 @@
           }
         },
         "epistemic": {
-          "enum": [
-            "CONFIRMED",
-            "INFERENCE",
-            "UNKNOWN"
-          ]
+          "enum": ["CONFIRMED", "INFERENCE", "UNKNOWN"]
         },
         "supports": {
           "type": "string",

@@ -1,0 +1,47 @@
+{
+  "schema": "l9.strategic-planner-value-claim/v1",
+  "claim_type": "objective_relative_quantitative_strategic_value",
+  "objective_ref": "objective:net-value",
+  "utility_unit": "USD",
+  "baseline_ref": "baseline:feasible-no-action",
+  "horizon_ref": "2027",
+  "model_revision_ref": "model:v1",
+  "evidence_snapshot_ref": "evidence:v1",
+  "focal_beneficiary_ref": "actor:A",
+  "counterfactual_identification_ref": "study:intervention-vs-control",
+  "feasibility": "admissible",
+  "feasibility_evidence_refs": ["formal:constraints-pass"],
+  "effects": [
+    {
+      "effect_id": "future-gross",
+      "period_ref": "2027-Q1",
+      "economic_class": "SFV",
+      "accounting_home": "SFV",
+      "amount": "100",
+      "evidence_refs": ["source:counterfactual-gross"]
+    },
+    {
+      "effect_id": "cost-20",
+      "period_ref": "2027-Q1",
+      "economic_class": "DC",
+      "accounting_home": "DC",
+      "amount": "20",
+      "evidence_refs": ["source:cost-estimate"]
+    }
+  ],
+  "declared_components": {
+    "IEV": "0",
+    "SFV": "100",
+    "DC": "20",
+    "ERL": "0",
+    "OC": "0"
+  },
+  "declared_sv": "80",
+  "method": {
+    "kind": "bounded_scenarios",
+    "method_ref": "numeric:scenario-v1",
+    "owner": "Numerical Reasoning",
+    "probabilistic": false
+  },
+  "claim_strength": "declared"
+}

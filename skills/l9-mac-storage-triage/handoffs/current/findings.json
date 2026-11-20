@@ -493,9 +493,7 @@
     }
   ],
   "repair": {
-    "phase_a_actions": [
-      "purge_stale_caches"
-    ],
+    "phase_a_actions": ["purge_stale_caches"],
     "phase_a_gib": 12.34,
     "phase_b_gib": 4.14,
     "phase_c_gib": 0

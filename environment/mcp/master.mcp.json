@@ -28,29 +28,56 @@
   "mcpServers": {
     "n8n-workflows Docs": {
       "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://gitmcp.io/Zie619/n8n-workflows"
-      ]
+      "args": ["mcp-remote", "https://gitmcp.io/Zie619/n8n-workflows"]
     },
     "Playwright": {
       "command": "npx",
-      "args": [
-        "@playwright/mcp@latest"
-      ]
+      "args": ["@playwright/mcp@latest"]
     },
     "firecrawl-mcp": {
       "command": "npx",
-      "args": [
-        "-y",
-        "firecrawl-mcp"
-      ],
+      "args": ["-y", "firecrawl-mcp"],
       "env": {
         "FIRECRAWL_API_KEY": "${FIRECRAWL_API_KEY}"
       }
     },
     "Tavily Expert": {
       "url": "${TAVILY_MCP_URL}"
+    },
+    "perplexity": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn perplexity"
+      ]
+    },
+    "Notion": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn notion"
+      ]
+    },
+    "n8n-mcp": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn n8n"
+      ]
+    },
+    "semgrep": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn semgrep"
+      ]
+    },
+    "GitHub": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "exec \"$HOME/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh\" spawn github"
+      ]
     }
   }
 }

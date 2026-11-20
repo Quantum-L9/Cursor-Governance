@@ -3,12 +3,7 @@
   "roles": {
     "coordinator": {
       "mutation_allowed": false,
-      "capabilities": [
-        "campaign.inspect",
-        "graph.inspect",
-        "scheduler.request",
-        "status.inspect"
-      ]
+      "capabilities": ["campaign.inspect", "graph.inspect", "scheduler.request", "status.inspect"]
     },
     "recon": {
       "mutation_allowed": false,
@@ -16,6 +11,7 @@
         "repository.read",
         "repository.search",
         "graphiti.read",
+        "test.run",
         "artifact.write_recon_report"
       ]
     },
@@ -63,12 +59,7 @@
     },
     "poller": {
       "mutation_allowed": false,
-      "capabilities": [
-        "pr.inspect",
-        "ci.inspect",
-        "review.inspect",
-        "artifact.write_poll_report"
-      ]
+      "capabilities": ["pr.inspect", "ci.inspect", "review.inspect", "artifact.write_poll_report"]
     },
     "failure_classifier": {
       "mutation_allowed": false,
@@ -114,11 +105,7 @@
     },
     "evidence_writer": {
       "mutation_allowed": false,
-      "capabilities": [
-        "artifact.read",
-        "receipt.append",
-        "artifact.write_evidence_receipt"
-      ]
+      "capabilities": ["artifact.read", "receipt.append", "artifact.write_evidence_receipt"]
     }
   },
   "globally_forbidden_capabilities": [

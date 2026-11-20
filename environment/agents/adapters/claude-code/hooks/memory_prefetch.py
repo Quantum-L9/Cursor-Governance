@@ -230,6 +230,73 @@ def _memory_health(session_id: str) -> dict[str, str]:
     return {"status": status, "detail": detail[:300]}
 
 
+def _close_gaps(roots: list[Path], session_id: str) -> list[str]:
+    """Open this session per root and name any prior session left unclosed.
+
+    Local receipts only — no memory call, so SessionStart stays health-only
+    (CANONICAL_LAW §8.9). Writing the open latch rotates the previous session
+    into ``previous_opened.json``; a prior session with no successful close
+    receipt is a lifecycle CLOSE_GAP (ADR-0032), repaired by ``/end-session``.
+    Before this, a Claude session never wrote an open latch, so a failed close
+    could not be detected at all. ``.l9/`` is git-excluded in every governed
+    workspace (``ops/scripts/lib/session_git_excludes.sh``).
+    """
+    try:
+        from ops.graphiti.hydration.session_latches import close_gap_reason, write_open_latch
+    except Exception:  # noqa: BLE001 - visibility aid, never a SessionStart failure
+        return []
+    gaps: list[str] = []
+    for root in roots:
+        try:
+            write_open_latch(root, session_id)
+            reason = close_gap_reason(root, session_id)
+        except (OSError, ValueError):
+            continue
+        if reason:
+            gaps.append(f"{root.name}: {reason}")
+    return gaps
+
+
+def _carrier_lines(namespaces: list[str]) -> list[str]:
+    """SessionStart lines for the relay / hosted carrier; empty on a local surface."""
+
+    try:
+        mb.ensure_importable()
+        from ops.memory.hook_carrier import HOSTED, RELAY, CarrierError, resolve_carrier
+    except Exception:  # noqa: BLE001 - SessionStart is fail-open
+        return []
+    try:
+        carrier = resolve_carrier()
+    except CarrierError as exc:
+        return [f"hook_carrier=INVALID ({exc}); hook-lane writes are refused"]
+    if carrier not in {RELAY, HOSTED}:
+        return []
+    targets = json.dumps(namespaces or ["<namespace>"])
+    hydrate_line = (
+        f'hydrate_shared=call memory_hydrate {{"task": "<task>", "namespaces": {targets}}} '
+        + "on the account connector (not the operator CLI)"
+    )
+    if carrier == HOSTED:
+        return [
+            "hook_carrier=hosted — hook records go straight to the shared Memory 3.0 store as "
+            + "the hook principal (ADR-0055); the local runtime health above is container "
+            + "scratch, not that store",
+            hydrate_line,
+            "relay_writes=only records the hosted transport could not carry are queued; the "
+            + "Stop hook drains them itself and never asks you for them",
+        ]
+    carrier_line = (
+        "hook_carrier=relay — the shared Memory 3.0 store is the account-managed L9 Memory "
+        + "connector; the local runtime health above is container scratch, not that store"
+    )
+    relay_line = (
+        "relay_writes=hook records are kept in the relay outbox (no hook credential bound); "
+        + "nothing is asked of you and the Stop hook never blocks for them (ADR-0055) — "
+        + "`python -m ops.memory.relay status` shows what is owed"
+    )
+    return [carrier_line, hydrate_line, relay_line]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="memory_prefetch")
     parser.add_argument(
@@ -353,6 +420,16 @@ def main() -> int:
             "isolation=dedicated worktree + branch off origin/main + publication gate",
             "phase_lock=not required",
         ]
+        carrier_lines = _carrier_lines(group_ids)
+        if carrier_lines:
+            # Relay carrier (CANONICAL_LAW §8.11): health above is the LOCAL
+            # runtime's, which is container scratch here, not the shared store.
+            lines[1:1] = carrier_lines
+        gaps = _close_gaps(roots, session_id)
+        for gap in gaps:
+            lines.insert(1, f"CLOSE_GAP {gap}")
+        if gaps:
+            lines.insert(1 + len(gaps), "REPAIR: /end-session")
         if len(roots) > 1:
             dropped_note = _dropped_summary(dropped)
             lines.insert(
@@ -372,6 +449,11 @@ def main() -> int:
                 )
                 + ". Repository work is unaffected; memory reads and writes may fail. "
                 "Repair: make memory-readiness."
+            )
+        if gaps:
+            loud = (loud + " " if loud else "") + _loud_status(
+                f"CLOSE_GAP: {len(gaps)} prior session(s) left unclosed "
+                f"({'; '.join(gaps)}). Repair: /end-session."
             )
         if dropped:
             loud = (loud + " " if loud else "") + _loud_status(

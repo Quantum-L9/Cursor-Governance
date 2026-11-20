@@ -14,7 +14,7 @@
       "ref": "l9.compiler/generic@1"
     },
     "compiler_manifest": {
-      "digest": "sha256:976892e22c694f7682fe763cbd40cb2d647643babc4455e237d4cbfcd81ed936",
+      "digest": "sha256:f6f10221c6bfbbd2382ba2f3dd80f5766b7836798556cac2ffcabb76080a3fde",
       "path": "semantics/generic_compiler_manifest.yaml",
       "ref": "l9.generic-compiler/global@1"
     },
@@ -24,7 +24,7 @@
       "ref": "l9.compiler/projection-engine@1"
     },
     "profile_catalog": {
-      "digest": "sha256:60a2114286fa9718b24c3be0e29942db16e5ecb79bc773fbbbdca1950ce9ea09",
+      "digest": "sha256:b9991557fb0e671b20865652a6264dadf6c39939a5472d734cdb9fa8a92ecd57",
       "path": "semantics/projection_profiles.yaml",
       "ref": "l9.projection-profile-catalog/global@1"
     },
@@ -34,41 +34,41 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "3dcdeaae355b6de08562993f705084d7a3714bfd",
+    "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
     "selector_model": {
       "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
       "path": "semantics/selector_model.yaml",
       "ref": "l9.selector-model/global@1"
     },
     "source_registry": {
-      "digest": "sha256:140961c3ea9ddbcc2f6c28e0ff8dc85f5e90c8b3adcc6b3eefe28254a2db528d",
+      "digest": "sha256:28038459d4201ba391f01ac16802195245aac939efb3c34f4ac9e71098528dfe",
       "path": "semantics/canonical_sources.yaml",
       "ref": "l9.canonical-sources/global@1"
     }
   },
   "inputs": [
     {
-      "digest": "sha256:65285d583154cefa1623f9a93061a3413cef2d1dd26349accb80225ce866b1b5",
+      "digest": "sha256:bb288184aff9b35269b756672af48369bfc55a280bac8ab3bc4c91ef5ba27a14",
       "path": "semantics/lifecycle.yaml",
       "ref": "l9.source/lifecycle@1",
-      "revision": "3dcdeaae355b6de08562993f705084d7a3714bfd"
+      "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b"
     }
   ],
   "operation": "projection",
   "output": {
-    "digest": "sha256:0e83d72597b31d2ee11d58913041d1b53375ee02638744866ce5bb7afd0aa819",
+    "digest": "sha256:5475d3bd2bba985558054694a3d4dee4fe467f4a39193f79b448fdcd25740755",
     "ref": "l9.projection/cursor-governance-operating-plane@2#l9.source/lifecycle@1"
   },
   "producer_identity": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "profile": {
     "digest": "sha256:eeb6ccea032035aaf48436abf8e76b6adeeac2f4c281dba9fbf549ab4aa387c8",
     "ref": "l9.projection/cursor-governance-operating-plane@2"
   },
-  "receipt_digest": "sha256:0aa7e2bc79ce74d0f505805081b5c5f95f94b34ec5788b4c38d741f810ca9f31",
-  "receipt_identity": "l9.receipt-instance/56027aacbdf79e8a21fa9613015cd0905e071a68662288cd3b820f5ac5dfbc02",
+  "receipt_digest": "sha256:3b7455029da5d7c10ea6044594bb6f5f585bc71cdec6f53c06978374355bbdc6",
+  "receipt_identity": "l9.receipt-instance/e2dd01b683857627547baa1743064f409ecf48027c8e03a76c6ee689e6fb2927",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -91,7 +91,7 @@
         "status": "pass"
       },
       "delivered_bytes": {
-        "content_digest": "sha256:2a7a38bb87c250a18280a990b60f55de51e0e845c00679a8f780323e93024296",
+        "content_digest": "sha256:2a06a729aca07f11fcee0c5596d0a41694d548441b4578c63843877325075377",
         "path": "l9.projection_cursor-governance-operating-plane_2/l9.source_lifecycle_1.projection.json",
         "status": "pass"
       },
@@ -118,7 +118,7 @@
         "status": "pass"
       },
       "projection_digest": {
-        "digest": "sha256:0e83d72597b31d2ee11d58913041d1b53375ee02638744866ce5bb7afd0aa819",
+        "digest": "sha256:5475d3bd2bba985558054694a3d4dee4fe467f4a39193f79b448fdcd25740755",
         "status": "pass"
       },
       "selection_equivalence": {
@@ -126,8 +126,8 @@
         "status": "pass"
       },
       "source_currentness": {
-        "digest": "sha256:65285d583154cefa1623f9a93061a3413cef2d1dd26349accb80225ce866b1b5",
-        "revision": "3dcdeaae355b6de08562993f705084d7a3714bfd",
+        "digest": "sha256:bb288184aff9b35269b756672af48369bfc55a280bac8ab3bc4c91ef5ba27a14",
+        "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
         "status": "pass"
       },
       "source_identity": {

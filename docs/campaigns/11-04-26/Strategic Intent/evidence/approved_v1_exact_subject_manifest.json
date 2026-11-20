@@ -1,0 +1,32 @@
+{
+  "admission_effect": "requires verified operator-authorized repository adoption; packaging alone changes no authority",
+  "admission_target": "operator-owned private strategy/ instances in Quantum-L9/.github",
+  "approval_basis": "user explicitly approved exact v0.6.1 ZIP for admission and instructed v1 preparation and self-push",
+  "files": {
+    "strategy/OPERATOR_DOCTRINE.yaml": "2b454ee209764461030b39bb766a9adc94b92f4c3b10bb3a6b6188cb44b31f11",
+    "strategy/alignment/agent_views.yaml": "ea49c2f9a457dd2f44a4db69506b1ea6a6e7d0df6323ebc8e0f382bb3f59e699",
+    "strategy/alignment/consumer_bindings.yaml": "d84f837933eb93accf985a740006d3ed059316942e668fa6af6ecba8995dddd1",
+    "strategy/alignment/operator_alignment.profile.yaml": "8db0a0e92f0b0256180ef78914f3cabf1f96ceb00c2853fd3de1a962d15116fd",
+    "strategy/operator_strategic_intent.yaml": "86487ee6fc524644fa177b53313ace8a3c23e205ad2589c9ed3c8095ce3593dd"
+  },
+  "not_global_semantic_law": true,
+  "package": "L9 Operator Doctrine, Intent and Five-Agent Alignment",
+  "predecessor_zip_sha256": "43ff7370dc9e4f126b6f914babb57990efdc20a927569cff5b0ea91908d04c78",
+  "runtime_activation": "NOT_PERFORMED",
+  "source_revisions": {
+    "consumer_bindings": "1.0.0",
+    "doctrine": "1.0.0",
+    "intent": "1.0.0",
+    "selection_profile": "1.0.0",
+    "views": "1.0.0"
+  },
+  "subject_digest": "sha256:4db9854e950737ebefa337323152d1f7776482e137aee3c0204698cdfb1951bc",
+  "unadopted_doctrine_values": [
+    "truth_and_evidence",
+    "autonomy_and_accountability",
+    "simplicity_and_irreducibility",
+    "sovereignty_and_independence",
+    "durable_value_creation"
+  ],
+  "version": "1.0.0"
+}

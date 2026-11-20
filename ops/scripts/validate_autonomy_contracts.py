@@ -44,6 +44,48 @@ def _provider_autonomy_residue_errors(root: Path) -> list[str]:
     return errors
 
 
+def _program_execution_consumer_errors(root: Path, entry: dict) -> list[str]:
+    """Check the optional Program Execution consumer, when the registry names it.
+
+    The entry is never required: root autonomy does not depend on Program
+    Execution. When it is present it must be the one-way, operator-invoked
+    consumer the surface profile describes, and the two must agree.
+    """
+    aid = "program-execution-autonomy-consumer"
+    errors: list[str] = []
+    for key in ("provider_manifest", "profile_path", "authority_reader", "effect_hook"):
+        rel = str(entry.get(key) or "")
+        if not rel or not (root / rel).is_file():
+            errors.append(f"{aid}: missing {key} path: {rel}")
+    if entry.get("provider_id") != "root-autonomy-control-plane":
+        errors.append(f"{aid}: provider_id must be root-autonomy-control-plane")
+    if entry.get("invocation") != "explicit_operator_only":
+        errors.append(f"{aid}: invocation must be explicit_operator_only")
+    profile_path = root / str(entry.get("profile_path") or "")
+    if not profile_path.is_file():
+        return errors
+    profile = yaml.safe_load(profile_path.read_text(encoding="utf-8")) or {}
+    block = (
+        profile.get(str(entry.get("profile_fragment") or "")) if isinstance(profile, dict) else None
+    )
+    if not isinstance(block, dict):
+        errors.append(f"{aid}: surface profile carries no {entry.get('profile_fragment')} block")
+        return errors
+    if block.get("stage") != entry.get("stage"):
+        errors.append(
+            f"{aid}: stage {entry.get('stage')!r} disagrees with the surface profile "
+            f"({block.get('stage')!r})"
+        )
+    if block.get("invocation") != entry.get("invocation"):
+        errors.append(f"{aid}: invocation disagrees with the surface profile")
+    autonomy = block.get("autonomy") if isinstance(block.get("autonomy"), dict) else {}
+    if autonomy.get("provider") != entry.get("provider_id"):
+        errors.append(f"{aid}: surface profile names a different autonomy provider")
+    if autonomy.get("owns_program_state") is not False:
+        errors.append(f"{aid}: the profile must keep root autonomy owns_program_state false")
+    return errors
+
+
 def validate(root: Path) -> list[str]:
     errors: list[str] = []
     manifest_path = root / "environment/contracts/autonomy/MANIFEST.yaml"
@@ -89,6 +131,8 @@ def validate(root: Path) -> list[str]:
         if aid == "root-autonomy-control-plane":
             if entry.get("owns_program_state") is not False:
                 errors.append("root-autonomy-control-plane must not own Program state")
+        if aid == "program-execution-autonomy-consumer":
+            errors.extend(_program_execution_consumer_errors(root, entry))
         if aid == "autonomy-surface-profile" and canon != "ops/autonomy/surface_profile.yaml":
             errors.append(f"{aid}: canonical_path must be ops/autonomy/surface_profile.yaml")
         if aid == "l4-local-autonomy":

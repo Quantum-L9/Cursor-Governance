@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import signal
 import subprocess
 import sys
+import tarfile
 import threading
 import time
 from pathlib import Path
@@ -281,6 +283,54 @@ def test_missing_base_is_cannot_evaluate_not_the_parent(
     loaded = manifest.load()
     assert run.mode_gate(loaded, repo, head, "does-not-exist") == 0
     assert "cannot-evaluate" in capsys.readouterr().out
+
+
+def _tar_bytes(members: list[tuple[str, bytes]]) -> bytes:
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        for name, payload in members:
+            info = tarfile.TarInfo(name)
+            info.size = len(payload)
+            tar.addfile(info, io.BytesIO(payload))
+    return buf.getvalue()
+
+
+def test_extract_tar_inside_writes_only_members_that_stay_inside(tmp_path: Path) -> None:
+    dest = tmp_path / "dest"
+    dest.mkdir()
+    raw = _tar_bytes([("nested/ok.txt", b"ok\n")])
+    with tarfile.open(fileobj=io.BytesIO(raw)) as tar:
+        run.extract_tar_inside(tar, dest)
+    assert (dest / "nested" / "ok.txt").read_bytes() == b"ok\n"
+
+
+def test_extract_tar_inside_refuses_a_member_that_escapes(tmp_path: Path) -> None:
+    dest = tmp_path / "dest"
+    dest.mkdir()
+    outside = tmp_path / "outside.txt"
+    raw = _tar_bytes([("ok.txt", b"ok\n"), ("../outside.txt", b"no\n")])
+    with tarfile.open(fileobj=io.BytesIO(raw)) as tar:
+        with pytest.raises(tarfile.TarError, match="outside destination"):
+            run.extract_tar_inside(tar, dest)
+    assert not outside.exists()
+    assert not (dest / "ok.txt").exists()
+
+
+def test_extract_tar_inside_refuses_a_link_that_points_outside(tmp_path: Path) -> None:
+    dest = tmp_path / "dest"
+    dest.mkdir()
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        info = tarfile.TarInfo("link")
+        info.type = tarfile.SYMTYPE
+        info.linkname = "../outside.txt"
+        tar.addfile(info)
+    buf.seek(0)
+    with tarfile.open(fileobj=buf) as tar:
+        with pytest.raises(tarfile.TarError):
+            run.extract_tar_inside(tar, dest)
+    assert not (tmp_path / "outside.txt").exists()
+    assert not (dest / "link").exists()
 
 
 def test_manifest_bytes_change_the_runner_digest(monkeypatch: pytest.MonkeyPatch) -> None:

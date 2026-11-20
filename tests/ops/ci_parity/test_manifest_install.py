@@ -218,3 +218,175 @@ def test_blocking_lane_rejects_a_version_range(tmp_path: Path) -> None:
     )
     problems = validate_manifest._blocking_identity(loaded)
     assert problems and "version range" in problems[0]
+
+
+# --- track: ci_ref (the tool follows its CI file, the hand pin is the fallback) ---
+
+OLD_SHA = "1" * 40
+NEW_SHA = "2" * 40
+CORE_LINE = "          sdk-revision: ${{{{ steps.runtime.outputs['sdk-revision'] || '{sha}' }}}}\n"
+
+
+def _tracked_manifest(tmp_path: Path, extra: str = "") -> Path:
+    yml = tmp_path / "tools.yaml"
+    yml.write_text(
+        "schema: l9.ci-parity.tools.v1\n"
+        f"install_root: {tmp_path / 'root'}\n"
+        f"bin_dir: {tmp_path / 'bin'}\n"
+        f"cache_root: {tmp_path / 'cache'}\n"
+        "tools:\n  sdk:\n"
+        f"    version: {OLD_SHA}\n"
+        "    method: uv_tool\n    package: git+https://example.invalid/sdk\n"
+        "    binary: sdk\n    version_cmd: [--help]\n    expect: ok\n"
+        f"    track: ci_ref\n{extra}"
+        "    ci_ref:\n      repo: Quantum-L9/l9-ci-core\n      ref: main\n"
+        "      path: org-ci.yml\n"
+        f"      contains: \"'{OLD_SHA}'\"\n"
+        "      extract: 'sdk-revision:[^\\n]*\\|\\|\\s*''(?P<version>[0-9a-f]{40})'''\n"
+        "lanes: {}\n"
+    )
+    return yml
+
+
+def _fake_uv_install(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    installed: list[str] = []
+
+    def fake(tool: manifest.Tool, target: Path) -> Path:
+        installed.append(tool.version)
+        binary = target / "bin" / tool.binary
+        binary.parent.mkdir(parents=True, exist_ok=True)
+        binary.write_text("#!/bin/sh\necho ok\n")
+        binary.chmod(0o755)
+        return binary
+
+    monkeypatch.setattr(install, "_install_uv_tool", fake)
+    return installed
+
+
+#: install.main() loads the default manifest; the tests point it at their own.
+_REAL_LOAD = manifest.load
+
+
+def _core(monkeypatch: pytest.MonkeyPatch, text: str | None) -> None:
+    def read(ref: dict[str, str]) -> str:
+        if text is None:
+            raise OSError("REST and git both refused")
+        return text
+
+    monkeypatch.setattr(validate_manifest, "_remote_text", read)
+
+
+def test_tracked_version_needs_exactly_one_full_sha(tmp_path: Path) -> None:
+    tool = manifest.load(_tracked_manifest(tmp_path)).tools["sdk"]
+    assert manifest.tracked_version(tool, CORE_LINE.format(sha=NEW_SHA)) == NEW_SHA
+    assert manifest.tracked_version(tool, "sdk-revision: ${{ inputs.sdk-revision }}") is None
+    ambiguous = CORE_LINE.format(sha=NEW_SHA) + CORE_LINE.format(sha=OLD_SHA)
+    assert manifest.tracked_version(tool, ambiguous) is None
+    twice = CORE_LINE.format(sha=NEW_SHA) * 2  # the same revision named twice is one answer
+    assert manifest.tracked_version(tool, twice) == NEW_SHA
+
+
+@pytest.mark.parametrize(
+    ("bad", "message"),
+    [
+        ("track: ci_ref\n", "needs a ci_ref with repo"),
+        ("track: latest\n", "track must be one of"),
+    ],
+)
+def test_track_is_validated_at_load(tmp_path: Path, bad: str, message: str) -> None:
+    yml = tmp_path / "tools.yaml"
+    yml.write_text(
+        "schema: l9.ci-parity.tools.v1\ntools:\n  sdk:\n"
+        "    version: '1'\n    method: uv_tool\n    package: git+https://example.invalid/sdk\n"
+        f"    binary: sdk\n    version_cmd: [--help]\n    expect: ok\n    {bad}"
+        "lanes: {}\n"
+    )
+    with pytest.raises(manifest.ManifestError, match=message):
+        manifest.load(yml)
+
+
+def test_track_refuses_an_extract_without_a_version_group(tmp_path: Path) -> None:
+    yml = _tracked_manifest(tmp_path)
+    yml.write_text(yml.read_text().replace("(?P<version>[0-9a-f]{40})", "([0-9a-f]{40})"))
+    with pytest.raises(manifest.ManifestError, match="version"):
+        manifest.load(yml)
+
+
+def test_install_follows_core_records_the_source_and_reinstalls_when_core_moves(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    yml = _tracked_manifest(tmp_path)
+    installed = _fake_uv_install(monkeypatch)
+    monkeypatch.setattr(install.manifest, "load", lambda path=yml: _REAL_LOAD(path))
+
+    _core(monkeypatch, CORE_LINE.format(sha=NEW_SHA))
+    assert install.main(["--tool", "sdk"]) == 0
+    loaded = _REAL_LOAD(yml)
+    state = loaded.read_state()["sdk"]
+    assert state["version"] == NEW_SHA and state["source"] == "ci_ref"
+    assert state["pinned"] == OLD_SHA  # the reviewed hand pin stays the fallback
+    # Every reader sees the installed revision, so run.py and receipts agree.
+    assert loaded.tools["sdk"].version == NEW_SHA
+    assert loaded.tools["sdk"].fallback_version == OLD_SHA
+    assert loaded.resolve("sdk") is not None
+
+    assert install.main(["--tool", "sdk"]) == 0  # Core unchanged: nothing reinstalls
+    assert installed == [NEW_SHA]
+
+    moved = "3" * 40
+    _core(monkeypatch, CORE_LINE.format(sha=moved))
+    assert install.main(["--tool", "sdk"]) == 0
+    assert installed == [NEW_SHA, moved]
+    assert _REAL_LOAD(yml).read_state()["sdk"]["pinned"] == OLD_SHA
+
+
+def test_unreadable_core_installs_the_hand_pin_and_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    yml = _tracked_manifest(tmp_path)
+    installed = _fake_uv_install(monkeypatch)
+    monkeypatch.setattr(install.manifest, "load", lambda path=yml: _REAL_LOAD(path))
+    _core(monkeypatch, None)
+
+    assert install.main(["--tool", "sdk"]) == 0
+    assert installed == [OLD_SHA]
+    out = capsys.readouterr().out
+    assert "WARN: sdk:" in out and f"installing the hand pin {OLD_SHA}" in out
+    assert _REAL_LOAD(yml).read_state()["sdk"]["source"] == "pin"
+
+
+def test_unreadable_core_keeps_the_revision_last_read_from_ci(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    yml = _tracked_manifest(tmp_path)
+    installed = _fake_uv_install(monkeypatch)
+    monkeypatch.setattr(install.manifest, "load", lambda path=yml: _REAL_LOAD(path))
+    _core(monkeypatch, CORE_LINE.format(sha=NEW_SHA))
+    assert install.main(["--tool", "sdk"]) == 0
+
+    _core(monkeypatch, "Core rewrote the step without a default")
+    assert install.main(["--tool", "sdk"]) == 0
+    assert installed == [NEW_SHA]  # no downgrade to the older hand pin
+    assert f"keeping {NEW_SHA} last read from CI" in capsys.readouterr().out
+
+
+def test_drift_of_a_tracked_tool_is_a_note_not_a_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    yml = _tracked_manifest(tmp_path)
+    _core(monkeypatch, CORE_LINE.format(sha=NEW_SHA))
+    notes: list[str] = []
+    assert validate_manifest.check(tmp_path, yml, remote=True, notes=notes) == []
+    assert len(notes) == 1 and NEW_SHA in notes[0] and OLD_SHA in notes[0]
+
+    _core(monkeypatch, "sdk-revision: ${{ inputs.sdk-revision }}")
+    problems = validate_manifest.check(tmp_path, yml, remote=True)
+    assert len(problems) == 1 and "ci_ref.extract" in problems[0]
+
+
+def test_repository_l9_ci_tracks_core_and_its_extract_agrees_with_its_fallback() -> None:
+    sdk = manifest.load().tools["l9-ci"]
+    assert sdk.track == "ci_ref"
+    pin = sdk.ci_ref["contains"].strip("'")
+    line = CORE_LINE.format(sha=pin)
+    assert manifest.tracked_version(sdk, line) == pin == sdk.fallback_version

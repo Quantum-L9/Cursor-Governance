@@ -152,17 +152,21 @@ def build_summary(
                 )
         if not job_ids:
             return summary
-        placeholders = ",".join("?" for _ in job_ids)
+        # Each query below scopes to this campaign's jobs with a static
+        # subquery and one bound parameter; no SQL text is built at runtime,
+        # and the job list never meets SQLite's bound-variable limit.
         events = connection.execute(
-            f"SELECT job_id, to_state FROM job_events WHERE job_id IN ({placeholders})",
-            job_ids,
+            "SELECT job_id, to_state FROM job_events WHERE job_id IN "
+            "(SELECT job_id FROM processing_jobs WHERE campaign_id = ?)",
+            (campaign_id,),
         ).fetchall()
         validated_jobs = {row["job_id"] for row in events if row["to_state"] == "VALIDATED"}
         summary["generated_data"]["packets_validated"] = len(validated_jobs)
 
         snapshots = connection.execute(
-            f"SELECT stage, payload_json FROM stage_snapshots WHERE job_id IN ({placeholders})",
-            job_ids,
+            "SELECT stage, payload_json FROM stage_snapshots WHERE job_id IN "
+            "(SELECT job_id FROM processing_jobs WHERE campaign_id = ?)",
+            (campaign_id,),
         ).fetchall()
         routes: Counter[str] = Counter()
         promoted_memory_units: set[str] = set()
@@ -184,10 +188,10 @@ def build_summary(
         )
 
         receipts = connection.execute(
-            f"SELECT receipt_id, unit_id, route, destination_status, "
-            f"destination_reference, payload_json FROM delivery_receipts "
-            f"WHERE job_id IN ({placeholders})",
-            job_ids,
+            "SELECT receipt_id, unit_id, route, destination_status, "
+            "destination_reference, payload_json FROM delivery_receipts "
+            "WHERE job_id IN (SELECT job_id FROM processing_jobs WHERE campaign_id = ?)",
+            (campaign_id,),
         ).fetchall()
         for row in receipts:
             if row["route"] != "memory":
@@ -214,14 +218,16 @@ def build_summary(
                 summary["memory"]["memory_candidates_rejected"] += 1
 
         failed_attempts = connection.execute(
-            f"SELECT COUNT(*) AS n FROM delivery_attempts "
-            f"WHERE job_id IN ({placeholders}) AND status = 'FAILED'",
-            job_ids,
+            "SELECT COUNT(*) AS n FROM delivery_attempts "
+            "WHERE job_id IN (SELECT job_id FROM processing_jobs WHERE campaign_id = ?) "
+            "AND status = 'FAILED'",
+            (campaign_id,),
         ).fetchone()["n"]
         dead_letters = connection.execute(
-            f"SELECT COUNT(*) AS n FROM dead_letters "
-            f"WHERE job_id IN ({placeholders}) AND status = 'OPEN'",
-            job_ids,
+            "SELECT COUNT(*) AS n FROM dead_letters "
+            "WHERE job_id IN (SELECT job_id FROM processing_jobs WHERE campaign_id = ?) "
+            "AND status = 'OPEN'",
+            (campaign_id,),
         ).fetchone()["n"]
         summary["memory"]["memory_failures"] = max(int(failed_attempts), int(dead_letters))
         return summary

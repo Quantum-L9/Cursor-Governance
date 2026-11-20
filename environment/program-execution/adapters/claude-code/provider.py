@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
 import os
+import shlex
 import shutil
+import sys
 from pathlib import Path
 
 from peer_execution.imports import load_module
@@ -13,30 +16,70 @@ from peer_execution.provider import (
 )
 from peer_execution.subprocess_runner import run_argv
 
-#: The live enforcement surface a Claude worker window runs behind. Without
-#: both of these the PreToolUse wrapper has nothing to authorize through, so a
-#: window would write with root authority nobody checked.
+#: The PreToolUse hook Program Execution registers in every worker window it
+#: launches. PE carries its own enforcement into its own windows; the host-wide
+#: Claude wrapper does not reach Program Execution and is not relied on here.
+WORKER_EFFECT_HOOK = (
+    "environment/program-execution/integrations/autonomy-control-plane/worker_effect_hook.py"
+)
+
+#: The enforcement surface a Claude worker window runs behind. Without all of
+#: these the hook has nothing to authorize through, so a window would write
+#: with root authority nobody checked.
 HOOK_SURFACE_PATHS = (
-    "environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py",
+    WORKER_EFFECT_HOOK,
     "environment/program-execution/integrations/autonomy-control-plane/program_authority.py",
     "autonomy/adapters/tool_hook.py",
+    "ops/autonomy/local_execution_gate.py",
 )
+
+#: Every tool through which a window can cause an effect. A tool matched here
+#: that the root capability map does not know is refused by the hook, never
+#: defaulted to a read.
+WORKER_EFFECT_MATCHER = "Bash|Edit|Write|MultiEdit|NotebookEdit"
+WORKER_EFFECT_HOOK_TIMEOUT_SECONDS = 60
+
+#: A worker window executes one rendered contract; it is not an operator
+#: session. Loading the operator's user-level settings gave every window the
+#: whole interactive surface -- plugins, MCP servers, session hooks and the
+#: full rule corpus -- which measured ~107k tokens of context creation per
+#: window against ~8k without it, and is where the host session receipts in a
+#: task worktree came from. The window therefore loads the target repository's
+#: own settings only, and no MCP server at all. What governs its effects is
+#: explicit and travels with it: the tool allowlist rendered from the
+#: contract, and the effect hook registered through `--settings`, which hands
+#: every allowed effect to the root execution gate.
+WORKER_SETTING_SOURCES = "project,local"
+
+#: This provider passes the worker instruction to `claude -p` as one argv
+#: string, and Linux caps a single argument at 128 KiB (MAX_ARG_STRLEN). An
+#: instruction past this bound is refused before the window is launched rather
+#: than failing as E2BIG inside it. The bound is this transport's, not the
+#: instruction's: providers that hand over the request as a file have none.
+MAX_ARGV_INSTRUCTION_BYTES = 100_000
+
+#: The pre-existing untracked wiring a worker worktree carries. The rendered
+#: contract defines these as not changes, but a worker derives its
+#: changed_files claim from `git status`, where the links appear as untracked
+#: files and get claimed. The worker's process therefore carries a
+#: command-scope `core.excludesfile` (GIT_CONFIG_*) naming a file with these
+#: entries, written in the worktree's own gitdir — no repository file, no
+#: common-config mutation, no other checkout affected.
+WORKER_GIT_EXCLUDES_CONTENT = ".cursor-commands\n.cursor/\n.l9/\n"
+WORKER_GIT_EXCLUDES_NAME = "worker-git-excludes"
 
 #: Authority fields the live hook needs, and nothing else. The sidecar carries
 #: more (campaign/graph/action ids, capabilities, the peer binding); exporting
 #: those into a worker's environment would widen what a compromised worker can
-#: read without widening anything it can do.
-_AUTHORITY_ENVIRONMENT = {
-    "L9_ADAPTER_SESSION_ID": "adapter_session_id",
-    "L9_LEASE_ID": "lease_id",
-    "L9_AGENT_ID": "agent_id",
-    "L9_AUTONOMY_DATABASE": "runtime_database",
-    "L9_AUTONOMY_ROOT": "repository_root",
-    "L9_PROGRAM_WORKSPACE": "workspace",
-    "L9_PROGRAM_TASK_ID": "task_id",
-    "L9_PROGRAM_ATTEMPT_NUMBER": "attempt_number",
-    "L9_AUTONOMY_AUTHORITY_DIGEST": "authority_digest",
-}
+#: read without widening anything it can do. The hook owns the mapping because
+#: it is the reader; the provider exports exactly what the hook will check.
+_AUTHORITY_ENVIRONMENT: dict[str, str] = dict(
+    load_module(
+        Path(__file__).resolve().parents[2]
+        / "integrations/autonomy-control-plane/worker_effect_hook.py",
+        "pes_claude_worker_effect_hook",
+    ).AUTHORITY_ENVIRONMENT
+)
 
 
 class ClaudeCodeProvider:
@@ -128,6 +171,98 @@ class ClaudeCodeProvider:
                 environment[name] = str(value)
         return environment
 
+    def _worker_settings(self) -> str:
+        """Session settings that put the effect hook in front of every effect.
+
+        Passed inline so the registration cannot be edited on disk between
+        render and launch. The hook runs on this interpreter: it is the one
+        that can import the root autonomy runtime the authorizer asks.
+        """
+        hook = self.repository_root / WORKER_EFFECT_HOOK
+        command = f"{shlex.quote(sys.executable)} {shlex.quote(str(hook))}"
+        return json.dumps(
+            {
+                "hooks": {
+                    "PreToolUse": [
+                        {
+                            "matcher": WORKER_EFFECT_MATCHER,
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": command,
+                                    "timeout": WORKER_EFFECT_HOOK_TIMEOUT_SECONDS,
+                                }
+                            ],
+                        }
+                    ]
+                }
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
+    @staticmethod
+    def _instruction_argument(request: CanonicalExecutionRequest) -> str:
+        """The worker instruction as one argv string, or a refusal."""
+        size = len(request.worker_instruction.encode("utf-8"))
+        if size > MAX_ARGV_INSTRUCTION_BYTES:
+            raise ValueError(
+                f"WORKER_INSTRUCTION_TOO_LARGE: {size} bytes exceeds the "
+                f"{MAX_ARGV_INSTRUCTION_BYTES}-byte argv bound of the Claude CLI transport"
+            )
+        return request.worker_instruction
+
+    @staticmethod
+    def _worker_git_excludes(worktree: Path) -> tuple[Path, dict[str, str]] | None:
+        """Write a worker-scoped git excludes file and return its env binding.
+
+        Returns ``(path, env)`` where ``env`` injects ``core.excludesfile``
+        through GIT_CONFIG_* command scope, so only this worker's own git
+        processes (and nothing the runner or the Controller observes) see the
+        wiring excluded. ``None`` when the worktree's gitdir cannot be
+        resolved — the window still runs, without the excludes.
+        """
+        try:
+            resolved = run_argv(
+                [
+                    "git",
+                    "-C",
+                    str(worktree),
+                    "rev-parse",
+                    "--path-format=absolute",
+                    "--git-path",
+                    ".",
+                ],
+                cwd=worktree,
+                timeout_seconds=10,
+                environment={},
+            )
+        except (OSError, ValueError):
+            return None
+        text = (resolved.stdout or "").strip()
+        if not text or resolved.exit_code != 0:
+            return None
+        try:
+            # `--path-format=absolute` names the gitdir outright; a git that
+            # predates it yields a cwd-relative path, which must resolve
+            # against the worktree — never the provider's own cwd.
+            raw = Path(text)
+            gitdir = raw.resolve() if raw.is_absolute() else (worktree / raw).resolve()
+            if not gitdir.is_dir():
+                return None
+            target = gitdir / WORKER_GIT_EXCLUDES_NAME
+            target.write_text(WORKER_GIT_EXCLUDES_CONTENT, encoding="utf-8")
+        except OSError:
+            return None
+        return (
+            target,
+            {
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": "core.excludesfile",
+                "GIT_CONFIG_VALUE_0": str(target),
+            },
+        )
+
     def invoke(self, request: CanonicalExecutionRequest) -> ProviderInvocation:
         permission_profile = dict(request.permission_profile)
         renderer = load_module(
@@ -141,26 +276,36 @@ class ClaudeCodeProvider:
         argv = [
             "claude",
             "-p",
-            request.worker_instruction,
+            self._instruction_argument(request),
             "--output-format",
             "json",
-            "--max-turns",
-            str(int(request.inference_budget["max_turns"])),
             "--allowedTools",
             ",".join(permissions["allowed"]),
             "--disallowedTools",
             ",".join(permissions["denied"]),
+            "--setting-sources",
+            WORKER_SETTING_SOURCES,
+            "--strict-mcp-config",
         ]
+        if "max_turns" in request.inference_budget:
+            argv += ["--max-turns", str(int(request.inference_budget["max_turns"]))]
+        authority_environment = self._authority_environment(request)
+        if authority_environment:
+            argv.extend(["--settings", self._worker_settings()])
+        environment = {
+            "L9_AUTONOMY_REQUIRED": "1",
+            "L9_PE_WORKER": "1",
+            "L9_PROGRAM_LOCK_DIGEST": request.program_lock_digest,
+            **authority_environment,
+        }
+        excludes = self._worker_git_excludes(Path(request.worktree_ref).resolve())
+        if excludes is not None:
+            environment.update(excludes[1])
         result = run_argv(
             argv,
             cwd=Path(request.worktree_ref).resolve(),
             timeout_seconds=int(request.timeout_budget["dispatch_seconds"]),
-            environment={
-                "L9_AUTONOMY_REQUIRED": "1",
-                "L9_PE_WORKER": "1",
-                "L9_PROGRAM_LOCK_DIGEST": request.program_lock_digest,
-                **self._authority_environment(request),
-            },
+            environment=environment,
         )
         excerpts = load_module(
             Path(__file__).with_name("excerpts.py"),

@@ -14,8 +14,9 @@ and model providers connect through one shared Peer Execution Core.
   health, and failover.
 - `conformance/`: fail-closed architecture and behavioral checks.
 - `campaigns/`: immutable campaign seeds plus landing policy
-  (`CAMPAIGN_EXECUTION_POLICY.yaml` — one integration branch per campaign;
-  `PR_REMEDIATE=0 make pr`; no remediate; no merge; no PRs against `main`).
+  (`CAMPAIGN_EXECUTION_POLICY.yaml` — one integration branch per campaign,
+  published by the campaign's own `pr` stage through the SSOT `make pr`;
+  no merge).
 
 Canonical peer topology lives only in
 `environment/agents/PEER_RUNTIME_BINDINGS.yaml`:
@@ -44,16 +45,27 @@ make -C "$HOME/.cursor-governance" campaign INTENT=<path>
 `campaign-architecture` is retained only as a compatibility alias to this same
 front door. It does not force or override input classification.
 
+Entry (registered stage, `PROGRAM_EXECUTION_REGISTERED_STAGE_V1`): with
+`/coding-agent on` in the invoking session and workspace,
+`L9_PE_OPERATOR_INVOCATION="<operator's words>" make -C "$HOME/.cursor-governance"
+campaign INTENT=<path> WS="$PWD"`. The runner refuses `CODING_AGENT_MODE_OFF`
+unless that mode is ACTIVE, and `CODING_AGENT_MODE_MISMATCH` unless it binds the
+same projection revision and views the pipeline does.
+
 `run_campaign.py` compiles seeds, admits the Blueprint, boots
 pec without a draft flag, and executes every task to **verified local
-commits** on `campaign/<campaign_id>`. That is where the autonomous run ends
-(`until=execute`, `AUTONOMOUS_LAST_STAGE`): the runner is permanently
-local-commit-only and refuses every publication stage — pushing the
-integration branch, opening task or host PRs, merging, and close — with
-`refuse_publication`. Publish separately with `PR_REMEDIATE=0 make pr`
-(`PR_BASE=origin/campaign/<campaign_id>`); merge only through
-`/l9-pr-remediation`; close into `campaigns/COMPLETED/<id>/` follows the
-Controller's closure receipt after that. Do not call
+commits** on `campaign/<campaign_id>`, then finishes with its `pr` stage
+(`AUTONOMOUS_LAST_STAGE`, CANONICAL_LAW `PROGRAM_EXECUTION_MAKE_PR_FINISH_V1`):
+`scripts/campaign_publish.py` authorizes that exact tree for L4 release, writes
+the PR intent from the Blueprint, and runs the governance SSOT
+`make -C <SSOT> pr WS=<integration worktree>` with `PR_REMEDIATE=0`, head
+`campaign/<campaign_id>`, base the target's remote default. That ceremony owns
+the push, the org PR template and its composer; the result is recorded in
+`runtime/PUBLICATION.json`. Every other publication act — a raw push, task
+PRs, merge, close — stays refused by `refuse_publication`. `until=execute`
+stops at local commits. Merge only through `/l9-pr-remediation`; close into
+`campaigns/COMPLETED/<id>/` follows the Controller's closure receipt after
+that. Do not call
 `compile_campaign_source.py`, `pec bootstrap`, or `program-execution intent`
 as a substitute. `--admission-draft` is not a live path
 (`L9_ALLOW_ADMISSION_DRAFT=1` is controller unit tests only). Host-only merge

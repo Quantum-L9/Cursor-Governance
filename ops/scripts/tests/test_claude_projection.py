@@ -648,6 +648,78 @@ class SkillStateUnfreezeTests(unittest.TestCase):
             self.assertFalse((target / "l9-a").exists())
 
 
+class ConsumerOwnedSkillEntriesTests(unittest.TestCase):
+    """A repository's committed skill links never set the bootstrap's status."""
+
+    @staticmethod
+    def _result(scope: str, mount_root: str, conflicts=(), drift=()) -> dict:
+        return {
+            "scope": scope,
+            "mount_root": mount_root,
+            "target": f"{mount_root}/.claude/skills",
+            "current": ["l9-a"],
+            "created": [],
+            "removed": [],
+            "conflicts": list(conflicts),
+            "drift": list(drift),
+        }
+
+    def _project(self, results: list[dict]) -> claude_projection.DomainOutcome:
+        import reconcile_llm_skill_adapters as adapters
+
+        with (
+            mock.patch.object(adapters, "run_orphan_migration", return_value=None),
+            mock.patch.object(adapters, "reconcile_adapters", return_value={"results": results}),
+        ):
+            return claude_projection.project_skills(Path("/gov"), Path("/ws"), False)
+
+    def test_sibling_repository_tracked_links_do_not_degrade(self) -> None:
+        outcome = self._project(
+            [
+                self._result("user", "/root"),
+                self._result(
+                    "project",
+                    "/ws/consumer",
+                    conflicts=["tracked-owned:l9-retired"],
+                    drift=["tracked-manifest:.l9-managed-skills.json"],
+                ),
+            ]
+        )
+        self.assertEqual(outcome.status, "ok")
+        self.assertEqual(outcome.failures, [])
+        self.assertEqual(
+            outcome.detail["consumer_owned"],
+            {
+                "/ws/consumer": [
+                    "tracked-owned:l9-retired",
+                    "tracked-manifest:.l9-managed-skills.json",
+                ]
+            },
+        )
+
+    def test_governance_owned_problems_still_degrade(self) -> None:
+        """Only committed consumer entries are reclassified; real faults stay."""
+        outcome = self._project(
+            [
+                self._result(
+                    "project",
+                    "/ws/consumer",
+                    conflicts=["unmanaged-conflict:plasticos-local", "tracked-owned:l9-x"],
+                    drift=["obsolete:l9-old"],
+                ),
+            ]
+        )
+        self.assertEqual(outcome.status, "conflict")
+        self.assertEqual(outcome.failures, ["unmanaged-conflict:plasticos-local"])
+        self.assertEqual(outcome.detail["drift"], ["obsolete:l9-old"])
+        self.assertEqual(outcome.detail["consumer_owned"], {"/ws/consumer": ["tracked-owned:l9-x"]})
+
+    def test_a_user_scope_tracked_conflict_is_not_reclassified(self) -> None:
+        outcome = self._project([self._result("user", "/root", conflicts=["tracked-owned:l9-a"])])
+        self.assertEqual(outcome.status, "conflict")
+        self.assertNotIn("consumer_owned", outcome.detail)
+
+
 class ClaudeSettingsGeneratedContractTests(unittest.TestCase):
     """<root>/.claude/settings.json is a projection of settings.template.json.
 

@@ -8,9 +8,7 @@
     "CANONICAL_LAW.md MEMORY_TWO_LANES_V1"
   ],
   "native_principal_follow_on": "Preferred long-term form is a native hook principal on the l9-graphite-memory stdio door (signed agent assertion + grants JSON). Until the package ships one, this client-side envelope is the interim; it is a request against the package, not a Cursor-Governance expansion.",
-  "agent_lane_callers": [
-    "environment/program-execution/integrations/graphiti/context_reader.py"
-  ],
+  "agent_lane_callers": ["environment/program-execution/integrations/graphiti/context_reader.py"],
   "agent_lane_note": "Production modules that read or write memory ON BEHALF OF AN AGENT (a PE worker's own task, a model tool). They use the package's public surface (l9-memory CLI located via ops.memory.runtime_binding, or the l9-graphite-memory MCP server) and never construct MemoryControlPlaneClient or spawn ops.memory.cli. ops/scripts/validate_memory_egress_boundary.py --lanes enforces this; tests/ops/memory/test_hook_envelope.py places every other caller.",
   "read_operations": [
     "resolve",
@@ -36,14 +34,7 @@
       "callers": [
         "ops/hooks/graphiti-prefetch.sh (Cursor subagentStart, GATES-002 opt-in) -> ops/graphiti/hydration/compile_session_packet.py (canonical_hydrate); Cursor sessionStart no longer hydrates"
       ],
-      "allowed_operations": [
-        "resolve",
-        "health",
-        "capabilities",
-        "hydrate",
-        "search",
-        "conflicts"
-      ],
+      "allowed_operations": ["resolve", "health", "capabilities", "hydrate", "search", "conflicts"],
       "record_classes": [],
       "max_records": 0,
       "max_bytes": 0,
@@ -53,11 +44,7 @@
       "callers": [
         "environment/agents/adapters/claude-code/hooks/memory_prefetch.py -> memory_bridge.memory_client (health only; SessionStart reads no records)"
       ],
-      "allowed_operations": [
-        "resolve",
-        "health",
-        "capabilities"
-      ],
+      "allowed_operations": ["resolve", "health", "capabilities"],
       "record_classes": [],
       "max_records": 0,
       "max_bytes": 0,
@@ -67,11 +54,7 @@
       "callers": [
         "environment/agents/adapters/manus/memory_lifecycle.py (explicit health-only startup policy; currently UPSTREAM_BLOCKED with no native owner client or Memory I/O)"
       ],
-      "allowed_operations": [
-        "resolve",
-        "health",
-        "capabilities"
-      ],
+      "allowed_operations": ["resolve", "health", "capabilities"],
       "record_classes": [],
       "max_records": 0,
       "max_bytes": 0,
@@ -106,7 +89,8 @@
     },
     "claude-session-end": {
       "callers": [
-        "environment/agents/adapters/claude-code/hooks/memory_writeback.py -> ops/graphiti/hydration/close_session.py"
+        "environment/agents/adapters/claude-code/hooks/memory_writeback.py -> ops/graphiti/hydration/close_session.py",
+        "environment/agents/adapters/claude-code/hooks/session_end_close.py -> ops/graphiti/hydration/close_session.py (SessionEnd: every session, Cursor sessionEnd parity)"
       ],
       "allowed_operations": [
         "resolve",
@@ -118,9 +102,7 @@
         "close",
         "distill"
       ],
-      "record_classes": [
-        "session_continuation"
-      ],
+      "record_classes": ["session_continuation"],
       "max_records": 8,
       "max_bytes": 65536,
       "provenance_required": true
@@ -138,9 +120,7 @@
         "close",
         "distill"
       ],
-      "record_classes": [
-        "session_continuation"
-      ],
+      "record_classes": ["session_continuation"],
       "max_records": 8,
       "max_bytes": 65536,
       "provenance_required": true
@@ -149,14 +129,7 @@
       "callers": [
         "ops/hooks/plan_memory_prefetch.py (python -m ops.memory.cli --surface plan-prefetch hydrate|search|conflicts)"
       ],
-      "allowed_operations": [
-        "resolve",
-        "health",
-        "capabilities",
-        "hydrate",
-        "search",
-        "conflicts"
-      ],
+      "allowed_operations": ["resolve", "health", "capabilities", "hydrate", "search", "conflicts"],
       "record_classes": [],
       "max_records": 0,
       "max_bytes": 0,
@@ -166,52 +139,27 @@
       "callers": [
         "ops/hooks/pr_publish_memory_write.py (python -m ops.memory.cli --surface pr-publish write --kind pickup_context -> episodic + tag session_continuation)"
       ],
-      "allowed_operations": [
-        "resolve",
-        "health",
-        "write"
-      ],
-      "record_classes": [
-        "episodic"
-      ],
+      "allowed_operations": ["resolve", "health", "write"],
+      "record_classes": ["episodic"],
       "max_records": 1,
       "max_bytes": 4096,
       "provenance_required": true
     },
     "pe-sgd-ingest": {
-      "callers": [
-        "environment/agents/generated-data/adapters/ingest_memory_candidate.py"
-      ],
-      "allowed_operations": [
-        "resolve",
-        "health",
-        "write"
-      ],
-      "record_classes": [
-        "insight",
-        "procedural",
-        "decision",
-        "observation"
-      ],
+      "callers": ["environment/agents/generated-data/adapters/ingest_memory_candidate.py"],
+      "allowed_operations": ["resolve", "health", "write"],
+      "record_classes": ["insight", "procedural", "decision", "observation"],
       "max_records": 64,
       "max_bytes": 8192,
       "provenance_required": true
     },
     "claude-governance-handoff": {
-      "allowed_operations": [
-        "resolve",
-        "health",
-        "write"
-      ],
-      "record_classes": [
-        "observation"
-      ],
+      "allowed_operations": ["resolve", "health", "write"],
+      "record_classes": ["observation"],
       "max_records": 1,
       "max_bytes": 16384,
       "provenance_required": true,
-      "namespaces": [
-        "cursor-governance"
-      ],
+      "namespaces": ["cursor-governance"],
       "callers": [
         "environment/agents/adapters/claude-code/hooks/governance_handoff_writeback.py (post-publish governance handoff: l9.governance_handoff.v1 + receipt-copied degradation, one record, cursor-governance only)"
       ]

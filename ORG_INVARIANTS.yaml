@@ -1,4 +1,11 @@
 ---
+# Consumer mirror of Quantum-L9/.github policies/ORG_INVARIANTS.yaml.
+#   Candidate head: ec3f5c6734530a3a90438a80827ebd8edd876734
+#   (https://github.com/Quantum-L9/.github/pull/269). Not an admission.
+#   Payload sha256: fdb3a6d45af46f237470671b57873557301f1261679d67c352cda5a81661b59c
+#   Release https://github.com/Quantum-L9/.github/pull/270 is BLOCKED.
+#   Signature status: UNKNOWN. Cursor-Governance does not author this policy.
+#
 # =============================================================================
 # Quantum-L9 Organization Invariants
 # =============================================================================
@@ -29,7 +36,7 @@
 l9_schema: 2
 artifact_type: governance_policy
 status: active
-canonical: true
+canonical: false
 
 metadata:
   policy_id: quantum-l9.org-invariants
@@ -43,7 +50,7 @@ metadata:
     name: Quantum-L9
     github_owner: Quantum-L9
 
-  policy_version: 4.0.0
+  policy_version: 4.1.0
   schema_version: 2
 
   owner:
@@ -51,9 +58,17 @@ metadata:
     escalation_team: security-admins
 
   canonical_source:
+    repository: Quantum-L9/.github
+    path: policies/ORG_INVARIANTS.yaml
+    revision: ec3f5c6734530a3a90438a80827ebd8edd876734
+    payload_sha256: fdb3a6d45af46f237470671b57873557301f1261679d67c352cda5a81661b59c
+    signature_status: UNKNOWN
+    admission: false
+  predecessor:
     repository: Quantum-L9/Cursor-Governance
     path: ORG_INVARIANTS.yaml
-    branch: main
+    revision: 59c0b3e0fae7418c67b7e3be76c4e3f412ad49dd
+    policy_version: 4.0.0
 
   classification:
     criticality: critical
@@ -555,7 +570,7 @@ invariants:
     requirement:
       statement: >-
         Quantum-L9 organization invariants originate only from the canonical
-        policy in Quantum-L9/Cursor-Governance.
+        policy in Quantum-L9/.github.
 
       enforcement_requirement: blocking
       fail_behavior: closed
@@ -565,8 +580,8 @@ invariants:
       version: 1
 
       expected:
-        repository: Quantum-L9/Cursor-Governance
-        path: ORG_INVARIANTS.yaml
+        repository: Quantum-L9/.github
+        path: policies/ORG_INVARIANTS.yaml
 
     forbidden:
       - competing_canonical_source
@@ -579,7 +594,7 @@ invariants:
       action: block
       message: >-
         Organization-invariant changes must originate from the canonical
-        Cursor-Governance policy.
+        Quantum-L9/.github policy.
 
     assurance:
       effective_enforcement_state: advisory
@@ -607,7 +622,7 @@ invariants:
         include:
           - Quantum-L9/*
         exclude:
-          - Quantum-L9/Cursor-Governance
+          - Quantum-L9/.github
 
     assertion:
       type: canonical_digest_match
@@ -719,19 +734,13 @@ invariants:
       fail_behavior: closed
 
     protected_paths:
-      - ORG_INVARIANTS.yaml
-      - CANONICAL_LAW.md
-      - schemas/**
-      - assertions/**
-      - controls/**
-      - scripts/validate_org_invariants.py
-      - scripts/render_org_invariants_mirror.py
+      - policies/ORG_INVARIANTS.yaml
+      - policies/ASSERTION_TYPES.yaml
+      - policies/org-invariants.schema.json
+      - policies/POLICY_RELEASE.schema.yaml
+      - policies/validate_org_policy.py
       - .github/workflows/**
       - .github/CODEOWNERS
-      - pyproject.toml
-      - ops/config/root-file-protection.json
-      - ops/scripts/validate_root_file_protection.py
-      - environment/contracts/**
 
     assertion:
       type: owner_merge_authorization
@@ -1137,7 +1146,7 @@ control_registry:
       - L9-ORG-006
       - L9-ORG-008
 
-    required_check_name: org-governance/invariants
+    required_check_name: Analyze (central Core)
 
     required_capabilities:
       - verify_canonical_reference_immutable
@@ -1166,7 +1175,7 @@ control_registry:
     required_capabilities:
       - require_org_governance_check
       - require_pull_request
-      - require_codeowner_approval
+      - require_authenticated_owner_authorization
       - block_force_push
       - restrict_bypass
       - cover_all_in_scope_repositories
@@ -1190,7 +1199,7 @@ control_registry:
       - protect_renderer
       - protect_workflows
       - protect_codeowners
-      - require_independent_human_review
+      - require_authenticated_owner_authorization
 
     evidence: []
 
@@ -1669,19 +1678,13 @@ consumer_policy:
 
 change_control:
   protected_paths:
-    - ORG_INVARIANTS.yaml
-    - CANONICAL_LAW.md
-    - schemas/**
-    - assertions/**
-    - controls/**
-    - scripts/validate_org_invariants.py
-    - scripts/render_org_invariants_mirror.py
+    - policies/ORG_INVARIANTS.yaml
+    - policies/ASSERTION_TYPES.yaml
+    - policies/org-invariants.schema.json
+    - policies/POLICY_RELEASE.schema.yaml
+    - policies/validate_org_policy.py
     - .github/workflows/**
     - .github/CODEOWNERS
-    - pyproject.toml
-    - ops/config/root-file-protection.json
-    - ops/scripts/validate_root_file_protection.py
-    - environment/contracts/**
 
   requirements:
     pull_request_required: true
@@ -1694,7 +1697,7 @@ change_control:
     direct_push_to_default_branch: forbidden
     force_push: forbidden
     unresolved_review_threads_block: false
-    required_check_name: org-governance/invariants
+    required_check_name: Analyze (central Core)
 
   agent_constraints:
     agent_may_propose_change: true
@@ -1828,7 +1831,7 @@ provenance:
     - repositories_belong_to_Quantum-L9
     - repository_birth_fails_closed
     - personal_account_routing_is_forbidden
-    - Cursor_Governance_is_canonical
+    - historical_Cursor_Governance_was_canonical_through_4_0_0
     - L9_Ops_MCP_is_a_consumer
     - violations_block_governed_operations
 

@@ -1107,7 +1107,22 @@ def preflight_campaign_source_document(src: dict[str, Any]) -> list[str]:
                 "refuse it after isolation and compile. Renumber the gate in the source"
             )
 
+    causality_errors = _campaign_evidence_errors(src)
+    if causality_errors:
+        raise CompileError("evidence causality failed:\n  - " + "\n  - ".join(causality_errors))
+
     return warnings
+
+
+def _campaign_evidence_errors(src: dict[str, Any]) -> list[str]:
+    """Catalog inputs that admission will not collect and no earlier task produces."""
+    path = Path(__file__).resolve().parent / "evidence_causality.py"
+    spec = importlib.util.spec_from_file_location("evidence_causality", path)
+    if spec is None or spec.loader is None:
+        raise CompileError(f"cannot load evidence causality checker: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return list(module.errors_for_campaign_source(src))
 
 
 def _task_output_locations(item: dict[str, Any]) -> list[str]:
@@ -1609,6 +1624,11 @@ def _compile_into(
                     "supports": list(item.get("supports") or []),
                     "contradicts": list(item.get("contradicts") or []),
                     "notes": item.get("claim"),
+                    **(
+                        {"freshness": str(item.get("freshness")).strip()}
+                        if str(item.get("freshness") or "").strip()
+                        else {}
+                    ),
                 }
                 for item in evidence
             ],
@@ -1819,6 +1839,7 @@ def _compile_into(
                 "target_id": item["target_id"],
                 "execution_kind": item["execution_kind"],
                 "kernel_profile": _task_kernel_profile(item),
+                **({"projection_context": True} if item.get("projection_context") is True else {}),
                 "objective": str(item["objective"]).strip(),
                 "authority_basis_ids": item["authority_basis_ids"],
                 "required_decision_ids": item.get("required_decision_ids") or [],

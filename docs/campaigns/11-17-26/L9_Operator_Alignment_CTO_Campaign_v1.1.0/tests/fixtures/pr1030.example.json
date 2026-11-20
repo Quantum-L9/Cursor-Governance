@@ -1,0 +1,10 @@
+{
+  "repo": "Quantum-L9/Cursor-Governance",
+  "number": 1030,
+  "head_sha": "5f175329a002ee819895ce6a4df3e40da7919378",
+  "paths": [
+    "governance/planner-mode/MODE.yaml",
+    "tools/authority/produce_projection_bundle.py",
+    "commands/planner.md"
+  ]
+}

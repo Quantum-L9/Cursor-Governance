@@ -1,0 +1,90 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "closure_rules": [
+      "transitive_requirements_are_preserved",
+      "duplicate_semantic_requirements_may_be_canonicalized_without_losing_provenance",
+      "conflicting_hard_requirements_produce_explicit_conflict_or_unsat",
+      "soft_objectives_are_evaluated_only_after_hard_feasibility"
+    ],
+    "global_rules": {
+      "hard_requirements_are_non_compensable": true,
+      "preferences_do_not_satisfy_hard_requirements": true,
+      "provider_capability_is_not_semantic_requirement_ownership": true,
+      "requirements_are_typed": true,
+      "requirements_preserve_source_provenance": true,
+      "resolution_does_not_create_authority": true,
+      "unresolved_requirements_remain_explicit": true
+    },
+    "requirement_classes": {
+      "architecture": {
+        "default_hardness": "hard",
+        "meaning": "Required structural guarantee or prohibited structure."
+      },
+      "authority": {
+        "default_hardness": "hard",
+        "meaning": "Required authority or admission condition."
+      },
+      "capability": {
+        "default_hardness": "hard",
+        "meaning": "Required semantic capability or capability closure."
+      },
+      "conformance": {
+        "default_hardness": "hard",
+        "meaning": "Required independently verifiable behavioral obligation."
+      },
+      "interface": {
+        "default_hardness": "hard",
+        "meaning": "Required semantic port or interface obligation."
+      },
+      "objective": {
+        "default_hardness": "soft",
+        "meaning": "Optimization objective evaluated only among feasible candidates."
+      },
+      "operational": {
+        "default_hardness": "hard",
+        "meaning": "Required runtime, deployment, observability, or packaging property.",
+        "note": "Operational preferences are modeled separately as soft objectives."
+      },
+      "semantic": {
+        "default_hardness": "hard",
+        "meaning": "Required domain or L9 meaning that must be preserved."
+      },
+      "technology": {
+        "default_hardness": "hard",
+        "meaning": "Required realization property or declared technology constraint.",
+        "note": "Technology preferences are modeled separately as soft objectives."
+      }
+    },
+    "requirement_entry_contract": {
+      "hardness_domain": [
+        "hard",
+        "soft"
+      ],
+      "optional": [
+        "owner",
+        "scope",
+        "depends_on",
+        "conflicts_with",
+        "evidence_requirement",
+        "priority"
+      ],
+      "required": [
+        "id",
+        "class",
+        "source_ref",
+        "hardness",
+        "satisfaction_semantics"
+      ]
+    }
+  },
+  "projection_digest": "sha256:71e6ae42a94c6f6a0d081595f961cfbd952afbde0ae7e5c1c15538a1b19035fc",
+  "projection_profile_digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+  "projection_profile_ref": "l9.projection/contracts-conformance@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:7865723e78b7f02817db9d5f54aedb1350cb08b45d42759c8bdafeba1320c7c2",
+  "source_ref": "l9.source/requirement-model@1"
+}

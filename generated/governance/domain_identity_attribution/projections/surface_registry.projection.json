@@ -1,0 +1,108 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "alias_rules": {
+      "alias_kinds": {
+        "historical_surface_alias": "A former or abbreviated SurfaceIdentity value that canonicalizes to one current surface when read as a surface value."
+      },
+      "alias_meaning_is_bounded_to_surface_identity": true,
+      "alias_never_shadows_a_canonical_surface": true,
+      "alias_never_targets_another_alias": true,
+      "alias_resolves_to_exactly_one_canonical_surface": true,
+      "surface_alias_never_implies_actor_alias": true
+    },
+    "aliases": [
+      {
+        "alias": "claude-desktop",
+        "alias_kind": "historical_surface_alias",
+        "canonical": "claude-code-desktop"
+      },
+      {
+        "alias": "claude-cli",
+        "alias_kind": "historical_surface_alias",
+        "canonical": "claude-code-cli"
+      },
+      {
+        "alias": "claude-ide",
+        "alias_kind": "historical_surface_alias",
+        "canonical": "claude-code-ide"
+      },
+      {
+        "alias": "claude-web",
+        "alias_kind": "historical_surface_alias",
+        "canonical": "claude-code-web"
+      },
+      {
+        "alias": "claude-mobile",
+        "alias_kind": "historical_surface_alias",
+        "canonical": "claude-code-mobile"
+      }
+    ],
+    "surfaces": [
+      {
+        "description": "The Cursor IDE interaction surface.",
+        "id": "cursor-ide",
+        "status": "current"
+      },
+      {
+        "description": "The Claude Code desktop application surface. The same string is a historical ActorIdentity alias in actor_registry.yaml; equal strings do not imply equal identity kinds.",
+        "id": "claude-code-desktop",
+        "status": "current"
+      },
+      {
+        "description": "The Claude Code terminal command-line surface.",
+        "id": "claude-code-cli",
+        "status": "current"
+      },
+      {
+        "description": "The Claude Code IDE-extension surface.",
+        "id": "claude-code-ide",
+        "status": "current"
+      },
+      {
+        "description": "The Claude Code hosted web surface.",
+        "id": "claude-code-web",
+        "status": "current"
+      },
+      {
+        "description": "The Claude Code mobile surface. The same string is a historical ActorIdentity alias in actor_registry.yaml; equal strings do not imply equal identity kinds.",
+        "id": "claude-code-mobile",
+        "status": "current"
+      },
+      {
+        "description": "The Codex hosted cloud surface.",
+        "id": "codex-cloud",
+        "status": "current"
+      },
+      {
+        "description": "The Codex command-line surface.",
+        "id": "codex-cli",
+        "status": "current"
+      },
+      {
+        "description": "The Gemini command-line surface.",
+        "id": "gemini-cli",
+        "status": "current"
+      },
+      {
+        "description": "The Manus hosted cloud surface.",
+        "id": "manus-cloud",
+        "status": "current"
+      },
+      {
+        "description": "A human operator's direct shell surface.",
+        "id": "operator-shell",
+        "status": "current"
+      }
+    ]
+  },
+  "projection_digest": "sha256:3dffd61a7d592050a5635e18e0b4ad7d5bf6b37451428f3241309544d5770d9e",
+  "projection_profile_digest": "sha256:062a28729209c9857cf70f3068ea6d565bb1ce54c765ace52b92afaa5d09e5b6",
+  "projection_profile_ref": "l9.projection/identity-attribution@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:d7200409ff02141a274ff8c9221d31429f6a6fae27539e6d9c8d20f1a6eba988",
+  "source_ref": "l9.source/surface-registry@1"
+}

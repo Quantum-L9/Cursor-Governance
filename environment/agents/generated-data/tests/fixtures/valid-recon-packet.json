@@ -34,22 +34,11 @@
         }
       ],
       "scope": {
-        "repositories": [
-          "Quantum-L9/example"
-        ],
-        "repository_classes": [
-          "l9_python"
-        ],
-        "paths": [
-          "uv.lock"
-        ],
-        "task_types": [
-          "dependency_setup"
-        ],
-        "roles": [
-          "executor",
-          "verifier"
-        ]
+        "repositories": ["Quantum-L9/example"],
+        "repository_classes": ["l9_python"],
+        "paths": ["uv.lock"],
+        "task_types": ["dependency_setup"],
+        "roles": ["executor", "verifier"]
       },
       "confidence": 0.98,
       "freshness": {
@@ -57,9 +46,7 @@
         "base_sha": "abc1234",
         "expires_at": null
       },
-      "proposed_routes": [
-        "memory"
-      ],
+      "proposed_routes": ["memory"],
       "expected_reuse": {
         "task_local": true,
         "cross_task": true,
@@ -103,22 +90,11 @@
         }
       ],
       "scope": {
-        "repositories": [
-          "Quantum-L9/example"
-        ],
-        "repository_classes": [
-          "l9_python"
-        ],
-        "paths": [
-          "pyproject.toml",
-          "uv.lock"
-        ],
-        "task_types": [
-          "dependency_setup"
-        ],
-        "roles": [
-          "executor"
-        ]
+        "repositories": ["Quantum-L9/example"],
+        "repository_classes": ["l9_python"],
+        "paths": ["pyproject.toml", "uv.lock"],
+        "task_types": ["dependency_setup"],
+        "roles": ["executor"]
       },
       "confidence": 0.92,
       "freshness": {
@@ -126,9 +102,7 @@
         "base_sha": "abc1234",
         "expires_at": null
       },
-      "proposed_routes": [
-        "contracts"
-      ],
+      "proposed_routes": ["contracts"],
       "expected_reuse": {
         "task_local": false,
         "cross_task": true,
@@ -162,16 +136,9 @@
     "repository_class": "l9_python",
     "base_sha": "abc1234",
     "input_artifacts": [],
-    "evidence_artifacts": [
-      "artifact-recon-001"
-    ],
-    "inspected_paths": [
-      "pyproject.toml",
-      "uv.lock"
-    ],
-    "executed_commands": [
-      "git rev-parse HEAD"
-    ],
+    "evidence_artifacts": ["artifact-recon-001"],
+    "inspected_paths": ["pyproject.toml", "uv.lock"],
+    "executed_commands": ["git rev-parse HEAD"],
     "generated_at": "2026-08-02T15:00:00Z"
   },
   "reuse_assessment": {

@@ -4,9 +4,12 @@ description: Sync or fast-forward a Cursor-Governance clone only via /ff and l9-
 
 # Fast-forward only (no SSOT clobber)
 
-SessionStart does **not** auto-update or auto-sync the SSOT. Inbound tip
-activation (`governance_activate_fresh.sh`) is skipped unless
-`L9_GOVERNANCE_AUTO_UPDATE=1` (breakglass). Catch up only via **`/ff`**.
+SessionStart does **not** auto-update or auto-sync the SSOT. It runs
+`governance_activate_fresh.sh` every time, but that script only compares the
+clone's HEAD with the GitHub tip and reports ahead/behind: an existing clone is
+never fetched, pulled, reset, or swapped (its contract C3). It installs a clone
+only when none is valid. There is no auto-update switch. Catch up only via
+**`/ff`**.
 
 When the user asks to sync, fast-forward, or “update the SSOT / this
 governance clone,” use **`/ff`** — nothing else.

@@ -31,7 +31,10 @@ from typing import Any
 TESTS_DIR = Path(__file__).resolve().parent
 PE_ROOT = TESTS_DIR.parents[1]
 SCRIPT = PE_ROOT / "scripts/run_campaign.py"
-ACTIVATE = PE_ROOT.parents[1] / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+ACTIVATE = (
+    PE_ROOT.parents[1]
+    / "skills/_archived/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+)
 
 if str(TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR))
@@ -41,6 +44,7 @@ from test_run_campaign import (  # type: ignore[import-not-found]  # noqa: E402
     _git_init,
     _host_repo,
     _load,
+    _projection_ok,
     _stack_ok,
 )
 
@@ -141,7 +145,7 @@ def _prepare(mod: Any, entry: Path, *, root: Path, l9: Path, primary: Path) -> t
         repo_root=root,
         l9_root=l9,
         fast=True,
-        hooks=mod.Hooks(context7_stack=_stack_ok),
+        hooks=mod.Hooks(context7_stack=_stack_ok, bind_projection=_projection_ok),
     )
     return report, time.monotonic() - started
 

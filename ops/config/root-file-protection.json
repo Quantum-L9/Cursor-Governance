@@ -233,10 +233,7 @@
   ],
   "pin_bump": {
     "description": "Content-based allowance for version-pin bumps (Dependabot or human). In a listed additive_only manifest, a change whose every removed line pairs 1:1 with an added line naming the same requirement with only its version numbers changed, and whose exact == pins resolve in the lock at head, is verdict pin_bump: no ALLOW-ROOT-DELETION marker and no protected-root PR body. Any other edit in the same file keeps the full additive_only rule. Judged on the diff, never the author.",
-    "files": [
-      "pyproject.toml",
-      "requirements.txt"
-    ],
+    "files": ["pyproject.toml", "requirements.txt"],
     "lock": "uv.lock"
   },
   "exempt_root_files": [],

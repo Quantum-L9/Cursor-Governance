@@ -1,0 +1,86 @@
+{
+  "main_currentness": "must re-resolve at campaign bootstrap and before each consequential action",
+  "observation_date": "2026-11-17",
+  "repos": {
+    "Quantum-L9/.github": "dd780b957b301acf5443013708105b7a76e3aa7b",
+    "Quantum-L9/Cursor-Governance": "58e7340f846dfe960a3c58fb4e4f2ef11b221084",
+    "Quantum-L9/l9-semantic-compiler-engine": "f3883cbbb4f4e982f96bfac0b3eca08ad7e711a6"
+  },
+  "source_documents": [
+    {
+      "path": ".claude/skills/l9-projection-admission/SKILL.md",
+      "purpose": "global semantic admission workflow, NOT operator scoped auto-admission",
+      "repository": "Quantum-L9/.github"
+    },
+    {
+      "path": ".claude/skills/l9-projection-admission/references/registration-surfaces.md",
+      "purpose": "global source/profile/schema registry and release closure",
+      "repository": "Quantum-L9/.github"
+    },
+    {
+      "path": "semantics/authority_model.yaml",
+      "purpose": "exact authority and approval boundaries",
+      "repository": "Quantum-L9/.github"
+    },
+    {
+      "path": "semantics/strategic_cognition_model.yaml",
+      "purpose": "intent externally owned; Plan and reasoning authority separation",
+      "repository": "Quantum-L9/.github"
+    },
+    {
+      "path": "docs/PROJECTION_PUBLICATION.md",
+      "purpose": "producer/consumer/receipt/trusted replay",
+      "repository": "Quantum-L9/.github"
+    },
+    {
+      "path": "src/l9_semantic_compiler/engine/registry.py",
+      "purpose": "CanonicalAuthority registered canonical source enforcement",
+      "repository": "Quantum-L9/l9-semantic-compiler-engine"
+    },
+    {
+      "path": "src/l9_semantic_compiler/cli.py",
+      "purpose": "existing project, compose, projection-coordinates, verify-projection",
+      "repository": "Quantum-L9/l9-semantic-compiler-engine"
+    },
+    {
+      "path": "src/l9_semantic_compiler/passes/projection.py",
+      "purpose": "projection semantics and receipt producer",
+      "repository": "Quantum-L9/l9-semantic-compiler-engine"
+    },
+    {
+      "path": "src/l9_semantic_compiler/passes/payload_validation.py",
+      "purpose": "source-class payload validation compatibility",
+      "repository": "Quantum-L9/l9-semantic-compiler-engine"
+    },
+    {
+      "path": "governance/cto-mode/MODE.yaml",
+      "purpose": "swarm protocol/role activation",
+      "repository": "Quantum-L9/Cursor-Governance"
+    },
+    {
+      "path": "ops/autonomy/projection_mode.py",
+      "purpose": "shared opt-in mode and admitted current views",
+      "repository": "Quantum-L9/Cursor-Governance"
+    },
+    {
+      "path": "tools/authority/produce_projection_bundle.py",
+      "purpose": "consumer driver for current global profiles and trusted replay",
+      "repository": "Quantum-L9/Cursor-Governance"
+    },
+    {
+      "path": "ops/make/publish.mk",
+      "purpose": "governance-owned make pr publication and L4 path",
+      "repository": "Quantum-L9/Cursor-Governance"
+    },
+    {
+      "path": "ops/config/merge-authority.json",
+      "purpose": "current merge switch; re-check on execution",
+      "repository": "Quantum-L9/Cursor-Governance"
+    },
+    {
+      "path": "skills/l9-pr-remediation/SKILL.md",
+      "purpose": "merge lifecycle, stack_safe_merge, head/CI/review gates",
+      "repository": "Quantum-L9/Cursor-Governance"
+    }
+  ]
+}

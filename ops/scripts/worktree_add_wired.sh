@@ -18,7 +18,7 @@ fi
 path=""
 i=1
 while [ "$i" -le "$#" ]; do
-  eval "a=\${$i}"
+  a="${!i}"
   case "$a" in
     -b|-B|--reason)
       i=$((i + 2))
@@ -55,10 +55,60 @@ fi
 # reconcile the IDE profile deliberately.
 L9_WIRE_LINKS_ONLY=1 bash "$SCRIPT_DIR/ensure_workspace_wired.sh" "$path"
 
-# Real locked venv in this tree. A symlink to another checkout's .venv fails
-# ensure_gov_python.sh (sys.prefix != this path). Consumer repos without
-# pyproject.toml + uv.lock are skipped.
-if [ -f "$path/pyproject.toml" ] && [ -f "$path/uv.lock" ]; then
-  echo "--- locked venv (ops/scripts/ensure_uv_environment.sh) ---"
-  bash "$SCRIPT_DIR/ensure_gov_python.sh" "$path"
+# Every repo that defines `venv` builds this tree's .venv with `make venv`.
+# The recipe may live in an included fragment, so ask Make; do not grep
+# the root Makefile and do not branch on uv.lock or requirements*.txt.
+# make -q: 0 up to date, 1 would run, 2 no such target.
+# A tree with no venv target, or a target that leaves no .venv, uses the
+# governance SSOT environment ($HOME/.cursor-governance/.venv) -- unless the
+# tree is its own Python project. That is the locked toolchain, not another
+# checkout of this same repo.
+#
+# A tree that is its own Python project never gets the SSOT link: its own
+# tooling owns .venv. `uv sync` syncs exactly (it removes every package the
+# tree's lock does not select), so through the link it rewrote the SSOT venv to
+# the consumer's lock and uninstalled the governance toolchain
+# (2026-11-11, l9-constellation-topology: ~96 locked packages -> ~28).
+# "Own project" is uv's own discovery rule, not a guess: uv treats any
+# pyproject.toml as a sync root -- a [project] table, a [tool.uv.workspace]
+# root, or a tool-config-only file (a "non-project workspace") -- and a
+# uv.lock is a lock it will sync. Such a tree builds its own .venv (`uv sync`,
+# or its documented setup) and is otherwise left without one.
+# This decides only whether to link; it never selects how a venv is built.
+_is_own_python_project() {
+  [ -f "$1/pyproject.toml" ] || [ -f "$1/uv.lock" ]
+}
+make_venv_rc=2
+if command -v make >/dev/null 2>&1; then
+  make_venv_rc=0
+  make -C "$path" -q venv >/dev/null 2>&1 || make_venv_rc=$?
+  if [ "$make_venv_rc" -eq 0 ] || [ "$make_venv_rc" -eq 1 ]; then
+    echo "--- venv (make venv) ---"
+    make -C "$path" venv
+  fi
+else
+  echo "WARN: make is not on PATH; cannot run make venv in $path" >&2
+fi
+if [ ! -e "$path/.venv" ] && [ ! -L "$path/.venv" ] && _is_own_python_project "$path"; then
+  echo "--- venv (own project: not linked to SSOT) ---"
+  echo "NOTE: $path is its own Python project (pyproject.toml or uv.lock);"
+  echo "  it gets no link to the governance SSOT venv, whose packages its own"
+  echo "  uv sync would replace. Build its own .venv there, e.g.: (cd \"$path\" && uv sync)"
+elif [ ! -e "$path/.venv" ]; then
+  ssot="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+  ssot_venv="$ssot/.venv"
+  if [ ! -e "$ssot_venv" ]; then
+    echo "ERROR: $path has no .venv and SSOT venv is missing at $ssot_venv" >&2
+    echo "  Fix: make -C \"$ssot\" venv" >&2
+    exit 1
+  fi
+  ssot_real="$(cd "$ssot" && pwd -P)"
+  path_real="$(cd "$path" && pwd -P)"
+  if [ "$ssot_real" = "$path_real" ]; then
+    echo "ERROR: $path is the SSOT and has no .venv" >&2
+    echo "  Fix: make -C \"$ssot\" venv" >&2
+    exit 1
+  fi
+  echo "--- venv (SSOT $ssot_venv) ---"
+  ln -s "$ssot_venv" "$path/.venv"
 fi

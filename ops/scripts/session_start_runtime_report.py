@@ -207,13 +207,73 @@ def classify_claude_adapter(
     ]
 
 
+#: Receipt component -> the report line it is derived from. The receipt aggregates
+#: lines this report already prints; these keys must not be counted a second time.
+_COMPONENT_TO_LINE = {
+    "shared_bootstrap": "venv",
+    "settings": "ide-profile",
+    "skills": "skill-usage",
+    "commands": "wiring",
+    "rules": "wiring",
+    "capabilities": "secrets-bind",
+    "memory": "memory",
+    "memory_cli": "memory",
+    "memory_mcp": "memory",
+    "mcp": "memory",
+}
+#: Receipt probes the report has no line of its own for, keyed to one finding each:
+#: `plugin` and `plugins` are the same probe written under two keys.
+_INDEPENDENT_PROBES = (("hooks", "hooks"), ("plugin", "plugin"), ("plugins", "plugin"))
+#: A probe the wiring check also covers (the `.cursor-commands` link): it repeats the
+#: wiring line when that line is already flagged, and is its own finding otherwise.
+_WIRING_COVERED_PROBES = ("commands_link",)
+
+
+def receipt_causes(
+    payload: dict[str, Any] | None, flagged: frozenset[str] = frozenset()
+) -> tuple[list[str], list[str]]:
+    """(report lines the receipt repeats, independent findings) for a non-READY receipt.
+
+    *flagged* names the report lines already in ``### Degraded``. Each underlying probe
+    yields at most one finding, however many receipt keys carry it.
+    """
+    if not isinstance(payload, dict):
+        return [], []
+    reasons = payload.get("reasons") if isinstance(payload.get("reasons"), dict) else {}
+    repeated: list[str] = []
+    for key, line in _COMPONENT_TO_LINE.items():
+        if payload.get(key) not in (None, "READY") and line not in repeated:
+            repeated.append(line)
+    independent: dict[str, str] = {}
+    for key, probe in _INDEPENDENT_PROBES:
+        if payload.get(key) not in (None, "READY") and probe not in independent:
+            independent[probe] = f"{probe}: {reasons.get(key) or payload.get(key)}"
+    for key in _WIRING_COVERED_PROBES:
+        if payload.get(key) in (None, "READY"):
+            continue
+        if "wiring" in flagged:
+            if "wiring" not in repeated:
+                repeated.append("wiring")
+        else:
+            independent[key] = f"{key}: {reasons.get(key) or payload.get(key)}"
+    return repeated, list(independent.values())
+
+
 def classify_cursor_adapter(
     *,
     surface: str,
     receipt: dict[str, Any],
     workspace: str = "",
+    payload: dict[str, Any] | None = None,
+    flagged: frozenset[str] = frozenset(),
 ) -> list[dict[str, Any]]:
     """Cursor's own receipt (~/.l9/cursor/bootstrap-state.json).
+
+    When *payload* (the receipt this run just wrote) is given and the receipt is not
+    READY only because of lines this report already prints, the adapter line names
+    those lines and stays out of ``### Degraded``: the receipt is an aggregate, and
+    "installer failed at stage 'complete'" once re-reported a wiring failure as a
+    second, unrelated fault.
 
     `make start` / `/start-session` / the SessionStart hook write this
     receipt every bootstrap. never_ran or TTL-unknown after that run is a
@@ -259,6 +319,18 @@ def classify_cursor_adapter(
             )
         ]
     klass = FAILED if state in {"failed", "blocked"} else DEGRADED
+    repeated, independent = receipt_causes(payload, flagged)
+    if independent:
+        return [_line("cursor-adapter", klass, f"{state} — " + "; ".join(independent))]
+    if repeated:
+        return [
+            _line(
+                "cursor-adapter",
+                klass,
+                f"{state} — aggregates {', '.join(repeated)} (reported on its own line)",
+                include_in_degraded=False,
+            )
+        ]
     return [_line("cursor-adapter", klass, f"{state} — {reason or 'receipt state=' + state}")]
 
 
@@ -591,6 +663,29 @@ def classify_bind_line(
     return _line("secrets-bind", OK, summary)
 
 
+def classify_authorized_catalog(names: list[str] | None) -> dict[str, Any]:
+    """Names an agent may bind. Printed tokens come from the allow-list, never the receipt."""
+    owner = Path(__file__).resolve().parents[1] / "secrets"
+    if str(owner) not in sys.path:
+        sys.path.insert(0, str(owner))
+    try:
+        import capability_bind as bind  # noqa: PLC0415
+    except Exception:  # noqa: BLE001 - the reporter never fails on an import
+        return _line("secrets-authorized", DEGRADED, "allow-list unread")
+    known = sorted(name for name in bind.allowed_names() if name not in bind.REFUSED_NAMES)
+    if names is None:
+        shown = known
+    else:
+        claimed = {str(name) for name in names}
+        shown = [name for name in known if name in claimed]
+    summary = (
+        "authorized: "
+        + " ".join(shown)
+        + " — a listed name is authorized to bind when the task needs that system"
+    )
+    return _line("secrets-authorized", OK, summary)
+
+
 def load_secrets_plane_receipt(workspace: str) -> dict[str, Any] | None:
     """Read the plane receipt. Never probe. Invalid/absent is unread."""
     if not workspace:
@@ -693,30 +788,44 @@ def receipt_log(receipt: dict[str, Any]) -> tuple[str, str]:
 
 
 def format_markdown(lines: list[dict[str, Any]]) -> str:
-    parts: list[str] = []
+    """Each component is printed exactly once.
+
+    ``### FAILED`` leads with a failed machine identity, ``### Degraded`` carries every
+    other line that needs attention (with its evidence), and ``### Runtime`` carries
+    the rest. A component used to appear in Runtime *and* Degraded (and an identity
+    failure in all three), so one fault read as two or three.
+    """
     failed_identity = [
         item
         for item in lines
         if item["name"] in {"infisical-identity", "aws-cli"} and item["class"] == FAILED
     ]
+    leading = {id(item) for item in failed_identity}
+    degraded = [
+        item for item in lines if item.get("include_in_degraded") and id(item) not in leading
+    ]
+    flagged = leading | {id(item) for item in degraded}
+    parts: list[str] = []
     if failed_identity:
         parts.append("### FAILED")
         for item in failed_identity:
             parts.append(f"- {item['name']}: {item['class']} — {item['summary']}")
         parts.append("")
-    runtime = ["### Runtime"]
-    for item in lines:
-        runtime.append(f"- {item['name']}: {item['class']} — {item['summary']}")
-    degraded = [item for item in lines if item.get("include_in_degraded")]
-    runtime.append("### Degraded")
+    parts.append("### Runtime")
+    healthy = [item for item in lines if id(item) not in flagged]
+    if not healthy:
+        parts.append("- none healthy (see below)")
+    for item in healthy:
+        parts.append(f"- {item['name']}: {item['class']} — {item['summary']}")
+    parts.append("### Degraded")
     if not degraded:
-        runtime.append("- none")
-        return "\n".join(parts + runtime)
+        parts.append("- none")
+        return "\n".join(parts)
     for item in degraded:
         ev = item.get("evidence") or ""
         extra = f" Evidence: {ev}" if ev and ev not in item["summary"] else ""
-        runtime.append(f"- {item['name']}: {item['class']} — {item['summary']}.{extra}".rstrip("."))
-    return "\n".join(parts + runtime)
+        parts.append(f"- {item['name']}: {item['class']} — {item['summary']}.{extra}".rstrip("."))
+    return "\n".join(parts)
 
 
 def collect(
@@ -741,6 +850,7 @@ def collect(
     identity: dict[str, Any] | None = None,
     aws_cli: dict[str, Any] | None = None,
     secrets_bind: list[dict[str, Any]] | None = None,
+    authorized_names: list[str] | None = None,
     write_receipt: bool = True,
     plane_state: str = "",
 ) -> list[dict[str, Any]]:
@@ -756,6 +866,7 @@ def collect(
         classify_infisical_identity(identity),
         *([line] if (line := classify_aws_cli(aws_cli)) is not None else []),
         classify_bind_line(secrets_bind, plane_state),
+        classify_authorized_catalog(authorized_names),
         classify_skill_usage(skill_note),
     ]
     receipt = read_claude_receipt(path=root / ".l9" / "claude" / "bootstrap-state.json")
@@ -775,6 +886,10 @@ def collect(
         try:
             written = write_cursor_bootstrap_receipt(home=root, workspace=workspace, lines=lines)
             cursor_receipt = read_claude_receipt(path=written, surface="cursor")
+            try:
+                written_payload = json.loads(written.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                written_payload = None
         except OSError as exc:
             lines.append(
                 _line(
@@ -790,6 +905,10 @@ def collect(
                     surface=surface,
                     receipt=cursor_receipt,
                     workspace=workspace,
+                    payload=written_payload,
+                    flagged=frozenset(
+                        item["name"] for item in lines if item.get("include_in_degraded")
+                    ),
                 )
             )
     else:
@@ -936,6 +1055,12 @@ def main(argv: list[str] | None = None) -> int:
         identity=identity,
         aws_cli=secrets_receipt_aws(plane_receipt),
         secrets_bind=secrets_bind,
+        authorized_names=(
+            plane_receipt.get("authorized_names")
+            if isinstance(plane_receipt, dict)
+            and isinstance(plane_receipt.get("authorized_names"), list)
+            else None
+        ),
         plane_state=secrets_plane_state(plane_receipt),
     )
     identity_failed = any(

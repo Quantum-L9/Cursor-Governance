@@ -141,10 +141,29 @@ def project_skills(
     for result in payload["results"]:
         outcome.projected += len(result.get("current", [])) + len(result.get("created", []))
         outcome.stale_removed += len(result.get("removed", []))
-        outcome.failures.extend(result.get("conflicts", []))
-        if result.get("drift"):
+        conflicts = list(result.get("conflicts", []))
+        drift = list(result.get("drift", []))
+        # A project-scope mount root is a repository the bootstrap does not own.
+        # What that repository COMMITTED under .claude/skills (a tracked link or a
+        # tracked manifest) is its content: reconcile_scope already refuses to
+        # touch it, and a sibling repository's commits must not set this
+        # session's skills status. In a cloud container every repository is a
+        # mount root, so one consumer's stale links used to mark the whole
+        # bootstrap DEGRADED with nothing the bootstrap could, or should, do.
+        # The entries stay visible, per repository, as consumer_owned.
+        if result.get("scope") == "project":
+            owned = [c for c in conflicts if c.startswith("tracked-owned:")]
+            owned += [d for d in drift if d.startswith("tracked-manifest:")]
+            if owned:
+                outcome.detail.setdefault("consumer_owned", {})[
+                    str(result.get("mount_root") or result.get("target") or "")
+                ] = owned
+                conflicts = [c for c in conflicts if c not in owned]
+                drift = [d for d in drift if d not in owned]
+        outcome.failures.extend(conflicts)
+        if drift:
             outcome.status = "drift"
-            outcome.detail.setdefault("drift", []).extend(result["drift"])
+            outcome.detail.setdefault("drift", []).extend(drift)
     if any(str(item).startswith("unmanaged-conflict:") for item in outcome.failures):
         outcome.status = "conflict"
     elif outcome.failures and outcome.status == "ok":

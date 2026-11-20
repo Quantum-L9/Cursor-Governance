@@ -8,6 +8,12 @@
 # repository (l9-ci-core): the offline check skips it, `--remote` reads it over
 # the network, and make pr runs `--remote` as a warning.
 #
+# `track: ci_ref` makes a tool follow its CI file instead of the hand pin:
+# install.py installs the one revision `ci_ref.extract` (a regex with a
+# `version` group) finds there and records it in state.json, so a CI bump needs
+# no re-pin here. `version` stays the reviewed fallback for when the CI file is
+# unreadable, and `contains` stays the exact evidence of that fallback.
+#
 # Cursor never reads this file: the runner is wired only from Claude hooks and
 # a Claude-guarded make pr wave entry (see README.md).
 schema: l9.ci-parity.tools.v1
@@ -88,8 +94,11 @@ tools:
     # The CI SDK Core runs for its Semgrep gate. Kept in its own tool
     # environment: l9-ci pins jsonschema==4.26.0 and semgrep 1.171.0 needs
     # <4.26, so the two cannot share one (Core installs them separately too).
-    # The version is the SDK commit; uv installs exactly that revision.
-    version: 6d70e829cdd9987279f5e48eed340b2b67881662
+    # The version is the SDK commit; uv installs exactly that revision. It
+    # tracks the revision org-ci.yml provisions (track: ci_ref), so Core's SDK
+    # bumps reach make pr without a re-pin; this hand pin is the fallback.
+    version: d09d3963cf8835446b9d1cfd5a03cc79ce16e2e2
+    track: ci_ref
     method: uv_tool
     package: git+https://github.com/Quantum-L9/l9-ci-sdk
     binary: l9-ci
@@ -99,10 +108,12 @@ tools:
       repo: Quantum-L9/l9-ci-core
       ref: main
       path: .github/workflows/org-ci.yml
-      contains: "'6d70e829cdd9987279f5e48eed340b2b67881662'"
+      contains: "'d09d3963cf8835446b9d1cfd5a03cc79ce16e2e2'"
+      # The provision-sdk step's default: sdk-revision: ${{ ... || '<sha>' }}
+      extract: 'sdk-revision:[^\n]*\|\|\s*''(?P<version>[0-9a-f]{40})'''
       observed: >-
         org-ci.yml provisions the SDK at this default sdk-revision for
-        Analyze (central Core), 2026-11-06.
+        Analyze (central Core), read at l9-ci-core main 68ed9943, 2026-11-07.
   zizmor:
     version: 1.30.1
     method: uv_tool
@@ -192,9 +203,12 @@ lanes:
     tool: biome
     tier: fast
     globs: ["*.json", "*.js", "*.jsx", "*.ts", "*.tsx", "*.mjs", "*.cjs"]
-    # Analyze (central Core) runs `biome ci` blocking: any finding in a changed
-    # file fails it, not only one on a changed line (a whole-file format
-    # diagnostic anchors wherever Biome puts it).
+    # Analyze (central Core) runs `biome ci` blocking only when the checkout
+    # root has biome.json or biome.jsonc (org-ci.yml hashFiles at 68ed994;
+    # otherwise not_applicable). Any finding in a changed file fails it, not
+    # only one on a changed line (a whole-file format diagnostic anchors
+    # wherever Biome puts it).
+    requires_any_file: [biome.json, biome.jsonc]
     block: [error]
     scope: changed-files
     weight: 1
@@ -215,9 +229,15 @@ lanes:
     # from l9-ci-core at `core_ref` and staged where org-ci stages it. Core
     # judges the whole tree, so this lane does too: a rule or policy change can
     # make untouched lines block (it did on #829).
+    # The governance is resolved by Core's own actions at `core_ref`
+    # (resolve-consumer-metadata, then resolve-governance with its
+    # `product-kind`), so a repository that does not declare `product_kind:
+    # node` in .l9/ci.json gets Core's constellation-scoped policy: the Gate
+    # routing rules run and are reported but cannot block (Core #237).
     tool: l9-ci
     provider: semgrep
     core_profile: pr_fast
+    core_event: pull_request
     core_ref: main
     tier: heavy
     globs: ["*.py", "*.pyi", "*.js", "*.jsx", "*.ts", "*.tsx"]

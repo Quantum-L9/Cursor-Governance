@@ -165,3 +165,19 @@ repo-setup: ## Establish the locked governance environment (uv + .venv)
 repo-validate: uv-lock-check rules-validate ## Validate the lockfile and the rules manifests
 repo-check: lint-ruff-full ## Run ruff check and ruff format --check over the repository
 repo-test: pytest-suites ## Run the registry-driven pytest suites
+# ---------------------------------------------------------------------------
+# Program Execution registered stage (CANONICAL_LAW
+# PROGRAM_EXECUTION_REGISTERED_STAGE_V1, 2026-11-13). Appended because Repo.mk is
+# additive_only: MAKE_FRAGMENTS above is not rewritten. Only `campaign` and
+# `campaign-check-input` join the graph; Program Execution's own fragment
+# stays uncomposed.
+# ---------------------------------------------------------------------------
+include ops/make/campaign.mk
+# ---------------------------------------------------------------------------
+# Release front door to Core's release engine (docs/L9_RELEASE.md). Appended
+# because Repo.mk is additive_only: the fragment list and the CONSUMER_SAFE list
+# above are not rewritten. `release` is consumer-safe so `l9 release` reaches it
+# from any L9 repository.
+# ---------------------------------------------------------------------------
+include ops/make/release.mk
+L9_CONSUMER_SAFE_TARGETS += release

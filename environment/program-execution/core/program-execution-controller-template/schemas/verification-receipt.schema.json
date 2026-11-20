@@ -160,6 +160,13 @@
           }
         }
       }
+    },
+    "outcome": {
+      "enum": [
+        "changed",
+        "already_satisfied"
+      ],
+      "description": "already_satisfied: the attempt changed nothing and the Controller's own run of the task's validation commands passed on the unchanged worktree, proving the objective already held on the base."
     }
   }
 }

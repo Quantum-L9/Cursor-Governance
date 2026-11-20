@@ -19,6 +19,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.parse
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
@@ -41,10 +42,14 @@ import pe_trace  # noqa: E402 - sibling module, imported after the sys.path guar
 
 PE_ROOT = Path(__file__).resolve().parents[1]
 GOV_ROOT = PE_ROOT.parents[1]
-ACTIVATE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
-NUGGET_SCRIPT = GOV_ROOT / "skills/l9-pe-nuggets/scripts/extract_nuggets.py"
-AUTHORIZE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py"
-BRIEF_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_brief.py"
+ACTIVATE_SCRIPT = (
+    GOV_ROOT / "skills/_archived/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+)
+NUGGET_SCRIPT = GOV_ROOT / "skills/_archived/l9-pe-nuggets/scripts/extract_nuggets.py"
+AUTHORIZE_SCRIPT = (
+    GOV_ROOT / "skills/_archived/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py"
+)
+BRIEF_SCRIPT = GOV_ROOT / "skills/_archived/l9-pe-campaign-activate/scripts/compile_brief.py"
 COMPILE_SOURCE = PE_ROOT / "scripts/compile_campaign_source.py"
 CAMPAIGN_INPUT = PE_ROOT / "scripts/campaign_input.py"
 COLLECT_EVIDENCE = PE_ROOT / "scripts/collect_evidence.py"
@@ -62,24 +67,27 @@ UNTIL_STAGES = (
     "bootstrap",
     "arm",
     "execute",
+    "pr",
 )
 UNTIL_ALIASES = {"bootstrap": "arm"}
-# Kept only so unreachable compatibility helpers can compare their historical
-# stages without becoming public runner stages again.
-LEGACY_PUBLICATION_STAGES = ("pr", "close", "merge")
-STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES + ("pr", "close"))}
+# Stages past `pr` stay refused: merge is /l9-pr-remediation's, never a campaign stage.
+LEGACY_PUBLICATION_STAGES = ("close", "merge")
+STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES + ("close",))}
 HOST_REPO_DEFAULT = "Quantum-L9/Cursor-Governance"
 HASH_PROGRAM_RE = re.compile(r"^pe-[0-9a-f]{8,}$")
 ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 FIRST_TASK_ID = "TASK-001"
 PE_MODE_ENV = "L9_PE_MODE"
-# Program Execution is permanently local-commit-only. The historical
-# release variable is retained as a diagnostic compatibility name only; it can
-# never widen runner authority. Publication belongs to root `make pr`; merge
-# belongs to /l9-pr-remediation.
+# PROGRAM_EXECUTION_MAKE_PR_FINISH_V1: a campaign finishes by publishing its
+# verified integration branch through the governance SSOT `make pr`
+# (campaign_publish.py), and only that way. No other publication path exists:
+# run_cmd still refuses every push, PR verb and `make pr`, and merge belongs to
+# /l9-pr-remediation. The historical release variable is a diagnostic
+# compatibility name only; it never widens runner authority.
 PE_RELEASE_ENV = "L9_PE_RELEASE_AUTHORIZED"
-AUTONOMOUS_LAST_STAGE = "execute"
-PUBLICATION_STAGES = ("pr", "close")
+AUTONOMOUS_LAST_STAGE = "pr"
+LOCAL_LAST_STAGE = "execute"
+PUBLICATION_STAGES = ("close",)
 PREPARATION_STAGES = (
     "stack_proof",
     "isolate",
@@ -129,9 +137,9 @@ def release_authorized() -> bool:
 def refuse_publication(action: str) -> None:
     """Fail closed on every remote publication attempt from Program Execution."""
     raise CampaignError(
-        f"Program Execution is permanently local-commit-only; refusing to {action}. "
-        f"Campaign execution ends at '{AUTONOMOUS_LAST_STAGE}' with verified local commits. "
-        "Publish separately with `PR_REMEDIATE=0 make pr`; merge only through "
+        f"Program Execution publishes only through the governance SSOT make pr; refusing to "
+        f"{action}. A campaign ends at '{AUTONOMOUS_LAST_STAGE}', where campaign_publish runs "
+        "`make -C <SSOT> pr WS=<integration worktree>`; merge only through "
         "/l9-pr-remediation. L9_PE_RELEASE_AUTHORIZED cannot widen PE authority."
     )
 
@@ -257,6 +265,7 @@ class Hooks:
     write_task_output: Callable[[Path, str, str], str] | None = None
     plan_window: Callable[[dict[str, Any], Path, Path], dict[str, Any]] | None = None
     compile_architecture: Callable[..., dict[str, Any]] | None = None
+    bind_projection: Callable[[dict[str, Any]], dict[str, Any]] | None = None
 
 
 @dataclass
@@ -667,6 +676,57 @@ def strip_session_residue(repo: Path) -> None:
         for path in receipts.glob("unknown-agent__*.json"):
             if proven_untracked(repo, path):
                 path.unlink()
+
+
+#: Where a host session keeps its own memory bookkeeping inside its cwd.
+HOST_SESSION_RECEIPTS = Path(".l9") / "memory" / "receipts"
+
+
+def relocate_host_session_residue(
+    worktree: Path,
+    destination: Path,
+    baseline: Mapping[str, str] | None = None,
+) -> list[str]:
+    """Move host session bookkeeping out of a task worktree before it is judged.
+
+    A real Claude host writes memory receipts under `.l9/memory/receipts/` in
+    its working directory as a session opens and closes. No tool call produces
+    them, so no PreToolUse authorization can ever cover them, and they are not
+    task output. Left in place they are indistinguishable from an unmediated
+    provider write, which is what mediation coverage refuses. A window that
+    was lost mid-flight leaves the same files under a session id nobody ever
+    reported, so the rule is by location and provenance, not by session.
+
+    Only files that are all of the following are moved, and they are moved
+    rather than deleted so the evidence survives beside the attempt:
+
+    * regular files directly inside the host receipt directory;
+    * absent from the pre-dispatch effect baseline;
+    * proven untracked by git.
+
+    Moving cannot hide an effect from the attempt: whatever is moved is no
+    longer in the worktree the Controller verifies and commits. Everything
+    else stays where it is and is judged by mediation coverage. Returns the
+    repo-relative paths that were moved.
+    """
+    receipts = worktree / HOST_SESSION_RECEIPTS
+    if not receipts.is_dir() or receipts.is_symlink():
+        return []
+    known = dict(baseline or {})
+    moved: list[str] = []
+    for path in sorted(receipts.iterdir()):
+        if path.is_symlink() or not path.is_file():
+            continue
+        relative = path.relative_to(worktree).as_posix()
+        if relative in known or not proven_untracked(worktree, path):
+            continue
+        destination.mkdir(parents=True, exist_ok=True)
+        target = destination / path.name
+        if target.exists():
+            target = destination / f"{path.name}.{time.time_ns()}"
+        shutil.move(str(path), str(target))
+        moved.append(relative)
+    return moved
 
 
 def normalize_remote_ref(value: str) -> str:
@@ -1485,9 +1545,10 @@ def default_ensure_target_checkout(
     if (
         donor is not None
         and may_clone_local(donor)
-        and not is_dirty(donor)
         and donor_matches_repository(donor, repository_id)
     ):
+        # A dirty donor still clones clean: uncommitted and untracked files are
+        # not objects, so the campaign tree does not inherit them.
         clone = run_cmd(
             ["git", "clone", "--local", str(donor.resolve()), str(dest)],
             timeout=CLONE_TIMEOUT_S,
@@ -1962,16 +2023,39 @@ def default_arm(
     }
 
 
-def default_make_pr(worktree: Path, campaign_id: str) -> dict[str, Any]:
-    """Refused. Program Execution never opens a host PR; `make pr` is the operator's.
+def default_make_pr(pec_workspace: Path, campaign_id: str) -> dict[str, Any]:
+    """Publish the completed campaign through the governance SSOT `make pr`.
 
-    The `make pr` implementation that used to sit under this refusal (audit
-    Y7) was unreachable and misread as a live publication path; the runner's
-    only publication behavior is the refusal itself.
+    PROGRAM_EXECUTION_MAKE_PR_FINISH_V1. The target checkout and accepted
+    Blueprint come from the launch pointer the runner wrote at arm; the base is
+    the target's remote default (origin/main for Cursor-Governance). The
+    ceremony, the push, the org PR template and its composer all belong to the
+    SSOT `make pr`; this runner only hands it the verified tree.
     """
-    del worktree, campaign_id
-    refuse_publication("open a host pull request")
-    raise AssertionError("unreachable: refuse_publication raises")  # pragma: no cover
+    module = _load_script("campaign_publish", PE_ROOT / "scripts" / "campaign_publish.py")
+    launch_path = pec_workspace / "runtime" / "LAUNCH.json"
+    try:
+        launch = json.loads(launch_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise CampaignError(f"cannot publish: launch pointer unreadable at {launch_path}") from exc
+    target = Path(str(launch.get("target_worktree") or launch.get("target_tree") or ""))
+    blueprint = Path(str(launch.get("blueprint") or ""))
+    if not target.is_dir() or not blueprint.is_dir():
+        raise CampaignError(
+            f"cannot publish: launch pointer names no target/blueprint ({launch_path})"
+        )
+    authority, _invocation = admit_operator_invocation()
+    try:
+        return module.publish_campaign(
+            pec_workspace=pec_workspace,
+            campaign_id=campaign_id,
+            target=target,
+            blueprint=blueprint,
+            base_ref=remote_lineage_ref(target),
+            authority=authority,
+        )
+    except module.PublicationError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
 
 
 def default_pr_status(host_repo: str, number: int | None) -> dict[str, Any]:
@@ -3138,6 +3222,11 @@ def _peer_identity() -> tuple[str, str, str | None]:
     claude_env = {k: v for k, v in os.environ.items() if k != "CURSOR_AGENT"}
     claude_surface = identity.resolve_surface_id({**claude_env, "CLAUDECODE": "1"})
     claude_here = (claude_actor, claude_surface) if claude_surface else None
+    if str(GOV_ROOT) not in sys.path:
+        sys.path.append(str(GOV_ROOT))
+    from ops.autonomy.surface_detect import detect_surface  # noqa: PLC0415
+
+    coarse = detect_surface(os.environ)
     aliases = {
         "claude-cli": (claude_actor, identity.CLAUDE_CLI_SURFACE),
         "claude-mobile": (claude_actor, identity.CLAUDE_MOBILE_SURFACE),
@@ -3150,6 +3239,10 @@ def _peer_identity() -> tuple[str, str, str | None]:
     if claude_here is not None:
         aliases["claude-code"] = claude_here
     binding = aliases.get(governance_surface)
+    if binding is None and coarse == "cursor":
+        binding = aliases["cursor"]
+        if provider_ref is None:
+            provider_ref = "cursor-foreground"
     if binding is None:
         raise CampaignError(
             "Peer Execution requires a canonical runtime binding. Set L9_PE_AGENT_REF and "
@@ -3244,9 +3337,20 @@ def _peer_concurrency_budget():
             "max_mutating_dispatches_per_target_lineage is enforced by exclusive "
             f"target-lineage write locks; only 1 is enforceable, got {lineage_limit}"
         )
+    # Program Execution's lanes are drawn from the autonomy profile of the
+    # surface it runs on. Its own policy may narrow them and may not exceed them.
+    authority = _campaign_authority_module()
+    try:
+        total_lanes, mutation_lanes = authority.narrowed_lanes(
+            authority.lane_ceiling(GOV_ROOT),
+            total_lanes=int(limits.get("max_active_dispatches") or 1),
+            mutation_lanes=int(limits.get("max_mutating_dispatches") or 1),
+        )
+    except authority.CampaignAuthorityError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
     return modules["ConcurrencyBudget"](
-        total_lanes=int(limits.get("max_active_dispatches") or 1),
-        mutation_lanes=int(limits.get("max_mutating_dispatches") or 1),
+        total_lanes=total_lanes,
+        mutation_lanes=mutation_lanes,
     )
 
 
@@ -3378,6 +3482,13 @@ def _run_peer_execution(
     front_door = _peer_pipeline()
     if autonomy_authority is None:
         autonomy_authority = _task_autonomy_authority(workspace, contract)
+    # The binding is verified on every dispatch (fail closed), but its views
+    # reach the worker only when the task contract asks for them: a worker's
+    # context is the contract, and governance semantics it does not need cost
+    # it turns and tokens.
+    projection = bound_projection_context(workspace)
+    if contract.get("projection_context") is not True:
+        projection = None
     agent_ref, surface, provider_override = _peer_identity()
     task_id = contract.get("task_id")
     attempt = _live_controller_attempt(workspace, str(task_id or ""))
@@ -3390,6 +3501,7 @@ def _run_peer_execution(
         autonomy_authority=autonomy_authority,
         attempt_id=(attempt or {}).get("attempt_id"),
         lease_id=(attempt or {}).get("lease_id"),
+        projection=projection,
     )
     try:
         outcome = front_door.execute(request)
@@ -3434,6 +3546,38 @@ def _run_peer_execution(
         "attempt_id": outcome.get("attempt_id"),
         "lease_id": outcome.get("lease_id"),
     }
+
+
+def bound_projection_context(workspace: Path) -> dict[str, Any]:
+    """The projection this campaign was bound to, re-verified for one window.
+
+    The binding is recorded when the campaign is bootstrapped or resumed
+    (`runtime/coding-projection-binding.json`). A campaign with no record was
+    never bound and dispatches nothing; a view whose bytes no longer carry the
+    bound digest is refused rather than handed to a worker.
+    """
+    path = workspace / "runtime" / "coding-projection-binding.json"
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise CampaignError(
+            f"no projection binding is recorded at {path}; a campaign that was not bound "
+            "to its execution projection dispatches no worker",
+            error_code="PROJECTION_BINDING_UNRECORDED",
+        ) from exc
+    verified = record.get("verified") if isinstance(record, dict) else None
+    binding = (verified or [None])[-1] or (record or {}).get("bootstrap")
+    if not isinstance(binding, dict):
+        raise CampaignError(
+            f"{path} carries no binding", error_code="PROJECTION_BINDING_UNRECORDED"
+        )
+    _peer_imports()
+    from peer_execution.context import projection_context  # noqa: PLC0415
+
+    try:
+        return projection_context(binding, GOV_ROOT)
+    except ValueError as exc:
+        raise CampaignError(str(exc), error_code="PROJECTION_NOT_HANDED") from exc
 
 
 def _live_controller_attempt(workspace: Path, task_id: str) -> dict[str, Any] | None:
@@ -3803,13 +3947,16 @@ def _terminalize_root_authority(
     contract: dict[str, Any],
     changed: list[str],
     candidate_sha: str | None,
+    status: str | None = None,
 ) -> str | None:
     """Hand the root executor lease its terminal result, or leave it revoked.
 
     Root autonomy does not get to say the Program task passed — the Controller
     does that next, independently. What this closes is the child authority: a
     completed executor action releases the lease and its resource claims, so a
-    finished worker keeps no live mutation authority.
+    finished worker keeps no live mutation authority. A recon grant's action
+    contract expects a ReconReport, so the subordinate's own outcome status
+    travels with the result instead of a mutation payload.
     """
     grant = unit.get("grant")
     if not grant:
@@ -3822,6 +3969,7 @@ def _terminalize_root_authority(
             candidate_sha=candidate_sha,
             contract_digest=str(contract.get("contract_digest") or ""),
             evidence={"attempt_receipt_path": str(contract.get("attempt_receipt_path") or "")},
+            status=status,
         )
     except Exception as exc:  # noqa: BLE001 — a failed handoff must revoke, not linger
         grants.revoke_task_grant(
@@ -4540,6 +4688,20 @@ def _finish_peer_unit(
         if not receipt_path.is_file():
             raise CampaignError(f"Peer Core did not persist attempt receipt for {task_id}")
         _bind_dispatch_correlation(workspace, task_id, outcome)
+        residue = relocate_host_session_residue(
+            Path(str(worktree)),
+            workspace / "runtime" / "peer-execution" / "host-session-residue" / str(task_id),
+            unit.get("pre_dispatch_baseline"),
+        )
+        if residue:
+            emit(
+                trace,
+                "TASK_HOST_SESSION_RESIDUE",
+                "filesystem_write",
+                "host_session_residue_relocated",
+                task_id=task_id,
+                metadata={"paths": residue[:50]},
+            )
         # Mediation coverage precedes the Controller: an unmediated write must
         # never become a recorded Program attempt.
         actual_changed = _require_mediated_effects(unit, trace=trace)
@@ -4552,6 +4714,7 @@ def _finish_peer_unit(
             contract=contract,
             changed=actual_changed,
             candidate_sha=receipt.get("candidate_sha"),
+            status=outcome.get("status"),
         )
         emit(
             trace,
@@ -4597,15 +4760,23 @@ def _finish_peer_unit(
             f"incomplete gates={json.dumps(incomplete_gates(verification), sort_keys=True)}"
         )
     # Commit only the exact work the Controller just verified. Provider execution
-    # owns mutation; PE retains the local commit boundary.
-    candidate = write_and_commit_output(
-        worktree,
-        unit["rel"],
-        unit["title"],
-        writable=writable,
-        commit_authorized=contract_allows_commit(contract),
-        observed=[str(path) for path in (verification.get("observed_changed_files") or [])],
-    )
+    # owns mutation; PE retains the local commit boundary. A read-only contract
+    # whose verdict observed no changes has nothing to commit and skips the
+    # boundary: `local_write` is not commit authority, so the commit step runs
+    # only when the contract requests commit or the verdict observed work.
+    observed_paths = [str(path) for path in (verification.get("observed_changed_files") or [])]
+    if contract_allows_commit(contract) or observed_paths:
+        candidate = write_and_commit_output(
+            worktree,
+            unit["rel"],
+            unit["title"],
+            writable=writable,
+            commit_authorized=contract_allows_commit(contract),
+            observed=observed_paths,
+        )
+    else:
+        candidate = target_head_sha(worktree)
+        log(f"{task_id}: read-only verdict observed no changes; nothing to commit")
     emit(
         trace,
         "TASK_LOCAL_COMMIT",
@@ -5683,6 +5854,138 @@ def attest_resume_source(
     }
 
 
+def _campaign_authority_module() -> Any:
+    return _load_script("pe_campaign_authority", PE_ROOT / "scripts/campaign_authority.py")
+
+
+def admit_operator_invocation() -> tuple[dict[str, Any], dict[str, Any]]:
+    """The profile's campaign authority and the operator's invocation for this run.
+
+    Program Execution is connected to the Autonomy Surface Profile and runs
+    only at the stage that profile names. At the `manual` stage that means an
+    explicit operator statement for every run -- fresh or resumed -- so the
+    runner refuses here, before it compiles, writes or executes anything.
+    """
+    module = _campaign_authority_module()
+    try:
+        authority = module.load_campaign_authority(GOV_ROOT)
+        invocation = module.operator_invocation(authority)
+    except module.CampaignAuthorityError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
+    return authority, invocation
+
+
+def require_coding_agent_mode(authority: dict[str, Any]) -> dict[str, Any]:
+    """The operator's /coding-agent session mode, or CODING_AGENT_MODE_OFF."""
+    module = _campaign_authority_module()
+    try:
+        return module.coding_agent_mode(authority)
+    except module.CampaignAuthorityError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
+
+
+def default_bind_projection(authority: dict[str, Any]) -> dict[str, Any]:
+    """Bind at bootstrap and resume, only while the operator has /coding-agent on.
+
+    The session mode is read first (CODING_AGENT_MODE_OFF unless ACTIVE), the
+    pipeline then binds through the profile's own status reader, and the two
+    must name the same bundle revision and view digests
+    (CODING_AGENT_MODE_MISMATCH). Live path never honors a skip env; tests
+    inject Hooks.bind_projection.
+    """
+    module = _campaign_authority_module()
+    try:
+        mode = module.coding_agent_mode(authority)
+        return module.bind_with_mode(module.bind_coding_projection(GOV_ROOT, authority), mode)
+    except module.CampaignAuthorityError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
+
+
+def record_campaign_admission(
+    pec_workspace: Path,
+    invocation: dict[str, Any],
+    binding: dict[str, Any],
+    *,
+    trace: pe_trace.ExecutionTrace | None,
+) -> None:
+    """Persist who asked for this run and what the pipeline was bound to."""
+    module = _campaign_authority_module()
+    try:
+        module.record_projection_binding(pec_workspace, binding)
+        module.record_invocation(pec_workspace, invocation)
+    except module.CampaignAuthorityError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
+    emit(
+        trace,
+        "CAMPAIGN_ADMITTED",
+        "authority",
+        "operator_invocation_and_projection_binding",
+        metadata={
+            "stage": invocation.get("stage"),
+            "statement_digest": invocation.get("statement_digest"),
+            "profile_ref": binding.get("profile_ref"),
+            "bundle_revision": binding.get("bundle_revision"),
+            "projection_status": binding.get("status"),
+        },
+    )
+
+
+def resumed_stage_timer(timing: Any, pec_workspace: Path) -> Any:
+    """A stage timer that continues the interrupted run's record.
+
+    A fresh `StageTimer(workspace)` starts empty and its first flush replaces
+    `runtime/TIMINGS.json`, so resuming used to erase how long preparation and
+    the completed tasks took. The stages already recorded are carried forward;
+    an unreadable record is not trusted and the timer starts empty.
+    """
+    timer = timing.StageTimer(pec_workspace)
+    recorded = pec_workspace / "runtime" / "TIMINGS.json"
+    try:
+        prior = json.loads(recorded.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return timer
+    stages = prior.get("stages") if isinstance(prior, dict) else None
+    if isinstance(stages, list):
+        timer.stages = [dict(item) for item in stages if isinstance(item, dict) and "stage" in item]
+    return timer
+
+
+def publish_completed_campaign(
+    report: CampaignReport,
+    pec_workspace: Path,
+    campaign_id: str,
+    *,
+    executed: bool,
+    hooks: Hooks,
+    trace: pe_trace.ExecutionTrace | None,
+) -> CampaignReport:
+    """The `pr` stage: every task COMPLETED, then the governance SSOT `make pr`.
+
+    The campaign's last act. Nothing merges here; the PR it opens is handed to
+    /l9-pr-remediation like any other.
+    """
+    if not executed:
+        raise CampaignError(
+            "refuse to publish before every task is COMPLETED",
+            exit_code=2,
+            error_code="CAMPAIGN_NOT_COMPLETE",
+        )
+    log(f"publish {campaign_id} through the governance SSOT make pr")
+    with traced(trace, "pr", "make_pr_ssot"):
+        publication = (hooks.make_pr or default_make_pr)(pec_workspace, campaign_id)
+    report.host_pr = str(publication.get("url") or "")
+    number = publication.get("number")
+    report.host_pr_number = int(number) if number is not None else None
+    report.program_blockers = []
+    report.stages_completed.append("pr")
+    log(
+        f"campaign complete: published {report.host_pr} "
+        f"(head {publication.get('head_branch')} -> {publication.get('base')}); "
+        "merge stays /l9-pr-remediation"
+    )
+    return report
+
+
 def resume_live_campaign(
     *,
     campaign_id: str,
@@ -5751,6 +6054,12 @@ def resume_live_campaign(
     # Program equivalence. Only EXACT_MATCH executes; TASK_SCOPED_DRIFT goes
     # through the canonical relock and is re-admitted; anything wider stops.
     admit_resume_identity(pec_workspace, campaign_id)
+    # A resumed run is a new run: it needs the operator's invocation again and
+    # the projection must still be the one this campaign was bootstrapped under.
+    campaign_authority, invocation = admit_operator_invocation()
+    with traced(trace, "bootstrap", "bind_coding_projection"):
+        projection_binding = (hooks.bind_projection or default_bind_projection)(campaign_authority)
+    record_campaign_admission(pec_workspace, invocation, projection_binding, trace=trace)
     log(f"resume {campaign_id} (runtime active; workspace kept, not quarantined)")
     report.stages_completed.append("resume")
     target = seed.get("target") if isinstance(seed.get("target"), dict) else {}
@@ -5771,50 +6080,48 @@ def resume_live_campaign(
             with traced(trace, "reconcile", "ensure_target_history"):
                 ensure_target_history(target_path, repository_id)
     log(f"execute {campaign_id}")
-    with traced(trace, "execute", "execute"):
-        if hooks.execute is not None:
-            hooks.execute(pec_workspace, campaign_id)
-        elif (pec_workspace / "runtime" / "program-lock.json").is_file():
-            default_execute(
-                pec_workspace,
-                campaign_id,
-                hooks=hooks,
-                live_prs=should_run(until, "pr") and hooks.make_pr is None,
-                trace=trace,
-            )
+    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+    timer = resumed_stage_timer(timing, pec_workspace)
+    with timer.stage("execute", resumed=True):
+        with traced(trace, "execute", "execute"):
+            if hooks.execute is not None:
+                hooks.execute(pec_workspace, campaign_id)
+            elif (pec_workspace / "runtime" / "program-lock.json").is_file():
+                default_execute(
+                    pec_workspace,
+                    campaign_id,
+                    hooks=hooks,
+                    live_prs=False,
+                    trace=trace,
+                    timer=timer,
+                )
     assert_blueprint_immutable(resume_blueprint, resume_blueprint_inventory, phase="resume_execute")
     executed = False
     if (pec_workspace / "runtime" / "program-lock.json").is_file():
         executed = all_required_tasks_completed(pec_workspace)
+    report.timings = timer.report()
+    # A resumed campaign reports the same progress projection a fresh one does.
+    # Without it `runtime/PROGRESS.json` was missing after an interrupted run,
+    # or kept the counts of the run that was interrupted.
+    log(
+        render_progress(
+            pec_workspace,
+            campaign_id=campaign_id,
+            timer=timer,
+            timing=timing,
+            published="PENDING" if should_run(until, "pr") else "NOT STARTED",
+        )
+    )
     report.program_blockers = default_program_blockers(campaign_id, armed=True, executed=executed)
     report.stages_completed.append("execute")
     with traced(trace, "commit", "commit_host_emit"):
         commit_host_emit(write_root, campaign_id)
     if not should_run(until, "pr"):
-        log("campaign complete: local commits only; publish separately with PR_REMEDIATE=0 make pr")
+        log("campaign complete: local commits only (until=execute); not published")
         return report
-    if not executed:
-        raise CampaignError("refuse host-only merge before all tasks COMPLETED", exit_code=2)
-    # Everything past this line is publication and the runner refuses it. The
-    # push / make pr / PR-report block that used to follow was unreachable
-    # (audit Y7) and read as a live publication path; it is gone.
-    refuse_publication("publish the campaign")
-    if not should_run(until, "close"):
-        return report  # pragma: no cover - refuse_publication raises
-    with traced(trace, "close", "close"):
-        if hooks.close is not None:
-            hooks.close(pec_workspace, campaign_id)
-        else:
-            default_close(
-                pec_workspace,
-                campaign_id,
-                write_root=write_root,
-                host_repo=host_repo,
-                hooks=hooks,
-                merge_recorded=requested_until in {"merge", "close"},
-            )
-    report.program_blockers = []
-    report.stages_completed.append("close")
+    report = publish_completed_campaign(
+        report, pec_workspace, campaign_id, executed=executed, hooks=hooks, trace=trace
+    )
     return report
 
 
@@ -6506,10 +6813,8 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     compile_generation = run.compile_generation
     ensure_target_checkout_once = run.ensure_target_checkout_once
     hooks = run.hooks
-    host_repo = run.host_repo
     report = run.report
     repository_id = run.repository_id
-    requested_until = run.requested_until
     reuse = run.reuse
     scoped_resume = run.scoped_resume
     seed = run.seed
@@ -6523,6 +6828,16 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     write_root = run.write_root
     accepted_blueprint_inventory = run.accepted_blueprint_inventory
 
+    # The pipeline is bound to the coding-agent execution projection before a
+    # runtime exists for it: an unverified binding bootstraps nothing.
+    campaign_authority, invocation = admit_operator_invocation()
+    with traced(trace, "bootstrap", "bind_coding_projection"):
+        projection_binding = (hooks.bind_projection or default_bind_projection)(campaign_authority)
+    bound_revision = str(projection_binding.get("bundle_revision"))[:12]
+    log(
+        f"projection {projection_binding.get('profile_ref')} "
+        f"{projection_binding.get('status')} @ {bound_revision}"
+    )
     pec = hooks.pec_bootstrap or default_pec_bootstrap
     pec_workspace_path = Path(report.pec_workspace)
     # Bootstrap requires an empty workspace, so the live runtime is both its
@@ -6565,6 +6880,9 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     timer.flush()
     report.pec_note = str(pec_result.get("output") or "")
     log("pec bootstrap ok")
+    record_campaign_admission(
+        Path(report.pec_workspace), invocation, projection_binding, trace=trace
+    )
     task_counts = assert_task_counts_agree(
         blueprint, report.launchability, Path(report.pec_workspace)
     )
@@ -6655,7 +6973,7 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
                     pec_workspace,
                     campaign_id,
                     hooks=hooks,
-                    live_prs=should_run(until, "pr") and hooks.make_pr is None,
+                    live_prs=False,
                     trace=trace,
                     timer=timer,
                 )
@@ -6678,36 +6996,243 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     with traced(trace, "commit", "commit_host_emit"):
         commit_host_emit(write_root, campaign_id)
     if not should_run(until, "pr"):
-        log("campaign complete: local commits only; publish separately with PR_REMEDIATE=0 make pr")
+        log("campaign complete: local commits only (until=execute); not published")
         return report
+    return publish_completed_campaign(
+        report, pec_workspace, campaign_id, executed=executed, hooks=hooks, trace=trace
+    )
 
-    if not executed:
+
+RENDERED_BY = "skills/l9-plan/scripts/render_campaign_source.py"
+_PLAN_FRONTMATTER = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|\Z)", re.S)
+
+
+def _plan_frontmatter(path: Path) -> dict[str, Any]:
+    if yaml is None:
         raise CampaignError(
-            "refuse host-only merge before all tasks COMPLETED",
-            exit_code=2,
+            "PyYAML is required to read a rendered plan", error_code="PLAN_FRONTMATTER"
         )
-    # Publication is refused here; the push / make pr / PR-report block that
-    # used to follow was unreachable (audit Y7) and is gone.
-    refuse_publication("publish the campaign")
-    if not should_run(until, "close"):
-        return report  # pragma: no cover - refuse_publication raises
+    text = path.read_text(encoding="utf-8")
+    match = _PLAN_FRONTMATTER.match(text)
+    if not match:
+        return {}
+    loaded = yaml.safe_load(match.group(1)) or {}
+    if not isinstance(loaded, dict):
+        raise CampaignError(f"{path} frontmatter is not a mapping", error_code="PLAN_FRONTMATTER")
+    return loaded
 
-    close = hooks.close or default_close
-    with traced(trace, "close", "close"):
-        if hooks.close is not None:
-            close(pec_workspace, campaign_id)
-        else:
-            default_close(
-                pec_workspace,
-                campaign_id,
-                write_root=write_root,
-                host_repo=host_repo,
-                hooks=hooks,
-                merge_recorded=requested_until in {"merge", "close"},
-            )
-    report.program_blockers = []
-    report.stages_completed.append("close")
-    return report
+
+def _stamp_blueprint_accepted(blueprint: Path) -> None:
+    """Stamp accepted after template validation. This is not default_admit."""
+    ops = _load_script("blueprint_ops_stamp", PE_ROOT / "scripts/blueprint_ops.py")
+    program_path = blueprint / "PROGRAM.yaml"
+    program = ops.load_yaml(program_path)
+    block = program.get("program") if isinstance(program, dict) else None
+    if not isinstance(block, dict):
+        raise CampaignError(
+            f"{program_path} has no program block to stamp accepted",
+            error_code="BLUEPRINT_STAMP",
+        )
+    block["definition_status"] = "accepted"
+    ops.dump_yaml(program_path, program)
+    ops.dump_yaml(
+        blueprint / "RENDERED_ACCEPTANCE.yaml",
+        {
+            "schema": "l9.rendered-plan-acceptance.v1",
+            "definition_status": "accepted",
+            "stamped_because": "validate_blueprint.py template mode returned no errors",
+        },
+    )
+    manifest_path = blueprint / "MANIFEST.yaml"
+    previous = ops.load_yaml(manifest_path) if manifest_path.is_file() else {}
+    bound = ""
+    if isinstance(previous, dict):
+        bound = str(previous.get("source_sha256") or "").strip()
+    ops.write_manifest(blueprint, "rendered-plan")
+    if bound:
+        rewritten = ops.load_yaml(manifest_path)
+        if isinstance(rewritten, dict):
+            rewritten["source_sha256"] = bound
+            ops.dump_yaml(manifest_path, rewritten)
+
+
+def _require_rendered_plan(intent_path: Path) -> tuple[Path, Path, dict[str, Any]]:
+    front = _plan_frontmatter(intent_path)
+    source_raw = str(front.get("campaign_source") or "").strip()
+    blueprint_raw = str(front.get("campaign_blueprint") or "").strip()
+    if not source_raw or not blueprint_raw:
+        raise CampaignError(
+            f"{intent_path} has no rendered campaign. Run /l9-plan so "
+            "render_campaign_source.py records campaign_source and campaign_blueprint.",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+    source_path = Path(source_raw)
+    blueprint_path = Path(blueprint_raw)
+    if not source_path.is_file() or not blueprint_path.is_dir():
+        raise CampaignError(
+            f"{intent_path} records campaign files that are not on disk "
+            f"(source={source_path}, blueprint={blueprint_path}). Run /l9-plan.",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+    if yaml is None:
+        raise CampaignError(
+            "PyYAML is required to read a rendered campaign", error_code="PLAN_FRONTMATTER"
+        )
+    document = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    if not isinstance(document, dict):
+        raise CampaignError(
+            f"{source_path} is not a campaign source mapping",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+    rendered_by = str((document.get("metadata") or {}).get("rendered_by") or "").strip()
+    if rendered_by != RENDERED_BY:
+        raise CampaignError(
+            f"{source_path} was not produced by {RENDERED_BY}. "
+            "A hand-authored source does not take the rendered-plan path.",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+    _require_source_binding(source_path, blueprint_path, front)
+    return source_path, blueprint_path, document
+
+
+def _require_source_binding(source_path: Path, blueprint_path: Path, front: dict[str, Any]) -> None:
+    """The blueprint and the plan must name the bytes of this source."""
+    manifest_path = blueprint_path / "MANIFEST.yaml"
+    if yaml is None or not manifest_path.is_file():
+        raise CampaignError(
+            f"{blueprint_path} has no manifest binding it to {source_path}",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    bound = str(manifest.get("source_sha256") or "").strip() if isinstance(manifest, dict) else ""
+    actual = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    recorded = str(front.get("campaign_source_sha256") or "").strip()
+    if not bound or bound != actual or (recorded and recorded != actual):
+        raise CampaignError(
+            f"{blueprint_path} is not the blueprint compiled from {source_path}",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+
+
+def _run_rendered_plan(
+    intent_path: Path,
+    *,
+    until: str,
+    requested_until: str,
+    primary: Path,
+    host_root: Path,
+    l9_home: Path,
+    host_repo: str,
+    hooks: Hooks,
+    fast: bool,
+    trace: pe_trace.ExecutionTrace | None,
+    target_checkout: Path | None,
+    timing: Any,
+    timer: Any,
+) -> CampaignReport:
+    """Validate the blueprint /l9-plan already rendered, then start work.
+
+    stack_proof, plan_window, a second compile, check_launchability,
+    admission_evidence, and default_admit do not run on this path.
+    """
+    source_path, blueprint, document = _require_rendered_plan(intent_path)
+    causality = _load_script(
+        "evidence_causality",
+        PE_ROOT / "scripts" / "evidence_causality.py",
+    )
+    source_errors = list(causality.errors_for_campaign_source(document))
+    if source_errors:
+        raise CampaignError(
+            "evidence causality failed: " + "; ".join(source_errors),
+            error_code="BLUEPRINT_VALIDATE",
+        )
+    seed = campaign_input_module().seed_view(document)
+    campaign_id = str(seed.get("campaign_id") or "").strip()
+    if not campaign_id:
+        raise CampaignError(f"rendered campaign has no campaign_id: {source_path}")
+    refuse_hash_campaign_id(campaign_id)
+    target = seed.get("target") or {}
+    repository_id = str(target.get("repository_id") or "").strip()
+    source_of_truth = str(target.get("source_of_truth") or "")
+    errors = (hooks.validate_blueprint or default_validate_blueprint)(blueprint)
+    if errors:
+        raise CampaignError(
+            "template validate failed: " + "; ".join(errors),
+            error_code="BLUEPRINT_VALIDATE",
+        )
+    _stamp_blueprint_accepted(blueprint)
+    launch = _load_script("launchability_rendered_count", PE_ROOT / "scripts/launchability.py")
+    task_count = len(launch.blueprint_tasks(blueprint))
+    pec_workspace = l9_home / "programs" / campaign_id
+    target_path = (target_checkout or (l9_home / "program-worktrees" / campaign_id)).resolve()
+    report = CampaignReport(
+        campaign_id=campaign_id,
+        until=until,
+        worktree=str(target_path),
+        primary=str(primary),
+        blueprint=str(blueprint),
+        pec_workspace=str(pec_workspace),
+        mode="rendered-plan",
+        launchability={"task_count": task_count, "launchable": True},
+    )
+    report.stages_completed.extend(["validate_blueprint", "accept"])
+    primed_root = l9_home / "primed"
+    cache = timing.StageCache(primed_root / campaign_id, enabled=fast)
+    prepare = _load_script("pe_prepare_state", PE_ROOT / "scripts/pe_prepare_state.py")
+    reuse = prepare.PrepareCache(
+        cache,
+        prepare.PrepareState.load(
+            primed_root / campaign_id / "PREPARE_STATE.json", campaign_id=campaign_id
+        ),
+    )
+
+    def ensure_target_checkout_once() -> None:
+        default_ensure_target_checkout(
+            target_path,
+            repository_id,
+            donor=host_root,
+            source_of_truth=source_of_truth,
+        )
+
+    run = _CampaignRun(
+        fast=fast,
+        hooks=hooks,
+        host_repo=host_repo,
+        host_root=host_root,
+        intent_path=intent_path,
+        l9_home=l9_home,
+        primary=primary,
+        requested_until=requested_until,
+        until=until,
+        blueprint=blueprint,
+        campaign_id=campaign_id,
+        campaign_source_doc=document,
+        compile_generation=blueprint_fingerprint(blueprint),
+        ensure_target_checkout_once=ensure_target_checkout_once,
+        pec_workspace=pec_workspace,
+        prepare=prepare,
+        primed_root=primed_root,
+        repo_root=host_root,
+        report=report,
+        repository_id=repository_id,
+        resolved_intent=source_path,
+        reuse=reuse,
+        scoped_resume=False,
+        seed=seed,
+        source_of_truth=source_of_truth,
+        target_checkout=target_checkout,
+        target_path=target_path,
+        target_worktree=str(target_path),
+        timer=timer,
+        timing=timing,
+        trace=trace,
+        accepted_blueprint_inventory=blueprint_byte_inventory(blueprint),
+        worktree=target_path,
+        write_root=host_root,
+    )
+    log(f"rendered plan {intent_path}")
+    log(f"campaign id: {campaign_id}")
+    return _stage_runtime(run)
 
 
 def _run_campaign_stages(
@@ -6728,6 +7253,7 @@ def _run_campaign_stages(
     requested_until = until
     until = normalize_until(until)
     hooks = hooks or Hooks()
+    campaign_authority, _invocation = admit_operator_invocation()
     fast = fast_mode(fast)
     timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
     timer = timing.StageTimer()
@@ -6738,6 +7264,22 @@ def _run_campaign_stages(
     # Analyze (central Core). Callers that need L9_ROOT / L9_RUNTIME_ROOT
     # agreement still use campaign_runtime_root() directly.
     l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
+    if intent_path.name.endswith(".plan.md"):
+        return _run_rendered_plan(
+            intent_path,
+            until=until,
+            requested_until=requested_until,
+            primary=primary,
+            host_root=host_root,
+            l9_home=l9_home,
+            host_repo=host_repo,
+            hooks=hooks,
+            fast=fast,
+            trace=trace,
+            target_checkout=target_checkout,
+            timing=timing,
+            timer=timer,
+        )
     run = _CampaignRun(
         fast=fast,
         hooks=hooks,
@@ -6756,8 +7298,16 @@ def _run_campaign_stages(
         until=until,
         worktree=worktree,
     )
+    finished = _stage_classify_and_prime(run)
+    if finished is not None:
+        return finished
+    if hooks.bind_projection is None:
+        # The input is classified (a rejected input is answered first); refuse
+        # before isolation, compile or any write when the operator's
+        # /coding-agent mode is off. Bootstrap and resume check it again and
+        # bind against it, so a mode turned off mid-campaign still stops.
+        require_coding_agent_mode(campaign_authority)
     for stage in (
-        _stage_classify_and_prime,
         _stage_isolate_and_emit,
         _stage_blueprint,
         _stage_admit,
@@ -6830,9 +7380,10 @@ def build_parser() -> argparse.ArgumentParser:
         choices=list(UNTIL_STAGES) + list(UNTIL_ALIASES),
         default=AUTONOMOUS_LAST_STAGE,
         help=(
-            "Last stage to run. Autonomous execution ends at "
-            f"'{AUTONOMOUS_LAST_STAGE}' with local commits; {PUBLICATION_STAGES} "
-            f"require the release transition ({PE_RELEASE_ENV})"
+            "Last stage to run. A campaign ends at "
+            f"'{AUTONOMOUS_LAST_STAGE}', publishing through the governance SSOT make pr; "
+            f"'{LOCAL_LAST_STAGE}' stops at verified local commits. {PUBLICATION_STAGES} "
+            "and merge are refused"
         ),
     )
     parser.add_argument("--primary", type=Path, default=None)
@@ -6874,13 +7425,14 @@ def refuse_live_until_shortcut(until: str) -> None:
         # Reaching a publication stage at all requires the release transition.
         refuse_publication(f"run the campaign through '{resolved}'")
         return
-    if resolved == AUTONOMOUS_LAST_STAGE:
+    if resolved in {AUTONOMOUS_LAST_STAGE, LOCAL_LAST_STAGE}:
         return
     if os.environ.get("L9_CAMPAIGN_UNTIL_DEBUG") == "1":
         return
     raise CampaignError(
-        "CAMPAIGN_UNTIL is not a live campaign path; make campaign runs through "
-        f"'{AUTONOMOUS_LAST_STAGE}' and stops at local commits. "
+        "CAMPAIGN_UNTIL is not a live campaign path; a campaign runs through "
+        f"'{AUTONOMOUS_LAST_STAGE}' (SSOT make pr) or stops at '{LOCAL_LAST_STAGE}' "
+        "with local commits. "
         "Set L9_CAMPAIGN_UNTIL_DEBUG=1 only for runner tests."
     )
 

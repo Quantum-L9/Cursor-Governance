@@ -54,32 +54,15 @@
     },
     "regression_risk": {
       "type": "string",
-      "enum": [
-        "none",
-        "low",
-        "medium",
-        "high",
-        "UNKNOWN"
-      ]
+      "enum": ["none", "low", "medium", "high", "UNKNOWN"]
     },
     "validation_status": {
       "type": "string",
-      "enum": [
-        "PASS",
-        "FAIL",
-        "BLOCKED",
-        "UNKNOWN",
-        "NOT_APPLICABLE"
-      ]
+      "enum": ["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NOT_APPLICABLE"]
     },
     "final_disposition": {
       "type": "string",
-      "enum": [
-        "accepted",
-        "rejected",
-        "deferred",
-        "mine_for_future"
-      ]
+      "enum": ["accepted", "rejected", "deferred", "mine_for_future"]
     }
   }
 }

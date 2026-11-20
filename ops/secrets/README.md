@@ -37,7 +37,7 @@ environment; Cursor / operator from the profile seeded by the AWS login seed. Se
 | `operator_only_iam.py` | Infisical IAM for `operator_only_keys`: `--check` / `--apply` give every `operator_only_iam.hosted_identity_names` identity a forbid privilege; `--probe` / `--self-probe` prove it by HTTP status |
 | `vault_mcp_bridge.py` + `vault-mcp-bridges.json` | stdio bridge for remote MCP servers whose key is bound from Infisical (Context7) |
 | `capability_exec.py` + `capability-exec.json` | Registered child-process runs needing one vault secret in their own env (Semgrep Pro dry-run); fixed argv, output scrubbed (AGENTS.md CI_PARITY_HOSTED_CLAUDE_V1) |
-| `infisical-cursor-governance.yaml` | Infisical project inventory (IDs + env key names, no values) |
+| `infisical-cursor-governance.yaml` | Infisical project inventory (IDs + env key names, no values). `memory_prod_secret_refs` names the Memory project's prod secrets and is outside the bind gate |
 | `port_aws_to_infisical.py` | Re-port AWS `openclaw-igorbot/*` → Infisical prod |
 | `registry.overlays.yaml` | Local stubs not yet in AWS (`ui-session-*`, `provisioned: false`) |
 | `registry.schema.yaml` | Shape contract |

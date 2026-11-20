@@ -79,7 +79,7 @@ tiers:
     use_when: writing or running Python tests under uv — red-green-refactor, vertical slicing, or uv project setup
   explicit_only:
   - skill: l9-plan
-    reason: live owner of the PLAN_DOCUMENT schema, validator and projection renderer that l9-plan-simple runs; its Program Execution planning has no live successor and its broad planning description would hijack l9-plan-simple routing — user-invoked only
+    reason: Program Execution campaign planner (PROGRAM_EXECUTION_PLANNER_V1) — renders a PLAN_DOCUMENT as a campaign-source.v2 that make campaign admits unchanged — and owner of the PLAN_DOCUMENT schema, validator and renderers that l9-plan-simple runs; a campaign runs only on the operator's own words and its broad planning description would hijack l9-plan-simple routing — user-invoked only
   - skill: l9-forge
     reason: zero-pause batch execution
   - skill: l9-end-session
@@ -95,7 +95,8 @@ tiers:
   - skill: l9-setting-up-terraform
     reason: infra-as-code bootstrap — high blast radius, explicit only
   - skill: l9-pr-remediation
-    reason: Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked) — each PR only under human authorization bound to its exact head; the operator typing /l9-pr-remediation is that authorization for the repo's open PRs (CANONICAL_LAW §6.2.15), an agent's own Skill call never is. The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.
+    reason: Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked) — each PR only under human authorization bound to its exact head; the operator typing /l9-pr-remediation is that authorization for the repo's open PRs (CANONICAL_LAW §6.2.15), an agent's own Skill call never is. The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push
+      and admin-merge stay forbidden.
   - skill: l9-issue-remediation
     reason: /issues and /l9-issue-remediation are remediator Converge (verify-before-trust, drain all clusters at max autonomy, recommended-A human blockers, land on PRs, close phantoms/resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.
   - skill: l9-bounded-autonomy
@@ -140,6 +141,10 @@ tiers:
     reason: routes validated IdeaOS decisions into Website-Bot, plan-simple, GAR, or an already-supported bounded repository path; Program Execution is not an execution owner; owner-selection and downstream invocation are high blast radius; disable-model-invocation
   - skill: l9-repo-birth
     reason: control surface that routes an exact verified PE/PEC source commit to the l9-repo-template packager; it holds no birth implementation, is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation
+  - skill: l9-violations
+    reason: Record a governance or skill-process breach inside this pack. Explicit only — invoke when an agent skipped a required skill or the user asks to record or review a violation. Not an always-on reviewer.
+  - skill: l9-strategic-plan
+    reason: 'UNTRIAGED — auto-registered by sync_generated_artifacts as the safe default when this pack appeared on disk with no tier. No one has decided whether it should be auto_invoke. Resolve via l9-wire-into-repo (Skill targets): give it a real reason here, or move it to tiers.auto_invoke.'
   do_not_migrate_to_skills:
   - item: commands/_archived/violation.md
     reason: violation handling belongs in always-applied rules or hooks, not optional skill context
@@ -170,9 +175,9 @@ tiers:
   - item: skills/_archived/l9-wire-skill-into-repo/
     reason: superseded by skills/l9-wire-into-repo/; archived out of live skills/ discovery — never auto-invoke or reconcile
   - item: skills/_archived/l9-pe-campaign-activate/
-    reason: Program Execution campaign front door retired with no replacement; archived out of live skills/ discovery — never auto-invoke or reconcile
+    reason: superseded as the campaign front door by make campaign (PROGRAM_EXECUTION_REGISTERED_STAGE_V1) and l9-plan's campaign-source.v2 renderer (PROGRAM_EXECUTION_PLANNER_V1); its scripts remain Program Execution's compile library, read by path from environment/program-execution/scripts/run_campaign.py — archived out of live skills/ discovery, never auto-invoke or reconcile
   - item: skills/_archived/l9-pe-nuggets/
-    reason: Program Execution nugget extraction retired with the campaign front door; archived out of live skills/ discovery — never auto-invoke or reconcile
+    reason: Program Execution nugget extraction is a library of the registered campaign runner (read by path from run_campaign.py), not a skill; archived out of live skills/ discovery — never auto-invoke or reconcile
   - item: skills/_archived/l9-setting-up-ci/
     reason: CI bootstrap procedure predates consumer-owned l9-lint-test.yml; archived out of live skills/ discovery — never auto-invoke or reconcile. No successor skill.
   - item: skills/_archived/l9-ci-ops/
@@ -288,7 +293,8 @@ claude_routing:
     - force push
     supporting:
     - l9-pr-digest
-    note: 'The operator typing /l9-pr-remediation is merge authority for the repo''s open-PR snapshot, each PR once pr_board.py says merge at its live head (CANONICAL_LAW §6.2.15); an agent''s own Skill call is not. Only the parent agent transcribes (authorize_merge.py --operator-instruction); merge workers never do and run only stack_safe_merge.py. Converge otherwise stops at MERGE_PENDING unless human authorization covers that PR at its current head (CANONICAL_LAW §6.2.13, §6.2.14): the operator''s merge instruction in their own words in this session''s chat (recorded by the prompt hook, transcribed with authorize_merge.py --operator-instruction), an APPROVED review on that head, or the exact line authorize merge owner/name#n@sha, from a human with write access. The PR author may be that human, protected paths included. Never ask the operator to repeat a recorded chat instruction or to post a GitHub comment. The agent then runs stack_safe_merge.py and does not approve, post that line, or write a local grant. Subscribe/own every open PR through required checks; do not hand the watch back to the human. The per-PR board verdict comes from ops/autonomy/pr_board.py (required-check identity from branch protection plus rulesets, conflicted paths); an ownership class is the edit axis and never parks a PR; leftover requires --human-decision or --unfixable-check; above-paygrade leftovers open a GitHub issue and launch l9-issue-remediation — do not ask the human to unblock; mission is open_prs=0. Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run the campaign publication ceremony or its gate-only diagnosis. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden.
+    note: 'The operator typing /l9-pr-remediation is merge authority for the repo''s open-PR snapshot, each PR once pr_board.py says merge at its live head (CANONICAL_LAW §6.2.15); an agent''s own Skill call is not. Only the parent agent transcribes (authorize_merge.py --operator-instruction); merge workers never do and run only stack_safe_merge.py. Converge otherwise stops at MERGE_PENDING unless human authorization covers that PR at its current head (CANONICAL_LAW §6.2.13, §6.2.14): the operator''s merge instruction in their own words in this session''s chat (recorded by the prompt hook, transcribed with authorize_merge.py --operator-instruction), an APPROVED review on that head, or the exact line authorize merge owner/name#n@sha, from a human with write access. The PR author may be that human, protected paths included. Never ask the operator to repeat a recorded chat instruction or to post a GitHub comment. The agent then runs stack_safe_merge.py and does not approve, post that line,
+      or write a local grant. Subscribe/own every open PR through required checks; do not hand the watch back to the human. The per-PR board verdict comes from ops/autonomy/pr_board.py (required-check identity from branch protection plus rulesets, conflicted paths); an ownership class is the edit axis and never parks a PR; leftover requires --human-decision or --unfixable-check; above-paygrade leftovers open a GitHub issue and launch l9-issue-remediation — do not ask the human to unblock; mission is open_prs=0. Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run the campaign publication ceremony or its gate-only diagnosis. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden.
 
       '
   - id: issue_remediation
@@ -403,7 +409,7 @@ claude_routing:
     - /l9-plan
     supporting:
     - l9-structured-reasoning
-    note: 'Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple. /l9-plan, make campaign, Program Lock, and PE+autonomy have no live owner. l9-plan-simple does not absorb them. Negative signals keep those requests off this route.
+    note: 'Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple. Campaign planning for make campaign, Program Lock and PE+autonomy belongs to the explicit-only /l9-plan (PROGRAM_EXECUTION_PLANNER_V1), which is never routed ambiently. l9-plan-simple does not absorb it. Negative signals keep those requests off this route.
 
       '
   - id: skill_compiler
@@ -850,6 +856,32 @@ claude_routing:
     supporting:
     - l9-structured-reasoning
     note: 'explicit_only + hint_allowed — Package an already verified clean source commit only. Never invoke as a default PE successor or create a remote repository from a hint.
+
+      '
+  - id: governance_violation
+    primary: l9-violations
+    signal_weight: 8
+    hint_allowed: true
+    required_any:
+    - /l9-violations
+    - governance violation
+    - skill violation
+    - record a violation
+    - review a violation
+    positive_signals:
+    - /l9-violations
+    - governance violation
+    - record a governance violation
+    - skipped a required skill
+    - bypassed a required workflow
+    - violation brief
+    negative_signals:
+    - code review
+    - passing test
+    - feature work
+    supporting:
+    - l9-structured-reasoning
+    note: 'explicit_only + hint_allowed — Record or review a governance or skill-process breach inside the l9-violations pack. Never an always-on reviewer, and a hint never records a violation on its own.
 
       '
 slash_commands:

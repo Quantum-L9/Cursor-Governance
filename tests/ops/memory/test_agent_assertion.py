@@ -239,8 +239,8 @@ def test_print_helper_skip_message_names_no_path(
 _PROJECTION_DIGEST = "sha256:9d7491d507b7204caeaa9892019ab39a5e459cf507c59fa192fa238e3a953c5c"
 _AUTHORITY = "9b27869dd893fcd28f76f99c9184a90435542c76"
 GOLDEN_KEY = "golden-identity-hmac-key"
-GOLDEN_DIGEST = "sha256:ab7b8ccd3d632dc8b64110aca296db64bd762a6df86eb0360799101538fdbcdb"
-GOLDEN_HMAC = "15edcf010a99e4ff1c132c1b9c0828555a1fa042257a3474f2588ecc92707c15"
+GOLDEN_DIGEST = "sha256:48179465ef52b40d1a40259b222887aea08e13ce5cdd0b7115c78ab0af07b5b8"
+GOLDEN_HMAC = "3cfb0db2175cc0ac22b0a9de28c0dcdab1df9e16ea8ee16585dcfaca164c0244"
 
 
 def _golden_body() -> dict:
@@ -289,10 +289,10 @@ def _golden_body() -> dict:
             "examined_consumer_pin": {
                 "role": "not_a_release_identity",
                 "distribution": "l9-graphite-memory",
-                "expected_package_version": "2.6.0",
-                "source_ref": "846f283f7dade101b324b87008ab4f5901f97074",
+                "expected_package_version": "3.0.1",
+                "source_ref": "96ed99eb172bb3b7433600db8581991c4c890737",
                 "artifact_sha256": (
-                    "d493573254cecedafb66ad3e1ccc380841ec8c617e9501adb5d993c989653d15"
+                    "4822b889dc8d590cedc0194d1d802e20b173d385ad377f80f4a0852502b1c957"
                 ),
             },
         },
@@ -317,6 +317,45 @@ def test_claude_cli_resolves_actor_and_surface() -> None:
     dims = assertion["resolved_dimensions"]
     assert dims["actor_identity"] == "l9.actor-registry/global@1#claude-code"
     assert dims["surface_identity"] == "l9.surface-registry/global@1#claude-code-cli"
+
+
+def test_the_store_admits_the_assertion_the_bootstrap_builds_for_mobile() -> None:
+    """End to end against the installed store's own verifier, not a copy of it.
+
+    The store compares the governing coordinates to constants it pins
+    (GLOBAL_IDENTITY_AUTHORITY_REVISION and the projection, binding and
+    resolver refs) and never fetches .github. Re-projecting the identity
+    authority here without the store bumping its pin would make every Claude
+    Code memory write fail at the door; this test fails first.
+    """
+    from l9_graphite_memory.authz.signed_assertion import (
+        identity_assertion_hmac,
+        verify_canonical_identity_assertion,
+    )
+    from l9_graphite_memory.contracts.identity import GLOBAL_IDENTITY_AUTHORITY_REVISION
+
+    assertion = helper.build_runtime_identity_assertion(
+        {"CLAUDECODE": "1", "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_mobile"}
+    )
+    coordinates = assertion["governing_coordinates"]
+    assert coordinates["global_identity_authority_revision"] == GLOBAL_IDENTITY_AUTHORITY_REVISION
+    key = "test-only-signing-key"
+    parsed = verify_canonical_identity_assertion(
+        assertion,
+        supplied_hmac=identity_assertion_hmac(assertion["assertion_digest"], key),
+        agent_id="claude-code",
+        signing_key=key,
+    )
+    assert parsed.resolved_dimensions.surface_identity == (
+        "l9.surface-registry/global@1#claude-code-mobile"
+    )
+    with pytest.raises(AuthenticationError):
+        verify_canonical_identity_assertion(
+            assertion,
+            supplied_hmac=identity_assertion_hmac(assertion["assertion_digest"], key),
+            agent_id="claude-code-mobile",
+            signing_key=key,
+        )
 
 
 def test_claude_remote_mobile_resolves_mobile_surface() -> None:
@@ -544,7 +583,7 @@ def _assert_release_and_runtime_stay_unknown(assertion: dict) -> None:
     assert coords["product_kind_exception_applies_from_release"] == "3.0.0"
     pin = assertion["provenance"]["examined_consumer_pin"]
     assert pin["role"] == "not_a_release_identity"
-    assert pin["expected_package_version"] == "2.6.0"
+    assert pin["expected_package_version"] == "3.0.1"
     assert assertion["result"] == "resolved"
 
 

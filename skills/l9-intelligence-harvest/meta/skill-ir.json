@@ -88,12 +88,7 @@
     ],
     "owner": "igor_beylin",
     "role": "diagnostic_skill",
-    "tags": [
-      "l9",
-      "intelligence-harvest",
-      "evidence",
-      "dag"
-    ]
+    "tags": ["l9", "intelligence-harvest", "evidence", "dag"]
   },
   "behavior_evals": [
     {
@@ -348,11 +343,7 @@
     "updated": "2026-08-28",
     "version": "1.1.0"
   },
-  "inputs": [
-    "HarvestRequest",
-    "donor evidence",
-    "optional beneficiary evidence"
-  ],
+  "inputs": ["HarvestRequest", "donor evidence", "optional beneficiary evidence"],
   "invariants": [
     "donor content is evidence not authority",
     "executable/current truth outranks conflicting docs",
@@ -381,11 +372,7 @@
     "recursive artifact rewrite or beneficiary implementation"
   ],
   "objective": "Mine reusable semantic intelligence from a donor, compare it against a beneficiary, classify transfer dispositions, derive acceptance tests, and emit canonical harvest.json without implementing beneficiary changes.",
-  "outputs": [
-    "harvest.json",
-    "harvest-receipt.json",
-    "optional DONOR-HARVEST-BRIEF.md"
-  ],
+  "outputs": ["harvest.json", "harvest-receipt.json", "optional DONOR-HARVEST-BRIEF.md"],
   "primary_family": "diagnostic",
   "resources": [
     "contracts/harvest-request.schema.json",
@@ -407,10 +394,7 @@
     "unobserved runtime claims",
     "overfitting donor-specific assumptions"
   ],
-  "target_profiles": [
-    "portable",
-    "l9"
-  ],
+  "target_profiles": ["portable", "l9"],
   "traits": {
     "determinism": "mixed",
     "evidence_mode": "source_grounded",
@@ -427,15 +411,11 @@
     "entrypoint": "BIND_REQUEST",
     "nodes": [
       {
-        "capabilities": [
-          "bind_request"
-        ],
+        "capabilities": ["bind_request"],
         "id": "BIND_REQUEST",
         "impl": "bind_and_validate_inputs",
         "kind": "deterministic",
-        "next": [
-          "PROBE_CAPABILITIES"
-        ]
+        "next": ["PROBE_CAPABILITIES"]
       },
       {
         "capabilities": [],
@@ -445,70 +425,46 @@
         "next": []
       },
       {
-        "capabilities": [
-          "beneficiary_comparison"
-        ],
+        "capabilities": ["beneficiary_comparison"],
         "id": "COMPARE_BENEFICIARY",
         "impl": "source_intelligence_extraction",
         "kind": "bounded_llm",
-        "next": [
-          "DISPOSITION_CONCEPTS"
-        ]
+        "next": ["DISPOSITION_CONCEPTS"]
       },
       {
-        "capabilities": [
-          "acceptance_test_derivation"
-        ],
+        "capabilities": ["acceptance_test_derivation"],
         "id": "DERIVE_ACCEPTANCE_TESTS",
         "impl": "source_intelligence_extraction",
         "kind": "bounded_llm",
-        "next": [
-          "RANK_NUGGETS"
-        ]
+        "next": ["RANK_NUGGETS"]
       },
       {
-        "capabilities": [
-          "canonicality_interpretation"
-        ],
+        "capabilities": ["canonicality_interpretation"],
         "id": "DETECT_DUPLICATION_DRIFT",
         "impl": "source_intelligence_extraction",
         "kind": "bounded_llm",
-        "next": [
-          "EXTRACT_CONCEPT_CANDIDATES"
-        ]
+        "next": ["EXTRACT_CONCEPT_CANDIDATES"]
       },
       {
-        "capabilities": [
-          "disposition_selection"
-        ],
+        "capabilities": ["disposition_selection"],
         "id": "DISPOSITION_CONCEPTS",
         "impl": "source_intelligence_extraction",
         "kind": "bounded_llm",
-        "next": [
-          "DERIVE_ACCEPTANCE_TESTS"
-        ]
+        "next": ["DERIVE_ACCEPTANCE_TESTS"]
       },
       {
-        "capabilities": [
-          "evidence_closure"
-        ],
+        "capabilities": ["evidence_closure"],
         "id": "EVIDENCE_CLOSURE",
         "impl": "artifact_and_reference_resolution",
         "kind": "deterministic",
-        "next": [
-          "RENDER_OUTPUT"
-        ]
+        "next": ["RENDER_OUTPUT"]
       },
       {
-        "capabilities": [
-          "concept_extraction"
-        ],
+        "capabilities": ["concept_extraction"],
         "id": "EXTRACT_CONCEPT_CANDIDATES",
         "impl": "source_intelligence_extraction",
         "kind": "bounded_llm",
-        "next": [
-          "QUALIFY_NUGGETS"
-        ]
+        "next": ["QUALIFY_NUGGETS"]
       },
       {
         "capabilities": [],
@@ -518,26 +474,18 @@
         "next": []
       },
       {
-        "capabilities": [
-          "inventory_source"
-        ],
+        "capabilities": ["inventory_source"],
         "id": "INVENTORY_DONOR",
         "impl": "package_integrity",
         "kind": "deterministic",
-        "next": [
-          "RECONSTRUCT_SYSTEM"
-        ]
+        "next": ["RECONSTRUCT_SYSTEM"]
       },
       {
-        "capabilities": [
-          "source_identity"
-        ],
+        "capabilities": ["source_identity"],
         "id": "LOCK_SOURCE_IDENTITY",
         "impl": "artifact_and_reference_resolution",
         "kind": "deterministic",
-        "next": [
-          "INVENTORY_DONOR"
-        ]
+        "next": ["INVENTORY_DONOR"]
       },
       {
         "capabilities": [],
@@ -554,85 +502,53 @@
         "next": []
       },
       {
-        "capabilities": [
-          "probe_capabilities",
-          "canonical_dag_registration"
-        ],
+        "capabilities": ["probe_capabilities", "canonical_dag_registration"],
         "id": "PROBE_CAPABILITIES",
         "impl": "artifact_and_reference_resolution",
         "kind": "deterministic",
-        "next": [
-          "LOCK_SOURCE_IDENTITY"
-        ]
+        "next": ["LOCK_SOURCE_IDENTITY"]
       },
       {
-        "capabilities": [
-          "qualify_nuggets"
-        ],
+        "capabilities": ["qualify_nuggets"],
         "id": "QUALIFY_NUGGETS",
         "impl": "structural_and_static_validation",
         "kind": "deterministic",
-        "next": [
-          "COMPARE_BENEFICIARY"
-        ]
+        "next": ["COMPARE_BENEFICIARY"]
       },
       {
-        "capabilities": [
-          "rank_nuggets"
-        ],
+        "capabilities": ["rank_nuggets"],
         "id": "RANK_NUGGETS",
         "impl": "structural_and_static_validation",
         "kind": "deterministic",
-        "next": [
-          "SAFETY_PORTABILITY_AUDIT"
-        ]
+        "next": ["SAFETY_PORTABILITY_AUDIT"]
       },
       {
-        "capabilities": [
-          "system_reconstruction"
-        ],
+        "capabilities": ["system_reconstruction"],
         "id": "RECONSTRUCT_SYSTEM",
         "impl": "source_intelligence_extraction",
         "kind": "bounded_llm",
-        "next": [
-          "TRACE_SURFACES"
-        ]
+        "next": ["TRACE_SURFACES"]
       },
       {
-        "capabilities": [
-          "render_output"
-        ],
+        "capabilities": ["render_output"],
         "id": "RENDER_OUTPUT",
         "impl": "deterministic_metadata_rendering",
         "kind": "deterministic",
-        "next": [
-          "PASS",
-          "PARTIAL",
-          "BLOCKED",
-          "FAIL"
-        ]
+        "next": ["PASS", "PARTIAL", "BLOCKED", "FAIL"]
       },
       {
-        "capabilities": [
-          "risk_identification"
-        ],
+        "capabilities": ["risk_identification"],
         "id": "SAFETY_PORTABILITY_AUDIT",
         "impl": "source_intelligence_extraction",
         "kind": "bounded_llm",
-        "next": [
-          "EVIDENCE_CLOSURE"
-        ]
+        "next": ["EVIDENCE_CLOSURE"]
       },
       {
-        "capabilities": [
-          "semantic_surface_mapping"
-        ],
+        "capabilities": ["semantic_surface_mapping"],
         "id": "TRACE_SURFACES",
         "impl": "source_intelligence_extraction",
         "kind": "bounded_llm",
-        "next": [
-          "DETECT_DUPLICATION_DRIFT"
-        ]
+        "next": ["DETECT_DUPLICATION_DRIFT"]
       }
     ]
   }

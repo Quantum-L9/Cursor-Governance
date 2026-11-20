@@ -8,21 +8,14 @@
     "expires_at": "2026-08-03T03:00:00Z"
   },
   "scope": {
-    "repositories": [
-      "Quantum-L9/Cursor-Governance"
-    ],
+    "repositories": ["Quantum-L9/Cursor-Governance"],
     "allowed_paths": [
       "addons/plasticos_gate/**",
       "program/mothballing-cursor-contracts/**",
       "ledger/artifacts/wave7/**",
       "autonomy/**"
     ],
-    "forbidden_paths": [
-      "ops/secrets/**",
-      ".env",
-      "**/*.pem",
-      "**/*.key"
-    ],
+    "forbidden_paths": ["ops/secrets/**", ".env", "**/*.pem", "**/*.key"],
     "allowed_operations": [
       "read",
       "search",

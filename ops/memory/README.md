@@ -53,6 +53,9 @@ MemoryService  →  canonical store  →  outbox  →  optional Graphiti project
 | `session_state.py` | `~/.cursor/l9-memory-session-state/<session>.json`: session id, task signature, namespace request, receipt digests, explicit task satisfactions; `authority: none`; the hydration-only predicate the Cursor write gates read | any claim of memory truth; any lock |
 | `mcp_instantiation.py` | `~/.cursor/mcp.json` as a real per-machine file rendered from `environment/mcp/master.mcp.json`; drops the retired `graphiti-memory` key; delegates the memory entry to `l9-memory client cursor install/verify` against the bound runtime | authoring the memory entry |
 | `diagnostics.py` | readiness R0 `PACKAGE_BOUND` … R9 `PROJECTION_READY` | "Graphiti is up" == healthy |
+| `hook_carrier.py` | the one hook-carrier decision: `hosted` (hook credential binds) / `relay` (cloud, unbound) / `local`; `L9_MEMORY_HOOK_CARRIER` override, unknown refused; `store_of` for supersession | reading or printing a credential value |
+| `hosted_hook_transport.py` | the hosted carrier (ADR-0055): client-credentials token for the `l9-memory-hooks` hook principal, one MCP `initialize` + `tools/call` per record to the onboarding `resource.identifier`, verdict `ok` / `refused` / `unavailable`; `drain` for the Stop hook | a host literal, a redirect, a cached token outside the process, a second door after a refusal |
+| `relay.py` | the relay outbox: queue, ack (hosted receipt UUID), reject (refusal), status | talking to memory |
 
 ## Caller taxonomy (ADR-0033 two lanes; ADR-0030 items 7–9 as amended; CANONICAL_LAW §8.3 / §8.6)
 
@@ -140,10 +143,12 @@ from outside the interpreter's own environment without the opt-in is
 
 **Production pin status.** The plan binds production to an immutable release
 artifact locked in `uv.lock`. `v2.3.0` built and OIDC-authenticated but PyPI
-rejected the `constellation` git extra (400). `v2.3.1` is the first index
-upload (`publish.yml` run 34172985608, 2026-09-08). `source.ref` is the
-`v2.3.1` tag, pinned to its commit by `release_evidence.memory_sha`, and
-`pyproject.toml` / `uv.lock` carry `l9-graphite-memory==2.3.1`.
+rejected the `constellation` git extra (400). `v2.3.1` was the first index
+upload (`publish.yml` run 34172985608, 2026-09-08). That tag stays immutable
+history. The bound package in this repository is `l9-graphite-memory==2.6.0`
+(`ops/config/memory-binding.json`). The admitted hosted release is `v3.0.0`
+(source `d8b33870c33dc4625f177282c5e99c888356efd8`), deployed 2026-11-16; it is
+not this lockfile and it is not on PyPI.
 
 **`exact` means the artifact** (audit CG-P1-03). Version, contract version and
 "the module lives under the interpreter prefix" are satisfied identically by
@@ -267,6 +272,14 @@ identity), `mcp_instantiation.py` (the memory-owned MCP installer),
 `memory_state.py` git probe may spawn a process, always as an argv list; and
 `MemoryControlPlaneClient` launches exactly `binding.memory_cli` for every
 operation.
+
+One named exception (ADR-0055, CANONICAL_LAW §8.12):
+`hosted_hook_transport.py` carries hook records to the hosted `MemoryService` —
+the canonical store, not a provider — and may import `urllib` request/error
+types, used only through `ops/lib/safe_https.py` (verified TLS, no redirects)
+to hosts read from `ops/config/memory-auth0-onboarding.yaml` and its discovery
+documents. The boundary test pins the exception to exactly that module and that
+root; the semgrep rule excludes exactly that file.
 
 ## Continuation capsule (plan §12)
 
@@ -416,36 +429,37 @@ failure and requires the pinned wheel.
 
 `.github/workflows/memory-cross-repo.yml` is that proof as a required,
 non-skippable PR check (audit P2-02 / P1-01): it resolves `memory-binding.json`
-`source.ref` on the memory remote (the `v2.3.1` release tag is peeled with
+`source.ref` on the memory remote (the bound release tag is peeled with
 `git ls-remote`; a bare SHA is taken as is), refuses any commit other than
 `release_evidence.memory_sha` so a moved tag fails rather than rebinds, clones
-the memory repository at that SHA, rebuilds the wheel by writing
-`release_evidence.build_backend_constraint` (`setuptools==84.0.0`) into a
-requirements file and passing that path to `uv build --wheel
---build-constraint` under the recorded `SOURCE_DATE_EPOCH`, refuses a digest that differs from
+the memory repository at that SHA, rebuilds the wheel with
+`scripts/build_release_artifacts.sh` (`python -m build`, then
+`tools/assurance/reproducible_artifacts.py canonicalize`) under the recorded
+`SOURCE_DATE_EPOCH`, checks that `[build-system] requires` equals
+`release_evidence.build_backend_constraint` (`setuptools==84.2.1`), refuses a digest that differs from
 `release_evidence.artifact_sha256`, installs the wheel into a clean
 environment bound through `L9_MEMORY_INTERPRETER`, runs the proof in required
 mode with `GRAPHITI_MCP_URL` / `GRAPHITI_MCP_TOKEN` unset, fails if any case
 skipped, and records the Cursor head, memory head, package version and
 artifact digest in the job summary and a proof artifact
-(`cursor.memory-cross-repo-proof/v1`). The live `source.ref` is the `v2.3.1`
-tag (cut 2026-09-08). The earlier `v2.3.0` tag stays immutable history. Making the context required in branch protection and the `uv.lock`
-artifact pin remain operator steps named in `release_evidence.operator_gated`;
-the pin waits for `publish.yml` to succeed on the tag, whose first run was
-rejected by the memory repository's `release` environment deployment policy
-(it does not yet allow the `v*` tag pattern).
+(`cursor.memory-cross-repo-proof/v1`). The live `source.ref` is
+`96ed99eb172bb3b7433600db8581991c4c890737`, the commit annotated tag `v3.0.1`
+peels to. `v3.0.0` was not uploaded. Earlier tags stay immutable history.
 
 ## Shared Hetzner memory staging binding (target; not live proof)
 
 For the approved Claude Code -> Cursor memory test, Cursor-Governance is the
 existing composer of the `l9-graphite-memory` dependency. The release binding
-in `ops/config/memory-binding.json` is `2.6.0` / `memory-control-plane/v1`.
+in `ops/config/memory-binding.json` is `3.0.1` / `memory-control-plane/v1`.
 Both agents must use that exact compatible package via their existing managed
 stdio MCP launchers, with each agent independently authenticated and authorized.
 
 The staged target is ONE shared PostgreSQL canonical store on authorized
-Hetzner infrastructure. That store does not exist yet: nothing has been
-provisioned, inventoried or bound, and this section names no live database.
+Hetzner infrastructure. Observed 2026-11-15, after its own provision approval:
+container `l9-graphiti-memory-postgres` on Docker network `l9-runtime`, image
+`postgres:16`, database `l9_memory`, role `l9_memory`, no published port.
+Infisical project `l9-graphite-memory` (`l9-graphite-memory-4b-bv`, id
+`f182da62-fe69-476a-95e0-305282eedab9`), environment `prod`, path `/`.
 Each agent runs its own package-owned local stdio MCP process, which composes
 its own MemoryService, signs with that agent's own unique identity, and uses
 product-supported configuration to select that same canonical store.
@@ -456,7 +470,7 @@ injected through permitted secret sources and must not enter MCP JSON,
 Git-tracked configuration, logs or model-visible output.
 
 The dependency pin selects the release's own `postgres` extra
-(`l9-graphite-memory[postgres]==2.6.0`), so `uv sync --locked` installs the
+(`l9-graphite-memory[postgres]==3.0.1`), so `uv sync --locked` installs the
 `psycopg2-binary` that `PostgresRecordStore` imports. No launcher selects the
 postgres backend or carries a DSN yet. No host-trusted pre-spawn has been shown
 to keep a DSN out of the model's reach: on the hosted Claude surface the model
@@ -474,14 +488,14 @@ deletes nothing: existing memory data stay where they are, and retiring or
 deleting them needs its own inventoried, separately authorized destructive
 campaign.
 
-Store identity is pending. Both agents must resolve the exact same store: one
-resource identity, not two stores that each count as authorized Hetzner
-infrastructure. After the store is provisioned under its own approval, record
-here its non-secret identifier and named environment, and its Infisical
-reference paths only (never values) in the existing
-`ops/secrets/infisical-cursor-governance.yaml` inventory, with evidence that
-both independently launched agents resolved that one store. Until that
-inventory is observed, the shared-store proof stays open.
+Both agents must resolve the exact same store: one resource identity, not two
+stores that each count as authorized Hetzner infrastructure. The non-secret
+identity is recorded above. The five prod names added 2026-11-15, and the
+connection name already present, are reference paths in
+`ops/secrets/infisical-cursor-governance.yaml` under `memory_prod_secret_refs`.
+That inventory holds names only. Those names stay out of `root_env_keys` and
+out of Infisical project `cursor-governance`. The shared-store proof stays open
+until both independently launched agents resolve this one store.
 
 First E2E: Claude Code creates a new canonical memory via package MCP and
 retains the server-issued record ID/receipt. After the writer exits, Cursor
@@ -498,12 +512,12 @@ The remote-host/Mobile consumer access boundary is explicitly unresolved.
 Do not treat the two local processes' successful shared-database test as
 permission to publish a remote HTTP memory endpoint or a database port.
 
-`2.6.0` is the current exact package binding, and the First E2E runs on it.
-It does not contain the readiness work in Quantum-L9/l9-graphiti-memory#90
+`3.0.1` is the current exact package binding. The First E2E ran on `2.6.0`.
+That 2.6.0 pin does not contain the readiness work in Quantum-L9/l9-graphiti-memory#90
 (ADR-097). #90 is merged on memory `main` at
 `6c98332d91ac9ec9ee5d4573b59dfc270cb705e6`, after the 2.6.0 source
-`846f283f7dade101b324b87008ab4f5901f97074`, so no admitted release carries
-it yet: five readiness families (`canonical`, `projection`,
+`846f283f7dade101b324b87008ab4f5901f97074`. The 2.6.0 pin therefore does not
+carry it: five readiness families (`canonical`, `projection`,
 `graph`, `active_store`, `awareness_bus`), with `full_capability` true only
 when every family is selected and healthy. Full-deployment acceptance
 therefore needs a later, newly admitted memory release and an exact consumer

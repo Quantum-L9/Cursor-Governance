@@ -42,6 +42,25 @@ CEILING_ROUTE = {100: 0.5, 500: 0.75, 1000: 1.0, 5000: 2.5, 10000: 5.0}
 TARGET_ROUTE_5000_MS = 100
 TARGET_MATERIALIZE_RECEIPT_MS = 50
 TARGET_HOOK_MS = 500
+#: Line tracing roughly doubles pure-Python routing time (measured locally at
+#: n=10000: 0.60 s plain, 1.27 s under coverage). The SonarCloud job runs this
+#: suite under coverage on shared runners, where 5.29 s breached the plain 5.0 s
+#: ceiling on 2026-11-15. The ceiling bounds the algorithm, not the tracer.
+COVERAGE_SLOWDOWN = 2.5
+
+
+def coverage_active() -> bool:
+    """True when a coverage tracer is measuring this process (pytest-cov or `coverage run`)."""
+    try:
+        import coverage
+    except ImportError:
+        return False
+    return coverage.Coverage.current() is not None
+
+
+def route_ceiling(count: int, *, traced: bool) -> float:
+    """The route p95 ceiling for ``count`` skills, widened only while a tracer runs."""
+    return CEILING_ROUTE[count] * (COVERAGE_SLOWDOWN if traced else 1.0)
 
 
 def tok(i: int) -> str:
@@ -163,7 +182,8 @@ def test_scale_pipeline(roots, count: int, capsys):
 
     route_med, route_p95 = timed(lambda: rp.route_prompt(explicit_prompt, loaded.data))
     decision = rp.route_prompt(explicit_prompt, loaded.data)
-    assert decision is not None and decision["primary"] == f"l9-synth-{target:05d}"
+    assert decision is not None
+    assert decision["primary"] == f"l9-synth-{target:05d}"
     assert decision["source"] == "route"
 
     # Description fallback scores every model_allowed skill (n-gram matching), so
@@ -173,7 +193,8 @@ def test_scale_pipeline(roots, count: int, capsys):
     if count <= 1000 or os.environ.get("L9_VSP_SCALE_FULL") == "1":
         fb_med, fb_p95 = timed(lambda: rp.route_prompt(fallback_prompt, loaded.data), repeat=3)
         fallback = rp.route_prompt(fallback_prompt, loaded.data)
-        assert fallback is not None and fallback["primary"] == f"l9-synth-{target:05d}"
+        assert fallback is not None
+        assert fallback["primary"] == f"l9-synth-{target:05d}"
 
     mat_med, mat_p95 = timed(lambda: mat.materialize_route(decision, loaded), DURABLE_REPEAT)
     materialized = mat.materialize_route(decision, loaded)
@@ -239,7 +260,7 @@ def test_scale_pipeline(roots, count: int, capsys):
             f"targets: route5000<{TARGET_ROUTE_5000_MS}ms mat+receipt<"
             f"{TARGET_MATERIALIZE_RECEIPT_MS}ms hook<{TARGET_HOOK_MS}ms"
         )
-    assert route_p95 < CEILING_ROUTE[count]
+    assert route_p95 < route_ceiling(count, traced=coverage_active())
     assert mat_p95 + rcpt_p95 < 1.0
     assert hook_p95 < 10.0
 
@@ -266,6 +287,14 @@ def test_one_stalled_write_does_not_set_the_durable_p95(monkeypatch) -> None:
     assert p95 < 1.0
 
 
+def test_route_ceiling_widens_only_under_a_tracer() -> None:
+    """Plain runs keep the original ceilings; only a coverage tracer widens them."""
+    for count, ceiling in CEILING_ROUTE.items():
+        assert route_ceiling(count, traced=False) == ceiling
+        assert route_ceiling(count, traced=True) == pytest.approx(ceiling * COVERAGE_SLOWDOWN)
+    assert route_ceiling(10000, traced=True) > 5.29, "the 2026-11-15 SonarCloud sample"
+
+
 def test_native_count_is_constant_across_scale(roots):
     """The projection never reads the registry: native cardinality is 1 by construction."""
     projection = ROOT / "environment" / "agents" / "adapters" / "cursor" / "skills"
@@ -289,4 +318,5 @@ def test_no_network_or_model_dependencies_in_prompt_path():
         imports = [line for line in text.splitlines() if line.startswith(("import ", "from "))]
         for line in imports:
             for token in forbidden:
-                assert f" {token}" not in line and f".{token}" not in line, (rel, line)
+                assert f" {token}" not in line, (rel, line)
+                assert f".{token}" not in line, (rel, line)

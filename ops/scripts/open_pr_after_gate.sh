@@ -94,7 +94,10 @@ BASE_REF="${PR_BASE#origin/}"
 echo "--- refresh base ($PR_BASE) ---"
 if fetch_receipt_reusable "$WS" "$BASE_REF"; then
   echo "OK: reuse fetch-receipt (age < ${FETCH_RECEIPT_TTL_S}s, sha matches origin/$BASE_REF)"
-elif ! git fetch origin "$BASE_REF"; then
+# fetch_origin_branch (lib/git_remote_head.sh, via resolve_pr_stack.sh) writes
+# refs/remotes/origin/$BASE_REF itself: a bare `git fetch origin <base>` only
+# fills FETCH_HEAD in a single-branch clone, so a stacked base stayed missing.
+elif ! fetch_origin_branch "$WS" "$BASE_REF"; then
   echo "FAIL: cannot fetch origin/$BASE_REF — current-main collision state is"
   echo "      undeterminable, so publication is denied. Local work is unaffected."
   exit 1
@@ -122,6 +125,54 @@ ahead="$(git rev-list --count "${PR_BASE}..HEAD" 2>/dev/null || echo 0)"
 if [[ "${ahead:-0}" -eq 0 ]]; then
   echo "FAIL: no commits on '$branch' ahead of $PR_BASE — commit your work first, then re-run make pr"
   exit 1
+fi
+
+# Generated-heal paths left dirty by deterministic preparation are committed
+# before publication (#862): the gate validated the tree WITH them, so pushing
+# without them publishes a tree nothing validated. Content is unchanged by the
+# commit, so the L4 tree digest below still binds the same bytes. Any other
+# dirt keeps the WARN. A classification or commit failure blocks publication.
+# BEGIN generated-heal-commit
+_commit_generated_heal() {
+  local prefixes path prefix line
+  local -a heal=()
+  if ! prefixes="$(python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" --print-generated-prefixes)"; then
+    echo "FAIL: cannot list generated prefixes; refusing to publish a tree with unclassified dirt"
+    return 1
+  fi
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    path="${line:3}"
+    path="${path#\"}"
+    path="${path%\"}"
+    while IFS= read -r prefix; do
+      [[ -z "$prefix" ]] && continue
+      if [[ "$path" == "$prefix"* ]]; then
+        heal+=("$path")
+        break
+      fi
+    done <<<"$prefixes"
+  done <<<"$(_meaningful_dirty)"
+  if [[ ${#heal[@]} -eq 0 ]]; then
+    return 0
+  fi
+  echo "--- commit generated heal (${#heal[@]} path(s)) ---"
+  printf '  %s\n' "${heal[@]}"
+  if ! git add -- "${heal[@]}"; then
+    echo "FAIL: could not stage generated-heal paths; nothing pushed"
+    return 1
+  fi
+  if ! git diff --cached --quiet -- "${heal[@]}"; then
+    if ! git commit --no-edit -q -m "chore(generated): commit generated heal before publish" -- "${heal[@]}"; then
+      echo "FAIL: could not commit generated-heal paths; nothing pushed"
+      return 1
+    fi
+  fi
+  echo "OK: committed generated heal — publishing the tree the gate validated"
+}
+# END generated-heal-commit
+if [[ -n "$(_meaningful_dirty)" ]]; then
+  _commit_generated_heal || exit 1
 fi
 
 meaningful="$(_meaningful_dirty || true)"
@@ -244,6 +295,13 @@ _push_with_bounded_recover() {
   local attempt=1 max=2 prior_head
   while [ "$attempt" -le "$max" ]; do
     if git push -u origin HEAD; then
+      # Record what was pushed as refs/remotes/origin/$branch. `push -u` sets the
+      # upstream config, but a single-branch clone maps no tracking ref for the
+      # feature branch, so `@{u}` stayed unresolvable and every unpushed-commit
+      # check (Stop hooks, session_debt) reported the published branch as
+      # unpushed. Telemetry only: the push already succeeded.
+      fetch_origin_branch "$WS" "$branch" >/dev/null 2>&1 ||
+        echo "WARN: pushed, but could not record origin/$branch locally"
       return 0
     fi
     if [ "$attempt" -ge "$max" ]; then
@@ -252,15 +310,37 @@ _push_with_bounded_recover() {
     fi
     echo "WARN: push rejected — recover $((attempt + 1))/$max (fetch + merge --no-edit + regen + re-attest)"
     prior_head="$(git rev-parse HEAD)"
-    git fetch origin "$BASE_REF" || return 1
+    fetch_origin_branch "$WS" "$BASE_REF" || return 1
     # Also fetch the remote feature branch tip: a concurrent publisher advancing the
     # same PR branch causes the rejection; merging only origin/$BASE_REF leaves those
     # commits absent and the next push is rejected again.
-    git fetch origin "$branch" 2>/dev/null || true
-    git merge --no-edit "origin/$BASE_REF" || return 1
+    fetch_origin_branch "$WS" "$branch" >/dev/null 2>&1 || true
+    if ! git merge --no-edit "origin/$BASE_REF"; then
+      if ! git merge --abort 2>/dev/null; then
+        echo "WARN: git merge --abort failed — inspect the tree before retrying" >&2
+      fi
+      echo "FAIL: push recovery could not merge origin/$BASE_REF cleanly — merge aborted, tree restored" >&2
+      return 1
+    fi
     if git rev-parse "origin/$branch" >/dev/null 2>&1 && \
        ! git merge-base --is-ancestor "origin/$branch" HEAD 2>/dev/null; then
-      git merge --no-edit "origin/$branch" || return 1
+      # #935: merge the remote branch only when it is this PR's live head (a
+      # concurrent publisher advanced it). With no open PR, origin/$branch is a
+      # spent name -- typically a squash-merged PR whose branch was not deleted --
+      # and merging it imports already-merged history into a new PR.
+      if [[ -z "${pr_number:-}" ]]; then
+        echo "FAIL: origin/$branch exists but has no open PR — the branch name is spent (reused_after_merge); not merging it, never forcing." >&2
+        echo "Move the new commits to a fresh branch and publish from there:" >&2
+        echo "  git checkout -b ${branch}-followup && PR_REMEDIATE=0 make pr" >&2
+        return 1
+      fi
+      if ! git merge --no-edit "origin/$branch"; then
+        if ! git merge --abort 2>/dev/null; then
+        echo "WARN: git merge --abort failed — inspect the tree before retrying" >&2
+      fi
+        echo "FAIL: push recovery could not merge origin/$branch (PR #${pr_number}) cleanly — merge aborted, tree restored" >&2
+        return 1
+      fi
     fi
     if [ -f "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" ]; then
       python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" --force || return 1
@@ -482,13 +562,12 @@ _compose_title_and_body() {
     _additive_measured=1
     _touched_additive=""
   fi
-  # The body is composed from ONE template: the org's canonical
-  # <owner>/.github .github/pull_request_template.md, resolved by the composer
-  # at an exact commit (compose_pr_body.py resolve_template). A consumer's local
-  # copy and the governance checkout's copy are never read: a divergent copy
-  # must not change what the body says, and an unreachable org template is an
-  # error rather than a silent switch to stale bytes. Org-managed sync
-  # (Quantum-L9/.github continuous-sync.yml) reconciles the local copies.
+  # The body is composed from ONE template at an exact commit, resolved by
+  # compose_pr_body.py resolve_template (operator directive 2026-11-17): the
+  # repository's own committed .github/pull_request_template.md when it passes
+  # validation, else the org's <owner>/.github template read live, else the copy
+  # pinned in this governance tree while it matches its receipt. Nothing usable
+  # is an error. Org-managed sync (continuous-sync.yml) seeds the local copies.
   if [[ -z "${owner:-}" || -z "${name:-}" ]]; then
     echo "ERROR: cannot resolve owner/repo, so the org PR template has no source" >&2
     exit 1
@@ -780,14 +859,31 @@ if [[ -f "$_pr_summary_py" ]]; then
     echo "WARN: pr summary receipt not written (continuing)"
 fi
 
-echo "--- subscribe (GitHub notifications for PR #$pr_number) ---"
-# PUT repos/.../issues/{n}/subscription 404s. GraphQL updateSubscription is
-# the live path (ops/scripts/lib/gh_subscribe_pr.sh).
-# shellcheck source=lib/gh_subscribe_pr.sh
-source "$SCRIPT_DIR/lib/gh_subscribe_pr.sh"
-if ! gh_subscribe_pr "$owner" "$name" "$pr_number"; then
-  echo "WARN: could not subscribe to PR #$pr_number (continuing)"
+# A registered /lcto swarm child owns the PR it publishes until it is ready to merge
+# (governance/cto-mode/MODE.yaml OWN YOUR PR, protocol v2). It subscribes and remediates
+# in its own session, so no remediation handoff marker is written for a subagent to pick
+# up, and the CTO never remediates. ops/autonomy/session_role.py `status` exits 0
+# only for a session that registered itself as a child; every other session,
+# or a probe that cannot run, keeps the solo behaviour.
+_swarm_child=0
+_role_py="$GOV_ROOT/.venv/bin/python"
+[[ -x "$_role_py" ]] || _role_py="$(command -v python3)"
+if [[ -f "$GOV_ROOT/ops/autonomy/session_role.py" ]] &&
+  "$_role_py" "$GOV_ROOT/ops/autonomy/session_role.py" status >/dev/null 2>&1; then
+  _swarm_child=1
+  PR_REMEDIATE=0
 fi
+
+echo "--- subscribe (GitHub notifications for PR #$pr_number) ---"
+{
+  # PUT repos/.../issues/{n}/subscription 404s. GraphQL updateSubscription is
+  # the live path (ops/scripts/lib/gh_subscribe_pr.sh).
+  # shellcheck source=lib/gh_subscribe_pr.sh
+  source "$SCRIPT_DIR/lib/gh_subscribe_pr.sh"
+  if ! gh_subscribe_pr "$owner" "$name" "$pr_number"; then
+    echo "WARN: could not subscribe to PR #$pr_number (continuing)"
+  fi
+}
 
 handoff_dir="$WS/.l9/pr"
 mkdir -p "$handoff_dir"
@@ -861,6 +957,10 @@ INSTRUCTIONS:
 
 EOF
   echo "RESULT: PASS — PR open + subscribed; agent must spawn l9-pr-remediation"
+elif [[ "$_swarm_child" == "1" ]]; then
+  echo "swarm child — you own PR #$pr_number until it is ready to merge: subscribe to its activity,"
+  echo "  fix CI and review findings, resolve every thread, then write CTO-STATUS: ready-to-merge"
+  echo "RESULT: PASS — PR open; lane published, owner remediates"
 else
   echo "PR_REMEDIATE=0 — skipped remediation handoff marker (PR still open/subscribed)"
   echo "RESULT: PASS — PR open + subscribed"

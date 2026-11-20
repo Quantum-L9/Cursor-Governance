@@ -1,0 +1,8 @@
+{
+  "repo": "Quantum-L9/Cursor-Governance",
+  "base_main_sha": "58e7340f846dfe960a3c58fb4e4f2ef11b221084",
+  "paths": [
+    "governance/operator-alignment/verifier.yaml",
+    "tools/authority/produce_projection_bundle.py"
+  ]
+}

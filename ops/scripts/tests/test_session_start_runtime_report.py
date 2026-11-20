@@ -166,6 +166,25 @@ class SecretsPlaneClassificationTests(unittest.TestCase):
         self.assertEqual(line["class"], report.DEGRADED)
         self.assertIn("do not paste a token", line["summary"])
 
+    def test_authorized_catalog_lists_allow_list_names_only(self) -> None:
+        secrets = Path(__file__).resolve().parents[2] / "secrets"
+        if str(secrets) not in sys.path:
+            sys.path.insert(0, str(secrets))
+        import capability_bind as bind
+
+        bind.remember_vault_names(frozenset())
+        try:
+            line = report.classify_authorized_catalog(
+                ["PERPLEXITY_API_KEY", "sk-CANARY-VALUE", "CLAUDE_INFISICAL_CLIENT_SECRET"]
+            )
+        finally:
+            bind.remember_vault_names(None)
+        self.assertEqual(line["class"], report.OK)
+        self.assertIn("PERPLEXITY_API_KEY", line["summary"])
+        self.assertIn("authorized to bind when the task needs that system", line["summary"])
+        self.assertNotIn("sk-CANARY-VALUE", line["summary"])
+        self.assertNotIn("CLAUDE_INFISICAL_CLIENT_SECRET", line["summary"])
+
     def test_missing_receipt_is_unread_not_a_live_probe(self) -> None:
         line = report.classify_bind_line(None)
         self.assertEqual(line["class"], report.DEGRADED)
@@ -1038,3 +1057,75 @@ class IdentityLiteralBarrierTests(unittest.TestCase):
     def test_ok_requires_both_ok_and_the_ok_code(self) -> None:
         line = report.classify_infisical_identity({"ok": True, "code": "IDENTITY_ABSENT"})
         self.assertEqual(line["class"], report.FAILED)
+
+
+class SinglePrintTests(unittest.TestCase):
+    """Each component appears once: a fault is not counted in Runtime *and* Degraded."""
+
+    def test_a_degraded_line_is_printed_only_under_degraded(self) -> None:
+        ok = report.classify_publish_path({"status": "none", "in_force": False})
+        bad = report.classify_simple(
+            "wiring", "FAIL — SSOT tip on 'feat/x' — run /ff", fail_tokens=("fail",)
+        )
+        md = report.format_markdown([ok, bad])
+        self.assertEqual(md.count("- wiring:"), 1)
+        runtime, degraded = md.split("### Degraded")
+        self.assertIn("publish-path: ok", runtime)
+        self.assertNotIn("wiring", runtime)
+        self.assertIn("- wiring:", degraded)
+
+    def test_a_failed_identity_is_printed_only_under_failed(self) -> None:
+        failed = report.classify_infisical_identity(
+            {"ok": False, "code": "IDENTITY_ABSENT", "summary": "x"}
+        )
+        md = report.format_markdown([failed])
+        self.assertEqual(md.count("infisical-identity:"), 1)
+        self.assertIn("### Degraded\n- none", md)
+
+    def test_cursor_receipt_aggregating_reported_lines_is_not_a_second_fault(self) -> None:
+        payload = {"commands": "BLOCKED", "rules": "BLOCKED", "hooks": "READY", "plugin": "READY"}
+        lines = report.classify_cursor_adapter(
+            surface="cursor",
+            receipt={"state": "failed", "reason": "installer failed at stage 'complete'"},
+            payload=payload,
+        )
+        self.assertEqual(len(lines), 1)
+        self.assertIn("aggregates wiring", lines[0]["summary"])
+        self.assertNotIn("installer failed", lines[0]["summary"])
+        self.assertFalse(lines[0]["include_in_degraded"])
+
+    def test_an_independent_receipt_probe_still_lands_in_degraded(self) -> None:
+        payload = {
+            "commands": "READY",
+            "hooks": "DEGRADED",
+            "reasons": {"hooks": "hooks.json missing"},
+        }
+        lines = report.classify_cursor_adapter(
+            surface="cursor", receipt={"state": "degraded", "reason": ""}, payload=payload
+        )
+        self.assertIn("hooks: hooks.json missing", lines[0]["summary"])
+        self.assertTrue(lines[0]["include_in_degraded"])
+
+
+class ReceiptAliasTests(unittest.TestCase):
+    """One underlying probe is one finding, however many receipt keys carry it."""
+
+    def test_plugin_and_plugins_are_one_finding(self) -> None:
+        payload = {
+            "plugin": "DEGRADED",
+            "plugins": "DEGRADED",
+            "reasons": {"plugin": "l9-governance plugin missing", "plugins": "x"},
+        }
+        repeated, independent = report.receipt_causes(payload)
+        self.assertEqual(repeated, [])
+        self.assertEqual(independent, ["plugin: l9-governance plugin missing"])
+
+    def test_commands_link_repeats_a_flagged_wiring_line(self) -> None:
+        payload = {"commands": "BLOCKED", "commands_link": "DEGRADED"}
+        repeated, independent = report.receipt_causes(payload, frozenset({"wiring"}))
+        self.assertEqual((repeated, independent), (["wiring"], []))
+
+    def test_commands_link_is_its_own_finding_when_wiring_passed(self) -> None:
+        payload = {"commands_link": "DEGRADED", "reasons": {"commands_link": "no link"}}
+        repeated, independent = report.receipt_causes(payload, frozenset())
+        self.assertEqual((repeated, independent), ([], ["commands_link: no link"]))

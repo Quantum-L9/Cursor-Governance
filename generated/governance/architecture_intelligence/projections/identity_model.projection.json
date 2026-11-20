@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "consumer_rules": {
@@ -161,7 +161,7 @@
     },
     "purpose": "Define distinct L9 identity dimensions, their binding and resolution semantics, and the provenance-bearing assertion consumed by downstream systems without conflating governance profile, provider, adapter, or transport identity with actor authorship."
   },
-  "projection_digest": "sha256:f94407106185d5ebb43bd65aebf328628282784f94affe4f6810278efa414ae3",
+  "projection_digest": "sha256:c7d1b163582a4c119b0fd9038cadbcc381f88d5c4774fca2cdf2643ae8b853a8",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",

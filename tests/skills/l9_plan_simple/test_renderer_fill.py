@@ -408,3 +408,58 @@ def test_l9_plan_simple_runs_no_archived_asset() -> None:
         and "_archived/l9-plan" in (REPO / rel).read_text(encoding="utf-8", errors="ignore")
     ]
     assert offenders == []
+
+
+def _render_titled(tmp_path: Path, plan: dict, mode: str = "cursor-build") -> str:
+    path = tmp_path / "plan.json"
+    path.write_text(json.dumps(plan), encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(RENDERER), "plan.json", f"--execute-via={mode}"],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    return proc.stdout
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "stack_safe_merge: promotions use merge commits",
+        "- leading dash: still a title",
+        'quotes "inside" and a back\\slash: here',
+        "# hash-led title",
+    ],
+)
+def test_frontmatter_survives_yaml_hostile_titles(tmp_path: Path, title: str) -> None:
+    """An unquoted `name:` with ": " broke the whole block (seen in the field)."""
+    yaml = pytest.importorskip("yaml")
+    from plan_sections import FRONTMATTER_RE, frontmatter_presence, frontmatter_yaml_error
+
+    plan = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    plan["title"] = title
+    plan["objective"] = 'Objective with "quotes": and a colon'
+    out = _render_titled(tmp_path, plan)
+    match = FRONTMATTER_RE.match(out)
+    assert match, out[:200]
+    loaded = yaml.safe_load(match.group(1))
+    assert loaded["name"] == title
+    assert loaded["overview"] == plan["objective"]
+    assert isinstance(loaded["todos"], list) and loaded["todos"]
+    assert frontmatter_yaml_error(out) is None
+    assert all(frontmatter_presence(out).values()), frontmatter_presence(out)
+
+
+def test_broken_frontmatter_is_named_not_reported_as_missing_todos() -> None:
+    pytest.importorskip("yaml")
+    from plan_sections import frontmatter_yaml_error, projection_marker_errors
+
+    good = _render("cursor-build")
+    broken = good.replace(good.splitlines()[1], "name: unquoted: colon title", 1)
+    error = frontmatter_yaml_error(broken)
+    assert error and error.startswith("G_FRONTMATTER_YAML:"), error
+    assert "line 1" in error
+    assert error in projection_marker_errors(broken)
+    assert frontmatter_yaml_error("no frontmatter here\n").startswith("G_FRONTMATTER_YAML:")

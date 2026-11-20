@@ -1,0 +1,93 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/projection-bindings/contracts-conformance.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-11-12
+# Same shape as skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml and
+# verified by the same binding-parameterized adapter over the one shared consumer verifier.
+integration:
+  integration_id: L9.CG.ARCHITECT_MODE.DOMAIN_CONTRACTS_CONFORMANCE.001
+  version: 1.0.0
+  artifact_class: runtime_integration_binding
+  status: active
+  semantic_owner: governance/projection-bindings/contracts-conformance.yaml
+purpose:
+  assertion: >-
+    Bind the contracts-conformance domain projection from Quantum-L9/.github into architect mode and CTO mode as a separate,
+    explicitly loaded input: a bundle the canonical compiler produced and this repository only
+    verifies. It executes no selector, composes no payload and authors no schema.
+input:
+  name: domain_contracts_conformance
+  authority:
+    repository: Quantum-L9/.github
+    projection_profile_ref: l9.projection/contracts-conformance@1
+    projection_profile_digest: sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312
+    projection_profile_class: domain
+    projection_profile_consumer: semantic_domain.contracts_conformance
+    composition_profile_ref: l9.compose/contracts-conformance@1
+    composition_profile_digest: sha256:2335519ed06fb37316baad61e7b57b80c38728c983711a1cafc48f6dd4a17056
+    projection_payload_schema: l9.projection.domain.contracts-conformance/v1
+    composed_payload_schema: l9.composed-projection.domain.contracts-conformance/v1
+    expected_source_classes:
+      - conformance_model
+      - requirement_model
+      - resolution_model
+      - invariants
+      - contracts
+  bundle:
+    path: generated/governance/domain_contracts_conformance
+    lock: bundle.lock.json
+    composed_view: composed.json
+  producer:
+    compiler: l9-semantic-compiler
+    driver: tools/authority/produce_projection_bundle.py
+    ci: .github/workflows/l9-projection-bundle-verify.yml
+    trusted_replay: .github/workflows/l9-projection-bundle-trusted-replay.yml
+    cg_produces: false
+  verifier: skills/l9-global-architect/scripts/verify_architecture_intelligence.py
+  shared_verifier: skills/l9-coding-agent/scripts/verify_canonical_binding.py
+admission:
+  resolved_independently_of: bundle.lock.json
+  resolver: skills/l9-coding-agent/scripts/verify_canonical_binding.py#resolve_admission
+  authority_main_ref: refs/remotes/origin/main
+  effect_when_absent: ADMISSION_UNRESOLVED (ADMISSION_DECISION_RECORD_ABSENT); integration is never admission.
+  decisions:
+    - candidate_ref: l9.projection/contracts-conformance@1
+      candidate_digest: sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312
+      decision: admit
+      admitted_revision: dcd9d0092740756c19ac681d399bd438409bdc52
+      decided_at: "2026-11-11"
+      authority_ref: >-
+        Quantum-L9/.github ADR-033, admitted by the repository owner on 2026-11-11 in governed session session_017xwbxxt7rGKHw3NhwSXSP4 (Quantum-L9/.github#239, Semantic Foundation v3.36.0); bound for architect mode by the owner's instruction of 2026-11-12 in governed session session_017xwbxw3RduoWFP29VkobHR: "Make an architect mode so I don't need the /l9-global-architect skill ... Select the optimal combination of profiles and add architect_mode.py and wire it up."
+    - candidate_ref: l9.compose/contracts-conformance@1
+      candidate_digest: sha256:2335519ed06fb37316baad61e7b57b80c38728c983711a1cafc48f6dd4a17056
+      decision: admit
+      admitted_revision: dcd9d0092740756c19ac681d399bd438409bdc52
+      decided_at: "2026-11-11"
+      authority_ref: >-
+        Quantum-L9/.github ADR-033, admitted by the repository owner on 2026-11-11 in governed session session_017xwbxxt7rGKHw3NhwSXSP4 (Quantum-L9/.github#239, Semantic Foundation v3.36.0); bound for architect mode by the owner's instruction of 2026-11-12 in governed session session_017xwbxw3RduoWFP29VkobHR: "Make an architect mode so I don't need the /l9-global-architect skill ... Select the optimal combination of profiles and add architect_mode.py and wire it up."
+load_condition:
+  when:
+    - cursor_host_default
+    - architect_mode_active
+    - cto_mode_active
+  requires_all:
+    - verifier.status == ADMITTED_AND_CURRENT (mode admitted)
+  repository_presence_alone_loads: false
+  loads: the composed view only; each namespace is one source projection exactly as produced
+failure_behavior:
+  BUNDLE_VERIFIED: not admitted law; admitted mode reads nothing.
+  BLOCKED: proceed without this domain; a claim that depends on it is a typed Unknown.
+  REJECTED: no part of the bundle may be read; report the refusal reason.
+  STALE: the bundle must not be treated as current; regeneration belongs to the producer.
+  fallback:
+    partial_bundle: forbidden
+    model_reconstruction_from_memory_or_repository_reads: forbidden
+forbidden_duplication:
+  - selector_execution
+  - projection_or_composition_by_cursor_governance
+  - payload_schema_authoring_or_reinterpretation

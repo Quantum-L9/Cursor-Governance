@@ -56,10 +56,20 @@ security wave already runs that exact pin when dependency files change.
   pinned `l9-ci` SDK the way `org-ci.yml` does: `semgrep run` then
   `gate evaluate`. The SDK source sits at `.l9/runtime/sdk/source` in the
   snapshot, because Semgrep names each rule by its config path and Core's policy
-  keys read `l9.runtime.sdk.source.l9_ci...`. Core's own bundled governance for
-  `pr_fast` (strictness, requiredness, `semgrep-policy.yaml`, identity maps) is
-  read from l9-ci-core and staged under `.l9/runtime/org-governance`; Core never
-  uses this repository's `.github/governance` files for this gate. Core judges
+  keys read `l9.runtime.sdk.source.l9_ci...`. The governance is resolved by
+  Core's own actions, fetched from l9-ci-core at `core_ref` and run exactly as
+  org-ci runs them: `resolve-consumer-metadata` reads the scanned repository's
+  `.l9/ci.json`, then `resolve-governance` takes its `product-kind` and stages
+  the `pr_fast` strictness, requiredness, `semgrep-policy.yaml` and identity
+  maps under `.l9/runtime/org-governance`; Core never uses this repository's
+  `.github/governance` files for this gate. **Constellation scope** (Core #237):
+  only a repository declaring `product_kind: node` gets the policy unchanged.
+  Any other repository gets Core's scoped policy, in which the four Gate routing
+  rules are `disabled`: they still run and the lane reports them as `note`, but
+  they cannot block. An inadmissible `product_kind` makes Core's action exit
+  non-zero; the lane then blocks with Core's own message (rule
+  `core/resolve-consumer-metadata` or `core/resolve-governance`) without running
+  Semgrep. The rule list and the scoping live only in Core. Core judges
   the whole tree, so the lane blocks on every finding Core's gate blocks. The
   verdict is `gate evaluate`'s exit (0 pass, 1 fail, 6 incomplete): `semgrep
   run` exits 0 even when semgrep wrote no report. Behind an HTTPS proxy the SDK
@@ -68,8 +78,12 @@ security wave already runs that exact pin when dependency files change.
 - **Semgrep Pro.** `semgrep ci --dry-run` fetches the org policy with the token
   and creates no scan. Advisory until probe U1 proves parity with the
   `semgrep-cloud-platform/scan` check.
-- **Biome** blocks: Analyze (central Core) runs `biome ci` in blocking mode with
-  its locked 2.5.8 binary, so any finding in a changed file blocks.
+- **Biome** blocks only when the scanned tree has `biome.json` or `biome.jsonc`
+  at its root, the same predicate as Analyze (central Core)
+  (`hashFiles('biome.json', 'biome.jsonc')`; otherwise `not_applicable`). Core
+  runs `biome ci` in blocking mode with its locked 2.5.8 binary, so any finding
+  in a changed file blocks. A repo with neither file skips the lane and does
+  not fail the gate.
 - **New tools** (actionlint, zizmor, shellcheck, yamllint) block on error level
   on changed lines only, so existing debt never blocks.
 
@@ -89,6 +103,14 @@ stays on CI. `make pr` does not start it, and the push hook does not wait on it.
 |---|---|---|
 | `0f3612da` (#829 before its fix) | `gate-result.json` status fail, 7 blocking: `hardcoded-credential` at `ops/memory/agent_assertion.py:34,39`, `ops/scripts/validate_legacy_doctrine_residue.py:229`, `ops/secrets/infisical_cli_login.py:60`, `ops/secrets/login_registry.py:18,20`; `sql-string-format` at `ops/memory/store_compat.py:96` | `blocking=7`, the same rules at the same seven lines, ~71 s |
 | `3cd61988` (main) | green | `blocking=0`, ~69 s |
+
+### Constellation scope (2026-11-13, Core `ff4d6c9`)
+
+| Tree | Before (unscoped node policy) | After (Core's resolver) |
+|---|---|---|
+| Quantum-L9/Gate_SDK `cbfd8d8` (no `product_kind`) | `blocking=3`: `httpx-direct-node-dispatch` at `src/constellation_node_sdk/gate/registration.py:274`; `hardcoded-peer-node-url` at `examples/application_client/app_client.py:38`, `examples/worker_node/worker_node_template.py:174` | `blocking=0 advisory=3`: the same three, as `note` |
+| the same tree with `product_kind: node` | — | `blocking=3`, the same three |
+| the same tree with `product_kind: bogus` | — | `blocking=1`: `core/resolve-consumer-metadata` — `product_kind must be one of ['dependency', 'node']` |
 
 ## Concurrency without collision
 
@@ -119,3 +141,15 @@ L9_CI_PARITY=0                                # session kill switch
 When `validate_manifest.py` reports a moved CI pin: read the CI log for the
 version it now runs, update `version`, `url`, `sha256` and `ci_ref` in
 `tools.yaml` together, then `install.py` and re-run the parity replay.
+
+`l9-ci` is not re-pinned by hand. It declares `track: ci_ref`: `install.py`
+reads the SDK revision `org-ci.yml` provisions (the one full SHA
+`ci_ref.extract` finds there), installs exactly that commit and records
+`source: ci_ref` in `state.json`, so a Core bump reaches `make pr` on the next
+install with no change here. `validate_manifest.py --remote` prints an `INFO`
+line when Core has moved past the hand pin and fails only when `extract` no
+longer finds exactly one revision. When Core cannot be read, `install.py` keeps
+the revision it last read from CI, or installs the hand pin `version` when none
+was recorded, and prints a `WARN` line either way. `version` and `contains`
+remain the reviewed fallback and its exact evidence; update them only when you
+want a newer offline fallback.

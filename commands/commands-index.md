@@ -14,7 +14,7 @@ recognition_rule: rules/02-slash-commands.mdc
 delegating to one skill pack are **retired** under `commands/_archived/`.
 Invoke the skill directly (Cursor plugin / Claude Code `~/.claude/skills/` symlink).
 
-Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml) — **21** live
+Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml) — **24** live
 commands (executors, DAGs, bootstrap, or protocols with no 1:1 skill name).
 
 ---
@@ -39,6 +39,9 @@ commands (executors, DAGs, bootstrap, or protocols with no 1:1 skill name).
 | `/l9-plan-build` | Plan-simple + kernels + Build DAG |
 | `/l9-audit-plans` | Leftover-todo refine (moves no plans) — skill `l9-audit-plans` (not `commands/`) |
 | `/lcto` | L CTO strategic mode |
+| `/architect` | Architect mode: opt-in architecture + strategic-planning projections |
+| `/coding-agent` | Coding-agent mode: opt-in coding-agent execution projection |
+| `/planner` | Planner mode: opt-in strategic-planning projections + Plan Keeper context (read-only) |
 | `/spec` | Specification generator |
 | `/rules` | List governance rules from `.cursor/rules/` |
 | `/update-command` | Slash-command minimizer DAG (legacy) |
@@ -54,7 +57,7 @@ Examples — full list: `skills/` + `ops/generated/skill-registry.json`.
 | `l9-issue-remediation` | `/l9-issue-remediation` (Claude Code skill slash) |
 | `l9-pr-digest` | `/l9-pr-digest` or `/pr` (digest then Diagnose) |
 | `l9-pr-remediation` | `/l9-pr-remediation` (Converge); `/pr` is Diagnose after digest |
-| `l9-plan-simple` | skill name or natural-language plan intent. PE campaign planning is retired. |
+| `l9-plan-simple` | skill name or natural-language plan intent. PE campaign planning is the explicit-only `/l9-plan`. |
 | `l9-pipeline-audit` | skill name or `/plan-audit` (compat alias) |
 | `l9-code-analysis` | analyze / evaluate / extract_align modes in skill |
 | `l9-bounded-autonomy` | `/autonomy` retired — invoke skill + packet |

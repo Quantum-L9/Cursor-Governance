@@ -8,8 +8,8 @@ metadata:
   tags: [l9, infisical, secrets, capability-bind, fail-closed, ssot]
   owner: igor_beylin
   status: active
-  version: 2.0.0
-  updated: 2026-11-02
+  version: 2.1.0
+  updated: 2026-11-19
 ---
 
 # l9-secrets
@@ -20,9 +20,11 @@ Resolve credentials for Quantum-L9 agents from **Cursor-Governance** `ops/secret
 without printing values, Keychain, or asking the human first.
 
 A name in Infisical project Cursor-Governance **is** the grant. Bind it via
-`capability_bind.py` whenever a secret is required. Do not ask. Do not wait
+`capability_bind.py` when the task needs that system. Do not ask. Do not wait
 for approval. Do not paste a token. Do not `hydrate --export` on a model
-surface.
+surface. `CLAUDE_INFISICAL_CLIENT_SECRET`, `INFISICAL_CLIENT_SECRET`, and
+`L9_INFISICAL_CLIENT_SECRET` are not re-issued: the identity is used, never
+handed out.
 
 | Vault | Role |
 |---|---|
@@ -31,12 +33,16 @@ surface.
 | **AWS Secrets Manager** | Cursor's bootstrap (in place of a `.env`), unchanged: it seeds `~/.infisical/l9-machine.json` (`login_registry.py`). No new secret goes to AWS. Claude never uses AWS. Do not delete AWS SM objects. |
 
 **Adding a secret:** create it in Infisical project `cursor-governance` (`prod`,
-path `/`) under a bare env-var name, then add that name to `root_env_keys` in
-`ops/secrets/infisical-cursor-governance.yaml` (the bind name gate). Never AWS
-first (`CANONICAL_LAW.md` §14.1).
+path `/`) under a bare env-var name. The live listing authorizes that name
+before the next commit. Mirror it into `root_env_keys` in
+`ops/secrets/infisical-cursor-governance.yaml` so a listing failure still
+allows the bind. Never AWS first (`CANONICAL_LAW.md` §14.1).
 
-SessionStart owns the plane (`session_start_secrets.py`). The reporter is a
-derived view. There is no Makefile `secrets-bind` target.
+SessionStart owns the plane (`session_start_secrets.py`). It prints one
+authorized-name catalog from a values-off listing and still probes only
+`SEMGREP_APP_TOKEN`, `SONAR_TOKEN`, `GITHUB_TOKEN`, and `CONTEXT7_API_KEY`.
+The reporter is a derived view. There is no Makefile `secrets-bind` target.
+`make pr` does not require `SONAR_TOKEN` or `SEMGREP_APP_TOKEN`.
 
 Values never go into git, logs, receipts, or chat.
 
@@ -69,8 +75,9 @@ MUST bind the Infisical name **before** asking the human.
 | PostHog | `openclaw-igorbot/posthog#personal_api_key` / `#project_api_key` |
 
 **CANONICAL_LAW.md §14 / §14.1:** Infisical `GITHUB_TOKEN` (legacy ref
-`openclaw-igorbot/github#token`) is the **sole** agent GitHub PAT. Do **not**
-create a second PAT in any store; rotate it in Infisical.
+`openclaw-igorbot/github#token`) is the **default** agent GitHub credential.
+`GITHUB_CLASSIC_PAT` binds when the task needs that token. Do **not**
+create another PAT; rotate the one the task uses in Infisical.
 Do **not** ask the human to click `github.com` UI when this PAT can finish the job.
 
 ## npm / GitHub Packages auth
@@ -145,6 +152,7 @@ See [references/infisical-protocol.md](references/infisical-protocol.md).
 - Infisical inventory + name gate (IDs/keys only): `ops/secrets/infisical-cursor-governance.yaml`
 - Legacy AWS inventory (operator): `ops/secrets/openclaw-igorbot.registry.yaml`
 - Overlays: `ops/secrets/registry.overlays.yaml`
+- Actions secret mirror (**operator-only**; hosted sessions get 403 on Actions secrets): `ops/secrets/sync_actions_secrets.py` + plan `ops/secrets/actions-secret-sync.json` — binds vault names in-process, `gh secret set` via stdin, `--dry-run` writes nothing
 - Child-env exec for tools that read their own credential (Semgrep Pro):
   `ops/secrets/capability_exec.py` + `capability-exec.json` — registered entries
   only, secret in that child's environment only, output scrubbed
@@ -161,7 +169,7 @@ See [references/infisical-protocol.md](references/infisical-protocol.md).
 
 | Code | Meaning | Next action |
 |---|---|---|
-| `<not-in-inventory>` | Name (or legacy ref) not in `root_env_keys` | Add the secret in Infisical and its name to `root_env_keys`; do not invent names |
+| `<not-in-inventory>` | Name (or legacy ref) not in the live listing or `root_env_keys` | Add the secret in Infisical; mirror the name into `root_env_keys`; do not invent names |
 | `unbound` | In the inventory but absent from the vault | Create it in Infisical project `cursor-governance` |
 | `infisical-machine-absent` | No machine identity on this surface | Operator sets `L9_INFISICAL_CLIENT_ID` + `L9_INFISICAL_CLIENT_SECRET` |
 | `LOGIN_REFUSED` | Infisical refused the identity (revoked, wrong secret) or unreachable | Rotate the identity's client secret in Infisical; re-set it |

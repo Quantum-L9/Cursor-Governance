@@ -28,25 +28,17 @@
     },
     "target": {
       "type": "object",
-      "required": [
-        "repository_or_artifact"
-      ],
+      "required": ["repository_or_artifact"],
       "properties": {
         "repository_or_artifact": {
           "type": "string",
           "minLength": 1
         },
         "base_revision": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "branch_or_worktree": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       }
     },
@@ -91,10 +83,7 @@
       "type": "array"
     },
     "readiness_claim": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "baseline_expectations": {
       "type": "array"

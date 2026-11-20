@@ -17,6 +17,10 @@ REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
 
 from compose_pr_body import (  # noqa: E402
+    BODY_BUDGET,
+    COMPACT_FIX_NOTE,
+    COMPACT_INTENT_NOTE,
+    COMPACT_INVENTORY_NOTE,
     COMPLETION_DERIVED,
     COMPLETION_NOT_APPLICABLE,
     COMPLETION_UNVERIFIED,
@@ -25,6 +29,7 @@ from compose_pr_body import (  # noqa: E402
     EDIT_MODE_STALE_PREFIX,
     ERROR_FENCE,
     GATE_UNVERIFIED,
+    GITHUB_BODY_LIMIT,
     LEGACY_THIN_PROBLEM_NOTE,
     NO_OWN_COMMIT,
     NO_SUBJECT,
@@ -1157,6 +1162,11 @@ class InventoryGuardTests(unittest.TestCase):
         self.assertEqual(check_inventory(endpoint, rows), (["old/x.py -> new/x.py"], ["new/x.py"]))
 
 
+#: A workspace with no repository template (not even a git repository), so the
+#: org and pinned paths are what a test exercises.
+NO_TEMPLATE = Path(tempfile.mkdtemp(prefix="l9-no-template-"))
+
+
 class TemplateResolutionTests(unittest.TestCase):
     """B4/D2/F2: one canonical template, at one exact org commit, or an error."""
 
@@ -1177,14 +1187,32 @@ class TemplateResolutionTests(unittest.TestCase):
 
         return gh
 
-    def test_consumer_copy_is_ignored_and_revision_is_exact(self) -> None:
+    def test_the_repository_template_comes_first_and_needs_no_network(self) -> None:
+        """Operator directive 2026-11-17: the org template is a fallback only."""
+
+        def no_network(endpoint: str) -> object:
+            raise AssertionError(f"read {endpoint} although the repository has a template")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _Repo(Path(tmp))
+            repo.write(".github/pull_request_template.md", CANONICAL_TEMPLATE)
+            repo.commit("template")
+            head = repo.git("rev-parse", "HEAD").strip()
+            repo.write(".github/pull_request_template.md", "## Scratch\n")  # uncommitted
+            source = resolve_template(
+                repo.root, "Quantum-L9", "consumer", gh=no_network, pinned=lambda o: None
+            )
+        self.assertEqual(source.text, CANONICAL_TEMPLATE)
+        self.assertEqual(source.revision, f"Quantum-L9/consumer@{head}")
+
+    def test_an_unusable_repository_template_falls_back_to_the_org(self) -> None:
         calls: list[str] = []
         with tempfile.TemporaryDirectory() as tmp:
-            workspace = Path(tmp)
-            (workspace / ".github").mkdir()
-            (workspace / ".github" / "pull_request_template.md").write_text("## Divergent\n")
+            repo = _Repo(Path(tmp))
+            repo.write(".github/pull_request_template.md", "## Divergent\n")
+            repo.commit("template")
             source = resolve_template(
-                workspace, "Quantum-L9", "consumer", gh=self._gh(CANONICAL_TEMPLATE, calls)
+                repo.root, "Quantum-L9", "consumer", gh=self._gh(CANONICAL_TEMPLATE, calls)
             )
         self.assertEqual(source.text, CANONICAL_TEMPLATE)
         self.assertEqual(source.revision, f"Quantum-L9/.github@{self.SHA}")
@@ -1196,6 +1224,16 @@ class TemplateResolutionTests(unittest.TestCase):
         body = compose_pr_body(facts, source.text).body
         self.assertIn(f"<!-- l9-pr-template: Quantum-L9/.github@{self.SHA} -->", body)
         self.assertNotIn("## Divergent", body)
+
+    def test_a_repository_without_a_template_uses_the_org_template(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _Repo(Path(tmp))
+            repo.write("README.md", "x\n")
+            repo.commit("init")
+            source = resolve_template(
+                repo.root, "Quantum-L9", "consumer", gh=self._gh(CANONICAL_TEMPLATE, [])
+            )
+        self.assertEqual(source.revision, f"Quantum-L9/.github@{self.SHA}")
 
     def test_template_missing_a_region_and_its_placeholder_is_rejected(self) -> None:
         for name, start, end in (
@@ -1226,14 +1264,16 @@ class TemplateResolutionTests(unittest.TestCase):
         def git_down(owner: str, path: str) -> tuple[str, str]:
             raise TemplateError(f"git ls-remote https://github.com/{owner}/.github failed")
 
-        # Both transports unreachable: no template, no stale fallback.
-        with self.assertRaisesRegex(TemplateError, "git transport also failed"):
-            resolve_template(Path("."), "Quantum-L9", "consumer", gh=down, git=git_down)
+        # Both transports unreachable and no usable pinned copy: no template.
+        with self.assertRaisesRegex(TemplateError, "git transport also failed.*no pinned template"):
+            resolve_template(
+                NO_TEMPLATE, "Quantum-L9", "consumer", gh=down, git=git_down, pinned=lambda o: None
+            )
         broken = CANONICAL_TEMPLATE.replace("## Files touched", "## Files")
         with self.assertRaisesRegex(TemplateError, "missing heading '## Files touched'"):
-            resolve_template(Path("."), "Quantum-L9", "consumer", gh=self._gh(broken, []))
+            resolve_template(NO_TEMPLATE, "Quantum-L9", "consumer", gh=self._gh(broken, []))
         with self.assertRaises(TemplateError):
-            resolve_template(Path("."), "", "consumer", gh=self._gh(CANONICAL_TEMPLATE, []))
+            resolve_template(NO_TEMPLATE, "", "consumer", gh=self._gh(CANONICAL_TEMPLATE, []))
 
     def test_rest_unreachable_reads_the_same_commit_over_git(self) -> None:
         """A gateway that scopes REST to the session's repos still serves git for the org repo."""
@@ -1247,7 +1287,7 @@ class TemplateResolutionTests(unittest.TestCase):
             owners.append(f"{owner}:{path}")
             return self.SHA, CANONICAL_TEMPLATE
 
-        source = resolve_template(Path("."), "Quantum-L9", "consumer", gh=scoped, git=git)
+        source = resolve_template(NO_TEMPLATE, "Quantum-L9", "consumer", gh=scoped, git=git)
         self.assertEqual(owners, ["Quantum-L9:.github/pull_request_template.md"])
         self.assertEqual(source.text, CANONICAL_TEMPLATE)
         self.assertEqual(source.revision, f"Quantum-L9/.github@{self.SHA}")
@@ -1255,7 +1295,7 @@ class TemplateResolutionTests(unittest.TestCase):
         broken = CANONICAL_TEMPLATE.replace("## Files touched", "## Files")
         with self.assertRaisesRegex(TemplateError, "missing heading '## Files touched'"):
             resolve_template(
-                Path("."), "Quantum-L9", "consumer", gh=scoped, git=lambda *_: (self.SHA, broken)
+                NO_TEMPLATE, "Quantum-L9", "consumer", gh=scoped, git=lambda *_: (self.SHA, broken)
             )
 
         # REST reachable: git is never consulted.
@@ -1263,7 +1303,7 @@ class TemplateResolutionTests(unittest.TestCase):
             raise AssertionError("git transport used while REST answered")
 
         resolve_template(
-            Path("."), "Quantum-L9", "consumer", gh=self._gh(CANONICAL_TEMPLATE, []), git=no_git
+            NO_TEMPLATE, "Quantum-L9", "consumer", gh=self._gh(CANONICAL_TEMPLATE, []), git=no_git
         )
 
     def test_org_repository_composes_from_its_own_head(self) -> None:
@@ -1305,7 +1345,7 @@ class CheckTemplateTests(unittest.TestCase):
 
     SHA = "2" * 40
 
-    def _run(self, gh, git) -> tuple[int, str, str]:
+    def _run(self, gh, git, pinned=lambda owner: None) -> tuple[int, str, str]:
         import contextlib
         import io
         from unittest import mock
@@ -1317,7 +1357,9 @@ class CheckTemplateTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as tmp,
             mock.patch.object(
-                module, "resolve_template", lambda ws, o, n: real(ws, o, n, gh=gh, git=git)
+                module,
+                "resolve_template",
+                lambda ws, o, n: real(ws, o, n, gh=gh, git=git, pinned=pinned),
             ),
             contextlib.redirect_stdout(out),
             contextlib.redirect_stderr(err),
@@ -1364,6 +1406,132 @@ class CheckTemplateTests(unittest.TestCase):
         self.assertEqual(rc, 2)
         self.assertEqual(out, "")
         self.assertIn("HTTP 404", err)
+
+
+class PinnedTemplateTests(unittest.TestCase):
+    """2026-11-17: Quantum-L9/.github is private and most agent sessions cannot reach
+    it (add_repo refuses dot-named repositories), so make pr refused to push in every
+    one of them. A copy pinned in this governance tree at an exact commit is the
+    fallback, used only while its bytes match their receipt."""
+
+    SHA = "3" * 40
+
+    def _pin(self, root: Path, text: str, *, sha256: str | None = None) -> None:
+        import hashlib
+
+        target = root / "Quantum-L9"
+        target.mkdir(parents=True)
+        (target / "pull_request_template.md").write_text(text, encoding="utf-8")
+        digest = sha256 or "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+        (target / "pull_request_template.receipt.json").write_text(
+            json.dumps({"revision": self.SHA, "sha256": digest}), encoding="utf-8"
+        )
+
+    @staticmethod
+    def _unreachable():
+        def gh(endpoint: str) -> object:
+            raise TemplateError(
+                f"gh api {endpoint} failed: not enabled for this session (HTTP 403)"
+            )
+
+        def git(owner: str, path: str) -> tuple[str, str]:
+            raise TemplateError("git ls-remote failed: could not read Username")
+
+        return gh, git
+
+    def test_unreachable_live_template_falls_back_to_the_pinned_copy(self) -> None:
+        from compose_pr_body import pinned_template
+
+        gh, git = self._unreachable()
+        with tempfile.TemporaryDirectory() as tmp:
+            self._pin(Path(tmp), CANONICAL_TEMPLATE)
+            source = resolve_template(
+                NO_TEMPLATE,
+                "Quantum-L9",
+                "consumer",
+                gh=gh,
+                git=git,
+                pinned=lambda owner: pinned_template(owner, Path(tmp)),
+            )
+        self.assertEqual(source.text, CANONICAL_TEMPLATE)
+        self.assertEqual(source.revision, f"Quantum-L9/.github@{self.SHA} (pinned)")
+
+    def test_the_live_template_wins_when_it_is_reachable(self) -> None:
+        def never(owner: str) -> tuple[str, str]:
+            raise AssertionError("pinned copy read while the live template answered")
+
+        source = resolve_template(
+            NO_TEMPLATE,
+            "Quantum-L9",
+            "consumer",
+            gh=TemplateResolutionTests._gh(TemplateResolutionTests(), CANONICAL_TEMPLATE, []),
+            pinned=never,
+        )
+        self.assertNotIn("(pinned)", source.revision)
+
+    def test_a_pinned_copy_that_no_longer_matches_its_receipt_is_refused(self) -> None:
+        from compose_pr_body import pinned_template
+
+        gh, git = self._unreachable()
+        with tempfile.TemporaryDirectory() as tmp:
+            self._pin(Path(tmp), CANONICAL_TEMPLATE, sha256="sha256:" + "0" * 64)
+            with self.assertRaisesRegex(TemplateError, "no pinned template"):
+                resolve_template(
+                    NO_TEMPLATE,
+                    "Quantum-L9",
+                    "consumer",
+                    gh=gh,
+                    git=git,
+                    pinned=lambda owner: pinned_template(owner, Path(tmp)),
+                )
+
+    def test_an_invalid_pinned_template_is_refused(self) -> None:
+        from compose_pr_body import pinned_template
+
+        gh, git = self._unreachable()
+        broken = CANONICAL_TEMPLATE.replace("## Files touched", "## Files")
+        with tempfile.TemporaryDirectory() as tmp:
+            self._pin(Path(tmp), broken)
+            with self.assertRaisesRegex(TemplateError, r"\(pinned\).*missing heading"):
+                resolve_template(
+                    NO_TEMPLATE,
+                    "Quantum-L9",
+                    "consumer",
+                    gh=gh,
+                    git=git,
+                    pinned=lambda owner: pinned_template(owner, Path(tmp)),
+                )
+
+    def test_the_pinned_owner_matches_case_insensitively(self) -> None:
+        from compose_pr_body import pinned_template
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self._pin(Path(tmp), CANONICAL_TEMPLATE)
+            held = pinned_template("quantum-l9", Path(tmp))
+        self.assertIsNotNone(held)
+
+    def test_the_committed_pin_is_a_valid_template_matching_its_receipt(self) -> None:
+        from compose_pr_body import pinned_template
+
+        held = pinned_template("Quantum-L9")
+        self.assertIsNotNone(held, "generated/governance/org_pr_template/Quantum-L9 is missing")
+        assert held is not None
+        from compose_pr_body import validate_template
+
+        self.assertEqual(validate_template(held[1]), [])
+
+    def test_check_template_passes_on_the_pinned_copy_so_make_pr_can_push(self) -> None:
+        from compose_pr_body import pinned_template
+
+        gh, git = self._unreachable()
+        with tempfile.TemporaryDirectory() as tmp:
+            self._pin(Path(tmp), CANONICAL_TEMPLATE)
+            rc, out, err = CheckTemplateTests._run(
+                CheckTemplateTests(), gh, git, lambda owner: pinned_template(owner, Path(tmp))
+            )
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(out.strip(), f"TEMPLATE_OK Quantum-L9/.github@{self.SHA} (pinned)")
+        self.assertIn("unreachable from this session", err)
 
 
 class CliTests(unittest.TestCase):
@@ -2485,6 +2653,100 @@ class TypeEvidenceReportTests(unittest.TestCase):
         field = compose_pr_body(facts, CANONICAL_TEMPLATE).fields["type_of_change"]
         self.assertEqual(field["status"], COMPLETION_VERIFIED, field)
         self.assertIn("commit types", field["detail"])
+
+
+def _big_facts(paths: int, commits: int, body_lines: int) -> MechanicalFacts:
+    """A range shaped like a long-running campaign merge: many paths and long commit bodies."""
+    changed = [
+        f"M\tplasticos_module_{i % 7}/models/feature_file_number_{i:04d}.py" for i in range(paths)
+    ]
+    subjects = [
+        f"feat(module): change number {i} with a reasonably descriptive subject"
+        for i in range(commits)
+    ]
+    bodies = [
+        "Why the work started.\n\n"
+        + "\n".join(f"Detail line {j} explaining the change in prose." for j in range(body_lines))
+        for _ in range(commits)
+    ]
+    return MechanicalFacts(
+        commits=subjects,
+        commit_bodies=bodies,
+        changed_files=changed,
+        path_subjects={row.split("\t")[1]: subjects[i % commits] for i, row in enumerate(changed)},
+        head="d" * 40,
+        shortstat=f"{paths} files changed",
+    )
+
+
+class GithubBodyLimitTests(unittest.TestCase):
+    """GitHub refuses a PR body over 65,536 characters with HTTP 422; the composer must fit."""
+
+    def test_small_body_is_not_compacted(self) -> None:
+        facts = _facts(["M\tops/a.py", "A\tops/b.py"])
+        result = compose_pr_body(facts, CANONICAL_TEMPLATE)
+        self.assertEqual(facts.compact, 0)
+        self.assertNotIn(COMPACT_FIX_NOTE, result.body)
+        self.assertNotIn(COMPACT_INTENT_NOTE, result.body)
+        self.assertIn("Why the work started.", result.body)
+
+    def test_long_commit_bodies_compact_only_the_fix(self) -> None:
+        facts = _big_facts(paths=40, commits=120, body_lines=12)
+        result = compose_pr_body(facts, CANONICAL_TEMPLATE)
+        self.assertLessEqual(len(result.body), BODY_BUDGET)
+        self.assertEqual(facts.compact, 1)
+        self.assertIn(COMPACT_FIX_NOTE, result.body)
+        self.assertNotIn(COMPACT_INTENT_NOTE, result.body)
+        self.assertNotIn("Detail line 3 explaining", result.body)
+        for subject in facts.commits:
+            self.assertIn(f"- {subject}", result.body)
+        self.assertTrue(any("compacted to GitHub" in item for item in result.mechanical_filled))
+
+    def test_moderate_paths_drop_reasons_and_keep_every_path(self) -> None:
+        facts = _big_facts(paths=290, commits=150, body_lines=6)
+        result = compose_pr_body(facts, CANONICAL_TEMPLATE)
+        self.assertLessEqual(len(result.body), BODY_BUDGET)
+        self.assertLess(BODY_BUDGET, GITHUB_BODY_LIMIT)
+        self.assertEqual(facts.compact, 2)
+        self.assertIn(COMPACT_INTENT_NOTE, result.body)
+        intent = region_content(result.body, REGION_INTENT) or ""
+        for row in facts.changed_files:
+            self.assertIn(f"`{row.split(chr(9))[1]}`", intent)
+        self.assertEqual(
+            check_inventory(result.body, [parse_row(r) for r in facts.changed_files]), ([], [])
+        )
+
+    def test_refresh_of_an_oversized_range_stays_under_the_limit(self) -> None:
+        small = compose_pr_body(_facts(["M\tops/a.py"]), CANONICAL_TEMPLATE).body
+        later = _big_facts(paths=290, commits=150, body_lines=6)
+        body, status = refresh_body(small, later)
+        self.assertIn(status, ("updated", "migrated"))
+        self.assertLessEqual(len(body), BODY_BUDGET)
+        self.assertEqual(
+            check_inventory(body, [parse_row(r) for r in later.changed_files]), ([], [])
+        )
+
+    def test_path_list_itself_collapses_to_a_measured_token(self) -> None:
+        long = "docs/plans/" + ("directory_" * 12)
+        changed = [f"D\t{long}/removed_plan_{i:04d}.md" for i in range(400)]
+        facts = MechanicalFacts(
+            commits=["chore: remove a large filed plan shelf"],
+            commit_bodies=["The path list alone is larger than the GitHub body budget."],
+            changed_files=changed,
+            path_subjects={
+                row.split("\t")[1]: "chore: remove a large filed plan shelf" for row in changed
+            },
+            head="d" * 40,
+            shortstat="400 files changed",
+        )
+        result = compose_pr_body(facts, CANONICAL_TEMPLATE)
+        rows = [parse_row(r) for r in facts.changed_files]
+        self.assertLessEqual(len(result.body), BODY_BUDGET)
+        self.assertEqual(facts.compact, 3)
+        self.assertIn(COMPACT_INVENTORY_NOTE, result.body)
+        self.assertEqual(check_inventory(result.body, rows), ([], []))
+        mismatched = check_inventory(result.body, rows[:10])
+        self.assertEqual(mismatched[0], [row.key for row in rows[:10]])
 
 
 if __name__ == "__main__":
