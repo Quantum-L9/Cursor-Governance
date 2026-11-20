@@ -38,7 +38,7 @@ permissions:
 
 jobs:
   codeql:
-    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@52d87ce2e217c16a96f0ef131f4da097ef7cd5e2  # default suite; action v4.39.3
+    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@24f0c4db99ba3ba170e5f872cd1c402684e47b81  # actions: write; default suite; action v4.39.3
     with:
       # This repo's checkout config. A local path is the file on the commit
       # being analyzed, so a pull request previews its own default-suite config.
