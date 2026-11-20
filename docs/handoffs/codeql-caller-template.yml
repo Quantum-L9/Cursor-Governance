@@ -28,7 +28,7 @@ on:
 permissions:
   contents: read
   security-events: write
-  actions: read
+  actions: write
 
 jobs:
   codeql:
@@ -38,4 +38,4 @@ jobs:
     permissions:
       contents: read
       security-events: write
-      actions: read
+      actions: write

@@ -34,19 +34,16 @@ concurrency:
 permissions:
   contents: read
   security-events: write
-  actions: read
+  actions: write
 
 jobs:
   codeql:
     uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@52d87ce2e217c16a96f0ef131f4da097ef7cd5e2  # default suite; action v4.39.3
     with:
-      # Override the reusable workflow's remote @main default: this repo IS
-      # Cursor-Governance, so the config file already sits in the checked-out
-      # tree at any ref (PR branch, push, or main). A local path resolves
-      # against the workspace instead of fetching a remote ref via the
-      # Contents API -- avoids a 404 on PRs before this file exists on main.
+      # This repo's checkout config. A local path is the file on the commit
+      # being analyzed, so a pull request previews its own default-suite config.
       config-file: ./.github/codeql/codeql-config.yml
     permissions:
       contents: read
       security-events: write
-      actions: read
+      actions: write
