@@ -9,14 +9,14 @@ projection:
   profile_ref: l9.projection/cursor-governance-identity@1
   profile_digest: sha256:0eb691b922a71e5d2ee335b42f28dcd7ec457f8f4a90b542dff3e361d4a8bb6a
   source_repository: Quantum-L9/.github
-  source_revision: 9b27869dd893fcd28f76f99c9184a90435542c76
+  source_revision: 08b2d072651083011a708c1ffd07497fc0d0e6b3
   sources:
     actor_registry:
       artifact_ref: l9.actor-registry/global@1
-      digest: sha256:34fbe4abc246e21c28401941025317be52c109c88335577616a2648cc93c6f6f
+      digest: sha256:942f9274770c44a28083645782715b5dd5b81cd2b4dfd0c4abc8cf0421ec5ddf
     surface_registry:
       artifact_ref: l9.surface-registry/global@1
-      digest: sha256:d7200409ff02141a274ff8c9221d31429f6a6fae27539e6d9c8d20f1a6eba988
+      digest: sha256:761b6cb77396e98a4b1d0420d7e6cd24af21f5fdd7cd273ffae3903d85af2245
 identity_dimensions:
   actor:
     artifact_ref: l9.actor-registry/global@1
@@ -28,8 +28,8 @@ actors:
 - id: claude-code
   kind: agent
   status: current
-  description: The one logical Claude Code actor. Desktop, CLI, IDE, web, and mobile are SurfaceIdentity
-    distinctions recorded in surface_registry.yaml, never separate actors.
+  description: The one logical Claude Code actor. Its surfaces, claude-code-cli and claude-code-web, are
+    SurfaceIdentity distinctions recorded in surface_registry.yaml, never separate actors.
 - id: codex
   kind: agent
   status: current
@@ -62,10 +62,11 @@ actor_aliases:
 surfaces:
 - id: claude-code-cli
   status: current
-  description: The Claude Code terminal command-line surface.
+  description: The Claude Code local command-line surface, including the command line run inside an IDE.
 - id: claude-code-web
   status: current
-  description: The Claude Code hosted web surface.
+  description: The Claude Code hosted cloud-session surface, whichever client starts the session, a phone
+    included.
 - id: codex-cli
   status: current
   description: The Codex command-line surface.
@@ -84,6 +85,9 @@ surfaces:
 surface_aliases:
 - alias: claude-cli
   canonical: claude-code-cli
+  alias_kind: historical_surface_alias
+- alias: claude-mobile
+  canonical: claude-code-web
   alias_kind: historical_surface_alias
 - alias: claude-web
   canonical: claude-code-web
