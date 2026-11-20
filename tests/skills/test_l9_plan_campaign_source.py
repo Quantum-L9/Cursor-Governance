@@ -302,3 +302,98 @@ def test_persisted_blueprint_keeps_each_validation_command(
     assert str((out.parent / "blueprint").resolve()) in recorded
     assert "# body" in recorded.split("---", 2)[-1]
     assert result["next"] == [f"make campaign {plan_md.resolve()}"]
+
+
+def _plan_kernel_gate():
+    hooks = REPO / "ops" / "hooks"
+    if str(hooks) not in sys.path:
+        sys.path.insert(0, str(hooks))
+    import plan_kernel_gate
+
+    return plan_kernel_gate
+
+
+def _self_test_module():
+    spec = importlib.util.spec_from_file_location(
+        "l9_plan_self_test_stamp_under_coverage",
+        SKILL / "scripts" / "self_test.py",
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_plan_kernel_gate_self_test_covers_the_campaign_latch(tmp_path: Path) -> None:
+    """The root suite must execute the gate's new latch lines.
+
+    ``plan_kernel_gate._self_test`` is the only in-repo exercise of the campaign
+    stamp latch. CI coverage is the root pytest run, which never passes
+    ``--self-test``, so those new lines were absent from ``coverage.xml``.
+    """
+    gate = _plan_kernel_gate()
+    assert gate._self_test() == 0
+    assert gate.plan_frontmatter(tmp_path) == {}
+    missing = tmp_path / "missing.plan.md"
+    gate.handle_post_tool_use({"cwd": str(tmp_path), "tool_input": {"path": str(missing)}})
+    assert not gate.pipeline_required_path(tmp_path).is_file()
+
+
+def test_skill_self_test_stamp_contract_is_executed(tmp_path: Path) -> None:
+    """Cover the stamp checks that live in the skill self-test, which CI does not collect."""
+    module = _self_test_module()
+    errors: list[str] = []
+    plan_md = module.campaign_stamp_plan(str(tmp_path))
+    module.campaign_stamp_next_line(
+        errors, f"ADMITTED\nmake campaign {plan_md.resolve()}\n", plan_md
+    )
+    assert errors == []
+    module.campaign_stamp_requires_plan_md(errors, str(tmp_path))
+    assert errors == []
+
+
+def test_pipeline_latch_clear_is_best_effort(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    plan = tmp_path / "p.plan.md"
+    plan.write_text("---\nname: t\noverview: t\n---\n", encoding="utf-8")
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    original_root = render.GOV_ROOT
+    render.GOV_ROOT = empty
+    try:
+        render._clear_plan_pipeline_latch(plan, tmp_path)
+    finally:
+        render.GOV_ROOT = original_root
+
+    gate = _plan_kernel_gate()
+
+    def _boom(_workspace: Path, _plan: Path) -> None:
+        raise OSError("full")
+
+    original_clear = gate.clear_pipeline_required
+    gate.clear_pipeline_required = _boom
+    try:
+        render._clear_plan_pipeline_latch(plan, tmp_path)
+    finally:
+        gate.clear_pipeline_required = original_clear
+
+    gov = tmp_path / "gov"
+    hooks = gov / "ops" / "hooks"
+    hooks.mkdir(parents=True)
+    (hooks / "plan_kernel_gate.py").write_text("raise RuntimeError('boom')\n", encoding="utf-8")
+    saved = sys.modules.pop("plan_kernel_gate", None)
+    broken = str(hooks)
+    sys.path.insert(0, broken)
+    render.GOV_ROOT = gov
+    try:
+        render._clear_plan_pipeline_latch(plan, tmp_path)
+        assert "not checked" in capsys.readouterr().err
+    finally:
+        render.GOV_ROOT = original_root
+        while broken in sys.path:
+            sys.path.remove(broken)
+        sys.modules.pop("plan_kernel_gate", None)
+        if saved is not None:
+            sys.modules["plan_kernel_gate"] = saved

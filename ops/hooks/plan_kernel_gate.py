@@ -407,6 +407,31 @@ def pipeline_latch_denies(command: str, workspace: Path) -> bool:
     return load_pipeline_required(workspace) is not None
 
 
+def _latch_campaign_plan(workspace: Path, path: Path) -> None:
+    """A stamped campaign plan clears its latch; an unstamped one names the renderer."""
+    if is_stamped_campaign_plan(path):
+        clear_pipeline_required(workspace, path)
+        return
+    write_pipeline_required(
+        workspace,
+        "campaign plan is not stamped; PEC refuses it (RENDERED_PLAN_REQUIRED)",
+        str(path),
+        repair=CAMPAIGN_REPAIR,
+    )
+
+
+def _latch_written_plan(workspace: Path, path: Path) -> None:
+    """Admit a written plan file, or latch the campaign renderer when it is unstamped."""
+    if not path.is_file():
+        return
+    if plan_kind(path) == "pe":
+        _latch_campaign_plan(workspace, path)
+        return
+    errors = _admit_plan(path)
+    if errors:
+        write_pipeline_required(workspace, "; ".join(errors[:8]), str(path))
+
+
 def handle_post_tool_use(event: dict[str, Any]) -> None:
     # Store-plan kernel apply stays /ff-owned. This latch is the plan pipeline
     # admission, a different file, and it does not delete the plan.
@@ -414,21 +439,7 @@ def handle_post_tool_use(event: dict[str, Any]) -> None:
     tool = str(event.get("tool_name") or event.get("toolName") or "")
     path = written_path(event)
     if path is not None and path.name.endswith(PLAN_SUFFIX):
-        if path.is_file():
-            if plan_kind(path) == "pe":
-                if is_stamped_campaign_plan(path):
-                    clear_pipeline_required(workspace, path)
-                else:
-                    write_pipeline_required(
-                        workspace,
-                        "campaign plan is not stamped; PEC refuses it (RENDERED_PLAN_REQUIRED)",
-                        str(path),
-                        repair=CAMPAIGN_REPAIR,
-                    )
-                return
-            errors = _admit_plan(path)
-            if errors:
-                write_pipeline_required(workspace, "; ".join(errors[:8]), str(path))
+        _latch_written_plan(workspace, path)
         return
     if "CreatePlan" in tool or tool.lower() in {"create_plan", "createplan"}:
         write_pipeline_required(
