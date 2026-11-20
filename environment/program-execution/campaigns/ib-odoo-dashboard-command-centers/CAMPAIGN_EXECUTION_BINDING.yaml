@@ -1,0 +1,44 @@
+schema: l9.program-execution.campaign-execution-binding.v1
+schema_version: 1.0.0
+campaign_id: ib-odoo-dashboard-command-centers
+updated: "2026-11-20"
+
+definition:
+  host: Quantum-L9/Cursor-Governance
+  path: environment/program-execution/campaigns/ib-odoo-dashboard-command-centers
+  source: CAMPAIGN_SOURCE.yaml
+  source_version: "1.0.0"
+
+execution:
+  mode: cto_swarm
+  host: cryptoxdog/IB-Odoo_19
+  default_branch: Staging
+  pr_base: Staging
+  stacking: "Within a lane, a follow-on task stacks on the lane's open PR (make pr base=<parent branch>); lanes never stack on each other."
+  publication: "IB-Odoo_19 make pr (delegated once by governance publish-authority.json)"
+  production: forbidden
+
+lanes:
+  - {id: LANE-A, name: admin, tasks: [TASK-010, TASK-011, TASK-013, TASK-012, TASK-031], paths: ["plasticos_admin_dashboard/**"]}
+  - {id: LANE-B, name: sales, tasks: [TASK-020, TASK-021, TASK-033], paths: ["plasticos_commission/models/sales_dashboard.py", "plasticos_commission/views/sales_dashboard_views.xml", "plasticos_commission/tests/**", "plasticos_commission/__manifest__.py"]}
+  - {id: LANE-C, name: logistics_and_spike, tasks: [TASK-001, TASK-032], paths: ["docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-001-*", "plasticos_logistics/models/load_dashboard.py", "plasticos_logistics/views/load_dashboard_views.xml", "plasticos_logistics/tests/test_load_dashboard*.py", "plasticos_logistics/tests/__init__.py", "plasticos_logistics/__manifest__.py"]}
+  - {id: LANE-D, name: ops_manager, tasks: [TASK-040], paths: ["<DEC-004 host module>/**", "security changes approved under DEC-005"], start_condition: "DEC-004 and DEC-005 decided; TASK-013 merged"}
+  - {id: CTO, name: integration_and_acceptance, tasks: [TASK-050, TASK-051], paths: ["docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-05*"]}
+
+pool:
+  max_agents: 5
+  reuse: "The cto-identity-bundle agent joins as the fourth lane agent by CTO ASSIGN once idle."
+
+l4:
+  local_commit: true
+  mid_execution_push: false
+  publish: "make pr (IB-Odoo_19), PR into Staging"
+  merge: operator_only
+
+preconditions_to_launch:
+  - "CTO mode ACTIVE (blocked by stale identity-attribution bundle; lane cto-identity-bundle is fixing it)"
+  - "cryptoxdog/IB-Odoo_19 attachable with push for child sessions"
+  - "Operator answers DEC-002, DEC-004, DEC-005 (only TASK-012 and TASK-040 wait on them)"
+
+status: ready_for_operator_go
+execute_now: false

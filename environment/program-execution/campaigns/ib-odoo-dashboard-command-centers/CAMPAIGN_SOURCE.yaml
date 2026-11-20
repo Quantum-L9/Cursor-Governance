@@ -1,0 +1,1070 @@
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+
+metadata:
+  campaign_id: "ib-odoo-dashboard-command-centers"
+  title: "IB-Odoo_19 Dashboard Command Centers — correctness first, native-first UI"
+  version: "1.0.0"
+  created_at: "2026-11-20T23:30:00Z"
+  status: operator_intake
+  owner: "Igor Beylin"
+  intended_drop_path: >-
+    environment/program-execution/campaigns/ib-odoo-dashboard-command-centers/CAMPAIGN_SOURCE.yaml
+  execution_host: cryptoxdog/IB-Odoo_19
+  execution_default_branch: Staging
+  runtime_root: "$HOME/.l9/programs/ib-odoo-dashboard-command-centers"
+  worktree_root: "$HOME/.l9/program-worktrees/ib-odoo-dashboard-command-centers"
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+  compilation_sequence:
+    - preserve_immutable_campaign_source
+    - compile_source_into_complete_native_blueprint
+    - collect_and_bind_current_state_evidence
+    - validate_blueprint_in_template_mode
+    - accept_blueprint_only_after_evidence_and_authority_resolution
+    - bootstrap_controller_and_create_program_lock
+    - admit_and_execute_ready_tasks
+    - evaluate_evidence_backed_gates
+    - export_controller_handoff_receipt
+    - obtain_program_owner_terminal_verdict
+  authority_boundaries:
+    campaign_source_owns: operator_intent_and_campaign_semantics
+    blueprint_owns: accepted_program_definition
+    controller_owns: mutable_runtime_state_and_gate_results
+    adapters_own: host_translation_and_execution_receipts
+    activation_prompt_owns: launch_mechanics_only
+
+operator_directive:
+  objective: >-
+    Repair every dashboard number and drill-down that is wrong today, then
+    upgrade Logistics, Sales and Admin into role-specific command centers and
+    add an Operations Manager command center, native Odoo 19 first, where
+    every actionable KPI opens exactly the source records it counts.
+  mode: controlled_autonomous_until_material_boundary
+  auto_continue:
+    - read_only_inspection
+    - blueprint_materialization
+    - reversible_repo_local_work
+    - local_validation
+    - independent_verification
+    - bounded_retry_of_transient_failures
+  pause_only_for:
+    - missing_or_conflicting_semantic_authority
+    - material_scope_expansion
+    - unresolved_blocking_unknown
+    - failed_blocking_gate
+    - security_or_secret_boundary
+    - exact_remote_mutation_approval
+    - exact_merge_tag_release_publish_deploy_or_migration_approval
+
+program:
+  id: "ib-odoo-dashboard-command-centers"
+  name: "IB-Odoo_19 Dashboard Command Centers"
+  version: "1.0.0"
+  owner: "Igor Beylin"
+  definition_status: ready
+  snapshot_at: "2026-11-20"
+  target_repository_id: cryptoxdog/IB-Odoo_19
+  contracts:
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+    pair: program-execution-system.v2
+  objective: >-
+    Every displayed actionable KPI on the four role dashboards opens the
+    source records it counts, with the same filter; counts and sums reconcile
+    with the source models; permissions and company isolation hold; the
+    dashboards are reproducible from module data.
+  problem_statement: >-
+    On cryptoxdog/IB-Odoo_19 Staging c422140, six of eight Admin urgency
+    drills name fields that plasticos.sales.dashboard does not define, the
+    rep-performance view multiplies money through a four-way join, Sales
+    commission payout columns are constants, multi-load deals dead-end in a
+    notification, about 49 Admin KPIs are not clickable, Admin SQL ignores
+    company, financial periods follow write_date, the Admin menu bypasses its
+    singleton opener, and no Operations Manager dashboard exists.
+  target_state: >-
+    One KPI definition per metric drives both the number and its drill
+    domain on the owning source model (KPI-drill parity); rep performance
+    aggregates without fan-out; commission payout reflects
+    plasticos.commission.payout; multi-load deals drill to their loads;
+    Admin is company-scoped; four command centers ship as module data and
+    pass operator acceptance on Staging.
+  scope:
+    include:
+      - "plasticos_admin_dashboard: drill contracts, rep aggregation, company scope, period basis, KPI drill coverage, singleton entry"
+      - "plasticos_commission: sales dashboard payout projection, load and transaction navigation, sales command center"
+      - "plasticos_logistics: load dashboard command center and its tests"
+      - "Operations Manager command center (host per DEC-004)"
+      - "Native Odoo 19 Dashboards shipped as module data, if TASK-001 proves it"
+    exclude:
+      - "Production promotion (Staging to Production merge is an operator act outside this campaign)"
+      - "New analytics database, duplicate transaction model or generic reporting engine"
+      - "Gate, CEG, EIE, Neo4j and plasticos_gate changes"
+      - "plasticos_base changes"
+      - "Adding company_id to plasticos.transaction, offer, intake or claim"
+      - "Making plasticos.transaction.commission_payout_state authoritative (RISK-003)"
+      - "Owl components unless TASK-001 records a native gap they close"
+  authority_order:
+    - applicable_safety_legal_security_requirements
+    - cursor_governance_canonical_law
+    - latest_explicit_operator_instruction
+    - latest_accepted_program_decision
+    - verified_current_state_evidence
+    - approved_task_card
+    - repository_local_governance
+    - implementation
+    - documentation
+    - UNKNOWN
+  operating_rules:
+    - one_authority_per_responsibility
+    - controller_may_narrow_never_widen
+    - unknown_blocks_only_named_dependencies
+    - promotion_requires_evidence_backed_gates
+    - no_silent_scope_expansion
+    - worker_claim_is_not_verification
+    - kpi_value_and_drill_domain_share_one_definition
+    - true_zero_is_distinguishable_from_unavailable
+    - every_python_xml_or_security_change_bumps_its_module_version
+  terminal_verdicts:
+    - CONVERGED
+    - CONVERGED_WITH_NON_BLOCKING_RISKS
+    - NOT_CONVERGED
+    - INCONCLUSIVE
+
+targets:
+  - id: TARGET-001
+    name: "IB-Odoo_19"
+    kind: git_repository
+    authority_owner: "cryptoxdog"
+    execution_mode: repo_local
+    adapter: git
+    repository_id: "cryptoxdog/IB-Odoo_19"
+    source_of_truth: "cryptoxdog/IB-Odoo_19 origin/Staging"
+    environments: [local, ci]
+    mutability: reversible
+    expected_revision: c422140c1d777a72b95cfc20995b80207d9bae6b
+    default_branch: Staging
+
+authorities:
+  - id: AUTH-001
+    responsibility: program_definition_scope_decisions_and_terminal_verdict
+    owner: "Igor Beylin"
+    scope: [whole_program, scope_changes, operator_decisions, staging_acceptance, terminal_verdict]
+  - id: AUTH-002
+    responsibility: controller_evidence_and_gate_evaluation
+    owner: controller
+    scope: [evidence_collection, gate_evaluation]
+  - id: AUTH-003
+    responsibility: technical_coordination_of_evidence_determined_choices
+    owner: "CTO session (/lcto)"
+    scope: [evidence_determined_design_choices, lane_assignment, integration_testing]
+
+decisions:
+  - id: DEC-001
+    question: "Which presentation layer carries the four command centers?"
+    authority_id: AUTH-003
+    status: accepted
+    options:
+      - {id: OPT-A, description: "Native-first: native list/kanban/pivot/graph views behind filtered window actions for queues; Odoo Dashboards (spreadsheet_dashboard) for the Admin analytic board only if TASK-001 proves module-data shipping; Owl only for a gap TASK-001 records."}
+      - {id: OPT-B, description: "Custom Owl dashboard framework for all four roles."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-001, EVID-003]
+    locked_consequence: "No custom analytics framework, analytics database or duplicate transaction model. Basis: Context7 /websites/odoo/19.0 Dashboards (drill to records, global filters); plasticos_odoo_standard_apps/__manifest__.py:24."
+  - id: DEC-002
+    question: "Which business date assigns a closed deal to a financial period (MTD/YTD revenue, margin, commission, closed counts, rep performance)?"
+    authority_id: AUTH-001
+    status: pending
+    options:
+      - {id: OPT-A, description: "plasticos.transaction.commission_earned_date (Date, indexed, set on live close, already used by the payout generator) — recommended."}
+      - {id: OPT-B, description: "Customer invoice date (customer_invoice_id.invoice_date)."}
+      - {id: OPT-C, description: "actual_delivery_date on the transaction."}
+    selected_option_id: null
+    blocking_task_ids: [TASK-012]
+    required_evidence_ids: [EVID-001]
+    locked_consequence: "write_date never assigns a financial period. Basis: admin_dashboard.py:296,325-336,736-744; transaction_commission.py:52,114; commission_payout.py:234-235."
+  - id: DEC-003
+    question: "May Sales dashboard rows open the owning plasticos.transaction?"
+    authority_id: AUTH-001
+    status: accepted
+    options:
+      - {id: OPT-A, description: "Yes, for users whose ACL and record rules already allow reading it (operator instruction 2026-11-20: direct navigation to underlying records); supersedes the sales_dashboard.py:17-18 docstring."}
+      - {id: OPT-B, description: "No; reps stay on the projection."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-001]
+    locked_consequence: "Navigation never widens access; the button is invisible where the transaction is not readable."
+  - id: DEC-004
+    question: "Which module hosts the Operations Manager command center? (Adding a module is ask-first, AGENTS.md:544.)"
+    authority_id: AUTH-001
+    status: pending
+    options:
+      - {id: OPT-A, description: "New module plasticos_ops_dashboard depending on logistics, claims, documents, commission and security_base — recommended."}
+      - {id: OPT-B, description: "Extend plasticos_admin_dashboard and add claims/documents to its depends."}
+    selected_option_id: null
+    blocking_task_ids: [TASK-040]
+    required_evidence_ids: [EVID-001]
+    locked_consequence: "One host; no circular dependency."
+  - id: DEC-005
+    question: "Approve the security changes the campaign needs? (a) Operations Manager read access to plasticos.claim; (b) Ops command center menu groups; (c) company record rule on plasticos.admin.kpi. Groups and record rules are ask-first, AGENTS.md:546."
+    authority_id: AUTH-001
+    status: pending
+    options:
+      - {id: OPT-A, description: "Approve (a), (b) and (c) as stated — recommended."}
+      - {id: OPT-B, description: "Approve (b) and (c) only; the Ops queue omits claims."}
+    selected_option_id: null
+    blocking_task_ids: [TASK-040]
+    required_evidence_ids: [EVID-001]
+    locked_consequence: "No group or record rule changes without this decision. Basis: claims_security.xml:14-41; security_groups.xml:112-117."
+  - id: DEC-006
+    question: "What is the source of truth for the commission locked amount and payout state shown on the Sales dashboard?"
+    authority_id: AUTH-003
+    status: accepted
+    options:
+      - {id: OPT-A, description: "Locked amount from plasticos.transaction.commission_locked_amount; payout state from the newest non-cancelled plasticos.commission.payout linked through commission_payout_tx_rel, else unpaid."}
+      - {id: OPT-B, description: "plasticos.transaction.commission_payout_state (never written by payout actions)."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-001]
+    locked_consequence: "Basis: transaction_commission.py:23-52,107-114; commission_payout.py:52-95,168-201; sale_inherit.py:227."
+  - id: DEC-007
+    question: "How is each actionable KPI bound to its drill-down?"
+    authority_id: AUTH-003
+    status: accepted
+    options:
+      - {id: OPT-A, description: "KPI-drill parity: one declaration (source model, domain, aggregate) drives both the value and a drill that opens the same model with the same domain; drills open the source model, not a projection, unless the projection row is the counted unit."}
+      - {id: OPT-B, description: "Keep separate SQL for values and hand-written drill domains."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-001, EVID-004]
+    locked_consequence: "Every actionable KPI has a test asserting search_count(drill domain) == displayed value."
+  - id: DEC-008
+    question: "How are Admin KPIs scoped to company when plasticos.transaction carries no company_id?"
+    authority_id: AUTH-003
+    status: accepted
+    options:
+      - {id: OPT-A, description: "Derive via sale_order_id.company_id in the user's allowed companies; plasticos.admin.kpi gains company_id and becomes one record per company opened through action_open_admin_dashboard."}
+      - {id: OPT-B, description: "Add a stored company_id to plasticos.transaction (excluded: DNB-004)."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-001]
+    locked_consequence: "Basis: admin_dashboard.py:39,43-182,473-479,631-643; transaction.py:1480; INVARIANTS.md POS-INV-05."
+  - id: DEC-009
+    question: "How does rep performance treat legacy history and open pipeline?"
+    authority_id: AUTH-003
+    status: accepted
+    options:
+      - {id: OPT-A, description: "Exclude legacy_erp_history, matching the KPI SQL; report open pipeline as a labelled point-in-time snapshot."}
+      - {id: OPT-B, description: "Keep current behaviour."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-001]
+    locked_consequence: "Basis: admin_dashboard.py:295,336,707-721."
+
+unknowns:
+  - id: UNK-001
+    statement: >-
+      Whether an Odoo 19 Enterprise spreadsheet.dashboard (with its
+      spreadsheet JSON and group_ids) can be shipped and upgraded as custom
+      module data, reproducibly across environments.
+    owner: AUTH-003
+    status: open
+    blocking_task_ids: [TASK-031]
+    resolution_method: "TASK-001 spike against the installed spreadsheet_dashboard source"
+    resolution_evidence_ids: [EVID-003]
+  - id: UNK-002
+    statement: >-
+      Installed module versions, UI rendering and real click behaviour on
+      Odoo.sh Staging and Production.
+    owner: AUTH-001
+    status: open
+    blocking_task_ids: [TASK-051]
+    resolution_method: "operator acceptance walk on Staging"
+    resolution_evidence_ids: [EVID-006]
+  - id: UNK-003
+    statement: >-
+      Query cost of the corrected KPI SQL at production volume with several
+      allowed companies.
+    owner: AUTH-001
+    status: open
+    blocking_task_ids: [TASK-051]
+    resolution_method: "EXPLAIN ANALYZE on the runtime fixture in TASK-050, timing on Staging in TASK-051"
+    resolution_evidence_ids: [EVID-005, EVID-006]
+
+evidence_requirements:
+  - id: EVID-001
+    claim: "Target revision and the re-verified findings F-001..F-010 plus three new defects are bound at admission."
+    source_type: repository_inspection
+    source_location: "cryptoxdog/IB-Odoo_19 Staging; CURRENT_STATE.yaml"
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports: [GATE-001]
+    contradicts: []
+  - id: EVID-002
+    claim: "On each lane head: make check and make test pass, and the lane PR's make pr pre-push gate (pr-check, including the install-smoke runtime stage for reached modules) is green."
+    source_type: test_result
+    source_location: "cryptoxdog/IB-Odoo_19 lane branches"
+    collection_method: "lane make pr receipt plus make check and make test output"
+    freshness: per_task
+    producer: TASK-010
+    supports: [GATE-001, GATE-002, GATE-003]
+    contradicts: []
+  - id: EVID-003
+    claim: "TASK-001 spike verdict on shipping spreadsheet dashboards as module data, with the source lines it relied on."
+    source_type: inspection
+    source_location: "docs/reports/gmp-reports/ in IB-Odoo_19"
+    collection_method: spike_report
+    freshness: per_task
+    producer: TASK-001
+    supports: [GATE-002]
+    contradicts: []
+  - id: EVID-004
+    claim: "Runtime tests for every touched module pass on the integrated Staging stack after the lane PRs merge, including KPI-drill parity and reconciliation tests."
+    source_type: test_result
+    source_location: "make runtime-test m=<modules> (operator-invoked runtime owner)"
+    collection_method: runtime_test
+    freshness: per_gate
+    producer: TASK-050
+    supports: [GATE-001, GATE-002, GATE-003]
+    contradicts: []
+  - id: EVID-005
+    claim: "EXPLAIN ANALYZE plans for every rewritten KPI query on the runtime fixture."
+    source_type: inspection
+    source_location: "TASK-050 report"
+    collection_method: runtime_inspection
+    freshness: per_gate
+    producer: TASK-050
+    supports: [GATE-003]
+    contradicts: []
+  - id: EVID-006
+    claim: "Operator acceptance walk on Staging: every actionable KPI clicked per role, company switch, mobile width, refresh."
+    source_type: operator_attestation
+    source_location: "Odoo.sh Staging"
+    collection_method: acceptance_checklist
+    freshness: per_gate
+    producer: TASK-051
+    supports: [GATE-004]
+    contradicts: []
+
+workstreams:
+  - id: WS-01
+    name: admin_correctness_and_command_center
+    objective: "Fix Admin numbers and drills, then make every Admin KPI drillable."
+    owner: AUTH-003
+    target_id: TARGET-001
+  - id: WS-02
+    name: sales_correctness_and_command_center
+    objective: "Fix Sales payout projection and navigation, then build the Sales command center."
+    owner: AUTH-003
+    target_id: TARGET-001
+  - id: WS-03
+    name: logistics_command_center_and_native_spike
+    objective: "Prove native dashboard shipping, then build the Logistics command center."
+    owner: AUTH-003
+    target_id: TARGET-001
+  - id: WS-04
+    name: operations_manager_command_center
+    objective: "Cross-department exception and approval queue for Operations Manager."
+    owner: AUTH-003
+    target_id: TARGET-001
+  - id: WS-05
+    name: acceptance
+    objective: "Runtime proof, performance proof and Staging acceptance."
+    owner: AUTH-001
+    target_id: TARGET-001
+
+dependency_edges:
+  - {from: TASK-010, to: TASK-011, kind: same_file_serialization}
+  - {from: TASK-011, to: TASK-013, kind: same_file_serialization}
+  - {from: TASK-013, to: TASK-012, kind: same_file_serialization}
+  - {from: TASK-013, to: TASK-031, kind: depends_on}
+  - {from: TASK-001, to: TASK-031, kind: depends_on}
+  - {from: TASK-020, to: TASK-021, kind: same_file_serialization}
+  - {from: TASK-021, to: TASK-033, kind: depends_on}
+  - {from: TASK-001, to: TASK-032, kind: depends_on}
+  - {from: TASK-013, to: TASK-040, kind: depends_on}
+  - {from: TASK-031, to: TASK-050, kind: depends_on}
+  - {from: TASK-032, to: TASK-050, kind: depends_on}
+  - {from: TASK-033, to: TASK-050, kind: depends_on}
+  - {from: TASK-040, to: TASK-050, kind: depends_on}
+  - {from: TASK-050, to: TASK-051, kind: depends_on}
+
+waves:
+  - id: W0
+    name: native_spike
+    task_ids: [TASK-001]
+    predecessor_wave_ids: []
+    exit_gate_ids: [GATE-002]
+  - id: W1
+    name: correctness_repairs
+    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021]
+    predecessor_wave_ids: []
+    exit_gate_ids: [GATE-001]
+  - id: W2
+    name: command_centers
+    task_ids: [TASK-031, TASK-032, TASK-033, TASK-040]
+    predecessor_wave_ids: [W0, W1]
+    exit_gate_ids: [GATE-003]
+  - id: W3
+    name: acceptance
+    task_ids: [TASK-050, TASK-051]
+    predecessor_wave_ids: [W2]
+    exit_gate_ids: [GATE-004]
+
+tasks:
+  - id: TASK-001
+    title: "Spike: ship an Odoo 19 Dashboard as module data"
+    definition_status: ready
+    workstream_id: WS-03
+    wave_id: W0
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Read the installed spreadsheet_dashboard (and spreadsheet_edition)
+      source, determine the exact data shape for shipping a dashboard and its
+      group_ids from a custom module, and prove or refute install and upgrade
+      reproducibility on a throwaway branch. Record native gaps (if any) that
+      would require Owl.
+    authority_basis_ids: [AUTH-003]
+    required_decision_ids: [DEC-001]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001]
+    paths:
+      - docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-001-native-dashboard-spike.md
+    actions:
+      - read_installed_spreadsheet_dashboard_source
+      - write_spike_report_with_verdict_and_source_lines
+    acceptance:
+      - id: AC-001
+        statement: "Report states SUPPORTED or NOT_SUPPORTED with source file and line evidence and the exact record shape; no product code is committed."
+        required_evidence_types: [inspection]
+    validation:
+      - id: VAL-001
+        method: command
+        command_or_inspection: test -s docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-001-native-dashboard-spike.md
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [verdict_without_source_lines, product_code_in_spike]
+    rollback:
+      strategy: revert_local_commit
+      trigger: validation_failure_or_scope_violation
+      validation: git status --short
+    risk: {tier: T1, reversibility: reversible, blast_radius: one_report}
+    authorization_ceiling: &ceiling_local
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids: [GATE-002]
+
+  - id: TASK-010
+    title: "Admin drill contracts (F-001, F-007, filter_open)"
+    definition_status: ready
+    workstream_id: WS-01
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Rebuild the eight Admin urgency drills under DEC-007 so each opens its
+      source model with the exact predicate its KPI SQL counts; fix the
+      action_open_sales_dashboard default filter; bind the Admin menu to
+      action_open_admin_dashboard.
+    authority_basis_ids: [AUTH-003]
+    required_decision_ids: [DEC-007]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001]
+    paths:
+      - plasticos_admin_dashboard/models/admin_dashboard.py
+      - plasticos_admin_dashboard/views/admin_dashboard_views.xml
+      - plasticos_admin_dashboard/tests/**
+      - plasticos_admin_dashboard/__manifest__.py
+    actions:
+      - declare_one_kpi_definition_per_urgency_metric
+      - retarget_drills_to_source_models_with_identical_predicates
+      - bind_menu_to_singleton_opener
+      - add_parity_tests_search_count_equals_kpi_value
+      - bump_module_version_patch
+    acceptance:
+      - id: AC-010
+        statement: "For each urgency KPI, a TransactionCase test builds fixtures and asserts search_count(drill domain) == KPI value, and every drill domain validates on its res_model."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-010
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [drill_names_field_absent_on_target, kpi_and_drill_diverge, menu_opens_unsaved_record]
+    rollback: &rollback_local
+      strategy: revert_local_commit
+      trigger: validation_failure_or_scope_violation
+      validation: git status --short
+    risk: {tier: T2, reversibility: reversible, blast_radius: plasticos_admin_dashboard}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-001]
+
+  - id: TASK-011
+    title: "Rep-performance aggregation without fan-out (F-002)"
+    definition_status: ready
+    workstream_id: WS-01
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Rewrite the rep-performance SQL view so closed, open, intake and offer
+      measures are each pre-aggregated per user and period before joining;
+      deals_open counts distinct open transaction ids; legacy rows excluded
+      and pipeline labelled as snapshot per DEC-009.
+    authority_basis_ids: [AUTH-003]
+    required_decision_ids: [DEC-009]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001]
+    paths:
+      - plasticos_admin_dashboard/models/admin_dashboard.py
+      - plasticos_admin_dashboard/views/admin_dashboard_views.xml
+      - plasticos_admin_dashboard/tests/**
+      - plasticos_admin_dashboard/__manifest__.py
+    actions:
+      - preaggregate_each_measure_in_its_own_cte
+      - count_distinct_open_transaction_ids
+      - add_reconciliation_test_with_2_closed_3_open_2x2_offers_fixture
+    acceptance:
+      - id: AC-011
+        statement: "With 2 closed (10k, 20k), 3 open (5k each) and 2 intakes x 2 offers, the view reports revenue_closed 30k, pipeline 15k, deals_open 3; the existing column test still passes."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-011
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [money_multiplied_by_join_cardinality, deals_open_counts_users]
+    rollback: *rollback_local
+    risk: {tier: T2, reversibility: reversible, blast_radius: plasticos_admin_dashboard}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-001]
+
+  - id: TASK-012
+    title: "Financial period business date"
+    definition_status: blocked
+    workstream_id: WS-01
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Replace write_date with the DEC-002 business date in every closed-deal
+      period predicate (KPI SQL and rep view), so editing an old transaction
+      never moves it between periods.
+    authority_basis_ids: [AUTH-001]
+    required_decision_ids: [DEC-002]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001]
+    paths:
+      - plasticos_admin_dashboard/models/admin_dashboard.py
+      - plasticos_admin_dashboard/tests/**
+      - plasticos_admin_dashboard/__manifest__.py
+    actions:
+      - replace_write_date_period_predicates
+      - add_test_editing_closed_deal_keeps_its_period
+    acceptance:
+      - id: AC-012
+        statement: "A closed transaction edited today stays in its original period in MTD, YTD and the rep view."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-012
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [edit_moves_deal_into_current_period]
+    rollback: *rollback_local
+    risk: {tier: T2, reversibility: reversible, blast_radius: plasticos_admin_dashboard}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-001]
+
+  - id: TASK-013
+    title: "Admin company scoping (F-006)"
+    definition_status: ready
+    workstream_id: WS-01
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Add company_id to plasticos.admin.kpi, make _get_or_create per
+      company, and scope every KPI query to the user's allowed companies per
+      DEC-008. The record rule part waits for DEC-005(c); the field, queries
+      and tests do not.
+    authority_basis_ids: [AUTH-003]
+    required_decision_ids: [DEC-008]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001]
+    paths:
+      - plasticos_admin_dashboard/models/admin_dashboard.py
+      - plasticos_admin_dashboard/tests/**
+      - plasticos_admin_dashboard/migrations/**
+      - plasticos_admin_dashboard/__manifest__.py
+    actions:
+      - add_company_id_and_per_company_singleton
+      - scope_kpi_sql_by_derived_company
+      - add_two_company_isolation_test
+      - bump_module_version_minor_with_repeatable_migration
+    acceptance:
+      - id: AC-013
+        statement: "With data in two companies, each company's KPI record counts only its own transactions, loads and invoices."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-013
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [cross_company_totals, second_singleton_per_company]
+    rollback: *rollback_local
+    risk: {tier: T3, reversibility: reversible, blast_radius: plasticos_admin_dashboard_with_migration}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-001]
+
+  - id: TASK-020
+    title: "Sales payout projection from real records (F-003)"
+    definition_status: ready
+    workstream_id: WS-02
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Replace the constant commission_locked_amount and
+      commission_payout_state columns with DEC-006 sources; un-hide the
+      payout detail button when a payout exists.
+    authority_basis_ids: [AUTH-003]
+    required_decision_ids: [DEC-006]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001]
+    paths:
+      - plasticos_commission/models/sales_dashboard.py
+      - plasticos_commission/views/sales_dashboard_views.xml
+      - plasticos_commission/tests/**
+      - plasticos_commission/__manifest__.py
+    actions:
+      - source_locked_amount_and_payout_state
+      - add_tests_for_unpaid_confirmed_paid_cancelled
+    acceptance:
+      - id: AC-020
+        statement: "A transaction in a paid payout shows paid and its locked amount; a cancelled payout falls back to the prior state or unpaid."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-020
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [constant_payout_columns, cancelled_payout_shown_as_paid]
+    rollback: *rollback_local
+    risk: {tier: T2, reversibility: reversible, blast_radius: plasticos_commission}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-001]
+
+  - id: TASK-021
+    title: "Sales navigation: multi-load and transaction (F-004, F-010)"
+    definition_status: ready
+    workstream_id: WS-02
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      action_view_load opens a plasticos.load list filtered by transaction_id
+      when load_count > 1; add action_view_transaction per DEC-003, visible
+      only to users with transaction read access.
+    authority_basis_ids: [AUTH-001, AUTH-003]
+    required_decision_ids: [DEC-003]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001]
+    paths:
+      - plasticos_commission/models/sales_dashboard.py
+      - plasticos_commission/views/sales_dashboard_views.xml
+      - plasticos_commission/tests/**
+      - plasticos_commission/__manifest__.py
+    actions:
+      - return_filtered_load_window_action_for_multiload
+      - add_transaction_navigation_respecting_acl
+      - extend_load_cardinality_test
+    acceptance:
+      - id: AC-021
+        statement: "A three-load deal's Track Load returns an ir.actions.act_window on plasticos.load whose domain yields exactly those three; Open Deal opens the transaction as a sales rep who owns it and is absent for one who does not."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-021
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [notification_dead_end, rep_reaches_foreign_transaction]
+    rollback: *rollback_local
+    risk: {tier: T2, reversibility: reversible, blast_radius: plasticos_commission}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-001]
+
+  - id: TASK-031
+    title: "Admin command center: full KPI drill coverage (F-005)"
+    definition_status: ready
+    workstream_id: WS-01
+    wave_id: W2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Make every Admin KPI in sections B, C, E and F a drillable button under
+      DEC-007, distinguish zero from unavailable, and, if TASK-001 says
+      SUPPORTED, ship the Admin analytic dashboard as module data.
+    authority_basis_ids: [AUTH-003]
+    required_decision_ids: [DEC-001, DEC-007]
+    blocking_unknown_ids: [UNK-001]
+    input_evidence_ids: [EVID-001, EVID-003]
+    paths:
+      - plasticos_admin_dashboard/**
+    actions:
+      - convert_plain_kpi_fields_to_drill_buttons
+      - render_unavailable_state_distinct_from_zero
+      - ship_native_dashboard_data_if_supported
+      - parity_test_per_kpi
+    acceptance:
+      - id: AC-031
+        statement: "No actionable KPI remains a plain field; each has a parity test; an unavailable metric renders differently from 0."
+        required_evidence_types: [test_result, inspection]
+    validation:
+      - id: VAL-031
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [display_only_actionable_kpi, generic_list_masquerading_as_drill]
+    rollback: *rollback_local
+    risk: {tier: T2, reversibility: reversible, blast_radius: plasticos_admin_dashboard}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-003]
+
+  - id: TASK-032
+    title: "Logistics command center"
+    definition_status: ready
+    workstream_id: WS-03
+    wave_id: W2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Upgrade plasticos.load.dashboard into a command center: today's
+      pickups and deliveries, late loads, SLA breaches, exceptions, missing
+      BOL, pending scheduling, carrier issues, each a drill to plasticos.load
+      under DEC-007, with kanban, pivot and graph views; add the module's
+      first dashboard tests.
+    authority_basis_ids: [AUTH-003]
+    required_decision_ids: [DEC-001, DEC-007]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001, EVID-003]
+    paths:
+      - plasticos_logistics/models/load_dashboard.py
+      - plasticos_logistics/views/load_dashboard_views.xml
+      - plasticos_logistics/tests/test_load_dashboard*.py
+      - plasticos_logistics/tests/__init__.py
+      - plasticos_logistics/__manifest__.py
+    actions:
+      - add_role_counters_with_drill_actions
+      - add_kanban_pivot_graph_views
+      - add_load_dashboard_tests_incl_company_isolation
+    acceptance:
+      - id: AC-032
+        statement: "Each logistics counter equals search_count of its drill domain on plasticos.load; company isolation and the sales-rep own rule hold on the dashboard."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-032
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [counter_drill_mismatch, cross_company_load_visible]
+    rollback: *rollback_local
+    risk: {tier: T2, reversibility: reversible, blast_radius: plasticos_logistics_dashboard}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-003]
+
+  - id: TASK-033
+    title: "Sales command center"
+    definition_status: ready
+    workstream_id: WS-02
+    wave_id: W2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Rep-scoped command center over the corrected sales projection: my open
+      opportunities, outstanding offers, active deals, pending confirmations,
+      margin, commission and missing customer documents, each drillable under
+      DEC-007.
+    authority_basis_ids: [AUTH-003]
+    required_decision_ids: [DEC-001, DEC-003, DEC-007]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001, EVID-003]
+    paths:
+      - plasticos_commission/models/sales_dashboard.py
+      - plasticos_commission/views/sales_dashboard_views.xml
+      - plasticos_commission/tests/**
+      - plasticos_commission/__manifest__.py
+    actions:
+      - add_rep_counters_with_drills
+      - add_pivot_graph_views
+      - parity_and_record_rule_tests
+    acceptance:
+      - id: AC-033
+        statement: "Each counter reconciles with its drill for the logged-in rep and never includes another rep's records."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-033
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [foreign_rep_records_counted]
+    rollback: *rollback_local
+    risk: {tier: T2, reversibility: reversible, blast_radius: plasticos_commission}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-003]
+
+  - id: TASK-040
+    title: "Operations Manager command center"
+    definition_status: blocked
+    workstream_id: WS-04
+    wave_id: W2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Cross-department execution queue for group_operations_manager: pending
+      Linda approvals, escalated and overdue claims, load exceptions and SLA
+      breaches, missing BOL, overdue or escalated document gaps, documents
+      awaiting review, delivered-uninvoiced handoffs; every item drills to
+      its source record; company scope per DEC-008.
+    authority_basis_ids: [AUTH-001, AUTH-003]
+    required_decision_ids: [DEC-004, DEC-005, DEC-007, DEC-008]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001]
+    paths:
+      - "<DEC-004 host module>/**"
+    actions:
+      - create_queue_counters_and_drills_from_existing_models
+      - apply_dec_005_security_changes
+      - tests_for_parity_role_visibility_and_company_isolation
+    acceptance:
+      - id: AC-040
+        statement: "An Operations Manager sees each queue with counts equal to its drills; a sales rep cannot open the menu; a second company's items never appear."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-040
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [ops_manager_cannot_open_claims, cross_company_queue_items]
+    rollback: *rollback_local
+    risk: {tier: T3, reversibility: reversible, blast_radius: new_module_and_security}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-003]
+
+  - id: TASK-050
+    title: "Runtime and performance proof"
+    definition_status: ready
+    workstream_id: WS-05
+    wave_id: W3
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Run the operator-invoked runtime tests for every touched module on the
+      integrated Staging-based stack, and record EXPLAIN ANALYZE for each
+      rewritten KPI query on the runtime fixture.
+    authority_basis_ids: [AUTH-001]
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-002]
+    paths:
+      - docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-050-runtime-proof.md
+    actions:
+      - runtime_test_touched_modules
+      - capture_query_plans
+    acceptance:
+      - id: AC-050
+        statement: "Runtime tests green for every touched module; no rewritten KPI query performs a sequential scan on plasticos_transaction or plasticos_load without a recorded justification."
+        required_evidence_types: [test_result, inspection]
+    validation:
+      - id: VAL-050
+        method: command
+        command_or_inspection: test -s docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-050-runtime-proof.md
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [runtime_tests_not_run_reported_as_pass]
+    rollback: *rollback_local
+    risk: {tier: T1, reversibility: reversible, blast_radius: one_report}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-004]
+
+  - id: TASK-051
+    title: "Staging acceptance walk"
+    definition_status: ready
+    workstream_id: WS-05
+    wave_id: W3
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Operator walks ACCEPTANCE.md on Odoo.sh Staging after the lane PRs
+      merge into Staging and records the result.
+    authority_basis_ids: [AUTH-001]
+    required_decision_ids: []
+    blocking_unknown_ids: [UNK-002, UNK-003]
+    input_evidence_ids: [EVID-004, EVID-005]
+    paths:
+      - docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-051-staging-acceptance.md
+    actions:
+      - operator_acceptance_walk
+      - record_results
+    acceptance:
+      - id: AC-051
+        statement: "Every row of ACCEPTANCE.md has PASS or a named defect; no Production change."
+        required_evidence_types: [inspection]
+    validation:
+      - id: VAL-051
+        method: command
+        command_or_inspection: test -s docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-051-staging-acceptance.md
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [acceptance_claimed_from_code_review]
+    rollback: *rollback_local
+    risk: {tier: T1, reversibility: reversible, blast_radius: one_report}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-004]
+
+gates:
+  - id: GATE-001
+    name: correctness_repaired
+    gate_type: wave_exit
+    blocking: true
+    owner_authority_id: AUTH-002
+    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021]
+    required_evidence_ids: [EVID-001, EVID-002]
+    pass_criteria:
+      - "Every W1 task's parity or reconciliation test passes in its lane PR's runtime stage."
+      - "No drill domain names a field absent from its res_model."
+      - "No module changed without a version bump."
+    failure_effect: BLOCKED
+  - id: GATE-002
+    name: native_path_decided
+    gate_type: wave_exit
+    blocking: true
+    owner_authority_id: AUTH-003
+    task_ids: [TASK-001]
+    required_evidence_ids: [EVID-003]
+    pass_criteria:
+      - "Spike verdict recorded with source evidence; UNK-001 closed either way."
+    failure_effect: BLOCKED
+  - id: GATE-003
+    name: command_centers_built
+    gate_type: wave_exit
+    blocking: true
+    owner_authority_id: AUTH-002
+    task_ids: [TASK-031, TASK-032, TASK-033, TASK-040]
+    required_evidence_ids: [EVID-002, EVID-003]
+    pass_criteria:
+      - "Every actionable KPI on four dashboards has a parity test passing in its lane PR's runtime stage."
+      - "Role visibility and company isolation tests pass."
+    failure_effect: BLOCKED
+  - id: GATE-004
+    name: staging_accepted
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-001
+    task_ids: [TASK-050, TASK-051]
+    required_evidence_ids: [EVID-004, EVID-005, EVID-006]
+    pass_criteria:
+      - "Runtime proof and query plans recorded."
+      - "Operator acceptance walk PASS on Staging."
+      - "Production untouched by the campaign."
+    failure_effect: BLOCKED
+
+risks:
+  - id: RISK-001
+    statement: "Corrected numbers will differ from what users saw; inflated rep revenue will drop."
+    owner: AUTH-001
+    likelihood: high
+    impact: medium
+    mitigations: ["Release note in each W1 PR naming the old and new definition."]
+    acceptance_status: accepted
+  - id: RISK-002
+    statement: "Native module-data dashboards may not be supported (UNK-001), leaving view-based command centers only."
+    owner: AUTH-003
+    likelihood: possible
+    impact: low
+    mitigations: ["DEC-001 keeps queues on native views regardless of the spike."]
+    acceptance_status: accepted
+  - id: RISK-003
+    statement: "plasticos.transaction.commission_payout_state is never written by payout actions; other readers of that field stay wrong."
+    owner: AUTH-001
+    likelihood: high
+    impact: medium
+    mitigations: ["Recorded as follow-up outside this campaign; the dashboard reads payout records directly (DEC-006)."]
+    acceptance_status: accepted
+  - id: RISK-004
+    statement: "TASK-010 to TASK-013 and TASK-031 share admin_dashboard.py; parallel edits would conflict."
+    owner: AUTH-003
+    likelihood: likely
+    impact: medium
+    mitigations: ["One lane owns WS-01; dependency_edges serialize the file."]
+    acceptance_status: accepted
+
+prohibited_paths:
+  - {id: DNB-001, statement: "plasticos_base/**", rationale: "Ask-first base module; out of scope."}
+  - {id: DNB-002, statement: "plasticos_gate/**", rationale: "Gate/CEG/EIE seam is owned by l9-ecosystem-fix-plan."}
+  - {id: DNB-003, statement: ".github/workflows/**", rationale: "CI authority is not changed by this campaign."}
+  - {id: DNB-004, statement: "plasticos_transaction/models/**", rationale: "No company_id or payout writes on the transaction in this campaign."}
+  - {id: DNB-005, statement: "Dockerfile, docker-compose*.yml, .env*", rationale: "Protected infrastructure files."}
+
+observability:
+  program_progress_fields:
+    - compiled_blueprint
+    - admission_evidence
+    - task_completion
+    - gate_status
+    - open_operator_decisions
+
+cutover_and_rollback:
+  preconditions:
+    - accepted_blueprint
+    - GATE-001_PASS
+    - GATE-003_PASS
+  rollback_rules:
+    - preserve_receipts
+    - revert_the_lane_pr_on_Staging_when_acceptance_fails
+    - never_touch_Production_from_this_campaign

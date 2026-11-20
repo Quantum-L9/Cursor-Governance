@@ -1,0 +1,118 @@
+schema: l9.program-execution.current-state-delta.v1
+schema_version: 1.0.0
+campaign_id: ib-odoo-dashboard-command-centers
+source_version: "1.0.0"
+collected_at: "2026-11-20T23:20:00Z"
+collection_method: read_only_inspection
+producer: "CTO session (claude-code-web), three read-only research passes"
+assessment_input:
+  schema: evidence.assessment/v1
+  file: IB_Odoo19_Dashboard_Evidence_Assessment_2026-11-20.json
+  assessed_revision: 6e5029f2e4efe9ffca3f0de0e819c6d3754adcfe
+  findings: [F-001, F-002, F-003, F-004, F-005, F-006, F-007, F-008, F-009, F-010]
+
+targets:
+  - id: TARGET-001
+    repository_id: cryptoxdog/IB-Odoo_19
+    default_branch: Staging
+    inspected_revision: c422140c1d777a72b95cfc20995b80207d9bae6b
+    reachability: in_scope
+    history_note: "Shallow clone; line-level change since 6e5029f2 cannot be proven. Findings below are re-verified at c422140."
+
+findings_at_inspected_revision:
+  - id: F-001
+    verdict: STILL_OPEN
+    task: TASK-010
+    fact: >-
+      Six of eight Admin urgency drills (admin_dashboard.py:540-607) use fields
+      absent from plasticos.sales.dashboard: has_negative_margin, state,
+      supplier_followup_count, is_supplier_confirmed, invoice_state,
+      compliance_status, commission_locked. delivered_uninvoiced (:570-577) is
+      also broken (not in the assessment). action_open_sales_dashboard
+      (:521-529) sets search_default_filter_open, which the search view
+      (sales_dashboard_views.xml:226-255) does not define.
+  - id: F-002
+    verdict: CHANGED_STILL_OPEN
+    task: TASK-011
+    fact: >-
+      Rep view (admin_dashboard.py:695-783) joins closed_tx x open_tx x
+      intake-offer rows and SUMs money; deals_open = COUNT(DISTINCT
+      ot.user_id). Example 2 closed (10k,20k), 3 open (5k), 2x2 offers gives
+      revenue_closed 360k (true 30k), pipeline 120k (true 15k), deals_open 1
+      (true 3). Open pipeline has no period filter; closed_tx does not exclude
+      legacy_erp_history. Changed: tests/test_rep_performance_view.py:18
+      exists but checks columns only.
+  - id: F-003
+    verdict: STILL_OPEN
+    task: TASK-020
+    fact: >-
+      sales_dashboard.py:181-183 selects 0.0 AS commission_locked_amount and
+      'unpaid' AS commission_payout_state. Truth: transaction
+      commission_locked_amount (transaction_commission.py:30, set :107-114);
+      plasticos.commission.payout.state (commission_payout.py:83) via
+      commission_payout_tx_rel (:73-80). Nothing writes
+      plasticos.transaction.commission_payout_state except = False
+      (sale_inherit.py:227).
+  - id: F-004
+    verdict: STILL_OPEN
+    task: TASK-021
+    fact: "sales_dashboard.py:421-430 returns display_notification when load_count > 1; loads are plasticos.load.transaction_id (load.py:294-300)."
+  - id: F-005
+    verdict: STILL_OPEN
+    task: TASK-031
+    fact: "admin_dashboard_views.xml: 9 KPIs are buttons, about 49 are plain fields (sections B Intake/Offers/Transactions, C Financial, E Leads, F AI)."
+  - id: F-006
+    verdict: STILL_OPEN
+    task: TASK-013
+    fact: >-
+      No company predicate in _compute_kpis (:188-450); model has no
+      company_id though docstring :39 says one record per company;
+      _get_or_create uses search([], limit=1) (:476). plasticos.transaction,
+      intake, offer, web_lead have no company_id; transaction company derives
+      from sale_order_id.company_id (transaction.py:1480).
+  - id: F-007
+    verdict: STILL_OPEN
+    task: TASK-010
+    fact: "Menu (views :318-323) targets action_admin_kpi_form (form, no res_id); action_open_admin_dashboard (model :631-643) is referenced nowhere."
+  - id: F-008
+    verdict: STILL_OPEN
+    task: TASK-040
+    fact: >-
+      group_operations_manager (security_groups.xml:112-117) implies logistics
+      ops, qc manager, accounting ops, documents manager; no ops dashboard
+      exists. It implies no claims group, so it likely lacks plasticos.claim
+      ACL (inference). Admin menus are restricted to group_system_admin.
+  - id: F-009
+    verdict: STILL_OPEN
+    task: [TASK-010, TASK-011, TASK-032]
+    fact: "Admin test checks view columns only; plasticos_logistics has no load_dashboard test."
+  - id: F-010
+    verdict: STILL_OPEN
+    task: TASK-021
+    fact: "My Deals action res_model plasticos.sales.dashboard (views :263-272); no action_view_transaction on the model."
+
+new_findings:
+  - id: N-001
+    task: TASK-012
+    fact: "Closed-deal periods use write_date (admin_dashboard.py:296,325-336,736-744); editing an old deal moves it into the current period."
+  - id: N-002
+    task: TASK-010
+    fact: "action_open_delivered_uninvoiced (:570-577) domain fields state, invoice_state are absent on the target."
+  - id: N-003
+    task: none (RISK-003)
+    fact: "plasticos.transaction.commission_payout_state is never set by payout confirm/paid actions (commission_payout.py:168-201)."
+
+platform_facts:
+  edition: "Odoo 19 Enterprise on Odoo.sh (AGENTS.md:86,95,100)"
+  native_dashboards: "spreadsheet_dashboard is a dependency of plasticos_odoo_standard_apps (__manifest__.py:24); spreadsheet_edition present in Enterprise mirror; no custom spreadsheet.dashboard data exists"
+  publication: "IB-Odoo_19 make pr (scripts/make_push_pipeline.sh) admits base Staging or a stacked parent with an open PR into Staging; Production refused"
+  runtime_tests: "Owners are the make pr-check smoke stage and operator-invoked make runtime-test m=<modules>; agents do not run make test-module/test-odoo ad hoc (Makefile:1365-1381)"
+  version_bump: "Mandatory for Python/XML/security/migration changes (skills/plasticos-odoo-version-bump/SKILL.md)"
+  ask_first: "New modules, security groups and record rules, ir.cron, plasticos_base (AGENTS.md:543-547)"
+
+open_operator_decisions: [DEC-002, DEC-004, DEC-005]
+ready_tasks: [TASK-001, TASK-010, TASK-011, TASK-013, TASK-020, TASK-021]
+blocked_tasks:
+  TASK-012: DEC-002
+  TASK-040: [DEC-004, DEC-005]
+do_not_execute_from_this_receipt: true

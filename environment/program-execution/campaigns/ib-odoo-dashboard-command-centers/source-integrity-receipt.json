@@ -1,0 +1,12 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "ib-odoo-dashboard-command-centers",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "source_version": "1.0.0",
+  "digest_algorithm": "sha256",
+  "digest": "0acef5565ca38f0cc8ecafdd8781c9f4a071c693fda9421b44c269cd3a7f7f0a",
+  "bytes": 45549,
+  "collected_at": "2026-11-20",
+  "collection_method": "cto_compiled_campaign_source_check_input_supported",
+  "producer": "CTO session (claude-code-web)"
+}
