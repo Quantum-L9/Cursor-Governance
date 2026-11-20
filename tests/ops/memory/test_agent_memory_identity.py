@@ -482,7 +482,10 @@ def test_the_minted_phone_session_door_is_web_and_tampering_is_refused(tmp_path:
     assert report["auth_method"] == "stdio-agent-assertion"
     assert report["is_admin"] is False
     assert report["write_namespaces"] == sorted(assigned)
-    assert "*" not in report["write_namespaces"]
+    # Operator decision 2026-11-20: claude-code writes any repository's namespace,
+    # as cursor does. A wildcard write grant is still not admin, the door still
+    # mirrors the registry exactly, and tampering is still refused (below).
+    assert assigned == ["*"]
     assert report["surface_identity"] == "l9.surface-registry/global@1#claude-code-web"
     assert all(report["refused"].values()), report["refused"]
 
