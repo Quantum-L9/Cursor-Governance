@@ -45,6 +45,11 @@ is public, so rows about credentials carry counts and actions only, never locati
 
 | T35 | Core uploads no coverage to Sonar, so every Core pull request that adds code fails SonarCloud with 0% coverage on new code (seen on #283, #286, #287). | observed | lane L2b | Feed coverage from an existing test run to the Sonar scan; no second test run. | OPEN, assigned |
 
+| T36 | EIE workflows use mutable action tags in 85 places on main, and `perplexity-code-review.yml` interpolates dispatch inputs into `run:`. | observed (Semgrep) | lane F2b | Pin to SHAs, move inputs to `env:`. See `SEMGREP_REVIEW.md`. | OPEN, assigned |
+| T37 | Hosted Semgrep false positives on main (SDK Python 3.7 compatibility rule, literal-identifier SQL, env-indirected script input, a logger line). | observed (Semgrep) | operator | Disable the Python 3.7 rule; triage the rest as false positive. | OPEN, operator |
+| T38 | Consumers reference `Quantum-L9/l9-ci-core/...@v2` by a moving tag, and three `pyproject.toml` files have no uv dependency cooldown. | observed (Semgrep) | Core owner | One decision each, applied centrally. | OPEN |
+| T39 | Reachable critical certifi advisory in four template repositories outside the campaign. | observed (Semgrep) | repository owners | Relock certifi. Out of campaign scope; recorded so it is not lost. | OPEN, out of scope |
+
 ## Pending operator changes
 
 | ID | Change | Where | When | Why |
