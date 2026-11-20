@@ -95,7 +95,7 @@ class SetupStubDoesNotInject(unittest.TestCase):
         body = STUB.read_text(encoding="utf-8")
         self.assertNotIn("CHILD_ALLOW_RULES", body)
         self.assertNotIn(".claude/settings.local.json", body)
-        self.assertNotIn('$PWD/.claude', body)
+        self.assertNotIn("$PWD/.claude", body)
 
     def test_stub_writes_only_the_degraded_user_rules_to_user_scope(self) -> None:
         body = STUB.read_text(encoding="utf-8")
