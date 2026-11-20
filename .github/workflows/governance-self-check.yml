@@ -3,6 +3,10 @@ name: governance-self-check
 
 on:
   pull_request:
+  # Merge queue: "governance-self-check" is a required context, so it must report on
+  # the queued merge commit too. Diff-scoped steps use merge_group.base_sha there.
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
   workflow_dispatch:
@@ -62,6 +66,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
+          MG_BASE_SHA: ${{ github.event.merge_group.base_sha }}
         run: |
           gen=ops/scripts/sync_generated_artifacts.py
           [ -f "$gen" ] || { echo "::error::$gen missing - cannot verify generated artifacts"; exit 1; }
@@ -69,9 +74,15 @@ jobs:
                  ops/generated/skill-registry.json \
                  skills/AUTONOMY_MANIFEST.yaml commands/COMMANDS_MANIFEST.yaml \
                  environment/generated/llm-rules"
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            git fetch --no-tags origin "${BASE_REF}"
-            git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/pr-changed-files.txt
+          if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "merge_group" ]; then
+            if [ "$EVENT_NAME" = "merge_group" ]; then
+              # The queued merge commit against the base it was built on.
+              [ -n "${MG_BASE_SHA}" ] || { echo "::error::merge_group event without merge_group.base_sha"; exit 1; }
+              git diff --name-only "${MG_BASE_SHA}...HEAD" > /tmp/pr-changed-files.txt
+            else
+              git fetch --no-tags origin "${BASE_REF}"
+              git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/pr-changed-files.txt
+            fi
             if [ ! -s /tmp/pr-changed-files.txt ]; then
               echo "ok: empty PR file list - skip generated regen"
             else
@@ -156,7 +167,8 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
-          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          MG_BASE_SHA: ${{ github.event.merge_group.base_sha }}
           TESTED_REVISION_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
@@ -173,6 +185,17 @@ jobs:
             git fetch --no-tags origin "${BASE_REF}"
             python3 "$tool" \
               --changed-since "origin/${BASE_REF}" \
+              --source-head-sha "$SOURCE_HEAD_SHA" \
+              --tested-revision-sha "$TESTED_REVISION_SHA" \
+              --receipt "$receipt" \
+              --json || rc=$?
+          elif [ "$EVENT_NAME" = "merge_group" ]; then
+            [ -n "${MG_BASE_SHA}" ] && [ -n "${SOURCE_HEAD_SHA}" ] || {
+              echo "::error::merge_group event without merge_group.base_sha/head_sha"
+              exit 1
+            }
+            python3 "$tool" \
+              --changed-since "$MG_BASE_SHA" \
               --source-head-sha "$SOURCE_HEAD_SHA" \
               --tested-revision-sha "$TESTED_REVISION_SHA" \
               --receipt "$receipt" \

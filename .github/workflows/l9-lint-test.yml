@@ -16,6 +16,11 @@ on:
   # workflow never reports its contexts at all — the PR sits BLOCKED forever with no
   # failing check to fix (PR #136 was stuck exactly this way).
   pull_request:
+  # Merge queue: "Lint and Type Check" and "Test Suite" are required contexts and
+  # must report on the queued merge commit (github.sha). There both jobs check that
+  # commit in full: Test Suite runs --profile ci, exactly as on push to main.
+  merge_group:
+    types: [checks_requested]
   push:
     branches:
       - main
@@ -50,11 +55,16 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
+      # Empty on merge_group (the step is skipped); Test Suite reads both only on
+      # pull_request.
       files: ${{ steps.decide.outputs.files }}
       files_unusable: ${{ steps.decide.outputs.files_unusable }}
     steps:
+      # A PR API call: only meaningful on pull_request, so skipped by name on
+      # merge_group (the job still runs and succeeds with empty outputs).
       - name: Resolve PR file list
         id: decide
+        if: github.event_name != 'merge_group'
         env:
           EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -252,7 +262,7 @@ jobs:
           # pull_request: --profile local --changed-file from scope.outputs.files
           # (does not re-list PR files). Unknown scope, an empty surviving list,
           # L9_CI_FULL_SUITE=1, and --profile ci exit nonzero.
-          # push to main / workflow_dispatch: --profile ci. That is not a
+          # push to main / merge_group / workflow_dispatch: --profile ci. That is not a
           # pull-request fallback. Sonar's deep suite is dispatch-only.
           #
           # Invoked with the locked interpreter the install step verified, not
