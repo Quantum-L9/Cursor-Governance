@@ -36,10 +36,12 @@ The eleven invariant statements (`INVARIANTS.yaml`), the three ADR texts and the
 `candidates/sdk-integration-contract.patch`, `ADRS.md`, `INVARIANTS.md`, `G0_OTHER_VENDOR_CHECK.md` and
 `audit/ALIGNMENT.yaml` are byte-identical to v1.7.0.
 
-Two files differ from v1.7.0 by whitespace only, because this repository's hygiene hooks normalize
-them. `candidates/sdk-adr-index.patch` lost the single leading space on two blank context lines, and
-`git apply --check` still exits 0 for it on SDK `ab8a2554`. `audit/RECURSIVE_ALIGNMENT_KERNEL.md` gained
-a final newline.
+Two files differ from v1.7.0 in representation, because this repository's hygiene hooks rewrite
+them. `audit/RECURSIVE_ALIGNMENT_KERNEL.md` gained a final newline. `candidates/sdk-adr-index.patch`
+ended on a blank context line that the hooks strip, which corrupts the hunk, so its hunk now carries one
+trailing context line fewer (`@@ -26,5 +26,6 @@`, ending at `## Ledger rules`). Applied to SDK
+`docs/adr/README.md` at `ab8a2554`, the supplied patch and this one produce byte-identical files. The
+change it makes, one new 0020 row marked Proposed, is unchanged.
 
 The v1.7.0 checksum list is kept as `audit/SHA256SUMS.v1.7.0`, so those two entries and every edited
 file no longer match it. `SHA256SUMS` covers this revision.
@@ -100,7 +102,7 @@ Each row states what was found, the evidence, and the sentence it outranks.
 | B09 | The sibling campaign already owns pull-request test expense. | Open-PR table above. | T09 and T11 are `delegated` to CEG #514, EIE #365, Core #281 and Cursor-Governance #1062. No lane here edits a file those pull requests change for that purpose. A lane that must touch the same file follows the Stacking section. |
 | B10 | The EIE half of T10 sits inside a foreign pull request. | `--cov=engine` is at `.github/workflows/sonarcloud.yml:85` on `e1a61f78`; `engine/` does not exist; EIE #365 changes that file and adds `tests/ci/test_sonar_analysis_truthfulness.py`. | Lane F2 does not edit `sonarcloud.yml`. It records whether #365 removes the stale target and, if not, sends that as a `CTO-QUESTION`. |
 | B11 | The T01 mechanism is no longer unknown. | CEG `.github/workflows/ci-quality.yml:151-186` at `b2150980`: three branches print a `::warning::` and skip (key absent, token lacks `scan` scope, "container failed to start; skipping scan (infra)"), and the job succeeds. Codecov at `:237-244` has `fail_ci_if_error: false`. | "The ZIP does not preserve the exact catch implementation" is resolved to those lines. Lane F1 re-reads them at its base before editing. |
-| B12 | The three candidate patches apply. | `git apply --check` exits 0 for `core-governance-contract.patch` on Core `3579bdc1`, and for `sdk-integration-contract.patch` and `sdk-adr-index.patch` on SDK `ab8a2554`. | The patches are used as written. |
+| B12 | The three candidate patches apply. | `git apply --check` exits 0 for `core-governance-contract.patch` on Core `3579bdc1`, and for `sdk-integration-contract.patch` and `sdk-adr-index.patch` on SDK `ab8a2554`, as stored in this pack. | The patches are used as stored here. A lane takes `sdk-adr-index.patch` from this pack, not from the v1.7.0 archive (see Unchanged). |
 | B13 | No strict schema reads either contract file. | Core: only `tests/governance/test_governance_boundary.py` reads `.l9/governance-contract.yaml`, as substring assertions. SDK: only `tests/architecture/test_version_alignment.py` reads `.l9/integration-contract.yaml`, for `metadata.version`. | "Admissibility under current target validators is unknown" is resolved for the top-level fields `ci_runtime_invariants` and `ci_provider_invariants`. No field remap is needed. The witness tests are still required; a YAML entry is not enforcement. |
 | B14 | Core has no `docs/adr/`. Its decisions are dated, append-only `AGENTS.md` sections. | `ls docs/adr` fails on `3579bdc1`; `AGENTS.md` §13 to §24 open with "Decision record for ...". | The frozen paths `docs/adr/0001-*.md`, `0002-*.md` and `docs/adr/README.md` stand. Lane L2 also appends one dated `AGENTS.md` section that points at them and repeats none of their text, so Core keeps one decision trail. |
 | B15 | Two different records are called "ADR 0020". | SDK `docs/adr/` ends at 0019, so SDK 0020 is free. `.github` already has `docs/adr/0020-coderabbit-central-config-seeded.md`. | Always write the owner: "SDK ADR 0020" or ".github ADR-0020". |
