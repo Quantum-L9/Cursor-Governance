@@ -2,7 +2,8 @@
 """SonarCloud is a dispatch-only deep entrypoint. It does not scan pull requests.
 
 Heavy pytest and coverage run only for mode=apply after the SHA check, once.
-Sonar consumes that coverage. A missing SONAR_TOKEN does not skip that suite.
+Sonar consumes that coverage through Core's reusable Sonar step. A missing
+SONAR_TOKEN does not skip that suite; the Core step reports it.
 Waiting on Core apply: this file does not claim a nightly Sonar run occurred.
 """
 
@@ -24,6 +25,10 @@ ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = ROOT / ".github" / "workflows" / "sonarcloud.yml"
 PROPERTIES = ROOT / "sonar-project.properties"
 SHA = re.compile(r"@[0-9a-f]{40}$")
+# The reusable Core Sonar step, pinned at l9-ci-core #301's merge commit.
+CORE_SONAR = (
+    "Quantum-L9/l9-ci-core/.github/actions/run-sonar@4185d917cfd932d5c2a94f681afe4f78eaa73155"
+)
 DISPATCH_INPUTS = (
     "expected_sha",
     "utc_slot",
@@ -93,6 +98,10 @@ class SonarCloudWorkflowTests(unittest.TestCase):
         self.assertGreater(suite_at, 0)
         self.assertIn("apply", self.steps[suite_at]["if"])
 
+    def _scan(self) -> dict:
+        (scan,) = [step for step in self.steps if step.get("uses", "") == CORE_SONAR]
+        return scan
+
     def test_missing_sonar_token_does_not_gate_pytest(self) -> None:
         suite = next(
             step for step in self.steps if "run_python_test_suites.py" in step.get("run", "")
@@ -101,38 +110,28 @@ class SonarCloudWorkflowTests(unittest.TestCase):
         self.assertEqual(suite["if"], "steps.admit.outputs.apply == 'true'")
         for step in self.steps[:suite_at]:
             self.assertNotIn("SONAR_TOKEN", str(step))
-        token = next(
-            step for step in self.steps if step["name"] == "Require SonarCloud analysis token"
-        )
-        scan = next(
-            step
-            for step in self.steps
-            if step.get("uses", "").startswith("SonarSource/sonarqube-scan-action@")
-        )
-        self.assertGreater(self.steps.index(token), suite_at)
-        self.assertGreater(self.steps.index(scan), self.steps.index(token))
-        self.assertEqual(token["id"], "sonar_token")
-        self.assertEqual(token["env"]["SONAR_TOKEN"], "${{ secrets.SONAR_TOKEN }}")
-        self.assertIn("exit 1", token["run"])
-        self.assertIn("steps.coverage.outcome == 'success'", token["if"])
-        self.assertIn("steps.sonar_token.outcome == 'success'", scan["if"])
+        scan = self._scan()
+        self.assertGreater(self.steps.index(scan), suite_at)
+        self.assertIn("steps.coverage.outcome == 'success'", scan["if"])
         self.assertNotIn("SONAR_TOKEN", suite["if"])
 
-    def test_token_script_reports_a_missing_token_and_accepts_one(self) -> None:
-        token = next(
-            step for step in self.steps if step["name"] == "Require SonarCloud analysis token"
-        )
-        missing = _bash(token["run"], {"SONAR_TOKEN": "   "})
-        self.assertEqual(missing.returncode, 1, missing.stderr)
-        self.assertIn("SONAR_TOKEN is required", missing.stdout)
-        present = _bash(token["run"], {"SONAR_TOKEN": "present-token"})
-        self.assertEqual(present.returncode, 0, present.stderr)
-        self.assertNotIn("present-token", present.stdout)
-        self.assertNotIn("present-token", present.stderr)
+    def test_the_token_reaches_only_the_core_sonar_step(self) -> None:
+        scan = self._scan()
+        self.assertEqual(scan["with"]["sonar-token"], "${{ secrets.SONAR_TOKEN }}")
+        holders = [step for step in self.steps if "SONAR_TOKEN" in str(step)]
+        self.assertEqual([scan], holders)
+        self.assertEqual(1, self.text.count("secrets.SONAR_TOKEN"))
+
+    def test_scan_is_the_core_step_not_a_local_scanner(self) -> None:
+        scan = self._scan()
+        self.assertEqual(scan["with"]["coverage-reports"], "coverage.xml")
+        self.assertEqual(scan["with"]["quality-gate"], "blocking")
+        self.assertNotIn("SonarSource/sonarqube-scan-action", self.text)
+        self.assertNotIn("Require SonarCloud analysis token", self.text)
 
     def test_every_external_action_is_sha_pinned(self) -> None:
         uses = [step["uses"] for step in self.steps if "uses" in step]
-        self.assertTrue(any(item.startswith("SonarSource/sonarqube-scan-action@") for item in uses))
+        self.assertIn(CORE_SONAR, uses)
         for ref in uses:
             self.assertRegex(ref, SHA)
 
@@ -174,19 +173,14 @@ class SonarCloudWorkflowTests(unittest.TestCase):
         self.assertNotIn("gh run list", self.text)
 
     def test_scan_consumes_coverage_and_does_not_invoke_pytest(self) -> None:
-        scan = next(
-            step
-            for step in self.steps
-            if step.get("uses", "").startswith("SonarSource/sonarqube-scan-action@")
-        )
+        scan = self._scan()
         suite = next(
             step for step in self.steps if "run_python_test_suites.py" in step.get("run", "")
         )
         self.assertLess(self.steps.index(suite), self.steps.index(scan))
         self.assertIn("steps.coverage.outcome == 'success'", scan["if"])
-        self.assertIn("-Dsonar.python.coverage.reportPaths=coverage.xml", scan["with"]["args"])
-        self.assertNotIn("pytest", scan.get("run", ""))
-        self.assertNotIn("run_python_test_suites.py", scan.get("with", {}).get("args", ""))
+        self.assertEqual("coverage.xml", scan["with"]["coverage-reports"])
+        self.assertNotIn("run", scan)
         self.assertIn("test -s coverage.xml", suite["run"])
 
     def test_failed_suite_does_not_scan_and_preserves_the_report(self) -> None:
@@ -222,10 +216,10 @@ class SonarCoverageTests(unittest.TestCase):
     def test_coverage_report_is_produced_before_the_scan_and_passed_to_it(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         produce = text.index("run_python_test_suites.py --profile ci")
-        scan = text.index("SonarSource/sonarqube-scan-action@")
+        scan = text.index(CORE_SONAR)
         self.assertLess(produce, scan)
         self.assertEqual(text.count("run_python_test_suites.py --profile ci"), 1)
-        self.assertIn("-Dsonar.python.coverage.reportPaths=coverage.xml", text[scan:])
+        self.assertIn("coverage-reports: coverage.xml", text[scan:])
         self.assertIn("steps.admit.outputs.apply == 'true'", text)
 
 
