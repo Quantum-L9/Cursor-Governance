@@ -160,17 +160,30 @@ def is_swarm_child(event: dict) -> bool:
 
 
 def session_roots(contract: dict, receipt_id: str, fallback: Any, workspace: Path) -> list[Path]:
-    """Repositories this session put in scope, else ``fallback(workspace)``.
+    """Repositories this session put in scope, plus any checked out since.
 
     ``roots`` records the roots SessionStart selected (``hydrated_roots`` on a
     receipt written before SessionStart became health-only), so reusing it
-    keeps the post-publish end symmetric with SessionStart. An absent or
-    malformed session receipt is an ordinary state, not an error.
+    keeps the post-publish end symmetric with SessionStart. A repository
+    cloned mid-session (operator decision 2026-11-20: memory works in every
+    repository a session works in) was not there at SessionStart, so the
+    current ``fallback(workspace)`` selection is appended after the receipt's
+    roots, never in their place. An absent or malformed session receipt is an
+    ordinary state, not an error.
     """
     receipt = prefetch_receipt(contract, receipt_id)
     roots = [Path(r) for r in (receipt.get("roots") or receipt.get("hydrated_roots") or [])]
     roots = [r for r in roots if str(r) and r.is_dir()]
-    return roots or list(fallback(workspace))
+    try:
+        current = [Path(r) for r in fallback(workspace)]
+    except Exception:  # noqa: BLE001 - a rescan fault must not lose the receipt's roots
+        current = []
+    seen = {r.resolve() for r in roots}
+    for root in current:
+        if root.is_dir() and root.resolve() not in seen:
+            seen.add(root.resolve())
+            roots.append(root)
+    return roots
 
 
 def emit(message: str) -> None:

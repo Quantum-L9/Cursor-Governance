@@ -92,3 +92,57 @@ def test_bootstrap_reports_exactly_the_hydrated_roots(
     reported = nc.resolve_workspace_namespaces(container, cap=2)
     assert [root for root, _ in reported.namespaces] == hydrated
     assert [ns for _, ns in reported.namespaces] == ["cursor-governance", "l9-ci-core"]
+
+
+def test_the_hydration_cap_is_the_shared_default_and_not_six() -> None:
+    """One source for the cap (operator decision 2026-11-20: raise it to 20)."""
+    from ops.scripts.lib.workspace_roots import DEFAULT_MAX_ROOTS
+
+    prefetch = _prefetch()
+    assert prefetch._MAX_HYDRATION_ROOTS == DEFAULT_MAX_ROOTS == 20
+
+
+def test_eight_repositories_are_all_in_scope(tmp_path: Path) -> None:
+    """The operator's required set fits under the cap; none is left out."""
+    for name, remote in (
+        ("dot-github", "https://github.com/Quantum-L9/.github"),
+        ("Cognitive.Engine.Graphs", "https://github.com/Quantum-L9/Cognitive.Engine.Graphs"),
+        ("Cursor-Governance", "https://github.com/Quantum-L9/Cursor-Governance"),
+        (
+            "Enrichment.Inference.Engine",
+            "https://github.com/Quantum-L9/Enrichment.Inference.Engine",
+        ),
+        ("IB-Odoo_19", "https://github.com/cryptoxdog/IB-Odoo_19"),
+        ("l9-graphiti-memory", "https://github.com/Quantum-L9/l9-graphiti-memory"),
+        ("l9-repo-template", "https://github.com/Quantum-L9/l9-repo-template"),
+        (
+            "l9-semantic-compiler-engine",
+            "https://github.com/Quantum-L9/l9-semantic-compiler-engine",
+        ),
+    ):
+        _repo(tmp_path / name, remote)
+    prefetch = _prefetch()
+    selection = prefetch._hydration_selection(tmp_path)
+    assert len(selection.selected) == 8
+    assert [why for _, why in selection.dropped] == []
+
+
+def test_write_back_covers_a_repository_cloned_after_session_start(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SessionStart's roots come first; a later clone is appended, not lost."""
+    import post_publish as pp
+
+    first = _repo(tmp_path / "Cursor-Governance", "https://github.com/Quantum-L9/Cursor-Governance")
+    later = _repo(tmp_path / "l9-ci-core", "https://github.com/Quantum-L9/l9-ci-core")
+    monkeypatch.setattr(pp, "prefetch_receipt", lambda contract, rid: {"roots": [str(first)]})
+    roots = pp.session_roots({}, "rid", lambda ws: [first, later], tmp_path)
+    assert roots == [first, later]
+    # A receipt-only session (nothing new) is unchanged.
+    assert pp.session_roots({}, "rid", lambda ws: [first], tmp_path) == [first]
+    # A failing rescan never loses what SessionStart recorded.
+
+    def boom(ws: Path) -> list[Path]:
+        raise OSError("unreadable container")
+
+    assert pp.session_roots({}, "rid", boom, tmp_path) == [first]
