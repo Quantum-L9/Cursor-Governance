@@ -14,7 +14,7 @@ five launch preconditions for the operator. `CAMPAIGN.yaml` is the machine index
 brief per lane.
 
 Mission, architecture, the three ADR texts, the eleven invariant statements and the three patches are
-unchanged from v1.7.0. Files whose facts are a 2026-11-19 snapshot carry a one-line notice at the top.
+unchanged in content from v1.7.0 (the binding lists two whitespace-only differences). Files whose facts are a 2026-11-19 snapshot carry a one-line notice at the top.
 The pool is not launched and nothing in this revision is evidence of execution.
 
 ## v1.7.0 recursive alignment revision

@@ -5,6 +5,6 @@
  | [0018](0018-rule-precision-by-code-position-and-dispatch.md) | Logging and routing rules match code positions and outbound dispatch | Accepted; logging clause amended by [0019](0019-rule-precision-saas-and-usage-counts.md) |
  | [0019](0019-rule-precision-saas-and-usage-counts.md) | Rules distinguish L9 destinations, usage counts, constant SQL and real handlers | Accepted |
 +| [0020](0020-all-applicable-capabilities-and-lossless-provider-evidence.md) | All-applicable capability detection, monotonic rules and lossless provider facts | Proposed |
- 
+
  ## Ledger rules
- 
+

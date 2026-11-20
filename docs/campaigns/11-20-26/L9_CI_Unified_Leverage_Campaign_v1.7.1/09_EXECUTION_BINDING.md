@@ -32,10 +32,17 @@ not authorize the swarm launch, any merge, any vendor or billing change, or a G0
 ## Unchanged
 
 The eleven invariant statements (`INVARIANTS.yaml`), the three ADR texts and the Core ADR index
-(`candidates/adr/`), and the three patches (`candidates/*.patch`) are byte-identical to v1.7.0. So are
-`ADRS.md`, `INVARIANTS.md`, `G0_OTHER_VENDOR_CHECK.md`, `audit/ALIGNMENT.yaml` and
-`audit/RECURSIVE_ALIGNMENT_KERNEL.md`. The v1.7.0 checksum list is kept as
-`audit/SHA256SUMS.v1.7.0`; `SHA256SUMS` covers this revision.
+(`candidates/adr/`), `candidates/core-governance-contract.patch`,
+`candidates/sdk-integration-contract.patch`, `ADRS.md`, `INVARIANTS.md`, `G0_OTHER_VENDOR_CHECK.md` and
+`audit/ALIGNMENT.yaml` are byte-identical to v1.7.0.
+
+Two files differ from v1.7.0 by whitespace only, because this repository's hygiene hooks normalize
+them. `candidates/sdk-adr-index.patch` lost the single leading space on two blank context lines, and
+`git apply --check` still exits 0 for it on SDK `ab8a2554`. `audit/RECURSIVE_ALIGNMENT_KERNEL.md` gained
+a final newline.
+
+The v1.7.0 checksum list is kept as `audit/SHA256SUMS.v1.7.0`, so those two entries and every edited
+file no longer match it. `SHA256SUMS` covers this revision.
 
 ## Live recheck
 
