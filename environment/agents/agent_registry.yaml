@@ -113,10 +113,14 @@ agents:
     binding_status: active
   claude-code:
     actor_ref: l9.actor-registry/global@1#claude-code
+    # Operator decision 2026-11-20: claude-code has exactly two surfaces.
+    # claude-code-web is every hosted cloud session (any remote_* entrypoint,
+    # phone included); claude-code-cli is the local CLI (also inside an IDE).
+    # claude-code-desktop / claude-code-ide / claude-code-mobile are drift and
+    # are not bound here.
     surface_refs:
       - l9.surface-registry/global@1#claude-code-cli
       - l9.surface-registry/global@1#claude-code-web
-      - l9.surface-registry/global@1#claude-code-mobile
     user_id: claude_code_agent
     principal_id: claude-code-memory-client
     token_env: L9_MEMORY_TOKEN__CLAUDE_CODE

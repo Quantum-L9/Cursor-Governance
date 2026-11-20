@@ -28,8 +28,9 @@ stay. Unique local commits and other dirty tracked paths are parked first.
 Nothing unique is deleted.
 
 `/ff` ends when `ff.sh` prints `OK:` and parked files are back at their
-original paths. Unique plans stay in the tree. Hold copies stay as
-backup. Do not run `ff_shelf.py`, `run_ff_post_shelf.sh`, or
+original paths. Plan relocation is retired: `docs/plans/` is not shelved,
+not parked, and not checked out over. Hold copies stay as backup for
+everything else. Do not run `ff_shelf.py`, `run_ff_post_shelf.sh`, or
 `verify_worktree_clean.py`. No commit. No push. No PR.
 
 **Corpus clean-repo law:** never `git stash push` corpus (incident:

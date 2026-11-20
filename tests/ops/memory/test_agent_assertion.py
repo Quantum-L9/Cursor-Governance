@@ -236,9 +236,14 @@ def test_print_helper_skip_message_names_no_path(
     assert str(tmp_path) not in captured.err
 
 
-_PROJECTION_DIGEST = "sha256:9d7491d507b7204caeaa9892019ab39a5e459cf507c59fa192fa238e3a953c5c"
+_PROJECTION_DIGEST = "sha256:8874ac71da756a78bfd0ecbc0966bbcd80b86c9f52fb10ce3b14ca945d86de9f"
 _AUTHORITY = "9b27869dd893fcd28f76f99c9184a90435542c76"
 GOLDEN_KEY = "golden-identity-hmac-key"
+#: The golden vector freezes wire format, not the live projection: its body keeps
+#: the projection digest it was minted with.
+_GOLDEN_PROJECTION_DIGEST = (
+    "sha256:9d7491d507b7204caeaa9892019ab39a5e459cf507c59fa192fa238e3a953c5c"
+)
 GOLDEN_DIGEST = "sha256:48179465ef52b40d1a40259b222887aea08e13ce5cdd0b7115c78ab0af07b5b8"
 GOLDEN_HMAC = "3cfb0db2175cc0ac22b0a9de28c0dcdab1df9e16ea8ee16585dcfaca164c0244"
 
@@ -272,7 +277,7 @@ def _golden_body() -> dict:
             "agent_bindings_ref": "l9.cursor-governance/agent-bindings@2",
             "global_identity_authority_revision": _AUTHORITY,
             "identity_binding_ref": "l9.cursor-governance/identity-binding@1",
-            "identity_projection_digest": _PROJECTION_DIGEST,
+            "identity_projection_digest": _GOLDEN_PROJECTION_DIGEST,
             "identity_projection_ref": "l9.projection/cursor-governance-identity@1",
             "surface_registry_digest": (
                 "sha256:d7200409ff02141a274ff8c9221d31429f6a6fae27539e6d9c8d20f1a6eba988"
@@ -347,7 +352,7 @@ def test_the_store_admits_the_assertion_the_bootstrap_builds_for_mobile() -> Non
         signing_key=key,
     )
     assert parsed.resolved_dimensions.surface_identity == (
-        "l9.surface-registry/global@1#claude-code-mobile"
+        "l9.surface-registry/global@1#claude-code-web"
     )
     with pytest.raises(AuthenticationError):
         verify_canonical_identity_assertion(
@@ -358,7 +363,8 @@ def test_the_store_admits_the_assertion_the_bootstrap_builds_for_mobile() -> Non
         )
 
 
-def test_claude_remote_mobile_resolves_mobile_surface() -> None:
+def test_claude_remote_mobile_resolves_the_web_surface() -> None:
+    """A cloud session started from the phone is Claude Code Web (2026-11-20)."""
     assertion = _resolved(
         {
             "CLAUDE_CODE_REMOTE": "true",
@@ -368,7 +374,7 @@ def test_claude_remote_mobile_resolves_mobile_surface() -> None:
     )
     dims = assertion["resolved_dimensions"]
     assert dims["actor_identity"] == "l9.actor-registry/global@1#claude-code"
-    assert dims["surface_identity"] == "l9.surface-registry/global@1#claude-code-mobile"
+    assert dims["surface_identity"] == "l9.surface-registry/global@1#claude-code-web"
     encoded = json.dumps(assertion)
     assert "session-secret-must-not-leak" not in encoded
     evidence = normalized_runtime_evidence(
@@ -500,7 +506,7 @@ def test_remote_mobile_exports_claude_actor_and_a_legal_door_grant(
     assertion = json.loads(env[ENV_IDENTITY_ASSERTION_JSON])
     dims = assertion["resolved_dimensions"]
     assert dims["actor_identity"] == "l9.actor-registry/global@1#claude-code"
-    assert dims["surface_identity"] == "l9.surface-registry/global@1#claude-code-mobile"
+    assert dims["surface_identity"] == "l9.surface-registry/global@1#claude-code-web"
 
 
 def test_unknown_remote_entrypoint_does_not_relabel_mobile() -> None:
@@ -550,7 +556,23 @@ def test_resolved_surface_must_be_in_the_binding() -> None:
     cli = surface_ref_from_binding("claude-code-cli", binding)
     assert cli == "l9.surface-registry/global@1#claude-code-cli"
     assert cli in binding["surface_refs"]
-    assert surface_ref_from_binding("claude-code-desktop", binding) == "unknown"
+    # Claude Code has exactly two surfaces (operator decision 2026-11-20).
+    assert [ref.rsplit("#", 1)[1] for ref in binding["surface_refs"]] == [
+        "claude-code-cli",
+        "claude-code-web",
+    ]
+    for drift in ("claude-code-desktop", "claude-code-ide", "claude-code-mobile", "codex-cli"):
+        assert surface_ref_from_binding(drift, binding) == "unknown"
+    web = _resolved(
+        {
+            "CLAUDECODE": "1",
+            "CLAUDE_CODE_REMOTE": "true",
+            "CLAUDE_CODE_ENTRYPOINT": "remote_desktop",
+        }
+    )
+    assert web["resolved_dimensions"]["surface_identity"] == (
+        "l9.surface-registry/global@1#claude-code-web"
+    )
     desktop = _resolved({"CLAUDECODE": "1"})
     assert desktop["resolved_dimensions"]["actor_identity"].endswith("#claude-code")
     assert desktop["resolved_dimensions"]["surface_identity"] == "unknown"
@@ -604,7 +626,7 @@ def test_cursor_claude_cli_and_mobile_use_full_canonical_refs() -> None:
     mobile = _resolved({"CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_mobile"})
     assert (
         mobile["resolved_dimensions"]["surface_identity"]
-        == "l9.surface-registry/global@1#claude-code-mobile"
+        == "l9.surface-registry/global@1#claude-code-web"
     )
     _assert_release_and_runtime_stay_unknown(mobile)
 

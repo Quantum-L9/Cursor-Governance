@@ -212,8 +212,12 @@ def test_ignored_colliding_untracked_is_parked() -> int:
     return 0
 
 
-def _velocity_fixture(tmp: Path, origin_paths: int) -> tuple[Path, Path]:
-    """A clone behind origin/main by `origin_paths` newly tracked files."""
+def _origin_clone_and_peer(tmp: Path) -> tuple[Path, Path, Path]:
+    """A bare origin on `main` with one base commit, a clone, and a peer clone.
+
+    The peer pushes to origin so the clone falls behind; every behind-origin
+    scenario starts from this shape.
+    """
     remote = tmp / "remote.git"
     clone = tmp / "clone"
     run(["git", "init", "--bare", str(remote)])
@@ -231,6 +235,12 @@ def _velocity_fixture(tmp: Path, origin_paths: int) -> tuple[Path, Path]:
     run(["git", "clone", str(remote), str(other)])
     git(other, "config", "user.email", "test@example.com")
     git(other, "config", "user.name", "Test")
+    return remote, clone, other
+
+
+def _velocity_fixture(tmp: Path, origin_paths: int) -> tuple[Path, Path]:
+    """A clone behind origin/main by `origin_paths` newly tracked files."""
+    remote, clone, other = _origin_clone_and_peer(tmp)
     for i in range(origin_paths):
         (other / f"landed{i:03d}.md").write_text(f"origin {i}\n", encoding="utf-8")
     git(other, "add", "-A")
@@ -676,23 +686,7 @@ def test_unrelated_history_with_dirty() -> int:
 def test_origin_tracked_env_local_does_not_clobber() -> int:
     """If origin starts tracking .env.local, /ff must not move or overwrite the local copy."""
     with tempfile.TemporaryDirectory() as tmp:
-        remote = Path(tmp) / "remote.git"
-        clone = Path(tmp) / "clone"
-        run(["git", "init", "--bare", str(remote)])
-        run(["git", "clone", str(remote), str(clone)])
-        git(clone, "config", "user.email", "test@example.com")
-        git(clone, "config", "user.name", "Test")
-        (clone / "tracked.txt").write_text("v1\n", encoding="utf-8")
-        git(clone, "add", "tracked.txt")
-        git(clone, "commit", "-m", "base")
-        git(clone, "branch", "-M", "main")
-        git(clone, "push", "-u", "origin", "main")
-        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
-
-        other = Path(tmp) / "other"
-        run(["git", "clone", str(remote), str(other)])
-        git(other, "config", "user.email", "test@example.com")
-        git(other, "config", "user.name", "Test")
+        remote, clone, other = _origin_clone_and_peer(Path(tmp))
         (other / "tracked.txt").write_text("v2\n", encoding="utf-8")
         (other / ".env.local").write_text(
             "DEEPSEEK_API_KEY=sk-ORIGIN-SHOULD-NOT-WIN\n", encoding="utf-8"
@@ -728,23 +722,7 @@ def test_origin_tracked_env_local_does_not_clobber() -> int:
 def test_feature_branch_switches_to_main() -> int:
     """Off-main clone: catch up main, return to the feature branch, restore dirt."""
     with tempfile.TemporaryDirectory() as tmp:
-        remote = Path(tmp) / "remote.git"
-        clone = Path(tmp) / "clone"
-        run(["git", "init", "--bare", str(remote)])
-        run(["git", "clone", str(remote), str(clone)])
-        git(clone, "config", "user.email", "test@example.com")
-        git(clone, "config", "user.name", "Test")
-        (clone / "tracked.txt").write_text("v1\n", encoding="utf-8")
-        git(clone, "add", "tracked.txt")
-        git(clone, "commit", "-m", "base")
-        git(clone, "branch", "-M", "main")
-        git(clone, "push", "-u", "origin", "main")
-        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
-
-        other = Path(tmp) / "other"
-        run(["git", "clone", str(remote), str(other)])
-        git(other, "config", "user.email", "test@example.com")
-        git(other, "config", "user.name", "Test")
+        remote, clone, other = _origin_clone_and_peer(Path(tmp))
         (other / "tracked.txt").write_text("v2\n", encoding="utf-8")
         git(other, "add", "tracked.txt")
         git(other, "commit", "-m", "origin ahead")
@@ -996,6 +974,65 @@ def test_full_history_unique_tip_preserves() -> int:
     return 0
 
 
+def test_colliding_plan_stays_in_place_and_reset_proceeds() -> int:
+    """An untracked docs/plans path origin starts tracking must not abort reset --keep.
+
+    Local bytes stay at that path. A later behind catch-up with the same path
+    dirty-tracked must also finish and keep those bytes.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        remote, clone, other = _origin_clone_and_peer(Path(tmp))
+        (other / "tracked.txt").write_text("v2\n", encoding="utf-8")
+        plan = other / "docs" / "plans"
+        plan.mkdir(parents=True)
+        (plan / "collide.md").write_text("origin plan\n", encoding="utf-8")
+        git(other, "add", "tracked.txt", "docs/plans/collide.md")
+        git(other, "commit", "-m", "ahead")
+        git(other, "push")
+
+        local_plan = clone / "docs" / "plans"
+        local_plan.mkdir(parents=True)
+        (local_plan / "collide.md").write_text("local plan\n", encoding="utf-8")
+        home = Path(tmp) / "home"
+        home.mkdir()
+        proc = run(
+            ["bash", str(FF)],
+            env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
+        )
+        if proc.returncode != 0:
+            return _fail(f"ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}")
+        if (local_plan / "collide.md").read_text(encoding="utf-8") != "local plan\n":
+            return _fail("colliding plan bytes were overwritten or dropped")
+        head = run(["git", "-C", str(clone), "rev-parse", "HEAD"]).stdout.strip()
+        origin = run(["git", "-C", str(clone), "rev-parse", "origin/main"]).stdout.strip()
+        if head != origin:
+            return _fail(f"catch-up did not reach origin/main {head} != {origin}")
+        if "plan path restored in place: docs/plans/collide.md" not in proc.stdout:
+            return _fail("missing in-place restore log\n" + proc.stdout)
+        if (clone / "tracked.txt").read_text(encoding="utf-8") != "v2\n":
+            return _fail("non-plan tracked file was not caught up")
+
+        (other / "tracked.txt").write_text("v3\n", encoding="utf-8")
+        git(other, "add", "tracked.txt")
+        git(other, "commit", "-m", "further")
+        git(other, "push")
+        proc2 = run(
+            ["bash", str(FF)],
+            env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
+        )
+        if proc2.returncode != 0:
+            return _fail(f"second ff.sh rc={proc2.returncode}\n{proc2.stdout}\n{proc2.stderr}")
+        if (local_plan / "collide.md").read_text(encoding="utf-8") != "local plan\n":
+            return _fail("dirty tracked plan was not left in place on the second catch-up")
+        head2 = run(["git", "-C", str(clone), "rev-parse", "HEAD"]).stdout.strip()
+        origin2 = run(["git", "-C", str(clone), "rev-parse", "origin/main"]).stdout.strip()
+        if head2 != origin2:
+            return _fail("second catch-up did not reach origin/main")
+        if (clone / "tracked.txt").read_text(encoding="utf-8") != "v3\n":
+            return _fail("second catch-up did not take the non-plan tip")
+    return 0
+
+
 def _ff_shelf() -> Path:
     return ROOT / "scripts" / "ff_shelf.py"
 
@@ -1050,16 +1087,12 @@ def test_ff_shelf_list_and_rsync_argv() -> int:
         campaign_note = "environment/program-execution/campaigns/note.md"
         if campaign_note in listed:
             return _fail(f"PE campaigns are not corpus keep-list: {listed}")
-        if "docs/plans/left.md" not in listed:
-            return _fail(f"missing leftover paths: {listed}")
+        if any(item.startswith("docs/plans/") for item in listed):
+            return _fail(f"plan files must stay put, listed={listed}")
         if "TODO.md" not in listed:
             return _fail(f"root task-queue file must be shelved, listed={listed}")
-        if "docs/plans/tracked.md" not in listed:
-            return _fail(f"dirty-tracked corpus must be shelved, listed={listed}")
-        if "docs/plans/gone.md" in listed:
-            return _fail(f"deleted corpus must not be an rsync source, listed={listed}")
-        if "docs/plans/gone.md" not in data.get("deleted", []):
-            return _fail(f"deleted corpus must be recorded, deleted={data.get('deleted')}")
+        if any(item.startswith("docs/plans/") for item in data.get("deleted", [])):
+            return _fail(f"deleted plans must not be shelved, deleted={data.get('deleted')}")
         if "untracked corpus" in " ".join(data.get("commit") or []):
             return _fail(f"commit message still says untracked: {data.get('commit')}")
         if "leftover corpus" not in " ".join(data.get("commit") or []):
@@ -1092,6 +1125,7 @@ def test_ff_shelf_append_not_restamp() -> int:
         git(clone, "commit", "-m", "base")
         (clone / "docs" / "plans").mkdir(parents=True)
         (clone / "docs" / "plans" / "left.md").write_text("plan leftover\n", encoding="utf-8")
+        (clone / "TODO.md").write_text("queue leftover\n", encoding="utf-8")
         prs = [
             {
                 "number": 1,
@@ -1150,6 +1184,7 @@ def test_ff_shelf_empty_author_stamps() -> int:
         git(clone, "commit", "-m", "base")
         (clone / "docs" / "plans").mkdir(parents=True)
         (clone / "docs" / "plans" / "left.md").write_text("plan leftover\n", encoding="utf-8")
+        (clone / "TODO.md").write_text("queue leftover\n", encoding="utf-8")
         prs = [
             {
                 "number": 3,
@@ -1257,6 +1292,7 @@ def main() -> int:
         ("already_at_tip", test_already_at_tip_leaves_dirty),
         ("unrelated_history", test_unrelated_history_with_dirty),
         ("keep_env_local", test_origin_tracked_env_local_does_not_clobber),
+        ("colliding_plan", test_colliding_plan_stays_in_place_and_reset_proceeds),
         ("feature_branch_switch", test_feature_branch_switches_to_main),
         ("shallow_behind", test_shallow_behind_never_preserves),
         ("shallow_at_tip", test_shallow_at_tip_leaves_dirty),
