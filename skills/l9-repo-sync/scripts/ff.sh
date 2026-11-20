@@ -164,13 +164,15 @@ else
 fi
 unset _ssot_keep_cand
 
-# Plan files are not parked, moved, or checked out over. The shelf no longer
-# takes them either.
+# Plan files stay at their path. A plan that would block `reset --keep`
+# (dirty tracked, or untracked where origin now tracks the same path) is
+# copied aside for that reset only, then written back. It is not shelved
+# and the catch-up checkout still excludes docs/plans.
 _ff_is_plan_path() {
   case "${1#./}" in
     docs/plans|docs/plans/*) return 0 ;;
+    *) return 1 ;;
   esac
-  return 1
 }
 
 TARGET_BRANCH="${GOVERNANCE_GITHUB_BRANCH:-main}"
@@ -225,6 +227,7 @@ DIRTY_REF=""
 HOLD=""
 OVERWRITE_UNTRACKED=""
 PARKED_UNTRACKED=0
+PLAN_ASIDE=""
 CORPUS_KEPT=""
 CLONE_KEY="$(printf '%s' "$CLONE" | shasum -a 256 | awk '{print substr($1,1,12)}')"
 HOLD_ROOT="${HOME}/.cursor/l9-ff-hold/${CLONE_KEY}/${STAMP}"
@@ -274,6 +277,48 @@ _copy_hold_tracked() {
   fi
 }
 
+# Copy a plan aside so `reset --keep` can move the index, then remember
+# whether the worktree copy must be written back or the deletion kept.
+_hold_plan_aside() {
+  local rel="$1"
+  local dest="$HOLD_ROOT/plans/$rel"
+  mkdir -p "$HOLD_ROOT"
+  HOLD="${HOLD:-$HOLD_ROOT}"
+  if [ -e "$CLONE/$rel" ] || [ -L "$CLONE/$rel" ]; then
+    mkdir -p "$(dirname "$dest")"
+    cp -a "$CLONE/$rel" "$dest"
+    PLAN_ASIDE="${PLAN_ASIDE}keep ${rel}"$'\n'
+  elif git -C "$CLONE" cat-file -e "HEAD:${rel}" 2>/dev/null; then
+    PLAN_ASIDE="${PLAN_ASIDE}delete ${rel}"$'\n'
+  fi
+  if git -C "$CLONE" cat-file -e "HEAD:${rel}" 2>/dev/null; then
+    git -C "$CLONE" restore --source=HEAD --staged --worktree -- "$rel"
+  elif [ -e "$CLONE/$rel" ] || [ -L "$CLONE/$rel" ]; then
+    rm -f -- "$CLONE/$rel"
+  fi
+  echo "ff: plan path held aside for reset --keep: $rel"
+}
+
+_restore_plans_in_place() {
+  local line action rel src
+  [ -n "${PLAN_ASIDE:-}" ] || return 0
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    action="${line%% *}"
+    rel="${line#* }"
+    if [ "$action" = "delete" ]; then
+      rm -f -- "$CLONE/$rel"
+      echo "ff: plan path deletion left in place: $rel"
+      continue
+    fi
+    src="$HOLD_ROOT/plans/$rel"
+    [ -e "$src" ] || [ -L "$src" ] || continue
+    mkdir -p "$(dirname "$CLONE/$rel")"
+    cp -a "$src" "$CLONE/$rel"
+    echo "ff: plan path restored in place: $rel"
+  done <<<"$PLAN_ASIDE"
+}
+
 # mode=always: park even at tip (required before switching off a feature branch).
 # mode=maybe_leave: leave unique dirt in the worktree when already on origin/main.
 _park_dirty_tracked() {
@@ -304,7 +349,7 @@ _park_dirty_tracked() {
   while IFS= read -r rel; do
     [ -z "$rel" ] && continue
     if _ff_is_plan_path "$rel"; then
-      echo "ff: plan path left in place: $rel"
+      _hold_plan_aside "$rel"
       continue
     fi
     if declare -F ssot_is_ff_corpus_keep >/dev/null 2>&1 && ssot_is_ff_corpus_keep "$rel"; then
@@ -378,7 +423,9 @@ _park_overwrite_untracked() {
   while IFS= read -r rel; do
     [ -z "$rel" ] && continue
     if _ff_is_plan_path "$rel"; then
-      echo "ff: plan path left in place (not parked): $rel"
+      if [ -e "$CLONE/$rel" ] || [ -L "$CLONE/$rel" ]; then
+        _hold_plan_aside "$rel"
+      fi
       continue
     fi
     if [ -e "$CLONE/$rel" ] || [ -L "$CLONE/$rel" ]; then
@@ -586,6 +633,7 @@ if [ "$BEHIND" -eq 0 ] && [ "$AHEAD" -eq 0 ]; then
   echo "OK: already at origin/${TARGET_BRANCH} ($(git -C "$CLONE" rev-parse --short HEAD))"
 else
   if ! git -C "$CLONE" reset --keep "origin/${TARGET_BRANCH}"; then
+    _restore_plans_in_place
     echo "FAIL: git reset --keep aborted — a dirty tracked file would be overwritten." >&2
     echo "Work is still in the worktree. Unique commits: ${PRESERVE_BRANCH:-none}. Dirty park: ${DIRTY_REF:-none}. Hold: ${HOLD:-none}." >&2
     exit 1
@@ -594,9 +642,16 @@ fi
 
 # Force origin blobs onto every colliding path and the rest of the tip.
 # `reset --keep` plus an empty OVERWRITE list left CI with the local copy.
+# docs/plans is excluded; plan bytes are written back after this checkout.
 if [ "$BEHIND" -gt 0 ] || [ "$AHEAD" -gt 0 ] || [ -n "$OVERWRITE_UNTRACKED" ] || [ "$PARKED_UNTRACKED" -eq 1 ]; then
-  git -C "$CLONE" checkout -f "origin/${TARGET_BRANCH}" -- . ':(exclude)docs/plans'
+  if ! git -C "$CLONE" checkout -f "origin/${TARGET_BRANCH}" -- . ':(exclude)docs/plans'; then
+    _restore_plans_in_place
+    echo "FAIL: checkout of origin/${TARGET_BRANCH} aborted after reset --keep." >&2
+    echo "Hold: ${HOLD:-none}." >&2
+    exit 1
+  fi
 fi
+_restore_plans_in_place
 
 if [ -d "$HOLD_ROOT/machine-local" ] && [ -n "$KEEP_BEFORE" ]; then
   while IFS= read -r rel; do

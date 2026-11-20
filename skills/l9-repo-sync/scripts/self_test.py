@@ -996,6 +996,81 @@ def test_full_history_unique_tip_preserves() -> int:
     return 0
 
 
+def test_colliding_plan_stays_in_place_and_reset_proceeds() -> int:
+    """An untracked docs/plans path origin starts tracking must not abort reset --keep.
+
+    Local bytes stay at that path. A later behind catch-up with the same path
+    dirty-tracked must also finish and keep those bytes.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        remote = Path(tmp) / "remote.git"
+        clone = Path(tmp) / "clone"
+        run(["git", "init", "--bare", str(remote)])
+        run(["git", "clone", str(remote), str(clone)])
+        git(clone, "config", "user.email", "test@example.com")
+        git(clone, "config", "user.name", "Test")
+        (clone / "tracked.txt").write_text("v1\n", encoding="utf-8")
+        git(clone, "add", "tracked.txt")
+        git(clone, "commit", "-m", "base")
+        git(clone, "branch", "-M", "main")
+        git(clone, "push", "-u", "origin", "main")
+        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
+
+        other = Path(tmp) / "other"
+        run(["git", "clone", str(remote), str(other)])
+        git(other, "config", "user.email", "test@example.com")
+        git(other, "config", "user.name", "Test")
+        (other / "tracked.txt").write_text("v2\n", encoding="utf-8")
+        plan = other / "docs" / "plans"
+        plan.mkdir(parents=True)
+        (plan / "collide.md").write_text("origin plan\n", encoding="utf-8")
+        git(other, "add", "tracked.txt", "docs/plans/collide.md")
+        git(other, "commit", "-m", "ahead")
+        git(other, "push")
+
+        local_plan = clone / "docs" / "plans"
+        local_plan.mkdir(parents=True)
+        (local_plan / "collide.md").write_text("local plan\n", encoding="utf-8")
+        home = Path(tmp) / "home"
+        home.mkdir()
+        proc = run(
+            ["bash", str(FF)],
+            env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
+        )
+        if proc.returncode != 0:
+            return _fail(f"ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}")
+        if (local_plan / "collide.md").read_text(encoding="utf-8") != "local plan\n":
+            return _fail("colliding plan bytes were overwritten or dropped")
+        head = run(["git", "-C", str(clone), "rev-parse", "HEAD"]).stdout.strip()
+        origin = run(["git", "-C", str(clone), "rev-parse", "origin/main"]).stdout.strip()
+        if head != origin:
+            return _fail(f"catch-up did not reach origin/main {head} != {origin}")
+        if "plan path restored in place: docs/plans/collide.md" not in proc.stdout:
+            return _fail("missing in-place restore log\n" + proc.stdout)
+        if (clone / "tracked.txt").read_text(encoding="utf-8") != "v2\n":
+            return _fail("non-plan tracked file was not caught up")
+
+        (other / "tracked.txt").write_text("v3\n", encoding="utf-8")
+        git(other, "add", "tracked.txt")
+        git(other, "commit", "-m", "further")
+        git(other, "push")
+        proc2 = run(
+            ["bash", str(FF)],
+            env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
+        )
+        if proc2.returncode != 0:
+            return _fail(f"second ff.sh rc={proc2.returncode}\n{proc2.stdout}\n{proc2.stderr}")
+        if (local_plan / "collide.md").read_text(encoding="utf-8") != "local plan\n":
+            return _fail("dirty tracked plan was not left in place on the second catch-up")
+        head2 = run(["git", "-C", str(clone), "rev-parse", "HEAD"]).stdout.strip()
+        origin2 = run(["git", "-C", str(clone), "rev-parse", "origin/main"]).stdout.strip()
+        if head2 != origin2:
+            return _fail("second catch-up did not reach origin/main")
+        if (clone / "tracked.txt").read_text(encoding="utf-8") != "v3\n":
+            return _fail("second catch-up did not take the non-plan tip")
+    return 0
+
+
 def _ff_shelf() -> Path:
     return ROOT / "scripts" / "ff_shelf.py"
 
@@ -1255,6 +1330,7 @@ def main() -> int:
         ("already_at_tip", test_already_at_tip_leaves_dirty),
         ("unrelated_history", test_unrelated_history_with_dirty),
         ("keep_env_local", test_origin_tracked_env_local_does_not_clobber),
+        ("colliding_plan", test_colliding_plan_stays_in_place_and_reset_proceeds),
         ("feature_branch_switch", test_feature_branch_switches_to_main),
         ("shallow_behind", test_shallow_behind_never_preserves),
         ("shallow_at_tip", test_shallow_at_tip_leaves_dirty),
