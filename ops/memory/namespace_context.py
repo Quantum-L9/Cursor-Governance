@@ -404,49 +404,49 @@ class WorkspaceNamespaces:
         return bool(self.namespaces)
 
 
-def resolve_workspace_namespaces(
+def select_namespace_roots(
     workspace: str | Path,
     *,
     cap: int | None = None,
     registry: Mapping[str, Any] | None = None,
-) -> WorkspaceNamespaces:
-    """Write namespace per repository root under ``workspace``.
+):
+    """The repository roots in memory scope for ``workspace``: one per namespace.
 
-    A single repository yields its own namespace. A container yields one entry
-    per child repository that resolves to a namespace of its own, up to
-    ``cap`` (default: the shared ``DEFAULT_MAX_ROOTS``); every excluded child is
-    returned with the rule that excluded it (``cap`` or ``no_namespace``).
+    The single selection both SessionStart hydration
+    (``memory_prefetch._hydration_selection``) and the bootstrap readiness
+    report use, so what is reported in scope is exactly what is hydrated.
+    It is the shared ``select_workspace_roots`` with a predicate that admits a
+    root only when it resolves to a write namespace of its OWN that no earlier
+    root already claimed. A second checkout of one repository (a linked
+    worktree beside its clone) must not take a slot under the cap and push a
+    distinct repository out of scope; it is returned in ``dropped`` as
+    ``duplicate_namespace``. A resolver fault never drops a root.
     """
 
     from ops.scripts.lib.workspace_roots import (  # noqa: PLC0415
         DEFAULT_MAX_ROOTS,
-        is_repository,
+        RootSelection,
         select_workspace_roots,
     )
 
     path = Path(workspace).expanduser().resolve()
     reg = load_registry() if registry is None else registry
-
-    owned: dict[Path, str | None] = {}
-    claimed: dict[str, Path] = {}
-    duplicates: list[tuple[str, str]] = []
-
-    def _own(root: Path) -> str | None:
-        if root not in owned:
-            owned[root] = resolve_namespace_context(root, registry=reg, env={}).write_namespace_hint
-        return owned[root]
+    claimed: set[str] = set()
+    duplicates: list[tuple[Path, str]] = []
 
     def _eligible(root: Path) -> bool:
-        # A second checkout of one repository (a linked worktree beside its
-        # clone) names the same namespace. It must not take a slot under the
-        # cap and push a distinct repository out of scope.
-        namespace = _own(root)
+        # Broad by design: a resolver fault must not drop a root.
+        # nosemgrep: l9.baseline.python.broad-except
+        try:
+            namespace = resolve_namespace_context(root, registry=reg, env={}).write_namespace_hint
+        except Exception:  # noqa: BLE001
+            return True
         if not namespace:
             return False
         if namespace in claimed:
-            duplicates.append((str(root), DROPPED_DUPLICATE_NAMESPACE))
+            duplicates.append((root, DROPPED_DUPLICATE_NAMESPACE))
             return False
-        claimed[namespace] = root
+        claimed.add(namespace)
         return True
 
     selection = select_workspace_roots(
@@ -454,18 +454,41 @@ def resolve_workspace_namespaces(
         cap=DEFAULT_MAX_ROOTS if cap is None else cap,
         predicate=_eligible,
     )
-    pairs = [(str(root), ns) for root in selection.selected if (ns := _own(root))]
-    duplicate_paths = {item[0] for item in duplicates}
-    excluded = [
-        (str(root), reason)
-        for root, reason in selection.dropped
-        if str(root) not in duplicate_paths
+    duplicate_roots = {root for root, _ in duplicates}
+    dropped = [item for item in selection.dropped if item[0] not in duplicate_roots]
+    return RootSelection(selection.selected, dropped + duplicates)
+
+
+def resolve_workspace_namespaces(
+    workspace: str | Path,
+    *,
+    cap: int | None = None,
+    registry: Mapping[str, Any] | None = None,
+) -> WorkspaceNamespaces:
+    """Write namespace per repository root in memory scope for ``workspace``.
+
+    The roots are ``select_namespace_roots``: the same set SessionStart
+    hydrates. A single repository yields its own namespace; a container
+    yields one entry per selected repository, and every excluded child with
+    the rule that excluded it (``cap``, ``no_namespace``,
+    ``duplicate_namespace``).
+    """
+
+    from ops.scripts.lib.workspace_roots import is_repository  # noqa: PLC0415
+
+    path = Path(workspace).expanduser().resolve()
+    reg = load_registry() if registry is None else registry
+    selection = select_namespace_roots(path, cap=cap, registry=reg)
+    pairs = [
+        (str(root), ns)
+        for root in selection.selected
+        if (ns := resolve_namespace_context(root, registry=reg, env={}).write_namespace_hint)
     ]
     return WorkspaceNamespaces(
         workspace=str(path),
         multi_repo=not is_repository(path) and bool(pairs),
         namespaces=tuple(pairs),
-        excluded=tuple(excluded + duplicates),
+        excluded=tuple((str(root), reason) for root, reason in selection.dropped),
     )
 
 
@@ -492,5 +515,6 @@ __all__ = [
     "repository_state_digest",
     "resolve_namespace_context",
     "resolve_workspace_namespaces",
+    "select_namespace_roots",
     "shared_read_namespaces",
 ]
