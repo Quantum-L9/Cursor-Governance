@@ -33,6 +33,10 @@ RUN_CAMPAIGN_RE = re.compile(
 PEC_RE = re.compile(r"\bpec\.py\b")
 CHECK_INPUT_RE = re.compile(r"campaign-check-input")
 PLAN_PATH_RE = re.compile(r"(\S+\.plan\.md)")
+SIMPLE_REPAIR = "skills/l9-plan-simple/scripts/run_plan_pipeline.py"
+CAMPAIGN_REPAIR = "skills/l9-plan/scripts/render_campaign_source.py"
+STAMP_KEYS = ("campaign_source", "campaign_source_sha256", "campaign_blueprint")
+CAMPAIGN_KINDS = frozenset({"pe", "pe-campaign"})
 
 
 def repo_root() -> Path:
@@ -230,18 +234,47 @@ def argv_plan_paths(command: str) -> list[Path]:
     return found
 
 
+def plan_frontmatter(path: Path) -> dict[str, Any]:
+    """Frontmatter of a written plan; {} when unreadable or absent."""
+    checker = _load_checker()
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    fm, _body = checker.parse_frontmatter(text)
+    return fm if isinstance(fm, dict) else {}
+
+
+def plan_kind(path: Path) -> str:
+    """`pe` for a campaign projection, `simple` for a simple one, else ""."""
+    fm = plan_frontmatter(path)
+    kind = str(fm.get("kind") or "").strip()
+    via = str(fm.get("execute_via") or "").strip()
+    if kind in CAMPAIGN_KINDS or via in CAMPAIGN_KINDS:
+        return "pe"
+    return "simple" if kind == "simple" else ""
+
+
+def is_stamped_campaign_plan(path: Path) -> bool:
+    """A campaign plan PEC admits: the renderer recorded all three stamp keys."""
+    fm = plan_frontmatter(path)
+    return all(str(fm.get(key) or "").strip() for key in STAMP_KEYS)
+
+
 def execute_verdict(event: dict[str, Any]) -> tuple[str, str]:
     command = extract_command(event)
     workspace = workspace_from_event(event)
     if pipeline_latch_denies(command, workspace):
         latch = load_pipeline_required(workspace) or {}
         reason = str(latch.get("reason") or "plan is not admitted")
+        repair = str(latch.get("repair") or SIMPLE_REPAIR)
         return (
             "deny",
             "plan pipeline latch is set ("
             + reason
-            + "). Run skills/l9-plan-simple/scripts/run_plan_pipeline.py. "
-            "The latch clears only after that pipeline passes.",
+            + "). Run "
+            + repair
+            + ". The latch clears only after that repair admits the plan.",
         )
     if not is_campaign_execute(command):
         return "allow", ""
@@ -288,7 +321,9 @@ def pipeline_required_path(workspace: Path) -> Path:
     return workspace / PIPELINE_REL
 
 
-def write_pipeline_required(workspace: Path, reason: str, plan: str | None) -> None:
+def write_pipeline_required(
+    workspace: Path, reason: str, plan: str | None, *, repair: str = SIMPLE_REPAIR
+) -> None:
     path = pipeline_required_path(workspace)
     path.parent.mkdir(parents=True, exist_ok=True)
     bound: str | None = None
@@ -301,7 +336,7 @@ def write_pipeline_required(workspace: Path, reason: str, plan: str | None) -> N
         "schema": PIPELINE_SCHEMA,
         "reason": reason,
         "plan": bound,
-        "repair": "skills/l9-plan-simple/scripts/run_plan_pipeline.py",
+        "repair": repair,
         "written_at": datetime.now(UTC).isoformat(),
     }
     path.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
@@ -346,7 +381,7 @@ def clear_pipeline_required(workspace: Path, plan: Path | None = None) -> bool:
 
 
 def is_pipeline_repair(command: str) -> bool:
-    return "run_plan_pipeline.py" in command
+    return "run_plan_pipeline.py" in command or "render_campaign_source.py" in command
 
 
 def is_controller_or_publish(command: str) -> bool:
@@ -372,6 +407,31 @@ def pipeline_latch_denies(command: str, workspace: Path) -> bool:
     return load_pipeline_required(workspace) is not None
 
 
+def _latch_campaign_plan(workspace: Path, path: Path) -> None:
+    """A stamped campaign plan clears its latch; an unstamped one names the renderer."""
+    if is_stamped_campaign_plan(path):
+        clear_pipeline_required(workspace, path)
+        return
+    write_pipeline_required(
+        workspace,
+        "campaign plan is not stamped; PEC refuses it (RENDERED_PLAN_REQUIRED)",
+        str(path),
+        repair=CAMPAIGN_REPAIR,
+    )
+
+
+def _latch_written_plan(workspace: Path, path: Path) -> None:
+    """Admit a written plan file, or latch the campaign renderer when it is unstamped."""
+    if not path.is_file():
+        return
+    if plan_kind(path) == "pe":
+        _latch_campaign_plan(workspace, path)
+        return
+    errors = _admit_plan(path)
+    if errors:
+        write_pipeline_required(workspace, "; ".join(errors[:8]), str(path))
+
+
 def handle_post_tool_use(event: dict[str, Any]) -> None:
     # Store-plan kernel apply stays /ff-owned. This latch is the plan pipeline
     # admission, a different file, and it does not delete the plan.
@@ -379,10 +439,7 @@ def handle_post_tool_use(event: dict[str, Any]) -> None:
     tool = str(event.get("tool_name") or event.get("toolName") or "")
     path = written_path(event)
     if path is not None and path.name.endswith(PLAN_SUFFIX):
-        if path.is_file():
-            errors = _admit_plan(path)
-            if errors:
-                write_pipeline_required(workspace, "; ".join(errors[:8]), str(path))
+        _latch_written_plan(workspace, path)
         return
     if "CreatePlan" in tool or tool.lower() in {"create_plan", "createplan"}:
         write_pipeline_required(
@@ -507,6 +564,58 @@ def _self_test() -> int:
         write_pipeline_required(ws, "host plan tool payload seen", None)
         if not clear_pipeline_required(ws, plan) or pipeline_required_path(ws).is_file():
             errors.append("an unbound latch must clear after the pipeline admits a plan")
+
+        required_file = required_path(ws)
+        if required_file.is_file():
+            required_file.unlink()
+
+        campaign = ws / "docs" / "plans" / "campaign_abcd1234.plan.md"
+        campaign.write_text(
+            "---\nname: c\noverview: c\nkind: pe\nexecute_via: pe-campaign\nstatus: current\n"
+            "---\n\n# campaign\n",
+            encoding="utf-8",
+        )
+        handle_post_tool_use({"cwd": str(ws), "tool_input": {"path": str(campaign)}})
+        campaign_latch = load_pipeline_required(ws)
+        if campaign_latch is None or campaign_latch.get("repair") != CAMPAIGN_REPAIR:
+            errors.append("an unstamped campaign plan must latch with the campaign renderer repair")
+        latched_perm, latched_msg = execute_verdict(
+            {"cwd": str(ws), "command": "make campaign docs/plans/campaign_abcd1234.plan.md"}
+        )
+        if latched_perm != "deny" or CAMPAIGN_REPAIR not in latched_msg:
+            errors.append(
+                "campaign-latched make campaign must name the campaign repair: "
+                f"{latched_perm} {latched_msg}"
+            )
+        repair_perm, _repair_msg = execute_verdict(
+            {
+                "cwd": str(ws),
+                "command": (
+                    "python3 skills/l9-plan/scripts/render_campaign_source.py plan.json "
+                    "--plan-md docs/plans/campaign_abcd1234.plan.md"
+                ),
+            }
+        )
+        if repair_perm != "allow":
+            errors.append("render_campaign_source.py must be allowed while the latch is set")
+        campaign.write_text(
+            "---\nname: c\noverview: c\nkind: pe\nexecute_via: pe-campaign\nstatus: current\n"
+            'campaign_source: "/tmp/campaign-source.yaml"\n'
+            'campaign_source_sha256: "abc"\n'
+            'campaign_blueprint: "/tmp/blueprint"\n'
+            "---\n\n# campaign\n",
+            encoding="utf-8",
+        )
+        handle_post_tool_use({"cwd": str(ws), "tool_input": {"path": str(campaign)}})
+        if pipeline_required_path(ws).is_file():
+            errors.append("a stamped campaign plan must clear its pipeline latch")
+
+        plain = ws / "docs" / "plans" / "plain.plan.md"
+        plain.write_text("# no receipt\n", encoding="utf-8")
+        handle_post_tool_use({"cwd": str(ws), "tool_input": {"path": str(plain)}})
+        plain_latch = load_pipeline_required(ws)
+        if plain_latch is None or plain_latch.get("repair") != SIMPLE_REPAIR:
+            errors.append("an ordinary unadmitted plan must latch with the simple pipeline repair")
 
     if errors:
         for err in errors:

@@ -43,6 +43,34 @@ def skill_validation_scripts() -> list[str]:
     return names
 
 
+def campaign_stamp_plan(tmp: str) -> Path:
+    """Write the plan file an admitting render must stamp."""
+    plan_md = Path(tmp) / "plan_campaign.plan.md"
+    plan_md.write_text("---\nname: campaign\noverview: proof\n---\n\n# body\n", encoding="utf-8")
+    return plan_md
+
+
+def campaign_stamp_next_line(errors: list[str], stdout: str, plan_md: Path) -> None:
+    """The operator next line names only the plan the renderer just stamped."""
+    if "make campaign" not in stdout or str(plan_md.resolve()) not in stdout:
+        errors.append("an admitted render must print the stamped plan as the next line")
+
+
+def campaign_stamp_requires_plan_md(errors: list[str], tmp: str) -> None:
+    """An admitting render that skips --plan-md is not a deliverable."""
+    without_md = run(
+        [
+            sys.executable,
+            "scripts/render_campaign_source.py",
+            "fixtures/plan_campaign.json",
+            "--out",
+            str(Path(tmp) / "no_md.yaml"),
+        ]
+    )
+    if without_md.returncode != 1 or "must stamp" not in without_md.stderr:
+        errors.append("an admitting render without --plan-md must be refused")
+
+
 def main() -> int:
     errors: list[str] = []
     listed = skill_validation_scripts()
@@ -240,8 +268,11 @@ def main() -> int:
     # Campaign mode: the fixture plan renders as a campaign-source.v2 that
     # Program Execution's own front door, compiler and launchability admit, and
     # a writing todo without validation is refused rather than synthesized.
+    # An admitting run must stamp --plan-md; the next line names only the
+    # stamped plan.
     with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
         out = Path(tmp) / "CAMPAIGN_SOURCE.yaml"
+        plan_md = campaign_stamp_plan(tmp)
         admitted = run(
             [
                 sys.executable,
@@ -249,6 +280,8 @@ def main() -> int:
                 "fixtures/plan_campaign.json",
                 "--out",
                 str(out),
+                "--plan-md",
+                str(plan_md),
             ]
         )
         if admitted.returncode != 0 or "ADMITTED" not in admitted.stdout:
@@ -256,6 +289,8 @@ def main() -> int:
                 "render_campaign_source.py did not admit fixtures/plan_campaign.json:\n"
                 f"{admitted.stdout}\n{admitted.stderr}"
             )
+        campaign_stamp_next_line(errors, admitted.stdout, plan_md)
+        campaign_stamp_requires_plan_md(errors, tmp)
         broken = json.loads((ROOT / "fixtures" / "plan_campaign.json").read_text("utf-8"))
         broken["todos"][0].pop("validation", None)
         broken_path = Path(tmp) / "plan_campaign_no_validation.json"
