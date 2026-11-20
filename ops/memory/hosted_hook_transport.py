@@ -295,7 +295,9 @@ def hosted_arguments(operation: str, arguments: Mapping[str, Any]) -> dict[str, 
 
     ``write`` must fit ``memory.ingest``: both required fields present and no
     field the tool does not declare. The other operations pass through, since
-    their relay arguments are already their hosted tool's arguments.
+    their relay arguments are already their hosted tool's arguments. A record
+    that does not fit is refused, not parked: the check is deterministic, so a
+    retry would fail identically and stall the drain behind it.
     """
 
     shaped = dict(arguments)
@@ -303,10 +305,10 @@ def hosted_arguments(operation: str, arguments: Mapping[str, Any]) -> dict[str, 
         return shaped
     unknown = sorted(set(shaped) - INGEST_FIELDS)
     if unknown:
-        raise HostedUnavailable(f"write arguments not declared by memory.ingest: {unknown}")
+        raise HostedRefused(f"write arguments not declared by memory.ingest: {unknown}")
     missing = [name for name in INGEST_REQUIRED if not shaped.get(name)]
     if missing:
-        raise HostedUnavailable(f"write arguments missing memory.ingest fields: {missing}")
+        raise HostedRefused(f"write arguments missing memory.ingest fields: {missing}")
     return shaped
 
 

@@ -305,9 +305,9 @@ def test_relay_keeps_write_agent_because_the_agent_carries_it() -> None:
 def test_write_arguments_fit_memory_ingest() -> None:
     args = {"namespace": NS, "content": "x", "memory_class": "meta", "tags": ["t"]}
     assert hht.hosted_arguments("write", args) == args
-    with pytest.raises(hht.HostedUnavailable, match="not declared by memory.ingest"):
+    with pytest.raises(hht.HostedRefused, match="not declared by memory.ingest"):
         hht.hosted_arguments("write", {**args, "agent": "x"})
-    with pytest.raises(hht.HostedUnavailable, match="missing memory.ingest fields"):
+    with pytest.raises(hht.HostedRefused, match="missing memory.ingest fields"):
         hht.hosted_arguments("write", {"namespace": NS})
     candidate = {"candidate": {"source": {}}}
     assert hht.hosted_arguments("ingest_candidate", candidate) == candidate
@@ -321,11 +321,24 @@ def test_ingest_fields_match_the_bound_release_schema() -> None:
 
 
 @pytest.mark.usefixtures("hosted_env")
-def test_an_undeclared_write_field_is_parked_not_sent(bound, fake_cli, endpoint, tmp_path) -> None:
+def test_an_undeclared_write_field_is_refused_not_sent(bound, fake_cli, endpoint, tmp_path) -> None:
     transport = _transport(endpoint)
     result = transport.call("write", {"namespace": NS, "content": "x", "agent": "y"})
-    assert result.unavailable and "not declared by memory.ingest" in (result.reason or "")
+    assert result.refused and "not declared by memory.ingest" in (result.reason or "")
     assert endpoint.calls == []
+
+
+def test_drain_settles_a_malformed_entry_and_carries_the_next(endpoint, tmp_path) -> None:
+    bad = relay.enqueue(
+        tmp_path,
+        surface="pr-publish",
+        operation="write",
+        arguments={"namespace": NS, "content": "x", "agent": "y"},
+    )["id"]
+    good = _owe(tmp_path, "b")
+    report = hht.drain(tmp_path, transport=_transport(endpoint))
+    assert report["rejected"] == [bad] and report["acked"] == [good]
+    assert report["remaining"] == 0 and report["stopped"] is None
 
 
 # --- OK, and only OK with a UUID receipt -------------------------------------
