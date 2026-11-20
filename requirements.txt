@@ -37,11 +37,6 @@
 # =============================================================================
 
 # --- Core-owned consumer CI toolchain (exact pins) ---------------------------
-# 2026-11-20: every pin below that names a tool in l9-ci-core
-# .github/actions/install-consumer-ci/toolchain-lock.json equals that lock
-# (ruff, mypy, pytest, pre-commit, bandit, pip-audit; pip via the uv
-# constraint in pyproject.toml). Core's lock wins over the SDK and over the
-# older authority lines above. Do not bump these here; Core bumps its lock.
 ruff==0.16.1
 mypy==2.3.0
 types-PyYAML==6.0.12.20260906

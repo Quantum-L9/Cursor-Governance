@@ -7,9 +7,6 @@ resolution-markers = [
     "python_full_version < '3.14'",
 ]
 
-[manifest]
-constraints = [{ name = "pip", specifier = "==26.2.1" }]
-
 [[package]]
 name = "aiosqlite"
 version = "0.22.1"

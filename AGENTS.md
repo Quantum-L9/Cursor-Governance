@@ -2613,8 +2613,8 @@ Stdio MCP servers whose env name is a vault name spawn through
 is the one source of CI tool versions (operator decision 2026-11-20; Python is
 3.12). Every pin this repository carries for a tool that lock names equals the
 lock: bandit `1.8.6`, pip-audit `2.9.0`, pre-commit `4.4.0`, pip `26.2.1`
-(a `[tool.uv] constraint-dependencies` entry, since pip arrives only
-transitively), and uv `0.13.8` wherever a workflow installs uv. `Repo.mk`
+(resolved in `uv.lock`; pip arrives only transitively, and Dependabot now
+ignores it), and uv `0.13.8` wherever a workflow installs uv. `Repo.mk`
 `repo-setup` still names uv `0.12.1`: that line is append-only protected and
 its rewrite waits for a human root-file authorization.
 ruff, mypy, pytest, biome and semgrep already matched. "l9-ci-sdk wins over

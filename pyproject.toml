@@ -82,10 +82,6 @@ package = false
 # Floor-pin uv so ancient binaries fail closed, but stay compatible with
 # Anthropic/Linux sandbox images that ship uv 0.8.x (0.11+ is preferred locally).
 required-version = ">=0.8.0"
-# pip is a Core-locked tool (l9-ci-core install-consumer-ci/toolchain-lock.json).
-# It reaches this lock only transitively (pip-audit), so pin it as a constraint
-# rather than a direct dependency; the lock then resolves the Core version.
-constraint-dependencies = ["pip==26.2.1"]
 
 [tool.ruff]
 line-length = 100
