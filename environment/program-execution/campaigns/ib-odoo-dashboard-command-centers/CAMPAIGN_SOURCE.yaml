@@ -4,7 +4,7 @@ schema_version: 2.0.0
 metadata:
   campaign_id: "ib-odoo-dashboard-command-centers"
   title: "IB-Odoo_19 Dashboard Command Centers — correctness first, native-first UI"
-  version: "1.1.0"
+  version: "1.2.0"
   created_at: "2026-11-20T23:30:00Z"
   status: operator_intake
   owner: "Igor Beylin"
@@ -57,7 +57,13 @@ operator_directive:
     Operations Manager owns Document AI / attribution exceptions, AP/AR
     discrepancies and transaction-document exceptions, Admin oversees the
     business, Sales is rep-scoped; every exception has exactly one accountable
-    owner who can actually resolve it, and the wrong role cannot.
+    owner who can actually resolve it, and the wrong role cannot. Native Odoo
+    AI Auto-Sort (operator instruction 2026-11-20, second addendum) classifies
+    incoming documents into the existing folders and tags: recognized shipping
+    paperwork to Logistics, uncertain or wrong results to Operations Manager;
+    human corrections persist on the original record with a reason; invoice
+    correction learning is verified by repeat tests and shipping prompts are
+    revised when recurring errors appear.
   mode: controlled_autonomous_until_material_boundary
   auto_continue:
     - read_only_inspection
@@ -78,7 +84,7 @@ operator_directive:
 program:
   id: "ib-odoo-dashboard-command-centers"
   name: "IB-Odoo_19 Dashboard Command Centers"
-  version: "1.1.0"
+  version: "1.2.0"
   owner: "Igor Beylin"
   definition_status: ready
   snapshot_at: "2026-11-20"
@@ -118,6 +124,7 @@ program:
       - "Linda approval authority by command class (DEC-011)"
       - "Operations Manager AI & Transaction Review Workbench and Logistics Live Control Tower"
       - "Service-user refusal on business verification (N-008)"
+      - "Native AI Auto-Sort on the existing Plasticos folders, tag-to-doc_type bridge, reasoned human reclassification, invoice-learning verification and shipping prompt-revision loop (DEC-013 OPT-C, DEC-015, DEC-016)"
     exclude:
       - "Production promotion (Staging to Production merge is an operator act outside this campaign)"
       - "New analytics database, duplicate transaction model or generic reporting engine"
@@ -127,7 +134,7 @@ program:
       - "Making plasticos.transaction.commission_payout_state authoritative (RISK-003)"
       - "Owl components except the Operations review comparison surface where DEC-001 allows it"
       - "A new exception queue table, scheduler or verification writer"
-      - "Activating Documents AI auto-sort, AI server actions, bill auto-post or new email senders"
+      - "AI Auto-Sort tools beyond move-in-folder and add-tags (no bill/invoice creation tool, no activity tool, no code tool), bill auto-post, or new email senders"
       - "Manual vendor-bill amount checks outside the existing digitized-bill guard (RISK-005)"
       - "Changing plasticos_base resolvers (DNB-001); reuse them"
   authority_order:
@@ -327,23 +334,47 @@ decisions:
     authority_id: AUTH-001
     status: accepted
     options:
-      - {id: OPT-A, description: "Operator 2026-11-20: AI may classify, propose and route only. No AI auto-sort action that creates business records, no AI server action as a decision writer, no bill auto-post, no new external sender; Linda remains the sole logistics-document chase sender. Unknown AI results stay unknown with a manual fallback. Installed capabilities and entitlements are verified (TASK-002) before any reliance."}
-      - {id: OPT-B, description: "Enable AI auto-sort and digitization auto-post."}
-    selected_option_id: OPT-A
+      - {id: OPT-A, description: "Superseded 2026-11-20: AI may classify, propose and route only; no AI auto-sort."}
+      - {id: OPT-B, description: "Enable AI auto-sort with every available tool and digitization auto-post."}
+      - {id: OPT-C, description: "Operator second addendum 2026-11-20: configure native ai_documents Auto-Sort on the existing Plasticos folders with exactly two tools, move-in-folder and add-tags. Recognized shipping paperwork (PO, SO, packing list, BOL, scale ticket, receiving or loading evidence) is moved/tagged toward Logistics; uncertain, contradictory or wrong-type results get the Needs Review tag and stay in Inbox for Operations Manager. No vendor-bill/customer-invoice creation tool, no activity or code tool (activities stay with the DEC-012 router), no AI verification, no auto-post, no new external sender; Linda remains the sole logistics-document chase sender."}
+    selected_option_id: OPT-C
     blocking_task_ids: []
-    required_evidence_ids: [EVID-007, EVID-009]
-    locked_consequence: "Official 19.0 docs: AI auto-sort can create invoices/vendor bills and trigger activities; AI tools execute unconditionally unless their code refuses; digitization can auto-post per vendor. Custom code already refuses _autopost_bill (account_move.py:304-309). The campaign activates none of these."
+    required_evidence_ids: [EVID-007, EVID-009, EVID-010]
+    locked_consequence: "Enterprise facts (EVID-010): ai_documents runs synchronously on create/move into a prompted folder via base.automation, plus an alias cron; it writes only what its tools do (folder_id, tag_ids) and a chatter log; there is no confidence field and no fallback, so the prompt must end with 'otherwise add Needs Review'. add_tags matches any tag by name globally, so the Verified tag must be unwritable outside verification. ai_documents_account's wizard defaults add bill/invoice creation tools; setup must pass explicit ai_tool_ids. Custom code already refuses _autopost_bill for digitized bills."
   - id: DEC-014
-    question: "Add business-evidence tags for PO, SO and carrier certification?"
+    question: "Add the missing shipping-paperwork types so Auto-Sort and routing can name them?"
     authority_id: AUTH-001
     status: pending
     options:
-      - {id: OPT-A, description: "Add PO, SO and CARRIER_CERT plasticos.document.tag records (plasticos_documents data) so routing and counts can name them; routing still decides by association."}
-      - {id: OPT-B, description: "No new tags; PO/SO paperwork is identified only by association to purchase.order / sale.order and CERT covers carrier certifications."}
+      - {id: OPT-A, description: "Recommended. Add native documents.tag records Purchase Order, Packing List, Receiving Report (plasticos_documents_native/data/document_tags.xml) and doc_type values purchase_order, packing_list, receiving_report mapped to plasticos.document.tag PO (new, plasticos_documents data), PACKING and RECEIVING (existing); Sales Orders keep Customer Order."}
+      - {id: OPT-B, description: "No new types; PO, packing list and receiving report fall back to Needs Review (Operations) until added."}
     selected_option_id: null
     blocking_task_ids: []
-    required_evidence_ids: [EVID-008]
-    locked_consequence: "TASK-060 ships with OPT-B behaviour and adds tags only if OPT-A is chosen. Basis: plasticos_documents/data/document_tags_data.xml."
+    required_evidence_ids: [EVID-008, EVID-010]
+    locked_consequence: "TASK-070/071 ship with OPT-B behaviour and gain the three types only if OPT-A is chosen. Basis: native tags lack PO/packing/receiving (document_tags.xml); legacy tags have PACKING, RECEIVING, no PO."
+  - id: DEC-015
+    question: "How does a native classification reach the business-evidence bridge, and how is a human correction kept?"
+    authority_id: AUTH-003
+    status: accepted
+    options:
+      - {id: OPT-A, description: "Smallest correction inside plasticos_documents_native: when exactly one document-type tag is present and doc_type is empty or tag-derived, set doc_type from a fixed tag->doc_type map with provenance doc_type_source='tag'; two or more type tags clear nothing, set no doc_type and add Needs Review. A human doc_type set (form or the reclassify action) sets doc_type_source='human' and is never overwritten by a tag. A Correct Classification action (doc_type, target folder, required reason) records the change through mail tracking of doc_type/doc_type_source plus a reason message with a module-owned subtype; the existing SHELL_TRIGGER_FIELDS write path re-syncs the original's business evidence. The Verified tag is dropped from any write that does not come through verification."}
+      - {id: OPT-B, description: "Give the AI a code tool that writes doc_type directly."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-010]
+    locked_consequence: "No AI write tool beyond move/tag; the correction ledger is mail tracking + reason messages on documents.document (no new table); one new provenance field (MINOR bump). Test first that the current bridge does not receive Auto-Sort classification (doc_type is never derived from tags today, document_native.py:35,88-109,177-212)."
+  - id: DEC-016
+    question: "Approve the AI provider, data sharing and module host for Auto-Sort?"
+    authority_id: AUTH-001
+    status: pending
+    options:
+      - {id: OPT-A, description: "Recommended. Approve OpenAI gpt-4.1 via Odoo ai (document name, attachment content, tag names sent per run); the operator sets the key in Odoo settings (ai.openai_key) on Staging first, never in the repository; configuration lives in a new auto_install glue module plasticos_documents_ai (depends plasticos_documents_native + ai_documents) so environments without AI are unaffected."}
+      - {id: OPT-B, description: "Approve the provider; configuration inside plasticos_documents_native with a hard ai_documents dependency."}
+      - {id: OPT-C, description: "Do not send document content to an external LLM; no Auto-Sort."}
+    selected_option_id: null
+    blocking_task_ids: [TASK-071, TASK-072]
+    required_evidence_ids: [EVID-009, EVID-010]
+    locked_consequence: "Adding a module is ask-first (AGENTS.md:544); the key is a secret held only in Odoo settings; usage cost is OpenAI's, not IAP credits."
 unknowns:
   - id: UNK-001
     statement: >-
@@ -387,6 +418,17 @@ unknowns:
     blocking_task_ids: [TASK-040]
     resolution_method: "TASK-002 read-only capability inventory with operator screenshots or settings export"
     resolution_evidence_ids: [EVID-009]
+  - id: UNK-005
+    statement: >-
+      Whether Odoo's invoice digitization measurably improves after human
+      corrections for a repeat vendor/layout on this database (server-side OCR
+      learning via the validate endpoint, and local partner/line prediction),
+      given IB's guard that refuses auto-post.
+    owner: AUTH-001
+    status: open
+    blocking_task_ids: []
+    resolution_method: "TASK-072 deterministic runtime tests for local prediction plus an operator repeat-upload protocol on Staging"
+    resolution_evidence_ids: [EVID-011]
 evidence_requirements:
   - id: EVID-001
     claim: "Target revision and the re-verified findings F-001..F-010 plus three new defects are bound at admission."
@@ -470,6 +512,24 @@ evidence_requirements:
     producer: TASK-002
     supports: [GATE-002]
     contradicts: []
+  - id: EVID-010
+    claim: "Enterprise ai_documents / ai_documents_account / account_invoice_extract internals for Auto-Sort configuration, tools, triggers and correction learning."
+    source_type: inspection
+    source_location: "Quantum-L9/odoo-enterprise main @ 3225e0e8 (ai_documents/models/documents_document.py:35-50,83-123,163-333; data/ir_actions_server_tools.xml; wizard/ai_documents_sort.py; ai/models/ir_actions_server.py; account_invoice_extract/models/account_invoice.py:77-298,780-790; account_accountant/models/account_move.py:834-1030); odoo/odoo 19.0 account partner.py:610-616, account_move.py:5973-6026"
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports: [GATE-002]
+    contradicts: []
+  - id: EVID-011
+    claim: "Invoice correction learning and shipping Auto-Sort accuracy results: runtime tests, Staging repeat-upload measurements, correction-ledger confusion counts and any prompt revision with before/after replay."
+    source_type: test_result
+    source_location: "docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-072-ai-learning.md"
+    collection_method: runtime_test_and_operator_measurement
+    freshness: per_task
+    producer: TASK-072
+    supports: [GATE-004]
+    contradicts: []
 workstreams:
   - id: WS-01
     name: admin_correctness_and_command_center
@@ -502,6 +562,11 @@ workstreams:
     objective: "Route each exception to the one role that can resolve it, at the existing owners, and give Logistics scoped Linda authority."
     owner: AUTH-003
     target_id: TARGET-001
+  - id: WS-07
+    name: native_ai_auto_sort
+    objective: "Native Auto-Sort classifies into existing folders and tags; the bridge and human corrections keep the business record right; learning is measured."
+    owner: AUTH-003
+    target_id: TARGET-001
 dependency_edges:
   - {from: TASK-010, to: TASK-011, kind: same_file_serialization}
   - {from: TASK-011, to: TASK-013, kind: same_file_serialization}
@@ -518,6 +583,12 @@ dependency_edges:
   - {from: TASK-060, to: TASK-032, kind: depends_on}
   - {from: TASK-060, to: TASK-064, kind: same_module_serialization}
   - {from: TASK-001, to: TASK-061, kind: lane_order}
+  - {from: TASK-060, to: TASK-070, kind: same_module_serialization}
+  - {from: TASK-070, to: TASK-071, kind: depends_on}
+  - {from: TASK-002, to: TASK-071, kind: depends_on}
+  - {from: TASK-071, to: TASK-072, kind: depends_on}
+  - {from: TASK-070, to: TASK-040, kind: depends_on}
+  - {from: TASK-071, to: TASK-050, kind: depends_on}
   - {from: TASK-031, to: TASK-050, kind: depends_on}
   - {from: TASK-032, to: TASK-050, kind: depends_on}
   - {from: TASK-033, to: TASK-050, kind: depends_on}
@@ -532,17 +603,17 @@ waves:
     exit_gate_ids: [GATE-002]
   - id: W1
     name: correctness_repairs
-    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064]
+    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064, TASK-070]
     predecessor_wave_ids: []
     exit_gate_ids: [GATE-001]
   - id: W2
     name: command_centers
-    task_ids: [TASK-040, TASK-032, TASK-031, TASK-033]
+    task_ids: [TASK-071, TASK-040, TASK-032, TASK-031, TASK-033]
     predecessor_wave_ids: [W0, W1]
     exit_gate_ids: [GATE-003]
   - id: W3
     name: acceptance
-    task_ids: [TASK-050, TASK-051]
+    task_ids: [TASK-072, TASK-050, TASK-051]
     predecessor_wave_ids: [W2]
     exit_gate_ids: [GATE-004]
 
@@ -929,7 +1000,6 @@ tasks:
       - plasticos_documents/migrations/**
       - plasticos_documents/__manifest__.py
       - plasticos_documents_native/models/document_sync.py
-      - plasticos_documents_native/data/**
       - plasticos_documents_native/tests/**
       - plasticos_documents_native/migrations/**
       - plasticos_documents_native/__manifest__.py
@@ -1042,6 +1112,161 @@ tasks:
     risk: {tier: T2, reversibility: reversible, blast_radius: plasticos_documents_verification}
     authorization_ceiling: *ceiling_local
     completion_gate_ids: [GATE-001]
+
+  - id: TASK-070
+    title: "Classification bridge and reasoned human correction (DEC-015)"
+    definition_status: ready
+    workstream_id: WS-07
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Test first: a document that receives a type tag (as Auto-Sort would) does
+      not get doc_type and does not reach plasticos.document.sync today. Then the
+      smallest correction in plasticos_documents_native per DEC-015: tag ->
+      doc_type derivation with doc_type_source provenance, multi-type conflict ->
+      Needs Review, human doc_type never overwritten, Correct Classification
+      action (doc_type, folder, required reason) recorded by mail tracking and a
+      reason message, re-sync through the existing SHELL_TRIGGER_FIELDS path so
+      the original's business evidence and DEC-010 routing follow the correction,
+      and the Verified tag refused on any write outside verification. Needs
+      Review on an Inbox document creates the Operations activity through the
+      TASK-060 router.
+    authority_basis_ids: [AUTH-003]
+    required_decision_ids: [DEC-010, DEC-012, DEC-015]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-008, EVID-010]
+    paths:
+      - plasticos_documents_native/models/document_native.py
+      - plasticos_documents_native/models/document_sync.py
+      - plasticos_documents_native/wizards/**
+      - plasticos_documents_native/views/**
+      - plasticos_documents_native/data/**
+      - plasticos_documents_native/security/ir.model.access.csv
+      - plasticos_documents_native/tests/**
+      - plasticos_documents_native/migrations/**
+      - plasticos_documents_native/__manifest__.py
+    actions:
+      - failing_test_tag_does_not_reach_bridge
+      - tag_to_doc_type_with_provenance
+      - reasoned_correct_classification_action
+      - verified_tag_write_guard
+      - resync_and_reroute_on_correction
+    acceptance:
+      - id: AC-070
+        statement: "A single type tag yields the mapped doc_type and one business-evidence sync; two type tags yield Needs Review and no doc_type; a human correction requires a reason, keeps the original file, is never overwritten by a later tag, re-syncs the evidence and re-routes the activity; Verified cannot be added outside verification."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-070
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [ai_tag_never_reaches_bridge, human_correction_overwritten_by_tag, correction_without_reason, verified_tag_set_by_ai]
+    rollback: *rollback_local
+    risk: {tier: T3, reversibility: reversible, blast_radius: plasticos_documents_native}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-001]
+
+  - id: TASK-071
+    title: "Native AI Auto-Sort configuration on existing folders (DEC-013 OPT-C)"
+    definition_status: blocked
+    workstream_id: WS-07
+    wave_id: W2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      In the DEC-016 host, a versioned Python setup method (invoked from a
+      <function> in a noupdate block and from a migration for each later prompt
+      version, never on every upgrade) creates the ai_documents.sort rule for
+      folder_plasticos_inbox with explicit ai_tool_ids = move-in-folder and
+      add-tags only. The prompt embeds the existing folder ids (Bills of Lading,
+      Scale Tickets, Loading Pics, Customer Orders, Vendor Bills, Compliance)
+      and existing tags; exception checks first (multipage -> To Split, stop;
+      contradictory references, unreadable or ambiguous identity -> Needs
+      Review, stay in Inbox); recognized shipping paperwork -> its folder and
+      type tag (Logistics); vendor bills and customer invoices -> Vendor Bills
+      folder and type tag, financial extraction stays with existing
+      digitization; otherwise Needs Review. Prompt text is versioned in the
+      module (prompt_version recorded in the rule's chatter). Tests mock
+      LLMApiService._request_llm like Enterprise test_ai_documents.
+    authority_basis_ids: [AUTH-001, AUTH-003]
+    required_decision_ids: [DEC-013, DEC-014, DEC-015, DEC-016]
+    blocking_unknown_ids: [UNK-004]
+    input_evidence_ids: [EVID-009, EVID-010]
+    paths:
+      - <DEC-016 host: plasticos_documents_ai/** or plasticos_documents_native/models/ai_sort_setup.py + data/ai_sort.xml + migrations/**>
+      - plasticos_documents_native/tests/test_ai_auto_sort*.py
+    actions:
+      - versioned_prompt_builder_with_explicit_tools
+      - noupdate_function_and_migration_per_prompt_version
+      - mocked_llm_routing_tests
+    acceptance:
+      - id: AC-071
+        statement: "With a mocked model: a BOL lands in Bills of Lading with the BOL tag and a Logistics activity; a scale ticket in Scale Tickets; an ambiguous or contradictory document stays in Inbox with Needs Review and an Operations activity; no bill, invoice, activity or code tool is attached to the rule; re-running module upgrade does not overwrite an administrator's prompt edit."
+        required_evidence_types: [test_result, inspection]
+    validation:
+      - id: VAL-071
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [bill_creation_tool_attached, unsure_model_leaves_document_unrouted, prompt_overwritten_on_upgrade, key_committed_to_repo]
+    rollback: *rollback_local
+    risk: {tier: T3, reversibility: reversible, blast_radius: ai_sort_configuration}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-003]
+
+  - id: TASK-072
+    title: "AI learning verification and shipping prompt-revision loop (UNK-005)"
+    definition_status: blocked
+    workstream_id: WS-07
+    wave_id: W3
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Invoices: runtime tests that a corrected and posted digitized bill sends
+      its corrected values to the OCR validate path and that a second bill of
+      the same layout predicts partner and lines from history; then an
+      operator protocol on Staging: three bills per vendor for three vendors,
+      recording human edits per bill before and after corrections. Shipping
+      documents (no native learning): a correction-ledger report over doc_type
+      tracking and reason messages giving AI type -> human type confusion
+      counts; when one confusion recurs (>= 3 in 14 days or >= 10 percent of
+      auto-sorted documents of that type) revise the Auto-Sort prompt through a
+      new prompt version (TASK-071 mechanism) and replay the recorded originals,
+      reporting before/after accuracy.
+    authority_basis_ids: [AUTH-001]
+    required_decision_ids: [DEC-013, DEC-015, DEC-016]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-009, EVID-010]
+    paths:
+      - docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-072-ai-learning.md
+      - plasticos_documents_native/tests/test_invoice_correction_learning*.py
+      - plasticos_documents_native/tests/__init__.py
+    actions:
+      - runtime_tests_for_local_prediction_and_validate_payload
+      - staging_repeat_upload_protocol
+      - correction_ledger_confusion_report
+      - prompt_revision_with_replay_when_threshold_met
+    acceptance:
+      - id: AC-072
+        statement: "Report states for invoices whether edits per bill fell across repeats (with counts) and for shipping documents the confusion matrix, any threshold breach, and before/after replay accuracy of any prompt revision; claims without measured counts are UNKNOWN."
+        required_evidence_types: [test_result, inspection]
+    validation:
+      - id: VAL-072
+        method: command
+        command_or_inspection: test -s docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-072-ai-learning.md
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [learning_claimed_without_repeat_measurement, prompt_changed_without_replay]
+    rollback: *rollback_local
+    risk: {tier: T2, reversibility: reversible, blast_radius: report_and_tests}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-004]
 
   - id: TASK-031
     title: "Admin command center: full KPI drill coverage (F-005)"
@@ -1310,7 +1535,7 @@ gates:
     gate_type: wave_exit
     blocking: true
     owner_authority_id: AUTH-002
-    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064]
+    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064, TASK-070]
     required_evidence_ids: [EVID-001, EVID-002, EVID-008]
     pass_criteria:
       - "Every W1 task's parity or reconciliation test passes in its lane PR's runtime stage."
@@ -1324,7 +1549,7 @@ gates:
     blocking: true
     owner_authority_id: AUTH-003
     task_ids: [TASK-001, TASK-002]
-    required_evidence_ids: [EVID-003, EVID-007, EVID-009]
+    required_evidence_ids: [EVID-003, EVID-007, EVID-009, EVID-010]
     pass_criteria:
       - "Authoring-path proof recorded; UNK-001 closed either way."
       - "Capability inventory recorded; UNK-004 closed or its unknown rows named."
@@ -1334,7 +1559,7 @@ gates:
     gate_type: wave_exit
     blocking: true
     owner_authority_id: AUTH-002
-    task_ids: [TASK-040, TASK-032, TASK-031, TASK-033]
+    task_ids: [TASK-071, TASK-040, TASK-032, TASK-031, TASK-033]
     required_evidence_ids: [EVID-002, EVID-003]
     pass_criteria:
       - "Every actionable KPI on four dashboards has a parity test passing in its lane PR's runtime stage."
@@ -1345,8 +1570,8 @@ gates:
     gate_type: completion
     blocking: true
     owner_authority_id: AUTH-001
-    task_ids: [TASK-050, TASK-051]
-    required_evidence_ids: [EVID-004, EVID-005, EVID-006]
+    task_ids: [TASK-072, TASK-050, TASK-051]
+    required_evidence_ids: [EVID-004, EVID-005, EVID-006, EVID-011]
     pass_criteria:
       - "Runtime proof and query plans recorded."
       - "Operator acceptance walk PASS on Staging, including the complete document-review and Linda-resolution paths."
@@ -1403,6 +1628,20 @@ risks:
     likelihood: high
     impact: medium
     mitigations: ["TASK-060 repeatable migration with a before/after owner report in the PR; Staging walk S11."]
+    acceptance_status: accepted
+  - id: RISK-008
+    statement: "Auto-Sort sends document content to OpenAI and runs synchronously inside the upload transaction; a slow or failing provider delays uploads (errors are logged, not raised)."
+    owner: AUTH-001
+    likelihood: possible
+    impact: medium
+    mitigations: ["DEC-016 approval; Staging first; TASK-050 measures upload latency with Auto-Sort on; Needs Review is the fallback."]
+    acceptance_status: accepted
+  - id: RISK-009
+    statement: "add_tags applies any tag by name; a model could apply Verified or a demo-duplicated tag name."
+    owner: AUTH-003
+    likelihood: possible
+    impact: high
+    mitigations: ["TASK-070 Verified-tag write guard; prompt names only allowed tags; tests assert Verified cannot be added by the rule."]
     acceptance_status: accepted
 prohibited_paths:
   - {id: DNB-001, statement: "plasticos_base/**", rationale: "Ask-first base module; out of scope."}

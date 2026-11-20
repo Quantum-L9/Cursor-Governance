@@ -1,9 +1,9 @@
 # LANE-D — Exception routing + Operations Manager AI & Transaction Review Workbench
 
 ## MANIFEST
-- Campaign: `ib-odoo-dashboard-command-centers` v1.1.0 — definition in Quantum-L9/Cursor-Governance, execution in `cryptoxdog/IB-Odoo_19` off `Staging` @ `c422140`.
+- Campaign: `ib-odoo-dashboard-command-centers` v1.2.0 — definition in Quantum-L9/Cursor-Governance, execution in `cryptoxdog/IB-Odoo_19` off `Staging` @ `c422140`.
 - Tasks (order): TASK-060 → TASK-064 → TASK-040 (TASK-040 starts once DEC-004 and DEC-005 are decided, TASK-002 is recorded and TASK-013 is merged).
-- Writable paths: `plasticos_documents/**`, `plasticos_documents_native/models/document_sync.py`, `plasticos_documents_native/data/**`, `plasticos_documents_native/tests/**`, `plasticos_documents_native/migrations/**`, `plasticos_documents_native/__manifest__.py`, the DEC-004 host module (recommended new `plasticos_ops_dashboard/**`), and exactly the security records DEC-005 approves. Everything else is read-only (`plasticos_base` resolvers are used, never edited).
+- Writable paths: `plasticos_documents/**`, `plasticos_documents_native/models/document_sync.py`, `plasticos_documents_native/tests/test_document_sync*.py`, `plasticos_documents_native/migrations/**` and `__manifest__.py` (version bump for the document_sync change only; LANE-E owns the rest of `plasticos_documents_native` after TASK-060 merges), the DEC-004 host module (recommended new `plasticos_ops_dashboard/**`), and exactly the security records DEC-005 approves. Everything else is read-only (`plasticos_base` resolvers are used, never edited).
 - Repositories: attach `cryptoxdog/IB-Odoo_19` with push (add_repo), clone, register_repo_root. Read-only: `Quantum-L9/L9-Ops-MCP` (kernels), `Quantum-L9/Cursor-Governance` (campaign definition; your session source).
 - Role: coding agent in the CTO pool (launch system prompt governs reporting, publishing and PR ownership).
 
@@ -14,7 +14,7 @@
 
 ## NON-GOALS
 - Not an executive financial report (Admin) and not a new queue table, scheduler or verification writer.
-- AI classifies, proposes and routes only: no AI auto-sort record creation, no AI server action as a writer, no auto-post, no new sender (DEC-013). Nothing in Documents AI or digitization settings is enabled.
+- Auto-Sort itself (configuration, bridge, learning) is LANE-E; this lane consumes its Needs Review and type-tag outcomes. No AI tool beyond move/tag, no auto-post, no new sender (DEC-013 OPT-C). Nothing in Documents AI or digitization settings is enabled by this lane.
 - No change to verification rules beyond TASK-064; no change to the bill guard; no posting from the workbench.
 - No `company_id` added to claim/transaction/offer/intake; no `plasticos_base` edits.
 
@@ -42,7 +42,7 @@
 - Do not change security groups, record rules, crons or `plasticos_base` unless the campaign decision for it is accepted (DEC-005). Prohibited paths: `plasticos_base/**`, `plasticos_gate/**`, `.github/workflows/**`, `plasticos_transaction/models/**`, Docker/compose/.env files.
 - Runtime tests: rely on the `make pr` pre-push gate (pr-check incl. install-smoke) — do not run `make test-module` / `make test-odoo` ad hoc. Locally run `make check` and `make test`; run `python3 scripts/check_module_wiring.py` before each commit.
 - Exceptions are `mail.activity` records only (DEC-012): module-owned activity type per exception class, assignee via `plasticos_base` `_plasticos_escalation_manager_in_group`, `activity_search` before any create (Odoo never deduplicates), `activity_feedback` to close. No new queue table, scheduler or verification writer.
-- AI may classify, propose and route only (DEC-013): no AI auto-sort record creation, no AI server action as a decision writer, no bill auto-post, no new external sender — Linda stays the sole logistics-document chase sender. Unknown AI output stays UNKNOWN with a manual path.
+- Native AI Auto-Sort (DEC-013 OPT-C) may only move documents between the existing Plasticos folders and add existing tags; no bill/invoice creation, activity or code tool; it never verifies evidence; no bill auto-post; no new external sender — Linda stays the sole logistics-document chase sender. An unsure or failed AI run leaves Needs Review for Operations; UNKNOWN stays UNKNOWN.
 - Authority is enforced server-side; a hidden or shown button is never the control.
 - Truth contract: report NOT RUN where a check did not run; never present a static read as runtime proof.
 

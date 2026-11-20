@@ -1,6 +1,6 @@
 # Acceptance — ib-odoo-dashboard-command-centers
 
-Each row needs PASS with evidence, or a named defect. Rows A01–A20 are runtime/test evidence (GATE-001/003/004). Rows S01–S13 are the operator's Staging walk (TASK-051, GATE-004). Code review alone never passes a row.
+Each row needs PASS with evidence, or a named defect. Rows A01–A26 are runtime/test evidence (GATE-001/003/004). Rows S01–S15 are the operator's Staging walk (TASK-051, GATE-004). Code review alone never passes a row.
 
 | ID | Criterion | Evidence | Gate |
 |---|---|---|---|
@@ -24,6 +24,12 @@ Each row needs PASS with evidence, or a named defect. Rows A01–A20 are runtime
 | A18 | Repeated processing, reassignment, resolution and reload never duplicate, lose or wrongly close an exception activity | TASK-060, TASK-061 tests | 001 |
 | A19 | Linda and the cron user cannot verify business evidence; a human Documents User on an exact accepted scope can | TASK-064 tests | 001 |
 | A20 | Admin drills from a department bottleneck (funnel stage, exceptions by owner) to the correct source records and accountable owner | TASK-031 tests | 003 |
+| A21 | Auto-Sort (mocked model): BOL → Bills of Lading + BOL tag + one Logistics activity; scale ticket → Scale Tickets; ambiguous or contradictory → stays in Inbox + Needs Review + one Operations activity | TASK-071 tests | 003 |
+| A22 | The Auto-Sort rule carries only move-in-folder and add-tags; no bill/invoice creation, activity or code tool | TASK-071 test + inspection | 003 |
+| A23 | A single type tag reaches business evidence (doc_type + one sync); conflicting type tags give Needs Review and no doc_type | TASK-070 tests | 001 |
+| A24 | A human correction keeps the original file, records classification, decision and required reason, is never overwritten by a later tag, re-syncs evidence and re-routes the activity | TASK-070 tests | 001 |
+| A25 | Verified cannot be added by Auto-Sort or any write outside verification | TASK-070 test | 001 |
+| A26 | Invoice learning measured (edits per bill across repeats) and shipping confusion counts reported; any prompt revision shows before/after replay accuracy | TASK-072 report | 004 |
 | S01 | Logistics: each counter click lands on the matching filtered load list; breadcrumb returns to the dashboard | operator walk | 004 |
 | S02 | Sales (as a rep): each counter click; Track Load on a multi-load deal; Open Deal | operator walk | 004 |
 | S03 | Admin: every KPI clickable; numbers match a manual count of the drill list for 5 sampled KPIs | operator walk | 004 |
@@ -36,4 +42,6 @@ Each row needs PASS with evidence, or a named defect. Rows A01–A20 are runtime
 | S10 | Production untouched by the campaign | branch check | 004 |
 | S11 | Document-review path end to end: a real BOL exception and a real ambiguous document reach the right inbox, are resolved by the right person, and the wrong person is refused | operator walk | 004 |
 | S12 | Linda-resolution path end to end for one Logistics-authorized class and one Operations-only class | operator walk | 004 |
-| S13 | No AI auto-sort record creation, bill auto-post or new external sender was activated (compare TASK-002 inventory) | operator walk | 004 |
+| S13 | Auto-Sort runs only with move/tag tools; no bill auto-post or new external sender was activated (compare TASK-002 inventory) | operator walk | 004 |
+| S14 | Staging: upload one real BOL, one scale ticket, one packing list and one ambiguous document into Inbox; each lands with the right owner; correct one with a reason and see it persist on the original | operator walk | 004 |
+| S15 | Staging repeat-upload protocol for invoice learning (3 vendors × 3 bills) recorded | operator walk | 004 |
