@@ -317,8 +317,16 @@ def resolve_namespace_context(
         )
     else:
         derived = derive_namespace(identity) if git_root else None
-        registered = set((registry.get("repos") or {}).keys())
-        if derived and derived not in forbidden and derived not in registered:
+        repos = registry.get("repos") or {}
+        # A derived namespace never shadows one that already means something:
+        # a registered slug, a legacy namespace a renamed slug still reads
+        # (Quantum-L9/github must not write into .github's quantum-l9-github
+        # history), the shared read fan-in, or the legacy workspace group. Same
+        # exclusion as l9_graphite_memory.group_resolver (Quantum-L9/l9-graphiti-memory#142).
+        reserved = set(repos.keys()) | set(shared) | {str(registry.get("workspace_group") or "")}
+        for slug in repos:
+            reserved.update(legacy_namespaces_for(registry, slug))
+        if derived and derived not in forbidden and derived not in reserved:
             method = METHOD_DERIVED
             write_hint = derived
             warnings.append(

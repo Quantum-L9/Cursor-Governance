@@ -476,3 +476,21 @@ def test_an_empty_container_resolves_nothing(tmp_path: Path) -> None:
     found = nc.resolve_workspace_namespaces(tmp_path, registry=_registry())
     assert found.resolved is False
     assert found.multi_repo is False
+
+
+def test_a_derived_namespace_never_takes_a_legacy_or_shared_namespace(tmp_path: Path) -> None:
+    """Quantum-L9/github must not write into .github's legacy quantum-l9-github history."""
+    registry = _registry()
+    registry["repos"]["dot-github"] = {
+        "github": "Quantum-L9/.github",
+        "legacy_namespaces": ["quantum-l9-github"],
+        "remote_patterns": ["*/Quantum-L9/.github"],
+    }
+    lookalike = _git_repo(tmp_path / "github", "https://github.com/Quantum-L9/github")
+    context = nc.resolve_namespace_context(lookalike, registry=registry, env={})
+    assert context.write_namespace_hint is None
+    assert context.method == nc.METHOD_UNRESOLVED
+    shared = _git_repo(tmp_path / "workspace", "https://github.com/l9/workspace")
+    assert (
+        nc.resolve_namespace_context(shared, registry=registry, env={}).write_namespace_hint is None
+    )
