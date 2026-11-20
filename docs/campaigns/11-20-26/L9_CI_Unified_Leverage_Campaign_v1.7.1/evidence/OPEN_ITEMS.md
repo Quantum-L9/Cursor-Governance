@@ -87,7 +87,7 @@ registration, the Claude Code host default) does not block close-out.
 | X4 | Expensive checks run nightly only where code changed | L2 (planner merged; apply needs the operator's GitHub App) | The planner dispatches only changed repositories, including Cursor-Governance's Sonar |
 | X5 | Cursor-Governance is cut over: dead and duplicate CI retired, required-check plan written, `CURSOR_CANARY_PASS` with evidence | CG-CUTOVER | `evidence/CURSOR_CANARY_RESULT.md` reports PASS against CURSOR_CANARY.md Gates 0-4 |
 | X6 | Secondary canaries recorded (CEG, EIE) | C-CEG, C-EIE | Gate 2-3 verdicts with run ids; findings in CI_CONFIG_FINDINGS |
-| X7 | Harvest ledgered with destinations | CTO | `evidence/HARVEST_LEDGER.md` (this change) |
+| X7 | Harvest ledgered with destinations | CTO, then each owner lane | Index in `evidence/HARVEST_LEDGER.md`; every row promoted during this campaign (at least C1 to C5) carries the full `HARVEST.md` fields and a delivery receipt. Rows not promoted stay as backlog for the rollout campaign |
 | X8 | Merge queue on Cursor-Governance main | CTO, after L2's merge_group proof | Ruleset carries the queue and a PR merges through it |
 | X9 | Close-out evidence | CTO | PROOF.md filled from real runs; this register closed |
 

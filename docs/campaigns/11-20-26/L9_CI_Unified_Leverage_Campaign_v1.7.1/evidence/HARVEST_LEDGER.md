@@ -32,6 +32,16 @@ Runtimes are job wall-clock from one sampled run per repository and are indicati
 | IB-Odoo_19 | 6 parallel jobs, about 3 min | not run (user-owned repository, outside org rulesets) | gitleaks, Actions pin checks and `l9-analysis.yml` duplicate Core |
 | Cursor-Governance | 5 required local checks plus supply chain, CodeQL and others | runs `make setup validate check test` | ruff, format and uv-lock duplicate Core repo-check |
 
+## Row completeness
+
+This is the Stage 0H index: one row per distinct promotion candidate, with donor, disposition, target
+and state. The remaining `HARVEST.md` fields (donor path and blob SHA, behaviour and scope, good/bad and
+non-target witnesses, delivery reference and admission, retirement and rollback) are **Unknown** for every
+row until its owner lane picks it up. The owner lane fills them in this file, in the same PR as the
+delivery, before promotion. No consumer copy is retired from a row that lacks a parity receipt. Census
+evidence (file and line) for every row is in the four census reports summarized in the CTO session
+transcript of 2026-11-20 and is re-bound by the owner lane at its head.
+
 ## Promotions, grouped by upstream owner
 
 ### Core (`Quantum-L9/l9-ci-core`), lane L2
@@ -58,7 +68,12 @@ Runtimes are job wall-clock from one sampled run per repository and are indicati
 
 | # | Component | Donors | Disposition | Target | State |
 |---|---|---|---|---|---|
-| S1 | Odoo 19 framework pack: `check_odoo19_xml` (with tests), `check_odoo19_hooks`, circular deps, orphan model refs, ACL completeness, package init, XML ref deps, about 17 generic `check_odoo_patterns.sh` checks, cron lock pairing | IB-Odoo_19 | promote_framework | new SDK framework pack (none exists: `packs.yaml:25-26`) | Blocked on the operator's licence grant from cryptoxdog, or a clean-room rewrite |
+| S1a | Odoo 19 XML deprecations (`<tree>`, `attrs=`, `states=`, `t-esc`, search `string=`, decoration-secondary, alert role, `active_id`) | IB `ci/check_odoo19_xml.py` (+ `ci/test_check_odoo19_xml.py`), `scripts/check_odoo_patterns.sh` #12-#16, #19, #20 | promote_framework | SDK Odoo framework pack (none exists: `packs.yaml:25-26`) | Blocked: licence grant or clean-room rewrite |
+| S1b | Odoo 19 hook writes (`groups_id` / users in hooks) | IB `ci/check_odoo19_hooks.py` | promote_framework | SDK Odoo pack | Blocked: licence |
+| S1c | Removed decorators and depends (`@api.one`/`@api.multi`, `@api.depends("id")`), `env.get` misuse, empty `__init__`, cron `numbercall`, `res.groups` `category_id`, unescaped `&`, nested eval quotes, icon without title | IB `scripts/check_odoo_patterns.sh` #2-#7, #11, #21, #24 | promote_framework | SDK Odoo pack | Blocked: licence |
+| S1d | Module dependency graph: circular deps, XML ref module declared in depends | IB `ci/check_circular_deps.py`, `ci/check_xml_module_ref_deps.py` | promote_framework | SDK Odoo pack | Blocked: licence |
+| S1e | Model integrity: orphan model refs, ACL completeness, package `__init__` integrity | IB `ci/check_orphan_model_refs.py`, `ci/check_acl_completeness.py`, `ci/check_package_init.py` | promote_framework | SDK Odoo pack | Blocked: licence |
+| S1f | Cron advisory-lock pairing (CRON1xx/2xx; CRON3xx stays domain) | IB `tools/cron_invariant_check.py` (pre-commit only, not in CI) | promote_framework | SDK Odoo pack | Blocked: licence; also not yet in IB CI |
 | S2 | Neo4j/Cypher interpolation lint (AST classifier; sanitizer and sink names externalized) | CEG `tools/cypher_lint.py` | promote_framework | SDK framework pack | Candidate |
 | S3 | Contract-ID rule-table scanner engine | CEG `tools/contract_scanner.py` (rules retain_domain; SEC/ERR generic rules promote_language) | promote_global (engine) | SDK provider | Candidate |
 | S4 | Finding tier policy (unknown HIGH fails closed; touched vs inherited; reasoned review markers) | EIE `tools/audit_engine.py` | promote_global | SDK baseline comparator + gate evaluator | Candidate |
