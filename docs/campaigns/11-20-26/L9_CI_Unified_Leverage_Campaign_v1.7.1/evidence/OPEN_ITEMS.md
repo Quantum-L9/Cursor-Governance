@@ -93,6 +93,9 @@ registration, the Claude Code host default) does not block close-out.
 
 ## Recorded operator decisions
 
+- 2026-11-20, about 22:20Z: only checks that protect working or secure code may block a pull-request merge. Housekeeping checks (CODEOWNERS and file presence, docs and link checks, PR size, header conventions, toolchain-version drift and similar debt) report and never block. Recorded as CI_CONFIG_FINDINGS row 19.
+- 2026-11-20, about 22:15Z: IB-Odoo_19 is proprietary to Quantum AI Partners, which clears its CI tooling for promotion into Quantum-L9 repositories (HARVEST_LEDGER S1a-S1f).
+
 - 2026-11-20, about 21:50Z: close-out scope. The campaign includes cutting **Cursor-Governance** over to organization CI, debugging it and proving it works, so that the organization is ready to roll out. Rolling out to the other repositories is not part of this campaign; the harvest ledger's rows for EIE, CEG and IB-Odoo_19 are that campaign's starting backlog.
 - 2026-11-20, about 21:40Z: harvest custom CI from Cursor-Governance, EIE, CEG and IB-Odoo_19 and move it upstream, so the organization benefits and consumers stop depending on their own copies. Ledger: `evidence/HARVEST_LEDGER.md`.
 
