@@ -6,6 +6,7 @@ stage and only surface long after bootstrap had frozen the blueprint.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import subprocess
 import sys
@@ -506,6 +507,33 @@ class ExecutionEnvironmentTest(unittest.TestCase):
                         resolved = self.exec_env._discover_python(root)
             self.assertEqual(resolved, self.exec_env._keep_venv_shim(Path(sys.executable)))
 
+    def test_package_false_syncs_dependencies_without_installing_the_project(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            project = Path(raw) / "project"
+            project.mkdir()
+            (project / "pyproject.toml").write_text(
+                "[tool.uv]\npackage = false\n", encoding="utf-8"
+            )
+            runtime = Path(raw) / "runtime"
+            seen: list[list[str]] = []
+
+            def fake_run(cmd, **kwargs):
+                seen.append(list(cmd))
+                python = runtime / ".venv" / "bin" / "python3"
+                python.parent.mkdir(parents=True, exist_ok=True)
+                python.write_text("#!/bin/sh\n", encoding="utf-8")
+                self.assertEqual(kwargs["env"]["UV_PROJECT_ENVIRONMENT"], str(runtime / ".venv"))
+                return subprocess.CompletedProcess(cmd, 0, "", "")
+
+            with unittest.mock.patch.object(self.exec_env, "exec_env_root", return_value=runtime):
+                with unittest.mock.patch.object(self.exec_env.shutil, "which", return_value="uv"):
+                    with unittest.mock.patch.object(
+                        self.exec_env.subprocess, "run", side_effect=fake_run
+                    ):
+                        resolved = self.exec_env._consumer_project_python(project)
+            self.assertEqual(seen[0][1:3], ["sync", "--no-install-project"])
+            self.assertEqual(resolved, (runtime / ".venv" / "bin" / "python3").resolve())
+
     def test_failed_editable_install_is_not_the_interpreter(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             project = Path(raw) / "project"
@@ -561,11 +589,17 @@ class RenderedPlanCampaignTest(unittest.TestCase):
             "tasks: []\n",
             encoding="utf-8",
         )
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        (blueprint / "MANIFEST.yaml").write_text(
+            f"source_sha256: {digest}\nfiles: []\n",
+            encoding="utf-8",
+        )
         plan = root / "demo.plan.md"
         plan.write_text(
             "---\n"
             "name: demo\n"
             f"campaign_source: {source}\n"
+            f"campaign_source_sha256: {digest}\n"
             f"campaign_blueprint: {blueprint}\n"
             "---\n\nbody\n",
             encoding="utf-8",

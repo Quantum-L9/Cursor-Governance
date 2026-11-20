@@ -7081,7 +7081,27 @@ def _require_rendered_plan(intent_path: Path) -> tuple[Path, Path, dict[str, Any
             "A hand-authored source does not take the rendered-plan path.",
             error_code="RENDERED_PLAN_REQUIRED",
         )
+    _require_source_binding(source_path, blueprint_path, front)
     return source_path, blueprint_path, document
+
+
+def _require_source_binding(source_path: Path, blueprint_path: Path, front: dict[str, Any]) -> None:
+    """The blueprint and the plan must name the bytes of this source."""
+    manifest_path = blueprint_path / "MANIFEST.yaml"
+    if yaml is None or not manifest_path.is_file():
+        raise CampaignError(
+            f"{blueprint_path} has no manifest binding it to {source_path}",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    bound = str(manifest.get("source_sha256") or "").strip() if isinstance(manifest, dict) else ""
+    actual = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    recorded = str(front.get("campaign_source_sha256") or "").strip()
+    if not bound or bound != actual or (recorded and recorded != actual):
+        raise CampaignError(
+            f"{blueprint_path} is not the blueprint compiled from {source_path}",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
 
 
 def _run_rendered_plan(

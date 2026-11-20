@@ -34,6 +34,7 @@ Exit codes: 0 rendered and admitted; 1 refused (render or PE check); 2 usage.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -485,15 +486,33 @@ def _upsert_frontmatter_scalar(body: str, key: str, value: str) -> str:
     return body.rstrip() + "\n" + line + "\n"
 
 
-def record_plan_paths(plan_md: Path, source: Path, blueprint: Path) -> None:
+def record_plan_paths(plan_md: Path, source: Path, blueprint: Path, source_sha256: str) -> None:
     """Write the admitted campaign paths onto a Cursor plan without rewriting its body."""
     text = plan_md.read_text(encoding="utf-8")
     match = re.match(r"\A---\s*\n(.*?)\n---\s*(?:\n|\Z)", text, re.S)
     if not match:
         raise RenderError([f"{plan_md} has no YAML frontmatter to record campaign paths on"])
     body = _upsert_frontmatter_scalar(match.group(1), "campaign_source", str(source.resolve()))
+    body = _upsert_frontmatter_scalar(body, "campaign_source_sha256", source_sha256)
     body = _upsert_frontmatter_scalar(body, "campaign_blueprint", str(blueprint.resolve()))
     plan_md.write_text("---\n" + body.rstrip() + "\n---\n" + text[match.end() :], encoding="utf-8")
+
+
+def bind_blueprint_to_source(blueprint: Path, source: Path) -> str:
+    """Record the admitted source bytes on the blueprint manifest."""
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    manifest_path = blueprint / "MANIFEST.yaml"
+    if not manifest_path.is_file():
+        raise RenderError([f"{blueprint} has no MANIFEST.yaml to bind to {source}"])
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(manifest, dict):
+        raise RenderError([f"{manifest_path} is not a mapping"])
+    manifest["source_sha256"] = digest
+    manifest_path.write_text(
+        yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True, width=100),
+        encoding="utf-8",
+    )
+    return digest
 
 
 def check_admission(source_path: Path, repo_root: Path, *, blueprint_dir: Path) -> dict[str, Any]:
@@ -601,6 +620,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         staged_blueprint = out.parent / f"blueprint.staged-{os.getpid()}"
         blueprint_path: Path | None = None
+        source_sha256 = ""
         try:
             if args.no_check:
                 if args.plan_md is not None:
@@ -617,9 +637,11 @@ def main(argv: list[str] | None = None) -> int:
                     shutil.rmtree(final_blueprint)
                 staged_blueprint.rename(final_blueprint)
                 blueprint_path = final_blueprint.resolve()
+                source_sha256 = bind_blueprint_to_source(blueprint_path, out)
                 admission["blueprint"] = str(blueprint_path)
+                admission["source_sha256"] = source_sha256
             if args.plan_md is not None and blueprint_path is not None:
-                record_plan_paths(args.plan_md.resolve(), out, blueprint_path)
+                record_plan_paths(args.plan_md.resolve(), out, blueprint_path, source_sha256)
         finally:
             # Admitted: the yaml is already at --out and the blueprint has been renamed.
             # Refused or interrupted: discard both staged artifacts.

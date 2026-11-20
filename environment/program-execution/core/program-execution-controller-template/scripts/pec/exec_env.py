@@ -155,7 +155,7 @@ def _discover_python(cwd: Path | None) -> Path:
         donor = _donor_toolchain_python()
         if donor is not None:
             return donor
-    if consumer and cwd is not None and not _uv_package_disabled(cwd):
+    if consumer and cwd is not None:
         project = _consumer_project_python(cwd)
         if project is not None:
             return project
@@ -224,6 +224,8 @@ def _consumer_project_python(cwd: Path) -> Path | None:
     """
     if not (cwd / "pyproject.toml").is_file():
         return None
+    if _uv_package_disabled(cwd):
+        return _sync_unpacked_project(cwd)
     existing = _provisioned_python(cwd) or _existing_venv_python(cwd)
     uv = shutil.which("uv")
     root = exec_env_root(cwd)
@@ -259,6 +261,43 @@ def _consumer_project_python(cwd: Path) -> Path | None:
         raise ExecEnvError(
             "editable install failed and was not adopted as the task interpreter: " + reason
         )
+    return python
+
+
+def _sync_unpacked_project(cwd: Path) -> Path | None:
+    """Sync dependencies for ``[tool.uv] package = false`` without installing the project.
+
+    ``package = false`` means the tree is not an installable distribution. It
+    does not mean the project has no dependencies. ``uv sync --no-install-project``
+    updates the environment. The environment lives beside the controller
+    runtime, not inside the candidate worktree.
+    """
+    uv = shutil.which("uv")
+    root = exec_env_root(cwd)
+    if uv is None or root is None:
+        return _provisioned_python(cwd) or _existing_venv_python(cwd)
+    venv = root / ".venv"
+    root.mkdir(parents=True, exist_ok=True)
+    env = os.environ.copy()
+    env["UV_PROJECT_ENVIRONMENT"] = str(venv)
+    synced = subprocess.run(
+        [uv, "sync", "--no-install-project", "--directory", str(cwd)],
+        cwd=str(cwd),
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=600,
+    )
+    if synced.returncode != 0:
+        detail = (synced.stderr or synced.stdout or "").strip().splitlines()
+        reason = detail[-1] if detail else "non-zero exit"
+        raise ExecEnvError(
+            "dependency sync failed and was not adopted as the task interpreter: " + reason
+        )
+    python = _existing_venv_python(root)
+    if python is None:
+        raise ExecEnvError("uv sync reported success but left no interpreter")
     return python
 
 

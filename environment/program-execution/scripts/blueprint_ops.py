@@ -104,8 +104,15 @@ def scan_placeholders(root: Path) -> list[str]:
 
 def write_manifest(root: Path, compiled_from: str) -> None:
     """Canonical Blueprint MANIFEST.yaml generator (digest of every tree file)."""
+    root = Path(root)
+    manifest_path = root / "MANIFEST.yaml"
+    previous_source = ""
+    if manifest_path.is_file():
+        previous = load_yaml(manifest_path)
+        if isinstance(previous, dict):
+            previous_source = str(previous.get("source_sha256") or "").strip()
     files = []
-    for path in tree_files(Path(root)):
+    for path in tree_files(root):
         if (
             path.name != "MANIFEST.yaml"
             and "__pycache__" not in path.parts
@@ -117,17 +124,17 @@ def write_manifest(root: Path, compiled_from: str) -> None:
                     "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                 }
             )
-    dump_yaml(
-        Path(root) / "MANIFEST.yaml",
-        {
-            "schema": "program-execution-blueprint.manifest.v2",
-            "schema_version": "2.0.0",
-            "template": "program-execution-blueprint",
-            "compiled_from": compiled_from,
-            "files": files,
-            "integrity": {"algorithm": "sha256", "self_excluded": True},
-        },
-    )
+    payload: dict[str, Any] = {
+        "schema": "program-execution-blueprint.manifest.v2",
+        "schema_version": "2.0.0",
+        "template": "program-execution-blueprint",
+        "compiled_from": compiled_from,
+        "files": files,
+        "integrity": {"algorithm": "sha256", "self_excluded": True},
+    }
+    if previous_source:
+        payload["source_sha256"] = previous_source
+    dump_yaml(manifest_path, payload)
 
 
 def patch_phase0_operator_name(root: Path, owner: str) -> bool:

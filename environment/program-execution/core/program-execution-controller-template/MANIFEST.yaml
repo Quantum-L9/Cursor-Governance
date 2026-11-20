@@ -107,7 +107,7 @@ files:
 - path: scripts/pec/dispatch.py
   sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
 - path: scripts/pec/exec_env.py
-  sha256: 87b4807268c4c501f76ded03bd11901c28ebc957896fe9fcd7cc63617dbdf690
+  sha256: bff700d96cc9099a5f5063492cb2ead67582255f5814755b9d7007ac3dfff981
 - path: scripts/pec/gates.py
   sha256: 32a07cdb47b48ec3cd40ffa131561e9183a46201a97604b6c1aaeb2083cb29af
 - path: scripts/pec/ledger.py
