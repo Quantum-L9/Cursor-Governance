@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Shelf leftover corpus after /ff: untracked and dirty-tracked.
 
-Owns ``TODO.md`` and ``docs/plans/``. Writes
-``$CLONE/.l9/ff-shelf-untracked.txt`` then ``rsync --files-from`` that path
+Owns ``TODO.md`` only. ``docs/plans/`` is retired from this shelf: plan files
+stay in the worktree and are never copied onto a ``feat/ff-shelf-*`` branch.
+Writes ``$CLONE/.l9/ff-shelf-untracked.txt`` then ``rsync --files-from`` that path
 (no process substitution, no ``/tmp`` files-from). Appends an existing
 same-author ``feat/ff-shelf-*`` worktree, or cuts one stamp when none is open.
 ``git add --pathspec-from-file`` is a separate command from commit.
@@ -23,7 +24,8 @@ from pathlib import Path
 
 LIST_REL = ".l9/ff-shelf-untracked.txt"
 SHELF_EXACT = ("TODO.md",)
-SHELF_PREFIXES = ("docs/plans/",)
+# Plan relocation is retired. docs/plans/ stays where it is.
+SHELF_PREFIXES: tuple[str, ...] = ()
 SECRET_NAME_RE = re.compile(r"(oauth|credentials|client_secret)", re.I)
 SHA_FIELD_RE = re.compile(r'(body_sha256:\s*["\']?)([^"\'\s]+)(["\']?)')
 ZERO_DIGEST = "0" * 64

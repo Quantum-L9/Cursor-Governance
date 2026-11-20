@@ -1050,16 +1050,12 @@ def test_ff_shelf_list_and_rsync_argv() -> int:
         campaign_note = "environment/program-execution/campaigns/note.md"
         if campaign_note in listed:
             return _fail(f"PE campaigns are not corpus keep-list: {listed}")
-        if "docs/plans/left.md" not in listed:
-            return _fail(f"missing leftover paths: {listed}")
+        if any(item.startswith("docs/plans/") for item in listed):
+            return _fail(f"plan files must stay put, listed={listed}")
         if "TODO.md" not in listed:
             return _fail(f"root task-queue file must be shelved, listed={listed}")
-        if "docs/plans/tracked.md" not in listed:
-            return _fail(f"dirty-tracked corpus must be shelved, listed={listed}")
-        if "docs/plans/gone.md" in listed:
-            return _fail(f"deleted corpus must not be an rsync source, listed={listed}")
-        if "docs/plans/gone.md" not in data.get("deleted", []):
-            return _fail(f"deleted corpus must be recorded, deleted={data.get('deleted')}")
+        if any(item.startswith("docs/plans/") for item in data.get("deleted", [])):
+            return _fail(f"deleted plans must not be shelved, deleted={data.get('deleted')}")
         if "untracked corpus" in " ".join(data.get("commit") or []):
             return _fail(f"commit message still says untracked: {data.get('commit')}")
         if "leftover corpus" not in " ".join(data.get("commit") or []):
@@ -1092,6 +1088,7 @@ def test_ff_shelf_append_not_restamp() -> int:
         git(clone, "commit", "-m", "base")
         (clone / "docs" / "plans").mkdir(parents=True)
         (clone / "docs" / "plans" / "left.md").write_text("plan leftover\n", encoding="utf-8")
+        (clone / "TODO.md").write_text("queue leftover\n", encoding="utf-8")
         prs = [
             {
                 "number": 1,
@@ -1150,6 +1147,7 @@ def test_ff_shelf_empty_author_stamps() -> int:
         git(clone, "commit", "-m", "base")
         (clone / "docs" / "plans").mkdir(parents=True)
         (clone / "docs" / "plans" / "left.md").write_text("plan leftover\n", encoding="utf-8")
+        (clone / "TODO.md").write_text("queue leftover\n", encoding="utf-8")
         prs = [
             {
                 "number": 3,

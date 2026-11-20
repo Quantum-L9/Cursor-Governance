@@ -163,6 +163,16 @@ else
   }
 fi
 unset _ssot_keep_cand
+
+# Plan files are not parked, moved, or checked out over. The shelf no longer
+# takes them either.
+_ff_is_plan_path() {
+  case "${1#./}" in
+    docs/plans|docs/plans/*) return 0 ;;
+  esac
+  return 1
+}
+
 TARGET_BRANCH="${GOVERNANCE_GITHUB_BRANCH:-main}"
 
 export GOVERNANCE_SYNC_PUSH=0
@@ -197,7 +207,7 @@ unset _keep_rel _keep_f
 UNTRACKED_BEFORE="$(git -C "$CLONE" ls-files --others --exclude-standard | LC_ALL=C sort)"
 
 echo "ff: clone=$CLONE branch=$BRANCH_BEFORE push=0 hard_reset=0 stash_u=0"
-echo "ff: keeping .venv, env.local, corpus (TODO.md docs/plans/ PE campaigns), and untracked; other dirty tracked get preserve refs"
+echo "ff: keeping .venv, env.local, and corpus (TODO.md, reports/repo-index); docs/plans stays in place; other dirty tracked get preserve refs"
 
 # A bare `fetch origin main` can leave origin/main stale (FETCH_HEAD only)
 # on some CI git/refspec layouts; then behind=0 and colliding untracked
@@ -293,6 +303,10 @@ _park_dirty_tracked() {
 
   while IFS= read -r rel; do
     [ -z "$rel" ] && continue
+    if _ff_is_plan_path "$rel"; then
+      echo "ff: plan path left in place: $rel"
+      continue
+    fi
     if declare -F ssot_is_ff_corpus_keep >/dev/null 2>&1 && ssot_is_ff_corpus_keep "$rel"; then
       echo "ff: classify path=${rel} class=corpus_keep (worktree bytes preserved; not reset to HEAD)"
       _copy_hold_tracked "$rel"
@@ -363,6 +377,10 @@ _park_overwrite_untracked() {
   fi
   while IFS= read -r rel; do
     [ -z "$rel" ] && continue
+    if _ff_is_plan_path "$rel"; then
+      echo "ff: plan path left in place (not parked): $rel"
+      continue
+    fi
     if [ -e "$CLONE/$rel" ] || [ -L "$CLONE/$rel" ]; then
       found="${found}${rel}"$'\n'
     fi
@@ -577,7 +595,7 @@ fi
 # Force origin blobs onto every colliding path and the rest of the tip.
 # `reset --keep` plus an empty OVERWRITE list left CI with the local copy.
 if [ "$BEHIND" -gt 0 ] || [ "$AHEAD" -gt 0 ] || [ -n "$OVERWRITE_UNTRACKED" ] || [ "$PARKED_UNTRACKED" -eq 1 ]; then
-  git -C "$CLONE" checkout -f "origin/${TARGET_BRANCH}" -- .
+  git -C "$CLONE" checkout -f "origin/${TARGET_BRANCH}" -- . ':(exclude)docs/plans'
 fi
 
 if [ -d "$HOLD_ROOT/machine-local" ] && [ -n "$KEEP_BEFORE" ]; then
