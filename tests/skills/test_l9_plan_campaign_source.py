@@ -47,11 +47,16 @@ def _write(tmp_path: Path, plan: dict) -> Path:
     return path
 
 
-def _run(tmp_path: Path, plan: dict, *extra: str) -> tuple[int, Path]:
+def _run(tmp_path: Path, plan: dict, *extra: str, with_plan_md: bool = True) -> tuple[int, Path]:
     out = tmp_path / "CAMPAIGN_SOURCE.yaml"
-    code = render.main(
-        [str(_write(tmp_path, plan)), "--out", str(out), "--repo-root", str(REPO), *extra]
-    )
+    args = [str(_write(tmp_path, plan)), "--out", str(out), "--repo-root", str(REPO)]
+    if with_plan_md:
+        plan_md = tmp_path / "plan.plan.md"
+        if not plan_md.exists():
+            plan_md.write_text("---\nname: t\noverview: t\n---\n\n# body\n", encoding="utf-8")
+        args += ["--plan-md", str(plan_md)]
+    args += list(extra)
+    code = render.main(args)
     return code, out
 
 
@@ -165,17 +170,64 @@ def test_a_refused_rerender_keeps_the_admitted_source(tmp_path: Path) -> None:
     assert not [path for path in out.parent.iterdir() if ".staged-" in path.name]
 
 
-def test_the_handoff_carries_the_operator_invocation_and_mode(
+def test_an_admitting_run_without_plan_md_is_refused(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     out = tmp_path / "CAMPAIGN_SOURCE.yaml"
+    code, _ = _run(tmp_path, _plan(), with_plan_md=False)
+    assert code == 1
+    assert "must stamp" in capsys.readouterr().err
+    assert not out.exists()
+
+
+def test_the_handoff_names_the_stamped_plan_only_after_the_stamp(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    out = tmp_path / "CAMPAIGN_SOURCE.yaml"
+    plan_md = tmp_path / "stamped.plan.md"
+    plan_md.write_text("---\nname: t\noverview: t\n---\n\n# body\n", encoding="utf-8")
     code = render.main(
-        [str(_write(tmp_path, _plan())), "--out", str(out), "--repo-root", str(REPO), "--json"]
+        [
+            str(_write(tmp_path, _plan())),
+            "--out",
+            str(out),
+            "--repo-root",
+            str(REPO),
+            "--plan-md",
+            str(plan_md),
+            "--json",
+        ]
     )
     assert code == 0
     result = json.loads(capsys.readouterr().out)
-    assert result["next"] == ["make campaign <the .plan.md>"]
+    assert result["next"] == [f"make campaign {plan_md.resolve()}"]
     assert (out.parent / "blueprint").is_dir()
+    recorded = plan_md.read_text(encoding="utf-8")
+    for key in ("campaign_source", "campaign_source_sha256", "campaign_blueprint"):
+        assert f"{key}:" in recorded
+
+
+def test_a_plan_md_without_frontmatter_is_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    out = tmp_path / "CAMPAIGN_SOURCE.yaml"
+    bare = tmp_path / "bare.plan.md"
+    bare.write_text("# no frontmatter\n", encoding="utf-8")
+    code = render.main(
+        [
+            str(_write(tmp_path, _plan())),
+            "--out",
+            str(out),
+            "--repo-root",
+            str(REPO),
+            "--plan-md",
+            str(bare),
+            "--json",
+        ]
+    )
+    assert code == 1
+    result = json.loads(capsys.readouterr().out)
+    assert any("frontmatter" in str(error) for error in result["errors"])
 
 
 def test_persisted_blueprint_keeps_each_validation_command(
