@@ -162,8 +162,8 @@ files:
   sha256: 395d85313c4f7627b415ee8deaf42a9b126ed29cdc5400da38a862d31300b47b
   bytes: 2233
 - path: program-execution-blueprint-template/schemas/evidence-catalog.schema.json
-  sha256: 64b5e4f9b0acd6f447fb3a758462ebfe46d847eb9fa296e0fca4634fd6534df5
-  bytes: 3140
+  sha256: 7ae0ffa241c9856492d127233cb1d26b67c44d388832205ba10bbd6fb1a73037
+  bytes: 3235
 - path: program-execution-blueprint-template/schemas/execution-index.schema.json
   sha256: a73904532ee0be5caf22210a36ca6d31b4b77794865cba260352fae70a234407
   bytes: 1235
@@ -207,8 +207,8 @@ files:
   sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
   bytes: 3111
 - path: program-execution-blueprint-template/scripts/validate_blueprint.py
-  sha256: 1b1875a4c5d9b8caf8a927e4a0866a87e4f39852ac64ae9c84d1ce45a18639e1
-  bytes: 24547
+  sha256: 408fa7fe55ed24363ad9c9b60b109d03bcff5d125f1c8253541d9df27c139d8d
+  bytes: 25570
 - path: program-execution-controller-template/ARCHITECTURE.md
   sha256: 2e9c4fd4d6acd9c3aeb216743a94aaaf53170cb5b6e557102ea0d9b2ec964c3b
   bytes: 1340
