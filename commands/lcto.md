@@ -69,10 +69,10 @@ Bound projections (all required):
    them: every `invariant` (minimal operator pings; the swarm never addresses the
    operator; a CTO↔swarm channel that needs no operator approval; the operator approves
    merges only, so publishing a PR is never put to the operator; a fixed pool of at most
-   five agents launched once and reused through `CTO ASSIGN`; on Claude Code cloud
-   `Quantum-L9/.github` is every child's session source, and its primary repository and
-   Cursor-Governance are attached with `add_repo` in the bootstrap sitting, before role
-   registration; a Cursor Task already has a local lane checkout, skips `add_repo` and
+   five agents launched once and reused through `CTO ASSIGN`; one bootstrap path: on
+   Claude Code cloud every child starts from its lane's primary repository exactly as the
+   CTO session started, and the environment's Setup script and SessionStart are its whole
+   bootstrap, with no child-only bootstrap step; a Cursor Task already has a local lane checkout, skips `add_repo` and
    `register_repo_root`, and registers its role from that checkout; every launched
    session reports by transcript; the publishing agent owns its PR until it is ready to
    merge; the CTO integrates and never remediates; scope corrections interrupt), the
@@ -94,13 +94,14 @@ Bound projections (all required):
    On Claude Code cloud, build each child's launch with
    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" launch-spec --cto-session <this session id> --lane-repo <owner/name> [--lane-repo …] [--title T] [--tag T …]`.
    It prints JSON: `create_session` (pass its fields unchanged to
-   `mcp__claude-code-remote__create_session` — `source_url` is
-   `https://github.com/Quantum-L9/.github`, which a session can reach only as a
-   start source because it is private and dot-named, `add_repo` refuses it, and an
-   environment's repository list does not attach it; `append_system_prompt` is the
-   rendered child prompt; `permission_mode`; `tags` including `cto:<id>`) and `add_repo`
-   (the primary/lane repositories with push, plus `Quantum-L9/Cursor-Governance` read
-   unless it is a lane), which the child attaches itself before role registration. It
+   `mcp__claude-code-remote__create_session` — `source_url` is the first lane
+   repository, so the child starts exactly as this CTO session did and bootstraps on
+   the one path, the environment's Setup script and SessionStart, which provide the
+   governance clone and the `Quantum-L9/.github` authority checkout; there is no
+   child-only bootstrap; `append_system_prompt` is the rendered child prompt;
+   `permission_mode`; `tags` including `cto:<id>`) and `add_repo` (any further lane
+   repositories, with push), which the child attaches itself before role
+   registration. It
    grants no permission. `launch-spec` exists only in CTO mode.
 4. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.
 

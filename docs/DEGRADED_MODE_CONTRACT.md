@@ -560,3 +560,32 @@ Cursor-Governance.
 - `add_repo` may still prompt or be refused by the host's permission layer
   (observed above). That is the `permission_precondition` in the contract: reported
   once at launch, not worked around.
+
+## Swarm child launch, 2026-11-20 — one bootstrap path; supersedes the launch source and child bootstrap of 2026-11-17
+
+Operator decision, 2026-11-20: "child coding agents must bootstrap using the same
+bootstrap you use to bootstrap i do NOT want a parallel bootstrap script or
+pipeline" and "remove the parallel child bootstrap script entirely i want ONE path
+for agents". This section supersedes, in the 2026-11-17 section above, the
+`.github` launch source, the governance `add_repo` attach, the `ff.sh --ssot`
+catch-up, and the DEGRADED start with `l9-materialize-governance`.
+
+| Session | Sources at start | Observed |
+|---|---|---|
+| `session_017xwbxxspzyYrgdmJ6qyzwV` (CTO) | `[Website-Bot]`, environment `env_01MraPSE4aEFGiZ9G917SNR6` | Setup cloned governance; SessionStart provisioned `/root/.l9/authority/.github` (non-shallow, HEAD `c788b99` = origin/main); architect and CTO mode `ACTIVE` |
+| `session_017xwbxy1eHaEhir9EvqXXUd`, `session_017xwbxveWk5awtt6H4w9Ksy` | `[.github]`, same environment | Setup started DEGRADED; the environment's stored Setup stub (`L9_STUB_REVISION=2026-11-20.2`, condensed to the field limit) carried no `l9_install_child_bootstrap`, so `$HOME/.l9/bin/l9-materialize-governance` never existed; both children held at CTO-BLOCKER before role registration |
+| `session_017xwbxvHpnzTWw3vcxnoVVo` | `[Website-Bot]`, same environment, no `add_repo` | `$HOME/.cursor-governance` at `7921359`; `$HOME/.l9/authority/.github` non-shallow, HEAD `c788b99` = origin/main; `bootstrap-state.json` `READY` |
+
+**Consequence.**
+
+- A Claude Code cloud swarm child is created with its lane's primary repository as
+  `source_url`, exactly as the CTO session is started. The environment's Setup
+  script and SessionStart are its whole bootstrap: they provide the governance
+  clone and the `Quantum-L9/.github` authority checkout.
+- There is no child-only bootstrap. `l9_install_child_bootstrap`,
+  `l9-materialize-governance`, its user-scope allow rules and the DEGRADED start
+  are removed from the Setup stub; a session whose Setup finds no governance
+  source fails closed, child or not.
+- A child calls `add_repo` only for further repositories in its campaign set, never
+  for governance. A missing governance clone or authority checkout is CTO-BLOCKER,
+  never a workaround, and no brief carries a bootstrap step.

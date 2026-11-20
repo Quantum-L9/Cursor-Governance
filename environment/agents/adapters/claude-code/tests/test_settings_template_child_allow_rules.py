@@ -15,15 +15,13 @@ SessionStart re-projects untracked workspace settings wholly from the template
 (reconcile_claude_settings.merge_workspace_settings), so an injected rule is
 removed again, and injecting would also edit repository-owned settings.
 
-Exception, 2026-11-20 (DEGRADED start): a child container has no governance
-source at Setup at all (its only source is Quantum-L9/.github and Setup holds no
-GitHub credential), so neither projection can run before the session starts.
-Only then does the stub write three narrow rules to USER scope, never to a
-workspace settings file, and the first web/setup.sh run replaces them with the
-template's. See DEGRADED_USER_RULES.
+One bootstrap path (operator decision 2026-11-20): a swarm child starts from its
+lane's primary repository exactly as the CTO session does, so the environment's
+Setup script and SessionStart are its whole bootstrap. The Setup stub writes no
+permission rule anywhere, and there is no DEGRADED child start or materializer.
 
 These tests pin that the template carries exactly these rules, that they are
-narrow, and that the Setup stub writes nothing else.
+narrow, and that the Setup stub writes no settings at all.
 """
 
 from __future__ import annotations
@@ -79,48 +77,17 @@ class RulesAreNarrow(unittest.TestCase):
         self.assertNotIn("setup.sh", joined)
 
 
-#: The only rules the Setup stub may write, and only on a DEGRADED start (no
-#: governance source on disk). 2026-11-20: a swarm child starts with
-#: Quantum-L9/.github as its only source and Setup holds no GitHub credential, so
-#: the template projection above cannot reach it before the session starts, and
-#: in-session both the push attach ("[Unauthorized Access]") and web/setup.sh
-#: ("[Undermining Oversight]") are refused without a rule. These three break that
-#: cycle; web/setup.sh then re-projects user permissions wholly from the template.
-DEGRADED_USER_RULES = [
-    "mcp__claude-code-remote__add_repo",
-    "mcp__claude-code-remote__register_repo_root",
-    'Bash(bash "$HOME/.l9/bin/l9-materialize-governance":*)',
-]
-
-
 class SetupStubDoesNotInject(unittest.TestCase):
-    def test_stub_never_writes_workspace_settings(self) -> None:
+    def test_stub_never_writes_settings(self) -> None:
         body = STUB.read_text(encoding="utf-8")
         self.assertNotIn("CHILD_ALLOW_RULES", body)
-        self.assertNotIn(".claude/settings.local.json", body)
+        self.assertNotIn(".claude/settings", body)
         self.assertNotIn("$PWD/.claude", body)
 
-    def test_stub_writes_only_the_degraded_user_rules_to_user_scope(self) -> None:
+    def test_there_is_no_child_only_bootstrap(self) -> None:
         body = STUB.read_text(encoding="utf-8")
-        self.assertIn('settings="$HOME/.claude/settings.json"', body)
-        for rule in DEGRADED_USER_RULES:
-            self.assertIn(repr(rule) if rule.startswith("Bash(") else f'"{rule}"', body)
-        start = body.index("rules = [")
-        block = body[start : body.index("]", start)]
-        self.assertEqual(block.count("\n    "), len(DEGRADED_USER_RULES))
-
-    def test_degraded_bootstrap_runs_only_without_a_governance_source(self) -> None:
-        body = STUB.read_text(encoding="utf-8")
-        calls = [
-            line.strip()
-            for line in body.splitlines()
-            if line.strip() == "l9_install_child_bootstrap"
-        ]
-        self.assertEqual(len(calls), 1)
-        self.assertIn("L9_GOV_DEGRADED=1", body)
-
-    def test_materialize_rule_is_dropped_by_the_template_projection(self) -> None:
-        self.assertNotIn(DEGRADED_USER_RULES[2], template_allow())
+        for gone in ("l9_install_child_bootstrap", "l9-materialize-governance", "L9_GOV_DEGRADED"):
+            self.assertNotIn(gone, body)
 
 
 if __name__ == "__main__":
@@ -152,8 +119,8 @@ def _run_stub(cwd: Path, home: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-class DegradedStartIsScopedToSwarmChildren(unittest.TestCase):
-    """Codex P1 on #1073: only the .github-only child layout may start DEGRADED."""
+class OneBootstrapPath(unittest.TestCase):
+    """A session with no governance source fails closed, whatever else it holds."""
 
     def setUp(self) -> None:
 
@@ -167,25 +134,19 @@ class DegradedStartIsScopedToSwarmChildren(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def test_ordinary_session_without_governance_still_fails_closed(self) -> None:
+    def test_ordinary_session_without_governance_fails_closed(self) -> None:
         result = _run_stub(self.work, self.home)
         self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertFalse((self.home / ".l9" / "bin" / "l9-materialize-governance").exists())
+        self.assertFalse((self.home / ".l9" / "bin").exists())
         self.assertFalse((self.home / ".claude" / "settings.json").exists())
 
-    def test_dotgithub_child_layout_starts_degraded_with_only_the_three_rules(self) -> None:
+    def test_dotgithub_only_layout_is_not_special_and_fails_closed(self) -> None:
         _git_repo(self.work / ".github", "https://github.com/Quantum-L9/.github")
         result = _run_stub(self.work, self.home)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("DEGRADED", result.stdout + result.stderr)
-        allow = json.loads((self.home / ".claude" / "settings.json").read_text())["permissions"][
-            "allow"
-        ]
-        self.assertEqual(allow, DEGRADED_USER_RULES)
-
-    def test_dotgithub_with_a_foreign_origin_is_not_the_child_layout(self) -> None:
-        _git_repo(self.work / ".github", "https://github.com/someone-else/.github")
-        self.assertEqual(_run_stub(self.work, self.home).returncode, 1)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertNotIn("DEGRADED", result.stdout + result.stderr)
+        self.assertFalse((self.home / ".l9" / "bin").exists())
+        self.assertFalse((self.home / ".claude" / "settings.json").exists())
 
     def test_governance_named_checkout_with_a_foreign_origin_is_not_trusted(self) -> None:
         _git_repo(
@@ -194,43 +155,3 @@ class DegradedStartIsScopedToSwarmChildren(unittest.TestCase):
         result = _run_stub(self.work, self.home)
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertFalse((self.home / ".cursor-governance").exists())
-
-
-class MaterializeScriptAuthenticatesItsSource(unittest.TestCase):
-    """Codex P1 on #1073: identity is checked before anything is cloned or run."""
-
-    def test_foreign_origin_is_refused_before_cloning(self) -> None:
-
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            home = root / "home"
-            home.mkdir()
-            work = root / "work"
-            work.mkdir()
-            _git_repo(work / ".github", "https://github.com/Quantum-L9/.github")
-            self.assertEqual(_run_stub(work, home).returncode, 0)
-            fake = _git_repo(
-                work / "cursor-governance", "https://github.com/attacker/cursor-governance"
-            )
-            subprocess.run(
-                ["git", "-C", str(fake), "commit", "-q", "--allow-empty", "-m", "x"],
-                check=True,
-                env={
-                    "PATH": os.environ["PATH"],
-                    "HOME": str(home),
-                    "GIT_AUTHOR_NAME": "t",
-                    "GIT_AUTHOR_EMAIL": "t@example.invalid",
-                    "GIT_COMMITTER_NAME": "t",
-                    "GIT_COMMITTER_EMAIL": "t@example.invalid",
-                },
-            )
-            result = subprocess.run(
-                ["bash", str(home / ".l9" / "bin" / "l9-materialize-governance"), str(fake)],
-                env={"PATH": os.environ["PATH"], "HOME": str(home)},
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            self.assertEqual(result.returncode, 1)
-            self.assertIn("refusing", result.stderr)
-            self.assertFalse((home / ".cursor-governance").exists())
