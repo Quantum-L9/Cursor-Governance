@@ -413,5 +413,7 @@ def test_claude_hook_does_not_run_the_coding_classifier_twice() -> None:
         body = text[text.index("emit_coding_projection() {") :]
         body = body[: body.index("\n}\n")]
         assert "coding_projection_status.py" not in body
-        assert "bound by default for Claude Code" in body
+        assert "part of the Claude Code default binding" in body
+        # It claims nothing: the bound status is the verified result below, never this line.
+        assert "is bound by default" not in body
         assert "not bound in this session" not in body

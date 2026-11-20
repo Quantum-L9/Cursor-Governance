@@ -81,7 +81,7 @@ binding's composed view, or the coding projection's three source-class views.
   missing, the interpreter is unresolved, it times out, or it prints nothing.
 - The separate `coding projection:` line differs per host. Cursor's is verification only
   and says so: `not bound in this session — /coding-agent binds it`. Claude Code's points
-  at the default binding, which verifies and binds it (`bound by default for Claude Code`).
+  at the default binding, whose verified result alone says whether it is bound.
 
 ### Authority checkout
 

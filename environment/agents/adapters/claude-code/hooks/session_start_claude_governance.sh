@@ -1016,7 +1016,7 @@ emit_account_drift() {
 # the hook spends no more of its budget than before. It is a host binding, not coding-agent
 # mode: a registered /lcto swarm child still runs coding_agent_mode.py on.
 emit_coding_projection() {
-  say "coding projection: l9.projection/coding-agent-execution@1 is bound by default for Claude Code — its verdict is in the default projection binding below (a host binding, not coding-agent mode; /coding-agent binds the mode)"
+  say "coding projection: l9.projection/coding-agent-execution@1 is part of the Claude Code default binding — whether it is bound in this session is the verified result in the default projection binding below, nothing else (a host binding, not coding-agent mode; /coding-agent binds the mode)"
 }
 
 # --- Authority checkout (shared by every workspace) --------------------------
