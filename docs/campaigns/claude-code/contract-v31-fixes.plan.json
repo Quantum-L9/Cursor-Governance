@@ -97,9 +97,7 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": [
-        "A1"
-      ],
+      "dependencies": ["A1"],
       "operation": "Insert",
       "anchor": "P1_REPOSITORY_PREFLIGHT actions/outputs/failures and C1_SESSIONSTART_SELF_HEAL preconditions",
       "leverage_rank": 2,
@@ -113,9 +111,7 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "A1"
-      ],
+      "dependencies": ["A1"],
       "operation": "Replace",
       "anchor": "C11B_REBUILD_OBSERVATION.validation.pass_when",
       "leverage_rank": 3,
@@ -129,9 +125,7 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "A3"
-      ],
+      "dependencies": ["A3"],
       "operation": "Insert",
       "anchor": "C11B_REBUILD_OBSERVATION actions, outputs and validation.pass_when",
       "leverage_rank": 4,
@@ -145,22 +139,14 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "A4"
-      ],
+      "dependencies": ["A4"],
       "operation": "Insert",
       "anchor": "C11A_ALLOWLIST_DECLARATION brokered_path_note and C11B failure_behavior.no_next_session_yet",
       "leverage_rank": 5,
       "shared_root_cause": "C11B validates proxies for its objective rather than the objective"
     }
   ],
-  "critical_path": [
-    "A1",
-    "A2",
-    "A3",
-    "A4",
-    "A5"
-  ],
+  "critical_path": ["A1", "A2", "A3", "A4", "A5"],
   "milestones": [
     {
       "id": "M1",
@@ -191,9 +177,7 @@
     {
       "surface": "WIP/claude-code-mobile-environment/",
       "action": "update",
-      "todo_ids": [
-        "A1"
-      ],
+      "todo_ids": ["A1"],
       "reason": "the v3.1 contract lands beside the existing tracked workstream plan artifacts"
     },
     {
@@ -246,13 +230,7 @@
     "rollback": "Delete the v3.1 file; v3.0.0 semantics are unchanged because v3.0.0 is not itself committed and nothing imports the new file."
   },
   "leverage": {
-    "ranked_todo_ids": [
-      "A1",
-      "A2",
-      "A3",
-      "A4",
-      "A5"
-    ],
+    "ranked_todo_ids": ["A1", "A2", "A3", "A4", "A5"],
     "shared_causes": [
       "v3.0.0 dropped content and assumed properties it never verified",
       "C11B validates proxies for its objective rather than the objective"
@@ -328,10 +306,7 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": [
-      "U1",
-      "U2"
-    ],
+    "remaining_unknown_ids": ["U1", "U2"],
     "next_skill": "l9-ynp",
     "stop_reason": "Both operator decisions are taken and recorded: the cloud_activation lane is retained with A3 and A4 applied, and the self-heal fix is verify-and-assert rather than new machinery. U1 and U2 are execution-time probes that A2 and A1 themselves install as P1 obligations, so they are discharged by running the plan rather than blocking it. All five todos are grounded in files and line anchors verified this session at b406fee."
   },

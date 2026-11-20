@@ -49,10 +49,7 @@
       "minLength": 1
     },
     "target_sha": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "payload": {
       "type": "object"

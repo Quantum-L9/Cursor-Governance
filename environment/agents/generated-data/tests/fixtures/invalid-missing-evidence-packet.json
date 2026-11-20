@@ -25,12 +25,8 @@
       "statement": "This observed statement has no evidence.",
       "source_evidence": [],
       "scope": {
-        "repositories": [
-          "Quantum-L9/example"
-        ],
-        "repository_classes": [
-          "l9_python"
-        ],
+        "repositories": ["Quantum-L9/example"],
+        "repository_classes": ["l9_python"],
         "paths": [],
         "task_types": [],
         "roles": []
@@ -41,9 +37,7 @@
         "base_sha": "abc1234",
         "expires_at": null
       },
-      "proposed_routes": [
-        "memory"
-      ],
+      "proposed_routes": ["memory"],
       "expected_reuse": {
         "task_local": false,
         "cross_task": true,

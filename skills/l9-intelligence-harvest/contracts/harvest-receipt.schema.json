@@ -19,12 +19,7 @@
       "type": "string"
     },
     "status": {
-      "enum": [
-        "PASS",
-        "PARTIAL",
-        "BLOCKED",
-        "FAIL"
-      ]
+      "enum": ["PASS", "PARTIAL", "BLOCKED", "FAIL"]
     },
     "unknowns": {
       "items": {
@@ -33,11 +28,6 @@
       "type": "array"
     }
   },
-  "required": [
-    "request_id",
-    "status",
-    "checks",
-    "outputs"
-  ],
+  "required": ["request_id", "status", "checks", "outputs"],
   "type": "object"
 }

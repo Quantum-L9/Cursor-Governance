@@ -4,10 +4,7 @@
   "title": "L9 post-publish governance handoff (l9.governance_handoff.v1)",
   "description": "Environment, bootstrap and governance material ONLY, written by the agent to .l9/memory/governance-handoff.json after make pr. The parallel Stop hook governance_handoff_writeback.py writes it as ONE observation record to the cursor-governance namespace, never the repository's, through the namespace-restricted hook surface claude-governance-handoff. The hook appends an 'observed' block copied verbatim from receipts (bootstrap receipt when not ready, degraded prefetch receipt, hook skips since session start); that block is not part of this file. Enforced by ops/memory/governance_handoff.py; also enforced there: the normalized brief is at most 12288 bytes and the record at most 16384 bytes. An all-empty brief with nothing observed writes no record.",
   "type": "object",
-  "required": [
-    "schema",
-    "pr_number"
-  ],
+  "required": ["schema", "pr_number"],
   "additionalProperties": false,
   "properties": {
     "schema": {
@@ -19,10 +16,7 @@
       "description": "The published PR's number. Must equal the number in .l9/pr/pr-summary.json written by make pr, or the brief is not this publication's and is refused. A number with a zero fractional part (7.0) is the integer 7."
     },
     "environment_friction": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "description": "What got in the way in the environment: evidence (detail) and cost (impact). A bare string is accepted and becomes {\"item\": <string>}.",
@@ -35,9 +29,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "item"
-            ],
+            "required": ["item"],
             "properties": {
               "item": {
                 "type": "string",
@@ -46,17 +38,11 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "detail": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               },
               "impact": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
@@ -67,10 +53,7 @@
       "description": "What got in the way in the environment: evidence (detail) and cost (impact). Empty is []. Absent or null is treated as []."
     },
     "blockers": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "description": "Environment or governance blockers, each with its cause and what unblocks it. A bare string is accepted and becomes {\"item\": <string>}.",
@@ -83,9 +66,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "item"
-            ],
+            "required": ["item"],
             "properties": {
               "item": {
                 "type": "string",
@@ -94,17 +75,11 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "blocker": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               },
               "unblock": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
@@ -115,10 +90,7 @@
       "description": "Environment or governance blockers, each with its cause and what unblocks it. Empty is []. Absent or null is treated as []."
     },
     "degraded_bootstrap": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "description": "Bootstrap components or hooks observed degraded, each with the state and reason seen. A bare string is accepted and becomes {\"component\": <string>}.",
@@ -131,9 +103,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "component"
-            ],
+            "required": ["component"],
             "properties": {
               "component": {
                 "type": "string",
@@ -142,10 +112,7 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "detail": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
@@ -156,10 +123,7 @@
       "description": "Bootstrap components or hooks observed degraded, each with the state and reason seen. Empty is []. Absent or null is treated as []."
     },
     "workarounds": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "description": "What was done instead of the blocked path. A bare string is accepted and becomes {\"item\": <string>}.",
@@ -172,9 +136,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "item"
-            ],
+            "required": ["item"],
             "properties": {
               "item": {
                 "type": "string",
@@ -183,10 +145,7 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "workaround": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
@@ -197,10 +156,7 @@
       "description": "What was done instead of the blocked path. Empty is []. Absent or null is treated as []."
     },
     "governance_actions": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "maxItems": 40,
       "items": {
         "description": "What a human must change in governance or environment settings: where and why. A bare string is accepted and becomes {\"action\": <string>}.",
@@ -213,9 +169,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "action"
-            ],
+            "required": ["action"],
             "properties": {
               "action": {
                 "type": "string",
@@ -224,17 +178,11 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "where": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               },
               "why": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },

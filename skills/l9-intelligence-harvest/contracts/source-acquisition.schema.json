@@ -4,13 +4,7 @@
   "additionalProperties": false,
   "properties": {
     "adapter": {
-      "enum": [
-        "local_path",
-        "repository_checkout",
-        "remote_repository",
-        "url",
-        "document_or_pack"
-      ]
+      "enum": ["local_path", "repository_checkout", "remote_repository", "url", "document_or_pack"]
     },
     "inventory": {
       "items": {
@@ -33,11 +27,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "path",
-          "bytes",
-          "sha256"
-        ],
+        "required": ["path", "bytes", "sha256"],
         "type": "object"
       },
       "type": "array"
@@ -53,10 +43,7 @@
       "type": "string"
     },
     "materialized_root": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "schema_version": {
       "const": "1.0"
@@ -77,13 +64,7 @@
           "type": "string"
         },
         "kind": {
-          "enum": [
-            "file",
-            "directory",
-            "repository",
-            "url",
-            "document_pack"
-          ]
+          "enum": ["file", "directory", "repository", "url", "document_pack"]
         },
         "provider": {
           "minLength": 1,
@@ -102,32 +83,17 @@
           "type": "string"
         }
       },
-      "required": [
-        "kind"
-      ],
+      "required": ["kind"],
       "type": "object"
     },
     "status": {
-      "enum": [
-        "PASS",
-        "PARTIAL",
-        "BLOCKED"
-      ]
+      "enum": ["PASS", "PARTIAL", "BLOCKED"]
     },
     "transport": {
-      "enum": [
-        "filesystem",
-        "repository_checkout",
-        "direct_https",
-        "connector"
-      ]
+      "enum": ["filesystem", "repository_checkout", "direct_https", "connector"]
     },
     "verification": {
-      "enum": [
-        "CONTENT_REHASHED",
-        "CONTENT_HASH_DECLARED",
-        "IDENTITY_ONLY"
-      ]
+      "enum": ["CONTENT_REHASHED", "CONTENT_HASH_DECLARED", "IDENTITY_ONLY"]
     }
   },
   "required": [

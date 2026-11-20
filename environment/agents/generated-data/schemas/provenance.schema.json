@@ -11,10 +11,7 @@
       "description": "One inspectable evidence reference (law §10.2). Identifies the source (source_id, source_type) and, where applicable, the repository/path/commit/locator that make it re-inspectable.",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "source_id",
-        "source_type"
-      ],
+      "required": ["source_id", "source_type"],
       "properties": {
         "source_id": {
           "type": "string",

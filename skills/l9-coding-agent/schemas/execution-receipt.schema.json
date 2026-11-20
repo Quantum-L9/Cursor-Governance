@@ -16,12 +16,7 @@
   ],
   "properties": {
     "terminal_state": {
-      "enum": [
-        "CONVERGED",
-        "BLOCKED",
-        "ESCALATE_ARCHITECTURE",
-        "FAILED"
-      ]
+      "enum": ["CONVERGED", "BLOCKED", "ESCALATE_ARCHITECTURE", "FAILED"]
     },
     "objective_status": {
       "type": "string"
@@ -54,10 +49,7 @@
       "type": "array"
     },
     "baseline_status": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "finding_traceability": {
       "type": "array"

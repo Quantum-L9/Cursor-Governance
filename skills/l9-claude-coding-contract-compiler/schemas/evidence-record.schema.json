@@ -20,11 +20,7 @@
     "identity": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "gate_id",
-        "owner_layer",
-        "mode"
-      ],
+      "required": ["gate_id", "owner_layer", "mode"],
       "properties": {
         "gate_id": {
           "type": "string"
@@ -34,23 +30,14 @@
         },
         "mode": {
           "type": "string",
-          "enum": [
-            "blocking",
-            "advisory",
-            "shadow"
-          ]
+          "enum": ["blocking", "advisory", "shadow"]
         }
       }
     },
     "subject": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "repository",
-        "subject_sha",
-        "base_sha",
-        "event_type"
-      ],
+      "required": ["repository", "subject_sha", "base_sha", "event_type"],
       "properties": {
         "repository": {
           "type": "string"
@@ -65,23 +52,14 @@
         },
         "event_type": {
           "type": "string",
-          "enum": [
-            "pull_request",
-            "merge_group",
-            "push",
-            "workflow_dispatch"
-          ]
+          "enum": ["pull_request", "merge_group", "push", "workflow_dispatch"]
         }
       }
     },
     "policy": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "registry_digest",
-        "risk_policy_digest",
-        "plan_digest"
-      ],
+      "required": ["registry_digest", "risk_policy_digest", "plan_digest"],
       "properties": {
         "registry_digest": {
           "type": "string",
@@ -104,17 +82,11 @@
     "outcome": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "result"
-      ],
+      "required": ["result"],
       "properties": {
         "result": {
           "type": "string",
-          "enum": [
-            "passed",
-            "failed",
-            "error"
-          ]
+          "enum": ["passed", "failed", "error"]
         },
         "violations": {
           "type": "array",

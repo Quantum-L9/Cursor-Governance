@@ -8,11 +8,7 @@
       "type": "string"
     },
     "epistemic": {
-      "enum": [
-        "CONFIRMED",
-        "INFERENCE",
-        "UNKNOWN"
-      ]
+      "enum": ["CONFIRMED", "INFERENCE", "UNKNOWN"]
     },
     "id": {
       "minLength": 1,
@@ -21,22 +17,13 @@
     "locator": {
       "properties": {
         "kind": {
-          "enum": [
-            "path_lines",
-            "symbol",
-            "url",
-            "artifact",
-            "unknown"
-          ]
+          "enum": ["path_lines", "symbol", "url", "artifact", "unknown"]
         },
         "value": {
           "type": "string"
         }
       },
-      "required": [
-        "kind",
-        "value"
-      ],
+      "required": ["kind", "value"],
       "type": "object"
     },
     "secret_redacted": {
@@ -48,12 +35,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "id",
-    "epistemic",
-    "source",
-    "locator"
-  ],
+  "required": ["id", "epistemic", "source", "locator"],
   "title": "Evidence",
   "type": "object"
 }

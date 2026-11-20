@@ -28,10 +28,7 @@
     },
     "autoremediate": {
       "type": "integer",
-      "enum": [
-        0,
-        1
-      ]
+      "enum": [0, 1]
     },
     "audit_id": {
       "type": "string",
@@ -61,11 +58,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "pr_number",
-          "base_sha",
-          "source_head_sha"
-        ],
+        "required": ["pr_number", "base_sha", "source_head_sha"],
         "properties": {
           "pr_number": {
             "type": "integer",
@@ -87,10 +80,7 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "sha256",
-          "bytes"
-        ],
+        "required": ["sha256", "bytes"],
         "properties": {
           "sha256": {
             "type": "string",

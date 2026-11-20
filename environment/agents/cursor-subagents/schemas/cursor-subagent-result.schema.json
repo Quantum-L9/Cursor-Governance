@@ -19,13 +19,7 @@
   "$defs": {
     "role": {
       "type": "string",
-      "enum": [
-        "recon",
-        "pr_remediation",
-        "test",
-        "documentation",
-        "verifier_reviewer"
-      ]
+      "enum": ["recon", "pr_remediation", "test", "documentation", "verifier_reviewer"]
     },
     "resultKind": {
       "type": "string",
@@ -64,14 +58,7 @@
     },
     "epistemicStatus": {
       "type": "string",
-      "enum": [
-        "observed",
-        "derived",
-        "hypothesized",
-        "disproven",
-        "contested",
-        "unresolved"
-      ]
+      "enum": ["observed", "derived", "hypothesized", "disproven", "contested", "unresolved"]
     },
     "route": {
       "type": "string",
@@ -100,10 +87,7 @@
     "evidenceRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "source_id",
-        "source_type"
-      ],
+      "required": ["source_id", "source_type"],
       "properties": {
         "source_id": {
           "type": "string",
@@ -255,9 +239,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "condition_type"
-            ],
+            "required": ["condition_type"],
             "properties": {
               "condition_type": {
                 "type": "string",
@@ -319,10 +301,7 @@
         },
         "blocking_status": {
           "type": "string",
-          "enum": [
-            "blocking",
-            "non_blocking"
-          ]
+          "enum": ["blocking", "non_blocking"]
         },
         "owner": {
           "type": "string",
@@ -360,24 +339,12 @@
     },
     "status": {
       "type": "string",
-      "enum": [
-        "completed",
-        "partial",
-        "blocked",
-        "failed"
-      ]
+      "enum": ["completed", "partial", "blocked", "failed"]
     },
     "identity": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "campaign_id",
-        "graph_id",
-        "action_id",
-        "agent_id",
-        "lease_id",
-        "base_sha"
-      ],
+      "required": ["campaign_id", "graph_id", "action_id", "agent_id", "lease_id", "base_sha"],
       "properties": {
         "campaign_id": {
           "type": "string",
@@ -410,13 +377,7 @@
     "assignment": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "role",
-        "objective",
-        "input_artifact_ids",
-        "allowed_paths",
-        "forbidden_paths"
-      ],
+      "required": ["role", "objective", "input_artifact_ids", "allowed_paths", "forbidden_paths"],
       "properties": {
         "role": {
           "$ref": "#/$defs/role"
@@ -509,10 +470,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "command",
-              "exit_code"
-            ],
+            "required": ["command", "exit_code"],
             "properties": {
               "command": {
                 "type": "string",
@@ -532,11 +490,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "validation_id",
-              "method",
-              "result"
-            ],
+            "required": ["validation_id", "method", "result"],
             "properties": {
               "validation_id": {
                 "type": "string",
@@ -548,12 +502,7 @@
               },
               "result": {
                 "type": "string",
-                "enum": [
-                  "PASS",
-                  "FAIL",
-                  "BLOCKED",
-                  "NOT_RUN"
-                ]
+                "enum": ["PASS", "FAIL", "BLOCKED", "NOT_RUN"]
               },
               "evidence_refs": {
                 "type": "array",
@@ -582,10 +531,7 @@
         "reuse_assessment": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "reusable_data_found",
-            "confidence"
-          ],
+          "required": ["reusable_data_found", "confidence"],
           "properties": {
             "reusable_data_found": {
               "type": "boolean"
@@ -623,9 +569,7 @@
     "provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "produced_at"
-      ],
+      "required": ["produced_at"],
       "properties": {
         "produced_at": {
           "type": "string",
@@ -703,9 +647,7 @@
               "const": "VerificationReviewReport"
             },
             "assignment": {
-              "required": [
-                "subject_agent_id"
-              ],
+              "required": ["subject_agent_id"],
               "properties": {
                 "role": {
                   "const": "verifier_reviewer"
@@ -722,10 +664,7 @@
           "assignment": {
             "properties": {
               "role": {
-                "enum": [
-                  "recon",
-                  "verifier_reviewer"
-                ]
+                "enum": ["recon", "verifier_reviewer"]
               }
             }
           }

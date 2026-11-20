@@ -108,11 +108,7 @@
       "id": "edit-authority-files",
       "description": "Edits to governance-authority paths carry no memory precondition. Isolation and collision safety are Git's job (worktree + branch + publication gate).",
       "match": {
-        "tools": [
-          "Edit",
-          "Write",
-          "NotebookEdit"
-        ],
+        "tools": ["Edit", "Write", "NotebookEdit"],
         "path_globs": [
           "CANONICAL_LAW.md",
           "AGENTS.md",
@@ -134,14 +130,8 @@
       "id": "edit-other",
       "description": "Any other edit carries no memory precondition.",
       "match": {
-        "tools": [
-          "Edit",
-          "Write",
-          "NotebookEdit"
-        ],
-        "path_globs": [
-          "**"
-        ]
+        "tools": ["Edit", "Write", "NotebookEdit"],
+        "path_globs": ["**"]
       },
       "requires": [],
       "fail_mode": "closed"
@@ -150,12 +140,8 @@
       "id": "git-mutation",
       "description": "Local history mutation and publication carry no memory precondition. Push/PR routing is governed by L4 and the publication gate, never by memory state.",
       "match": {
-        "tools": [
-          "Bash"
-        ],
-        "command_patterns": [
-          "(^|\\s|&&|;|\\|)\\s*git\\s+(commit|push|merge|rebase|tag)\\b"
-        ]
+        "tools": ["Bash"],
+        "command_patterns": ["(^|\\s|&&|;|\\|)\\s*git\\s+(commit|push|merge|rebase|tag)\\b"]
       },
       "requires": [],
       "fail_mode": "closed"

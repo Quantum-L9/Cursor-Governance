@@ -3,11 +3,7 @@
   "title": "ScopeLock",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "in_scope",
-    "hard_out_of_scope",
-    "preserved_files"
-  ],
+  "required": ["in_scope", "hard_out_of_scope", "preserved_files"],
   "properties": {
     "in_scope": {
       "type": "array",
@@ -16,10 +12,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "deliverable"
-        ],
+        "required": ["id", "deliverable"],
         "properties": {
           "id": {
             "type": "integer",
@@ -48,21 +41,14 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "path",
-          "guarantee"
-        ],
+        "required": ["path", "guarantee"],
         "properties": {
           "path": {
             "type": "string"
           },
           "guarantee": {
             "type": "string",
-            "enum": [
-              "behavior_unchanged",
-              "comment_only",
-              "schema_compatible_only"
-            ]
+            "enum": ["behavior_unchanged", "comment_only", "schema_compatible_only"]
           }
         }
       }

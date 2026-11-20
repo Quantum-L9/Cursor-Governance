@@ -9,10 +9,7 @@
   "composition_profile": "l9.compose/strategic-planner-value@1",
   "model": "l9.strategic.value@1",
   "contract": "l9.contract/strategic-value-assessment@1",
-  "new_global_invariants": [
-    "L9-SV-001",
-    "L9-SV-002"
-  ],
+  "new_global_invariants": ["L9-SV-001", "L9-SV-002"],
   "required_source_classes": [
     "authority_model",
     "contracts",

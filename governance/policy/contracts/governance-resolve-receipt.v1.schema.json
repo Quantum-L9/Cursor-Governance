@@ -20,10 +20,7 @@
       "const": "l9.governance-resolve-receipt.v1"
     },
     "status": {
-      "enum": [
-        "PASS",
-        "BLOCKED"
-      ]
+      "enum": ["PASS", "BLOCKED"]
     },
     "resolver_version": {
       "type": "string",
@@ -48,13 +45,7 @@
     "counts": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "VERIFIED",
-        "IMPLEMENTED",
-        "MISSING",
-        "UNKNOWN",
-        "CONFLICT"
-      ],
+      "required": ["VERIFIED", "IMPLEMENTED", "MISSING", "UNKNOWN", "CONFLICT"],
       "properties": {
         "VERIFIED": {
           "type": "integer",

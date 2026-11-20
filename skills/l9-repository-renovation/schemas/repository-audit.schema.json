@@ -27,33 +27,19 @@
     },
     "repository": {
       "type": "object",
-      "required": [
-        "root",
-        "git_head",
-        "git_branch",
-        "dirty"
-      ],
+      "required": ["root", "git_head", "git_branch", "dirty"],
       "properties": {
         "root": {
           "type": "string"
         },
         "git_head": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "git_branch": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "dirty": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         }
       },
       "additionalProperties": false
@@ -83,19 +69,10 @@
             "type": "string"
           },
           "severity": {
-            "enum": [
-              "critical",
-              "high",
-              "medium",
-              "low"
-            ]
+            "enum": ["critical", "high", "medium", "low"]
           },
           "confidence": {
-            "enum": [
-              "high",
-              "medium",
-              "low"
-            ]
+            "enum": ["high", "medium", "low"]
           },
           "summary": {
             "type": "string"

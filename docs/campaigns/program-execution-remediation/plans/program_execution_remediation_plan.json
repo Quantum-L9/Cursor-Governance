@@ -78,9 +78,7 @@
       ],
       "effort": "medium",
       "risk": "high",
-      "dependencies": [
-        "todo-00-execution-preflight"
-      ],
+      "dependencies": ["todo-00-execution-preflight"],
       "leverage_rank": 2,
       "operation": "Replace",
       "anchor": "_TUNNEL_COMMANDS + fresh_execution_workspace/_release_open_leases",
@@ -95,9 +93,7 @@
       ],
       "effort": "medium",
       "risk": "high",
-      "dependencies": [
-        "todo-00-execution-preflight"
-      ],
+      "dependencies": ["todo-00-execution-preflight"],
       "leverage_rank": 3,
       "operation": "Replace",
       "anchor": "early resumable execute branch + campaign_source_shape/edited_task_ids/adopt_changed_definitions",
@@ -114,9 +110,7 @@
       ],
       "effort": "medium",
       "risk": "high",
-      "dependencies": [
-        "todo-00-execution-preflight"
-      ],
+      "dependencies": ["todo-00-execution-preflight"],
       "leverage_rank": 4,
       "operation": "Replace",
       "anchor": "close_campaign/command closeout contract",
@@ -132,9 +126,7 @@
       ],
       "effort": "medium",
       "risk": "medium",
-      "dependencies": [
-        "todo-00-execution-preflight"
-      ],
+      "dependencies": ["todo-00-execution-preflight"],
       "leverage_rank": 5,
       "operation": "Replace",
       "anchor": "evaluate_gate + evaluate-gate CLI",
@@ -152,10 +144,7 @@
       ],
       "effort": "medium",
       "risk": "medium",
-      "dependencies": [
-        "todo-00-execution-preflight",
-        "todo-02-resume-source-lock"
-      ],
+      "dependencies": ["todo-00-execution-preflight", "todo-02-resume-source-lock"],
       "leverage_rank": 6,
       "operation": "Wrap",
       "anchor": "_execute_provider / live provider dispatch",
@@ -194,10 +183,7 @@
       ],
       "effort": "medium",
       "risk": "low",
-      "dependencies": [
-        "todo-05-failover-parity",
-        "todo-06-supported-path-e2e"
-      ],
+      "dependencies": ["todo-05-failover-parity", "todo-06-supported-path-e2e"],
       "leverage_rank": 8,
       "operation": "Replace",
       "anchor": "provider helper ownership / compatibility facade",
@@ -298,17 +284,13 @@
     {
       "surface": "environment/program-execution/campaigns/README.md",
       "action": "update",
-      "todo_ids": [
-        "todo-03-completion-projection"
-      ],
+      "todo_ids": ["todo-03-completion-projection"],
       "reason": "Current documented closeout command must reflect projection-only semantics."
     },
     {
       "surface": "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
       "action": "update",
-      "todo_ids": [
-        "todo-03-completion-projection"
-      ],
+      "todo_ids": ["todo-03-completion-projection"],
       "reason": "Machine policy must stop advertising free-form ledger close authority."
     },
     {
