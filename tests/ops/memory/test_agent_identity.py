@@ -16,6 +16,7 @@ from ops.memory import agent_identity as ai
 
 CLAUDE = {"CLAUDECODE": "1"}
 MOBILE = {**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_mobile"}
+WEB = {**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_desktop"}
 REGISTRY = Path(__file__).resolve().parents[3] / "environment/agents/agent_registry.yaml"
 
 
@@ -26,6 +27,7 @@ REGISTRY = Path(__file__).resolve().parents[3] / "environment/agents/agent_regis
         (CLAUDE, "claude-code"),
         ({"CLAUDE_CODE_ENTRYPOINT": "cli"}, "claude-code"),
         (MOBILE, "claude-code"),
+        (WEB, "claude-code"),
         # configured values never relabel a surface that has markers
         ({"CURSOR_AGENT": "1", "L9_MEMORY_AGENT_ID": "claude-code"}, "cursor"),
         ({**CLAUDE, "L9_MEMORY_AGENT_ID": "claude-code-mobile"}, "claude-code"),
@@ -106,7 +108,16 @@ def test_surface_follows_evidence_and_does_not_default() -> None:
     assert ai.resolve_agent_id(CLAUDE) == "claude-code"
     assert ai.resolve_surface_id(CLAUDE) == ""
     assert ai.resolve_surface_id({**CLAUDE, "CLAUDE_CODE_ENTRYPOINT": "cli"}) == "claude-code-cli"
-    assert ai.resolve_surface_id(MOBILE) == "claude-code-mobile"
+    # Claude Code has two surfaces: every hosted entrypoint is claude-code-web
+    assert ai.resolve_surface_id(MOBILE) == "claude-code-web"
+    assert ai.resolve_surface_id(WEB) == "claude-code-web"
+    assert ai.resolve_agent_id(WEB) == "claude-code"
+    assert set(ai.LOCAL_ENTRYPOINTS.values()) | set(ai.REMOTE_SURFACE_BY_ENTRYPOINT.values()) == {
+        "claude-code-cli",
+        "claude-code-web",
+    }
+    # the same entrypoint off a cloud container proves no surface
+    assert ai.resolve_surface_id({**CLAUDE, "CLAUDE_CODE_ENTRYPOINT": "remote_desktop"}) == ""
     assert ai.resolve_surface_id({"CURSOR_AGENT": "1"}) == "cursor-ide"
     assert ai.resolve_agent_id({"CURSOR_AGENT": "1", **CLAUDE}) == "claude-code"
     assert ai.resolve_surface_id({"CURSOR_AGENT": "1", **CLAUDE}) == ""

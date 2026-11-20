@@ -118,7 +118,7 @@ class RuntimeReadinessReceiptTests(unittest.TestCase):
             }
         )
         self.assertEqual(actor, "l9.actor-registry/global@1#claude-code")
-        self.assertEqual(surface, "l9.surface-registry/global@1#claude-code-mobile")
+        self.assertEqual(surface, "l9.surface-registry/global@1#claude-code-web")
 
     def test_identity_refs_never_guess_an_unmapped_surface(self) -> None:
         actor, surface = identity_refs(

@@ -842,7 +842,7 @@ PYEOF
 _l9_door_status() {
   local missing=()
   # The memory identity is DERIVED from host markers (ops/memory/agent_identity.py):
-  # cursor, claude-code-desktop, claude-code-mobile — never configured, so it
+  # actor cursor or claude-code; claude-code surface cli or web — never configured, so it
   # cannot drift from the surface that is actually running.
   local _agent _why _drift
   _agent="$(PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m ops.memory.agent_identity 2>/dev/null || true)"

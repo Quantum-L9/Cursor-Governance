@@ -3216,7 +3216,7 @@ def _peer_identity() -> tuple[str, str, str | None]:
     # execution surfaces; the surface is derived by the one resolver
     # (ops/memory/agent_identity.py) from the remaining host markers. An
     # entrypoint that does not select an assigned surface has no surface and
-    # fails below rather than being labelled desktop, web, or mobile.
+    # fails below rather than being guessed (only cli and web exist).
     identity = _agent_identity_module()
     claude_actor = identity.CLAUDE_ACTOR
     claude_env = {k: v for k, v in os.environ.items() if k != "CURSOR_AGENT"}
@@ -3229,7 +3229,8 @@ def _peer_identity() -> tuple[str, str, str | None]:
     coarse = detect_surface(os.environ)
     aliases = {
         "claude-cli": (claude_actor, identity.CLAUDE_CLI_SURFACE),
-        "claude-mobile": (claude_actor, identity.CLAUDE_MOBILE_SURFACE),
+        "claude-mobile": (claude_actor, identity.CLAUDE_WEB_SURFACE),
+        "claude-web": (claude_actor, identity.CLAUDE_WEB_SURFACE),
         "cursor": ("cursor", "cursor-ide"),
         "cursor-ide": ("cursor", "cursor-ide"),
         "codex": ("codex", "codex-cloud"),

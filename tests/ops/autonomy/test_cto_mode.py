@@ -697,6 +697,12 @@ def test_child_prompt_never_clones_dot_github_and_keeps_the_frozen_prefixes() ->
         "FIRST ACTION, ROLE REGISTRATION"
     )
     assert 'ff.sh" --ssot' in text
+    # A child's only source is Quantum-L9/.github, so Setup starts DEGRADED with no
+    # governance clone; the prompt must name the one materialize command the
+    # Setup stub's user-scope rule allows, ahead of the ff.sh catch-up.
+    materialize = 'bash "$HOME/.l9/bin/l9-materialize-governance"'
+    assert materialize in text
+    assert text.index(materialize) < text.index('ff.sh" --ssot')
     template = cto_mode.load_contract()["operating_protocol"]["child_system_prompt"]
     assert template.count("{") == template.count("{cto_session}")
 

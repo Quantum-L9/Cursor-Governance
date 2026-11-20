@@ -26,6 +26,10 @@ from typing import Any
 import yaml
 
 DEFAULT_OUT = Path("ops/generated/skill-registry.json")
+# Claude Code reads this copy. It is the same bytes as DEFAULT_OUT, written
+# and checked here so the adapter register cannot drift from the repo register.
+CLAUDE_ADAPTER_REL = Path("environment/agents/adapters/claude-code")
+CLAUDE_MIRROR_REL = CLAUDE_ADAPTER_REL / "generated" / "skill-registry.json"
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -173,6 +177,64 @@ def serialized(registry: dict[str, Any]) -> str:
     return json.dumps(registry, indent=2, sort_keys=True, ensure_ascii=True) + "\n"
 
 
+def _refuse_outside_root(path: Path, root: Path) -> None:
+    """Reject a resolved path that symlink-escapes the repository root."""
+    if not path.is_relative_to(root):
+        raise SystemExit(f"refusing to access path outside repository root: {path}")
+
+
+def registry_targets(root: Path, out: Path) -> list[Path]:
+    """Files this invocation may read or write.
+
+    A custom ``--out`` is caller-owned. The Claude mirror is the same bytes as
+    the repo register. It is included for the default output whenever this
+    root contains the Claude adapter tree, even when ``generated/`` is absent:
+    that directory's only tracked file is the mirror, so deleting the mirror
+    deletes the directory. The write path creates missing parents. A root with
+    no adapter tree (a registry-only fixture) has nothing to mirror.
+    """
+    _refuse_outside_root(out, root)
+    targets = [out]
+    if out != (root / DEFAULT_OUT).resolve():
+        return targets
+    adapter = (root / CLAUDE_ADAPTER_REL).resolve()
+    _refuse_outside_root(adapter, root)
+    if not adapter.is_dir():
+        return targets
+    mirror = (root / CLAUDE_MIRROR_REL).resolve()
+    _refuse_outside_root(mirror, root)
+    targets.append(mirror)
+    return targets
+
+
+def _text_differs(path: Path, registry_text: str) -> bool:
+    if not path.is_file():
+        return True
+    return path.read_text(encoding="utf-8") != registry_text
+
+
+def check_targets(targets: list[Path], registry_text: str) -> int:
+    stale = [path for path in targets if _text_differs(path, registry_text)]
+    if stale:
+        for path in stale:
+            print(f"STALE: {path}")
+        return 1
+    for path in targets:
+        print(f"CURRENT: {path}")
+    return 0
+
+
+def write_targets(targets: list[Path], registry_text: str) -> int:
+    for path in targets:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not _text_differs(path, registry_text):
+            print(f"CURRENT: {path}")
+            continue
+        path.write_text(registry_text, encoding="utf-8")
+        print(f"WROTE: {path}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
@@ -182,25 +244,11 @@ def main() -> int:
 
     root = args.root.resolve()
     out = (args.out or (root / DEFAULT_OUT)).resolve()
-    # Validate the constructed path before any filesystem access so faulty
-    # --root/--out arguments cannot escape the repository root (path traversal).
-    if not out.is_relative_to(root):
-        raise SystemExit(f"refusing to access path outside repository root: {out}")
+    targets = registry_targets(root, out)
     registry_text = serialized(build_registry(root))
     if args.check:
-        if not out.is_file() or out.read_text(encoding="utf-8") != registry_text:
-            print(f"STALE: {out}")
-            return 1
-        print(f"CURRENT: {out}")
-        return 0
-
-    out.parent.mkdir(parents=True, exist_ok=True)
-    if out.is_file() and out.read_text(encoding="utf-8") == registry_text:
-        print(f"CURRENT: {out}")
-        return 0
-    out.write_text(registry_text, encoding="utf-8")
-    print(f"WROTE: {out}")
-    return 0
+        return check_targets(targets, registry_text)
+    return write_targets(targets, registry_text)
 
 
 if __name__ == "__main__":

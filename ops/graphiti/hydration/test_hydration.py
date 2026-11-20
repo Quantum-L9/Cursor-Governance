@@ -72,7 +72,7 @@ def test_identity_is_derived_per_surface_and_configured_values_are_ignored(monke
     assert got == {
         "agent_id": "claude-code",
         "user_id": "claude_code_agent",
-        "surface": "claude-code-mobile",
+        "surface": "claude-code-web",
     }
     _surface(monkeypatch, CLAUDECODE="1")
     bare = ident.resolve_write_identity(surface="claude-code")
