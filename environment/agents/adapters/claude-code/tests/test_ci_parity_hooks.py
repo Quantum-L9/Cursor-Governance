@@ -146,17 +146,6 @@ def test_posttool_edit_returns_findings_as_context(
 def test_posttool_is_silent_on_cursor(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # A Cursor-only process. A live Claude runtime outranks CURSOR_AGENT by design
-    # (surface_detect.claude_runtime_present), so markers inherited from a Claude
-    # Code session running this suite must not leak in.
-    for marker in (
-        "CLAUDECODE",
-        "CLAUDE_CODE_ENTRYPOINT",
-        "CLAUDE_CODE_SESSION_ID",
-        "CLAUDE_CODE_REMOTE",
-        "L9_GOVERNANCE_SURFACE",
-    ):
-        monkeypatch.delenv(marker, raising=False)
     monkeypatch.setenv("CURSOR_AGENT", "1")
     hook = _load("ci_parity_posttool")
     monkeypatch.setattr(hook, "RUNNER", _stub_runner(tmp_path, 0, "findings"))
