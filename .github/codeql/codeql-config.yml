@@ -7,26 +7,16 @@
 # status: active
 # --- /L9_META ---
 #
-# Shared CodeQL configuration for all Quantum-L9 repositories.
+# Shared CodeQL configuration for pull requests and pushes to main.
 # Portable by design: contains no repo-specific paths or languages.
-# The `security-and-quality` suite is the built-in CodeQL suite that adds the
-# maintainability / code-quality queries (unused imports, dead code, unused
-# locals, etc.) on top of the security queries.
+#
+# This file intentionally sets no queries and no query-filters. The CodeQL
+# action disables overlay analysis (NonDefaultQueries) when either key is
+# present, and overlay is what lets a pull request reuse the main database
+# and extract only changed files. The default suite is the high-precision
+# security suite. security-extended runs from codeql-config-nightly.yml.
 
-name: "L9 CodeQL config (security + code quality)"
-
-queries:
-  - uses: security-and-quality
-
-# Noise dial. Suppress at source (deterministic + versioned + DRY across every
-# repo) instead of per-alert dismissal. Start minimal: drop only low-precision
-# findings. Add targeted `id` excludes below over time, each with a one-line
-# reason — a reviewable suppressions ledger, not a blanket mute.
-query-filters:
-  - exclude:
-      precision: low
-  # --- suppressions ledger (add data-driven, one reason per line) ---
-  # - exclude: { id: py/unused-import }   # example form; do NOT enable preemptively
+name: "L9 CodeQL config (default suite)"
 
 # Directories that are never source-of-truth for L9 repos. Kept generic so the
 # same ignore list is valid whether a repo ships Python, shell, or config only.

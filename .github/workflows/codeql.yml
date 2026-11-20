@@ -7,9 +7,9 @@
 # status: active
 # --- /L9_META ---
 #
-# Thin caller -> the org-wide reusable CodeQL workflow. This is the ONLY CodeQL
-# file a repo needs; analysis logic + query policy live centrally in
-# Quantum-L9/Cursor-Governance. This copy self-scans Cursor-Governance itself.
+# Thin caller -> the org-wide reusable CodeQL workflow. Analysis for pull
+# requests and pushes to main uses the default suite (see codeql-config.yml).
+# security-extended is codeql-nightly.yml and does not run on pull requests.
 
 name: "CodeQL (security + code quality)"
 
@@ -22,8 +22,6 @@ on:
       - "**/*.md"
       - "docs/**"
       - "**/*.mdc"
-  schedule:
-    - cron: "24 3 * * 1"     # weekly, Monday 03:24 UTC
   workflow_dispatch: {}
 
 # Cancel a superseded run of the same PR (saves CI minutes on rapid pushes).

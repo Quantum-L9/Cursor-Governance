@@ -1,0 +1,38 @@
+# --- L9_META ---
+# l9_schema: 1
+# artifact_type: ci_workflow
+# component: codeql_nightly_extended
+# tags: [ci, codeql, security, governance, quantum-l9]
+# retrieval: on_demand
+# status: active
+# --- /L9_META ---
+#
+# security-extended on main only. Not a pull_request workflow and not a
+# required check. The pull-request caller stays on the default suite so
+# overlay analysis remains available.
+
+name: "CodeQL nightly (security-extended)"
+
+on:
+  schedule:
+    - cron: "24 3 * * *" # nightly, 03:24 UTC
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  codeql:
+    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@a01485a4a3c16a8c78012b15d2a11d48e1836ed1 # retargeted in the pin commit
+    with:
+      config-file: ./.github/codeql/codeql-config-nightly.yml
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
