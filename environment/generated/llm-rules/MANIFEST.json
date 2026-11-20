@@ -51,9 +51,9 @@
       "alias": null,
       "class": "always",
       "output": "05-ask-mode.md",
-      "output_sha256": "1dc9a659f231e205858a605c0592d0db995cee612f7e0187d26538dae3ef2d15",
+      "output_sha256": "2bebea1ffd85a290346d03d268cabc762ea837c4469ea8fc3e1f3e25d4dcbc59",
       "source": "rules/05-ask-mode.mdc",
-      "source_sha256": "4b2f5f47210034c6e3437b3a87e93dc22c07e1f1cb4c16cf51feb7ad75ed709f",
+      "source_sha256": "bab10ed1adf9932ed1c9da099d1356a38aa488f1b820cec32a6e976d2b74a4b0",
       "stem": "05-ask-mode"
     },
     {
@@ -436,11 +436,11 @@
     },
     {
       "alias": null,
-      "class": "skipped_agent_requested",
-      "output": null,
-      "output_sha256": null,
+      "class": "always",
+      "output": "79-output-discipline.md",
+      "output_sha256": "afea0681af4dae418aded5eea6275363cded6df164fc9a309bed8cf63a36cd6e",
       "source": "rules/79-output-discipline.mdc",
-      "source_sha256": "ea8f58ae1f555e814980ef9e7d0262d7e9f642efca6f9a0e65f07e519acf2989",
+      "source_sha256": "e04073c9cccaf257c04749cfc2256504af2bdff0e4317d1a46935632a2d27485",
       "stem": "79-output-discipline"
     },
     {
@@ -628,9 +628,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 53,
-    "skipped_agent_requested": 15,
+    "projected": 54,
+    "skipped_agent_requested": 14,
     "source_mdc": 68
   },
-  "tree_sha256": "ddf495d08c5b4051682c2b1bb0700dcf50a5c96f8eea927f4f17fc606a5100cb"
+  "tree_sha256": "4ac285c5a5104f5e8d0f611441fb4b7ae572550e045fae161b9f862e65cd371a"
 }
