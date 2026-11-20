@@ -40,7 +40,14 @@ from typing import NamedTuple
 #: real work only the first time it is seen — there `cap=UNCAPPED` serves every
 #: repository. Memory hydration pays a Graphiti round trip AND context bytes on
 #: EVERY session, cached by nothing, so it keeps a cap and rotates instead.
-DEFAULT_MAX_ROOTS = 6
+#:
+#: 20 since 2026-11-20 (operator decision): the old cap of 6 was self-imposed
+#: and left real repositories out of memory scope every session. Since
+#: CANONICAL_LAW §8.9 SessionStart reads no records, so a root in scope costs
+#: only local namespace resolution there (one health call is shared by all
+#: roots); write-back keeps its own wall-clock budget and names what it defers.
+#: The cap stays finite so a container of unrelated checkouts is bounded.
+DEFAULT_MAX_ROOTS = 20
 
 #: `cap=UNCAPPED` selects every eligible root. Distinct from a large number so
 #: the intent is readable at the call site and cannot drift out of date as a

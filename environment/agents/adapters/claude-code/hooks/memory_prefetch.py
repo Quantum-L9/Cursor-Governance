@@ -61,7 +61,7 @@ for _path in (_GOV_LIB, _GOV_SCRIPTS, _GOV_AUTONOMY):
         sys.path.insert(0, str(_path))
 
 from surface_detect import is_claude_gate_surface  # noqa: E402
-from workspace_roots import DROPPED_CAP  # noqa: E402
+from workspace_roots import DEFAULT_MAX_ROOTS, DROPPED_CAP  # noqa: E402
 from workspace_roots import select_workspace_roots as _shared_select_workspace_roots  # noqa: E402
 
 
@@ -83,7 +83,9 @@ def prefetch_agent_id(env: dict[str, str] | None = None) -> str:
 #: Cloud containers put several repositories side by side. The roots in scope
 #: are capped rather than unbounded — and the cap is reported in the emitted
 #: text, because a silent truncation reads as "everything was covered".
-_MAX_HYDRATION_ROOTS = 6
+#: One source: the shared selector's default (workspace_roots.DEFAULT_MAX_ROOTS),
+#: so this hook and the bootstrap report can never disagree on the cap.
+_MAX_HYDRATION_ROOTS = DEFAULT_MAX_ROOTS
 
 
 def _repo_count(workspace: Path) -> int:
