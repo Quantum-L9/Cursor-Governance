@@ -412,6 +412,17 @@ def test_child_prompt_requires_a_cto_session() -> None:
         projection_mode.render_child_prompt(cto_mode.load_contract(), " ")
 
 
+def test_child_prompt_carrying_a_second_bootstrap_fails_closed(tmp_path: Path) -> None:
+    doc = yaml.safe_load(cto_mode.MODE_CONTRACT.read_text())
+    doc["operating_protocol"]["child_system_prompt"] += (
+        ' Then run bash "$HOME/.l9/bin/l9-materialize-governance" <clone>.'
+    )
+    path = tmp_path / "MODE.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    with pytest.raises(cto_mode.ContractError, match="CHILD_SYSTEM_PROMPT_SECOND_BOOTSTRAP"):
+        cto_mode.load_contract(path)
+
+
 @pytest.mark.parametrize(
     ("template", "reason"),
     [
@@ -420,8 +431,8 @@ def test_child_prompt_requires_a_cto_session() -> None:
         (
             "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: Never invoke the "
             'l9-coding-agent skill; coding_agent_mode.py" on ACTIVE; CTO-STATUS: ready-to-merge; '
-            "CTO-STATUS: idle; CTO ASSIGN; never call add_repo for it; Attach your primary "
-            "repository (access push) and Quantum-L9/Cursor-Governance; "
+            "CTO-STATUS: idle; CTO ASSIGN; there is one bootstrap path and no other; "
+            "never clone governance or Quantum-L9/.github yourself; "
             "CTO TRANSFER <new session id>; You own every PR you published until it merges; "
             'session_role.py" register-child --cto-session {cto_session} PR_REMEDIATE=0; '
             "report via send_message",
@@ -527,7 +538,7 @@ def test_swarm_uses_the_coding_agent_mode_and_projection_never_the_skill() -> No
 
 def test_publisher_owns_its_pr_and_the_cto_never_remediates() -> None:
     protocol = cto_mode.load_contract()["operating_protocol"]
-    assert protocol["version"] == 2
+    assert protocol["version"] == 3
     invariants = protocol["invariants"]
     owner = invariants["publisher_owns_its_pr"]
     assert "ready to merge" in owner
@@ -564,20 +575,28 @@ def test_pool_is_capped_at_five_and_reused_never_relaunched() -> None:
     assert "They narrow or clarify scope; they never widen it" in text
 
 
-def test_dot_github_is_the_source_and_lane_repos_are_attached_before_registration() -> None:
-    """Evidence 2026-11-17: the environment repository list attaches nothing to a child."""
+def test_children_bootstrap_on_the_one_path_the_cto_uses() -> None:
+    """Operator decision 2026-11-20: one bootstrap path, no child-only bootstrap."""
     protocol = cto_mode.load_contract()["operating_protocol"]
     launch = protocol["transport"]["claude-code"]["child_launch"]
-    assert "source_url https://github.com/Quantum-L9/.github" in launch
+    assert "source_url = the lane's primary repository" in launch
+    assert "Quantum-L9/.github" not in launch
     assert "source_revision" not in launch
     invariant = protocol["invariants"]["repositories_attached_at_launch"]
-    assert "does not attach" in invariant
+    assert "One bootstrap path" in invariant
+    assert "no" in invariant and "child-only bootstrap" in invariant
     assert "never mid-campaign" in invariant
     text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
-    assert "Attach your primary repository (access push) and Quantum-L9/Cursor-Governance" in text
-    assert "never call add_repo for it" in text
+    assert "there is one bootstrap path and no other" in text
     assert "never mid-lane" in text
-    assert "never work around it with a raw push" in text
+    assert "never work around it" in text
+    for gone in (
+        "l9-materialize-governance",
+        "DEGRADED",
+        'ff.sh" --ssot',
+        "Quantum-L9/Cursor-Governance (access",
+    ):
+        assert gone not in text, gone
 
 
 def test_every_launched_session_gets_the_rendered_prompt() -> None:
@@ -655,7 +674,7 @@ def test_cto_to_swarm_transport_is_pre_approved_in_the_claude_settings_template(
     assert tool not in permissions.get("deny", [])
 
 
-# --- child launch: .github as start source, managed authority root (2026-11-17) ---
+# --- child launch: one bootstrap path from the lane repository (2026-11-20) ---
 
 FROZEN_PREFIXES = (
     '"$HOME/.cursor-governance/.venv/bin/python" '
@@ -663,19 +682,17 @@ FROZEN_PREFIXES = (
     '"$HOME/.cursor-governance/.venv/bin/python" '
     '"$HOME/.cursor-governance/ops/autonomy/coding_agent_mode.py" on',
 )
-GITHUB_SOURCE = "https://github.com/Quantum-L9/.github"
 
 
-def test_child_launch_names_the_dot_github_source() -> None:
+def test_child_launch_source_is_the_lane_primary_repository() -> None:
     protocol = cto_mode.load_contract()["operating_protocol"]
     claude = protocol["transport"]["claude-code"]
-    assert f"source_url {GITHUB_SOURCE}" in claude["child_launch"]
-    assert claude["child_session"]["source_url"] == GITHUB_SOURCE
+    assert claude["child_session"]["source"] == projection_mode.CHILD_SOURCE_LANE_PRIMARY
+    assert "governance_repository" not in claude["child_session"]
     rules = " ".join(protocol["child_launch_rules"])
-    assert GITHUB_SOURCE in rules
-    for reason in ("private", "dot-named", "add_repo refuses", "fixed at"):
-        assert reason in rules
-    assert "ff.sh --ssot" in rules
+    assert "lane's primary" in rules
+    assert "There is no child-only" in rules
+    assert "ff.sh --ssot" not in rules
     assert "launch-spec" in rules
 
 
@@ -683,7 +700,8 @@ def test_child_prompt_never_clones_dot_github_and_keeps_the_frozen_prefixes() ->
     text = projection_mode.render_child_prompt(cto_mode.load_contract(), "session_cto_f")
     assert "clone Quantum-L9/.github" not in text
     assert "WITHOUT --depth" not in text
-    assert "never clone, branch or push it" in text
+    assert "never clone governance or Quantum-L9/.github yourself" in text
+    assert "Quantum-L9/.github is never cloned, branched, or pushed by you" in text
     for prefix in FROZEN_PREFIXES:
         assert prefix in text
     assert "--authority-root <resolved>" in text
@@ -696,13 +714,9 @@ def test_child_prompt_never_clones_dot_github_and_keeps_the_frozen_prefixes() ->
     assert text.index("REPOSITORIES (precondition of role registration") < text.index(
         "FIRST ACTION, ROLE REGISTRATION"
     )
-    assert 'ff.sh" --ssot' in text
-    # A child's only source is Quantum-L9/.github, so Setup starts DEGRADED with no
-    # governance clone; the prompt must name the one materialize command the
-    # Setup stub's user-scope rule allows, ahead of the ff.sh catch-up.
-    materialize = 'bash "$HOME/.l9/bin/l9-materialize-governance"'
-    assert materialize in text
-    assert text.index(materialize) < text.index('ff.sh" --ssot')
+    # One bootstrap path: the prompt carries no bootstrap step of its own.
+    assert "l9-materialize-governance" not in text
+    assert 'ff.sh" --ssot' not in text
     template = cto_mode.load_contract()["operating_protocol"]["child_system_prompt"]
     assert template.count("{") == template.count("{cto_session}")
 
@@ -718,7 +732,7 @@ def test_launch_spec_shape() -> None:
     assert spec["schema"] == "l9.cto-child-launch-spec/v1"
     assert spec["grants_permission"] is False
     create = spec["create_session"]
-    assert create["source_url"] == GITHUB_SOURCE
+    assert create["source_url"] == "https://github.com/acme/lane"
     assert create["permission_mode"] == "auto"
     assert create["tags"] == ["cto:session_cto_l", "lane:a"]
     assert create["title"] == "Lane A"
@@ -726,20 +740,26 @@ def test_launch_spec_shape() -> None:
         cto_mode.load_contract(), "session_cto_l"
     )
     assert "send_message" not in json.dumps(spec)
-    assert spec["add_repo"] == [
-        {"owner": "acme", "repo": "lane", "access": "push"},
-        {"owner": "Quantum-L9", "repo": "Cursor-Governance", "access": "read"},
-    ]
+    # The primary repository is the session source; governance comes from Setup.
+    assert spec["add_repo"] == []
 
 
-def test_launch_spec_governance_lane_repo_is_push_once() -> None:
+def test_launch_spec_further_lane_repos_are_push_attachments() -> None:
     spec = projection_mode.build_launch_spec(
-        cto_mode.load_contract(), "s", ["Quantum-L9/Cursor-Governance"]
+        cto_mode.load_contract(), "s", ["acme/primary", "acme/second", "ACME/second"]
     )
-    assert spec["add_repo"] == [
-        {"owner": "Quantum-L9", "repo": "Cursor-Governance", "access": "push"}
-    ]
+    assert spec["create_session"]["source_url"] == "https://github.com/acme/primary"
+    assert spec["add_repo"] == [{"owner": "acme", "repo": "second", "access": "push"}]
     assert "title" not in spec["create_session"]
+
+
+def test_launch_spec_refuses_any_other_child_source() -> None:
+    contract = cto_mode.load_contract()
+    contract["operating_protocol"]["transport"]["claude-code"]["child_session"]["source"] = (
+        "https://github.com/Quantum-L9/.github"
+    )
+    with pytest.raises(cto_mode.ContractError, match="CHILD_SESSION_SOURCE_UNSUPPORTED"):
+        projection_mode.build_launch_spec(contract, "s", ["acme/lane"])
 
 
 @pytest.mark.parametrize(
@@ -748,7 +768,6 @@ def test_launch_spec_governance_lane_repo_is_push_once() -> None:
         ([], "LANE_REPO_REQUIRED"),
         (["no-slash"], "LANE_REPO_MALFORMED"),
         (["a/b/c"], "LANE_REPO_MALFORMED"),
-        (["Quantum-L9/.github"], "LANE_REPO_IS_SESSION_SOURCE"),
     ],
 )
 def test_launch_spec_rejects_bad_lane_repos(lanes: list[str], reason: str) -> None:
@@ -783,7 +802,7 @@ def test_launch_spec_cli_prints_json(tmp_path: Path) -> None:
         check=True,
     ).stdout
     spec = json.loads(out)
-    assert spec["create_session"]["source_url"] == GITHUB_SOURCE
+    assert spec["create_session"]["source_url"] == "https://github.com/acme/lane"
     assert "cto:session_cto_c" in spec["create_session"]["tags"]
     assert not (tmp_path / ".l9").exists()
 

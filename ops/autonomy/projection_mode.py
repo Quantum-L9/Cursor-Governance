@@ -248,10 +248,11 @@ CHILD_PROMPT_REQUIRED = (
     "CTO-STATUS: ready-to-merge",
     "CTO-STATUS: idle",
     "CTO ASSIGN",
-    # Quantum-L9/.github is the session source (add_repo refuses dot names); the primary
-    # repository and Cursor-Governance are attached before role registration (2026-11-17).
-    "never call add_repo for it",
-    "Attach your primary repository (access push) and Quantum-L9/Cursor-Governance",
+    # One bootstrap path (operator decision 2026-11-20): a child starts from its lane's
+    # primary repository exactly as the CTO does; Setup and SessionStart are its whole
+    # bootstrap, and it never builds one of its own.
+    "there is one bootstrap path and no other",
+    "never clone governance or Quantum-L9/.github yourself",
     # A pool outlives its CTO: coordinator transfer is explicit and re-registers the role,
     # and a published PR stays repairable by its owner after the owner takes another lane.
     "CTO TRANSFER <new session id>",
@@ -262,6 +263,8 @@ CHILD_PROMPT_REQUIRED = (
     "PR_REMEDIATE=0",
 )
 CHILD_PROMPT_FORBIDDEN = ("send_message", "SendMessage")
+# A child-only bootstrap step is a second bootstrap path; the prompt may never carry one.
+CHILD_PROMPT_BOOTSTRAP_FORBIDDEN = ("l9-materialize-governance", 'web/setup.sh" ', "DEGRADED")
 
 
 def check_child_system_prompt(template: Any) -> None:
@@ -273,6 +276,9 @@ def check_child_system_prompt(template: Any) -> None:
     named = [token for token in CHILD_PROMPT_FORBIDDEN if token in template]
     if named:
         raise ContractError(f"CHILD_SYSTEM_PROMPT_NAMES_SEND_TOOL: {', '.join(named)}")
+    second_path = [token for token in CHILD_PROMPT_BOOTSTRAP_FORBIDDEN if token in template]
+    if second_path:
+        raise ContractError(f"CHILD_SYSTEM_PROMPT_SECOND_BOOTSTRAP: {', '.join(second_path)}")
 
 
 def render_child_prompt(contract: dict[str, Any], cto_session: str) -> str:
@@ -287,7 +293,12 @@ def render_child_prompt(contract: dict[str, Any], cto_session: str) -> str:
 
 LAUNCH_SPEC_SCHEMA = "l9.cto-child-launch-spec/v1"
 LAUNCH_HOST = "claude-code"
-_CHILD_SESSION_KEYS = ("source_url", "permission_mode", "governance_repository")
+_CHILD_SESSION_KEYS = ("source", "permission_mode")
+#: The one declared child source. A child starts from its lane's primary repository,
+#: exactly as the CTO session starts from its own, so the environment's Setup script
+#: and SessionStart are its whole bootstrap. There is no child-only bootstrap path.
+CHILD_SOURCE_LANE_PRIMARY = "lane_primary_repository"
+GITHUB_URL = "https://github.com"
 
 
 def _repo_coordinate(value: str) -> tuple[str, str]:
@@ -306,35 +317,33 @@ def _declared_child_session(contract: dict[str, Any]) -> dict[str, Any]:
         _nonempty_str(child.get(key)) for key in _CHILD_SESSION_KEYS
     ):
         raise ContractError("CHILD_SESSION_UNDECLARED")
+    if str(child["source"]).strip() != CHILD_SOURCE_LANE_PRIMARY:
+        raise ContractError(f"CHILD_SESSION_SOURCE_UNSUPPORTED: {child['source']}")
     return child
 
 
-def _source_repo(source_url: str) -> str:
-    return "/".join(source_url.rstrip("/").removesuffix(".git").split("/")[-2:]).lower()
-
-
-def _attachment_list(
-    source_url: str, governance: str, lane_repos: list[str]
-) -> list[dict[str, str]]:
-    """Push attachments for lane repos, plus governance read when it is not a lane."""
+def _lane_coordinates(lane_repos: list[str]) -> list[tuple[str, str]]:
+    """Distinct lane repositories in order; the first is the primary (session source)."""
     if not lane_repos:
         raise ContractError("LANE_REPO_REQUIRED")
-    source_repo = _source_repo(source_url)
-    attach: list[dict[str, str]] = []
+    lanes: list[tuple[str, str]] = []
     seen: set[str] = set()
     for value in lane_repos:
         owner, repo = _repo_coordinate(value)
         key = f"{owner}/{repo}".lower()
-        # The source repository is read-only to every child, and add_repo refuses it.
-        if key == source_repo:
-            raise ContractError(f"LANE_REPO_IS_SESSION_SOURCE: {value}")
         if key not in seen:
             seen.add(key)
-            attach.append({"owner": owner, "repo": repo, "access": "push"})
-    if governance.lower() not in seen:
-        owner, repo = governance.split("/")
-        attach.append({"owner": owner, "repo": repo, "access": "read"})
-    return attach
+            lanes.append((owner, repo))
+    return lanes
+
+
+def _attachment_list(lanes: list[tuple[str, str]]) -> list[dict[str, str]]:
+    """Push attachments for every lane repository after the primary one.
+
+    The primary repository is the session source, and governance plus the authority
+    checkout come from Setup and SessionStart, so neither is attached here.
+    """
+    return [{"owner": owner, "repo": repo, "access": "push"} for owner, repo in lanes[1:]]
 
 
 def _session_tags(cto_session: str, tags: list[str] | None) -> list[str]:
@@ -347,6 +356,7 @@ def _session_tags(cto_session: str, tags: list[str] | None) -> list[str]:
 
 def _create_session_args(
     child: dict[str, Any],
+    source_url: str,
     prompt: str,
     cto_session: str,
     *,
@@ -354,7 +364,7 @@ def _create_session_args(
     tags: list[str] | None,
 ) -> dict[str, Any]:
     create: dict[str, Any] = {
-        "source_url": str(child["source_url"]).strip(),
+        "source_url": source_url,
         "append_system_prompt": prompt,
         "permission_mode": str(child["permission_mode"]).strip(),
         "tags": _session_tags(cto_session, tags),
@@ -379,14 +389,17 @@ def build_launch_spec(
     """
     child = _declared_child_session(contract)
     prompt = render_child_prompt(contract, cto_session)
-    source = str(child["source_url"]).strip()
-    governance = "/".join(_repo_coordinate(str(child["governance_repository"])))
+    lanes = _lane_coordinates(lane_repos)
+    owner, repo = lanes[0]
+    source_url = f"{GITHUB_URL}/{owner}/{repo}"
     return {
         "schema": LAUNCH_SPEC_SCHEMA,
         "grants_permission": False,
         "host": LAUNCH_HOST,
-        "create_session": _create_session_args(child, prompt, cto_session, title=title, tags=tags),
-        "add_repo": _attachment_list(source, governance, lane_repos),
+        "create_session": _create_session_args(
+            child, source_url, prompt, cto_session, title=title, tags=tags
+        ),
+        "add_repo": _attachment_list(lanes),
     }
 
 
