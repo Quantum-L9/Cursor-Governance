@@ -378,7 +378,122 @@ def locate_clone_for_namespace(
     return None
 
 
+#: Exclusion reason for a second checkout of an already-selected repository.
+DROPPED_DUPLICATE_NAMESPACE = "duplicate_namespace"
+
+
+@dataclass(frozen=True)
+class WorkspaceNamespaces:
+    """Per-repository write namespaces for a workspace that may hold several.
+
+    A namespace identifies a REPOSITORY, never a container. A cloud container
+    root (several checkouts side by side) is correctly ambiguous for one write
+    hint, so callers that report readiness must resolve each repository root
+    instead. Root selection is the shared ``select_workspace_roots`` with the
+    same cap and predicate the SessionStart prefetch hydrates under, so this
+    report and the hydrated set cannot disagree.
+    """
+
+    workspace: str
+    multi_repo: bool
+    namespaces: tuple[tuple[str, str], ...]
+    excluded: tuple[tuple[str, str], ...]
+
+    @property
+    def resolved(self) -> bool:
+        return bool(self.namespaces)
+
+
+def select_namespace_roots(
+    workspace: str | Path,
+    *,
+    cap: int | None = None,
+    registry: Mapping[str, Any] | None = None,
+):
+    """The repository roots in memory scope for ``workspace``: one per namespace.
+
+    The single selection both SessionStart hydration
+    (``memory_prefetch._hydration_selection``) and the bootstrap readiness
+    report use, so what is reported in scope is exactly what is hydrated.
+    It is the shared ``select_workspace_roots`` with a predicate that admits a
+    root only when it resolves to a write namespace of its OWN that no earlier
+    root already claimed. A second checkout of one repository (a linked
+    worktree beside its clone) must not take a slot under the cap and push a
+    distinct repository out of scope; it is returned in ``dropped`` as
+    ``duplicate_namespace``. A resolver fault never drops a root.
+    """
+
+    from ops.scripts.lib.workspace_roots import (  # noqa: PLC0415
+        DEFAULT_MAX_ROOTS,
+        RootSelection,
+        select_workspace_roots,
+    )
+
+    path = Path(workspace).expanduser().resolve()
+    reg = load_registry() if registry is None else registry
+    claimed: set[str] = set()
+    duplicates: list[tuple[Path, str]] = []
+
+    def _eligible(root: Path) -> bool:
+        # Broad by design: a resolver fault must not drop a root.
+        # nosemgrep: l9.baseline.python.broad-except
+        try:
+            namespace = resolve_namespace_context(root, registry=reg, env={}).write_namespace_hint
+        except Exception:  # noqa: BLE001
+            return True
+        if not namespace:
+            return False
+        if namespace in claimed:
+            duplicates.append((root, DROPPED_DUPLICATE_NAMESPACE))
+            return False
+        claimed.add(namespace)
+        return True
+
+    selection = select_workspace_roots(
+        path,
+        cap=DEFAULT_MAX_ROOTS if cap is None else cap,
+        predicate=_eligible,
+    )
+    duplicate_roots = {root for root, _ in duplicates}
+    dropped = [item for item in selection.dropped if item[0] not in duplicate_roots]
+    return RootSelection(selection.selected, dropped + duplicates)
+
+
+def resolve_workspace_namespaces(
+    workspace: str | Path,
+    *,
+    cap: int | None = None,
+    registry: Mapping[str, Any] | None = None,
+) -> WorkspaceNamespaces:
+    """Write namespace per repository root in memory scope for ``workspace``.
+
+    The roots are ``select_namespace_roots``: the same set SessionStart
+    hydrates. A single repository yields its own namespace; a container
+    yields one entry per selected repository, and every excluded child with
+    the rule that excluded it (``cap``, ``no_namespace``,
+    ``duplicate_namespace``).
+    """
+
+    from ops.scripts.lib.workspace_roots import is_repository  # noqa: PLC0415
+
+    path = Path(workspace).expanduser().resolve()
+    reg = load_registry() if registry is None else registry
+    selection = select_namespace_roots(path, cap=cap, registry=reg)
+    pairs = [
+        (str(root), ns)
+        for root in selection.selected
+        if (ns := resolve_namespace_context(root, registry=reg, env={}).write_namespace_hint)
+    ]
+    return WorkspaceNamespaces(
+        workspace=str(path),
+        multi_repo=not is_repository(path) and bool(pairs),
+        namespaces=tuple(pairs),
+        excluded=tuple((str(root), reason) for root, reason in selection.dropped),
+    )
+
+
 __all__ = [
+    "DROPPED_DUPLICATE_NAMESPACE",
     "ENV_NAMESPACE_REQUEST",
     "METHOD_AMBIGUOUS",
     "METHOD_EXPLICIT",
@@ -386,6 +501,7 @@ __all__ = [
     "METHOD_UNRESOLVED",
     "REGISTRY_PATH",
     "NamespaceContext",
+    "WorkspaceNamespaces",
     "aliases_for",
     "child_git_roots",
     "forbidden_namespaces",
@@ -398,5 +514,7 @@ __all__ = [
     "repository_matches",
     "repository_state_digest",
     "resolve_namespace_context",
+    "resolve_workspace_namespaces",
+    "select_namespace_roots",
     "shared_read_namespaces",
 ]
