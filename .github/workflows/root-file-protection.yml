@@ -17,6 +17,11 @@ on:
   # the PR permanently BLOCKED with nothing to fix. A WIP-only diff touches no root
   # file, so the gate is a cheap trivial pass rather than a missing check.
   pull_request:
+  # Merge queue: the same required context must report on the queued merge commit,
+  # or a queued PR waits forever. On merge_group the gate evaluates that commit
+  # against merge_group.base_sha; it never skips and never passes vacuously.
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
@@ -33,11 +38,54 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout PR head with base history
+      # One range per event, resolved before anything is fetched. A missing or
+      # inconsistent coordinate fails the job: an unresolvable range is not a pass.
+      - name: Resolve gate range
+        id: range
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.sha }}
+          PR_BASE_REF: ${{ github.base_ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MG_BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          MG_HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+        run: |
+          set -euo pipefail
+          case "${EVENT_NAME}" in
+            pull_request)
+              [ -n "${PR_BASE_REF}" ] && [ -n "${PR_HEAD_SHA}" ] || {
+                echo "::error::pull_request event without base ref or head sha"; exit 1; }
+              base_fetch="+refs/heads/${PR_BASE_REF}:refs/remotes/origin/${PR_BASE_REF}"
+              base="origin/${PR_BASE_REF}"
+              head="${PR_HEAD_SHA}"
+              ;;
+            merge_group)
+              # GITHUB_SHA is the merge group's commit (documented); the payload's
+              # head_sha must be that same commit, and base_sha must be present.
+              [ -n "${MG_BASE_SHA}" ] || {
+                echo "::error::merge_group event without merge_group.base_sha"; exit 1; }
+              [ -n "${MG_HEAD_SHA}" ] && [ "${MG_HEAD_SHA}" = "${EVENT_SHA}" ] || {
+                echo "::error::merge_group.head_sha '${MG_HEAD_SHA}' is not the event commit '${EVENT_SHA}'"; exit 1; }
+              base_fetch="${MG_BASE_SHA}"
+              base="${MG_BASE_SHA}"
+              head="${MG_HEAD_SHA}"
+              ;;
+            *)
+              echo "::error::unsupported event ${EVENT_NAME}"; exit 1
+              ;;
+          esac
+          {
+            echo "base_fetch=${base_fetch}"
+            echo "base=${base}"
+            echo "head=${head}"
+          } >> "${GITHUB_OUTPUT}"
+      - name: Checkout gated head with base history
         env:
           REPOSITORY: ${{ github.repository }}
-          BASE_REF: ${{ github.base_ref }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_FETCH: ${{ steps.range.outputs.base_fetch }}
+          BASE: ${{ steps.range.outputs.base }}
+          HEAD_SHA: ${{ steps.range.outputs.head }}
           TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -49,9 +97,16 @@ jobs:
           # range for ALLOW-ROOT-DELETION markers, so a shallow fetch could drop older
           # commits (and their markers) and cause false gate failures.
           git -c protocol.version=2 fetch origin "${HEAD_SHA}"
-          git -c protocol.version=2 fetch origin \
-            "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          git -c protocol.version=2 fetch origin "${BASE_FETCH}"
           git checkout -q --detach "${HEAD_SHA}"
+          # A queued merge commit is built on merge_group.base_sha; if it does not
+          # descend from it, the range is not the change being merged. (A PR head
+          # may be behind its base branch, so this holds for merge_group only; the
+          # PR path is judged from the merge base, as before.)
+          if [ "${EVENT_NAME}" = "merge_group" ]; then
+            git merge-base --is-ancestor "${BASE}" "${HEAD_SHA}" || {
+              echo "::error::merge_group base ${BASE} is not an ancestor of ${HEAD_SHA}"; exit 1; }
+          fi
           git remote set-url origin "https://github.com/${REPOSITORY}.git"
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
@@ -59,8 +114,8 @@ jobs:
           python-version: "3.12"
       - name: Append-only gate
         env:
-          BASE_REF: ${{ github.base_ref }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ steps.range.outputs.base }}
+          HEAD_SHA: ${{ steps.range.outputs.head }}
         run: |
           python ops/scripts/validate_root_file_protection.py \
-            --base "origin/${BASE_REF}" --head "${HEAD_SHA}"
+            --base "${BASE}" --head "${HEAD_SHA}"

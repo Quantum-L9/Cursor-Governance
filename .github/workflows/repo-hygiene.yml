@@ -3,6 +3,10 @@ name: repo-hygiene
 
 on:
   pull_request:
+  # Merge queue: "repo-hygiene" is a required context; it checks the queued merge
+  # commit (the checkout's default revision on merge_group) with no PR context.
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
   workflow_dispatch:
