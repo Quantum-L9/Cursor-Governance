@@ -221,6 +221,21 @@ done
 # Do NOT reach for --no-verify, and do NOT unset it globally here: gh needs
 # it, and ~/.profile sources the durable env unguarded.
 
+# True when the checkout at $1 has origin $2, compared case-insensitively and
+# without a trailing slash or ".git". A directory's name is not its identity:
+# only a checkout whose origin IS the expected repository may supply
+# governance code that this stub, or the materialize script, will execute.
+l9_origin_is() {
+  local url
+  url="$(git -C "$1" remote get-url origin 2>/dev/null)"
+  url="$(printf '%s' "$url" | tr '[:upper:]' '[:lower:]')"
+  url="${url%/}"
+  url="${url%.git}"
+  [ "$url" = "$2" ]
+}
+L9_GOV_ORIGIN="https://github.com/quantum-l9/cursor-governance"
+L9_DOTGITHUB_ORIGIN="https://github.com/quantum-l9/.github"
+
 # --- 1b) Swarm-child bootstrap (DEGRADED start only) -----------------------
 # A /lcto child that starts without governance cannot reach it in-session by
 # itself. Attaching its primary repository with push access, and running
@@ -249,6 +264,17 @@ l9_install_child_bootstrap() {
 set -euo pipefail
 src="$(cd "${1:?usage: l9-materialize-governance <Cursor-Governance clone path>}" && pwd)"
 gov="$HOME/.cursor-governance"
+# Identity before execution: this script clones the source and runs its
+# web/setup.sh, so the source must BE Quantum-L9/Cursor-Governance, not any
+# attached repository that happens to carry that path.
+origin="$(git -C "$src" remote get-url origin)"
+norm="$(printf '%s' "$origin" | tr '[:upper:]' '[:lower:]')"
+norm="${norm%/}"
+norm="${norm%.git}"
+if [ "$norm" != "https://github.com/quantum-l9/cursor-governance" ]; then
+  echo "l9-materialize-governance: $src has origin '$origin', not Quantum-L9/Cursor-Governance; refusing" >&2
+  exit 1
+fi
 if [ -d "$gov/.git" ]; then
   echo "l9-materialize-governance: $gov is already present"
   exit 0
@@ -320,21 +346,32 @@ else
     # source already checked out under the working directory, so clone from that.
     _l9_local=""
     for _l9_c in Cursor-Governance cursor-governance; do
-      if [ -d "$PWD/$_l9_c/.git" ]; then _l9_local="$PWD/$_l9_c"; break; fi
+      if [ -d "$PWD/$_l9_c/.git" ] && l9_origin_is "$PWD/$_l9_c" "$L9_GOV_ORIGIN"; then
+        _l9_local="$PWD/$_l9_c"
+        break
+      fi
     done
     if [ -n "$_l9_local" ] && git clone --depth 1 --branch "$GOV_BRANCH" "file://$_l9_local" "$GOV_DIR"; then
       git -C "$GOV_DIR" remote set-url origin "$GOV_REMOTE"
       note "governance cloned from the session checkout $_l9_local"
+    elif [ -d "$PWD/.github/.git" ] && l9_origin_is "$PWD/.github" "$L9_DOTGITHUB_ORIGIN"; then
+      rm -rf "$GOV_DIR"
+      # The /lcto swarm-child layout: Quantum-L9/.github is the session's ONLY
+      # source (create_session takes one source_url; the environment's
+      # Repositories list is not attached to it), so no governance source
+      # exists at Setup, and failing here refused to start every child. Only
+      # this layout starts DEGRADED: the child prompt (governance/cto-mode/
+      # MODE.yaml) carries the materialize step. Any other session keeps the
+      # fail-closed exit below rather than being cached governance-dark.
+      L9_GOV_DEGRADED=1
+      warn "  swarm-child layout (Quantum-L9/.github only) — starting DEGRADED"
+      l9_install_child_bootstrap
     else
       rm -rf "$GOV_DIR"
-      # A /lcto swarm child is created with Quantum-L9/.github as its ONLY source
-      # (create_session takes one source_url; the environment's Repositories list
-      # is not attached to it), so no governance source exists at Setup. Failing
-      # here refused to start every child. Start DEGRADED instead and leave the
-      # child the one narrow path to governance; see l9_install_child_bootstrap.
-      L9_GOV_DEGRADED=1
-      warn "  no Cursor-Governance checkout under $PWD either — starting DEGRADED"
-      l9_install_child_bootstrap
+      warn "  add Quantum-L9/Cursor-Governance AND Quantum-L9/.github under Repositories in"
+      warn "  this environment's settings (session title bar -> environment -> Edit), then"
+      warn "  start a NEW session; also confirm the network allows github.com"
+      exit 1
     fi
   fi
 fi
