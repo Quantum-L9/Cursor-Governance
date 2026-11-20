@@ -158,6 +158,16 @@ def test_request_adds_the_exclude_once_and_keeps_existing_entries(tmp_path: Path
     assert lines == ["# local", "build/", projection_mode.STATE_GIT_EXCLUDE]
 
 
+def test_request_survives_a_non_utf8_exclude_file(tmp_path: Path) -> None:
+    """git does not require info/exclude to be UTF-8; the request must not abort."""
+    repo = _git_init(tmp_path / "lane")
+    exclude = repo / ".git" / "info" / "exclude"
+    exclude.write_bytes(b"caf\xe9\n")
+    coding_agent_mode.request(repo, session_id=SID)
+    assert (repo / ".l9/coding-agent-mode/session.json").is_file()
+    assert exclude.read_bytes() == b"caf\xe9\n" + projection_mode.STATE_GIT_EXCLUDE.encode() + b"\n"
+
+
 def test_request_outside_a_git_checkout_still_writes_state(tmp_path: Path) -> None:
     coding_agent_mode.request(tmp_path, session_id=SID)
     assert (tmp_path / ".l9/coding-agent-mode/session.json").is_file()

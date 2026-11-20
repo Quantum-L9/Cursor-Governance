@@ -77,13 +77,17 @@ def _ensure_state_git_exclude(workspace: Path) -> None:
         common = workspace / common
     exclude = common / "info" / "exclude"
     try:
-        existing = exclude.read_text(encoding="utf-8") if exclude.is_file() else ""
-        if STATE_GIT_EXCLUDE in (line.strip() for line in existing.splitlines()):
+        # Bytes, not text: git does not require info/exclude to be UTF-8, and a
+        # decode error here would abort the mode request this helper must never
+        # block (Codex review on #1075).
+        entry = STATE_GIT_EXCLUDE.encode("utf-8")
+        existing = exclude.read_bytes() if exclude.is_file() else b""
+        if entry in (line.strip() for line in existing.splitlines()):
             return
         exclude.parent.mkdir(parents=True, exist_ok=True)
-        prefix = "" if not existing or existing.endswith("\n") else "\n"
-        with exclude.open("a", encoding="utf-8") as handle:
-            handle.write(f"{prefix}{STATE_GIT_EXCLUDE}\n")
+        prefix = b"" if not existing or existing.endswith(b"\n") else b"\n"
+        with exclude.open("ab") as handle:
+            handle.write(prefix + entry + b"\n")
     except OSError:
         return
 
