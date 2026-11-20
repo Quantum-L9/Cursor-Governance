@@ -53,9 +53,9 @@ dev = [
     # installs them through floating fallback pip commands outside uv.lock.
     "pytest-xdist==3.8.0",
     "pytest-timeout==2.4.0",
-    "bandit==1.9.4",
-    "pip-audit==2.10.1",
-    "pre-commit==4.6.2",
+    "bandit==1.8.6",
+    "pip-audit==2.9.0",
+    "pre-commit==4.4.0",
 ]
 # Portable UI Operator / AWS secrets resolve — NOT required for make pr.
 # Install: uv sync --extra ui-operator && playwright install
@@ -82,6 +82,10 @@ package = false
 # Floor-pin uv so ancient binaries fail closed, but stay compatible with
 # Anthropic/Linux sandbox images that ship uv 0.8.x (0.11+ is preferred locally).
 required-version = ">=0.8.0"
+# pip is a Core-locked tool (l9-ci-core install-consumer-ci/toolchain-lock.json).
+# It reaches this lock only transitively (pip-audit), so pin it as a constraint
+# rather than a direct dependency; the lock then resolves the Core version.
+constraint-dependencies = ["pip==26.2.1"]
 
 [tool.ruff]
 line-length = 100

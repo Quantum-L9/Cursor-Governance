@@ -2606,3 +2606,18 @@ SessionStart prints the authorized name catalog and still probes only
 Stdio MCP servers whose env name is a vault name spawn through
 `run_vault_mcp_bridge.sh spawn`. The child environment receives the bind.
 `master.mcp.json` and a rendered config keep placeholders.
+
+## Core's toolchain lock owns CI tool versions (2026-11-20) — supersedes the bandit, pip-audit, pre-commit and uv rows of the § toolchain table
+
+`Quantum-L9/l9-ci-core` `.github/actions/install-consumer-ci/toolchain-lock.json`
+is the one source of CI tool versions (operator decision 2026-11-20; Python is
+3.12). Every pin this repository carries for a tool that lock names equals the
+lock: bandit `1.8.6`, pip-audit `2.9.0`, pre-commit `4.4.0`, pip `26.2.1`
+(a `[tool.uv] constraint-dependencies` entry, since pip arrives only
+transitively), and uv `0.13.8` wherever a workflow installs uv. `Repo.mk`
+`repo-setup` still names uv `0.12.1`: that line is append-only protected and
+its rewrite waits for a human root-file authorization.
+ruff, mypy, pytest, biome and semgrep already matched. "l9-ci-sdk wins over
+l9-ci-core" in `ops/scripts/run_pr_security.sh` is withdrawn. A bump lands in
+Core's lock first; this repository follows it and never leads it. Core's
+`check-toolchain-alignment` action reports any declaration that drifts.

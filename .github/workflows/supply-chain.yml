@@ -49,7 +49,7 @@ jobs:
       - name: Install locked toolchain
         run: |
           set -euo pipefail
-          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.13.8
           uv sync --locked --no-build --extra dev
 
       - name: Check License Compliance
@@ -135,7 +135,7 @@ jobs:
       - name: Install locked toolchain + pinned cyclonedx-bom
         run: |
           set -euo pipefail
-          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.13.8
           uv sync --locked --no-build --extra dev
           uvx --from 'cyclonedx-bom==7.3.0' cyclonedx-py --help >/dev/null
 

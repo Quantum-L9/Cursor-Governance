@@ -2,9 +2,11 @@
 # Local PR security gate — changed-files only (gitleaks + bandit + semgrep + pip-audit).
 # Full-tree scans belong to nightly CI, not make pr / pre-commit.
 #
-# Version authority: requirements.txt (l9-ci-sdk wins over l9-ci-core on
-# disagreement). bandit/pip-audit come from that file; gitleaks is core-only
-# (sdk does not pin it). Semgrep: SDK policy >=1.100.0,<2.0.0.
+# Version authority: l9-ci-core's toolchain lock
+# (.github/actions/install-consumer-ci/toolchain-lock.json) owns every CI tool
+# version it lists, including bandit, pip-audit and gitleaks; the SDK does not
+# override it. requirements.txt mirrors that lock and this script reads the
+# bandit/pip-audit pins from it. Semgrep: SDK policy >=1.100.0,<2.0.0.
 #
 # Consumer usage (no per-repo Makefile copy required):
 #   make -C "$HOME/.cursor-governance" pr-security WS="$(pwd)"
@@ -51,7 +53,7 @@ WS="$(cd "$WS" && pwd)"
 PR_SECURITY_ADVISORY="${PR_SECURITY_ADVISORY:-0}"
 PR_BASE="${PR_BASE:-}"
 GITLEAKS_CONFIG="${GITLEAKS_CONFIG:-$GOV_ROOT/.gitleaks.toml}"
-# Pins: Python tools from requirements.txt (sdk wins over core). gitleaks is a
+# Pins: Python tools from requirements.txt (a mirror of Core's lock). gitleaks is a
 # machine CLI pinned once, by the bootstrap that installs it
 # (bootstrap_agent_environment.sh, mirroring l9-ci-core security.yml). Read the
 # pin from there instead of keeping a second literal that can drift.
