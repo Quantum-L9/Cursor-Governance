@@ -164,6 +164,8 @@ repo-setup: ## Establish the locked governance environment (uv + .venv)
 	$(MAKE) --no-print-directory venv
 repo-validate: uv-lock-check rules-validate ## Validate the lockfile and the rules manifests
 repo-check: lint-ruff-full ## Run ruff check and ruff format --check over the repository
+# pull_request scope failures exit nonzero in pytest-suites. Unknown scope does
+# not expand repo-test to the full suite.
 repo-test: pytest-suites ## Run the registry-driven pytest suites
 # ---------------------------------------------------------------------------
 # Program Execution registered stage (CANONICAL_LAW

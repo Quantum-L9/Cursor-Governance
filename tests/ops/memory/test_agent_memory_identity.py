@@ -470,7 +470,7 @@ print(json.dumps(report))
 """
 
 
-def test_the_minted_mobile_door_verifies_and_tampering_is_refused(tmp_path: Path) -> None:
+def test_the_minted_phone_session_door_is_web_and_tampering_is_refused(tmp_path: Path) -> None:
     """Hosted mint -> launcher exec -> the real Memory verifier, no live data."""
     result = _launch(MOBILE, tmp_path, probe=_VERIFY_PROBE)
     assert result.returncode == 0, result.stderr
@@ -483,7 +483,7 @@ def test_the_minted_mobile_door_verifies_and_tampering_is_refused(tmp_path: Path
     assert report["is_admin"] is False
     assert report["write_namespaces"] == sorted(assigned)
     assert "*" not in report["write_namespaces"]
-    assert report["surface_identity"] == "l9.surface-registry/global@1#claude-code-mobile"
+    assert report["surface_identity"] == "l9.surface-registry/global@1#claude-code-web"
     assert all(report["refused"].values()), report["refused"]
 
     local = tmp_path / ".config" / "l9-memory" / "agent_tokens.local.json"
