@@ -17,6 +17,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -137,6 +138,7 @@ def test_root_file_gate_judges_only_the_resolved_range() -> None:
             assert token not in text, f"{name!r} reads {token}; it must use steps.range"
     gate = steps["Append-only gate"]
     assert gate["env"] == {
+        "EVENT_NAME": "${{ github.event_name }}",
         "BASE": "${{ steps.range.outputs.base }}",
         "HEAD_SHA": "${{ steps.range.outputs.head }}",
     }
@@ -145,6 +147,10 @@ def test_root_file_gate_judges_only_the_resolved_range() -> None:
     assert resolve["env"]["MG_BASE_SHA"] == "${{ github.event.merge_group.base_sha }}"
     assert resolve["env"]["MG_HEAD_SHA"] == "${{ github.event.merge_group.head_sha }}"
     assert resolve["env"]["EVENT_SHA"] == "${{ github.sha }}"
+    assert resolve["env"]["MG_HEAD_REF"] == "${{ github.event.merge_group.head_ref }}"
+    body = steps["Queued pull request body (merge_group)"]
+    assert body["if"] == "github.event_name == 'merge_group'"
+    assert "MG_BASE_REF" in body["env"] and "exit 1" in body["run"]
 
 
 def _resolve(tmp_path: Path, **env: str) -> tuple[int, dict[str, str], str]:
@@ -160,6 +166,7 @@ def _resolve(tmp_path: Path, **env: str) -> tuple[int, dict[str, str], str]:
         "PR_HEAD_SHA": "",
         "MG_BASE_SHA": "",
         "MG_HEAD_SHA": "",
+        "MG_HEAD_REF": "",
     }
     result = subprocess.run(
         ["bash", "-c", script],
@@ -174,6 +181,7 @@ def _resolve(tmp_path: Path, **env: str) -> tuple[int, dict[str, str], str]:
 
 BASE_SHA = "a" * 40
 HEAD_SHA = "b" * 40
+QUEUE_REF = f"refs/heads/gh-readonly-queue/main/pr-1088-{'e' * 40}"
 
 
 def test_merge_group_range_is_the_queued_commit_against_its_base(tmp_path: Path) -> None:
@@ -183,12 +191,18 @@ def test_merge_group_range_is_the_queued_commit_against_its_base(tmp_path: Path)
         EVENT_SHA=HEAD_SHA,
         MG_BASE_SHA=BASE_SHA,
         MG_HEAD_SHA=HEAD_SHA,
+        MG_HEAD_REF=QUEUE_REF,
         # Stale PR-shaped values must not leak into a merge_group range.
         PR_BASE_REF="main",
         PR_HEAD_SHA="c" * 40,
     )
     assert rc == 0, log
-    assert outputs == {"base_fetch": BASE_SHA, "base": BASE_SHA, "head": HEAD_SHA}
+    assert outputs == {
+        "base_fetch": BASE_SHA,
+        "base": BASE_SHA,
+        "head": HEAD_SHA,
+        "pr_number": "1088",
+    }
 
 
 @pytest.mark.parametrize(
@@ -198,6 +212,9 @@ def test_merge_group_range_is_the_queued_commit_against_its_base(tmp_path: Path)
         {"MG_HEAD_SHA": ""},  # missing head fails closed
         {"MG_HEAD_SHA": "d" * 40},  # head is not the event's commit
         {"EVENT_NAME": "push"},  # an event the gate does not know
+        {"MG_HEAD_REF": ""},  # no queued PR: its body evidence cannot be read
+        {"MG_HEAD_REF": "refs/heads/main"},
+        {"MG_HEAD_REF": "refs/heads/gh-readonly-queue/main/pr-x-" + "e" * 40},
     ],
 )
 def test_merge_group_range_fails_closed(tmp_path: Path, overrides: dict[str, str]) -> None:
@@ -206,6 +223,7 @@ def test_merge_group_range_fails_closed(tmp_path: Path, overrides: dict[str, str
         "EVENT_SHA": HEAD_SHA,
         "MG_BASE_SHA": BASE_SHA,
         "MG_HEAD_SHA": HEAD_SHA,
+        "MG_HEAD_REF": QUEUE_REF,
         **overrides,
     }
     rc, outputs, log = _resolve(tmp_path, **env)
@@ -223,6 +241,7 @@ def test_pull_request_range_is_unchanged(tmp_path: Path) -> None:
         "base_fetch": "+refs/heads/main:refs/remotes/origin/main",
         "base": "origin/main",
         "head": HEAD_SHA,
+        "pr_number": "",
     }
 
 
@@ -230,3 +249,72 @@ def test_merge_group_checkout_requires_base_ancestry() -> None:
     run = _root_file_steps()["Checkout gated head with base history"]["run"]
     assert 'if [ "${EVENT_NAME}" = "merge_group" ]; then' in run
     assert 'git merge-base --is-ancestor "${BASE}" "${HEAD_SHA}"' in run
+
+
+# --- The gate itself on a queued commit (Codex P1 on #1088) ----------------------
+
+STAMP = "<!-- L9_PROTECTED_ROOT_PR -->"
+
+
+def _git(repo: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-C", str(repo), *args], capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
+@pytest.fixture(scope="module")
+def queued_repo(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, str, str]:
+    """A clone whose HEAD is a queued entry appending to AGENTS.md (additive_only)."""
+    repo = tmp_path_factory.mktemp("queue") / "repo"
+    subprocess.run(["git", "clone", "-q", str(ROOT), str(repo)], check=True)
+    _git(repo, "config", "user.email", "queue@example.invalid")
+    _git(repo, "config", "user.name", "queue")
+    base = _git(repo, "rev-parse", "HEAD")
+    with (repo / "AGENTS.md").open("a", encoding="utf-8") as handle:
+        handle.write("\nAppended by a queued pull request.\n")
+    _git(repo, "commit", "-q", "-am", "queued entry")
+    return repo, base, _git(repo, "rev-parse", "HEAD")
+
+
+def _gate(repo: Path, base: str, head: str, body: str) -> subprocess.CompletedProcess[str]:
+    runner_temp = repo.parent / "runner-temp"
+    runner_temp.mkdir(exist_ok=True)
+    (runner_temp / "queued-pr-body.md").write_text(body, encoding="utf-8")
+    event = runner_temp / "event.json"
+    event.write_text('{"merge_group": {}}', encoding="utf-8")  # no pull_request object
+    env = {
+        "PATH": f"{Path(sys.executable).parent}:{os.environ['PATH']}",
+        "HOME": os.environ.get("HOME", str(repo.parent)),
+        "RUNNER_TEMP": str(runner_temp),
+        "EVENT_NAME": "merge_group",
+        "BASE": base,
+        "HEAD_SHA": head,
+        "GITHUB_ACTIONS": "true",
+        "GITHUB_EVENT_PATH": str(event),
+    }
+    return subprocess.run(
+        ["bash", "-c", _root_file_steps()["Append-only gate"]["run"]],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_queued_additive_change_passes_with_its_pr_stamp(
+    queued_repo: tuple[Path, str, str],
+) -> None:
+    repo, base, head = queued_repo
+    result = _gate(repo, base, head, f"Summary\n{STAMP}\n")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "touches additive_only" not in result.stdout
+
+
+def test_queued_additive_change_fails_without_its_pr_stamp(
+    queued_repo: tuple[Path, str, str],
+) -> None:
+    repo, base, head = queued_repo
+    result = _gate(repo, base, head, "Summary without the stamp\n")
+    assert result.returncode != 0
+    assert f"missing {STAMP}" in result.stdout

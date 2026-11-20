@@ -37,6 +37,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      # merge_group only: read the queued entry's own PR body (stamp evidence).
+      pull-requests: read
     steps:
       # One range per event, resolved before anything is fetched. A missing or
       # inconsistent coordinate fails the job: an unresolvable range is not a pass.
@@ -49,8 +51,10 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           MG_BASE_SHA: ${{ github.event.merge_group.base_sha }}
           MG_HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+          MG_HEAD_REF: ${{ github.event.merge_group.head_ref }}
         run: |
           set -euo pipefail
+          pr_number=""
           case "${EVENT_NAME}" in
             pull_request)
               [ -n "${PR_BASE_REF}" ] && [ -n "${PR_HEAD_SHA}" ] || {
@@ -66,6 +70,13 @@ jobs:
                 echo "::error::merge_group event without merge_group.base_sha"; exit 1; }
               [ -n "${MG_HEAD_SHA}" ] && [ "${MG_HEAD_SHA}" = "${EVENT_SHA}" ] || {
                 echo "::error::merge_group.head_sha '${MG_HEAD_SHA}' is not the event commit '${EVENT_SHA}'"; exit 1; }
+              # The queue names each entry's ref gh-readonly-queue/<base>/pr-<N>-<sha>;
+              # N is the PR whose body carries this entry's stamp evidence. A ref
+              # of any other shape fails closed rather than skipping that evidence.
+              pr_re='^refs/heads/gh-readonly-queue/.+/pr-([0-9]+)-[0-9a-f]{40}$'
+              [[ "${MG_HEAD_REF}" =~ ${pr_re} ]] || {
+                echo "::error::merge_group.head_ref '${MG_HEAD_REF}' names no queued pull request"; exit 1; }
+              pr_number="${BASH_REMATCH[1]}"
               base_fetch="${MG_BASE_SHA}"
               base="${MG_BASE_SHA}"
               head="${MG_HEAD_SHA}"
@@ -78,6 +89,7 @@ jobs:
             echo "base_fetch=${base_fetch}"
             echo "base=${base}"
             echo "head=${head}"
+            echo "pr_number=${pr_number}"
           } >> "${GITHUB_OUTPUT}"
       - name: Checkout gated head with base history
         env:
@@ -112,10 +124,48 @@ jobs:
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
+      # A merge_group payload has no pull_request body, so the protected-root stamp
+      # (<!-- L9_PROTECTED_ROOT_PR -->) is read from the queued entry's own PR.
+      - name: Queued pull request body (merge_group)
+        if: github.event_name == 'merge_group'
+        env:
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.range.outputs.pr_number }}
+          MG_BASE_REF: ${{ github.event.merge_group.base_ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [ -n "${PR_NUMBER}" ] || { echo "::error::no queued pull request number"; exit 1; }
+          pr="$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}")"
+          pr_base="refs/heads/$(jq -r '.base.ref' <<<"${pr}")"
+          [ "${pr_base}" = "${MG_BASE_REF}" ] || {
+            echo "::error::PR #${PR_NUMBER} targets ${pr_base}, the merge group ${MG_BASE_REF}"; exit 1; }
+          jq -r '.body // ""' <<<"${pr}" > "${RUNNER_TEMP}/queued-pr-body.md"
       - name: Append-only gate
         env:
+          EVENT_NAME: ${{ github.event_name }}
           BASE: ${{ steps.range.outputs.base }}
           HEAD_SHA: ${{ steps.range.outputs.head }}
         run: |
+          set -euo pipefail
+          if [ "${EVENT_NAME}" != "merge_group" ]; then
+            python ops/scripts/validate_root_file_protection.py \
+              --base "${BASE}" --head "${HEAD_SHA}"
+            exit 0
+          fi
+          # 1) The whole queued commit against merge_group.base_sha: append-only
+          #    content, ALLOW-ROOT-DELETION markers and the root inventory. The range
+          #    can hold several queued PRs, so PR-body evidence is not judged here
+          #    (no body source: the validator prints a NOTE for that part only).
+          env -u GITHUB_ACTIONS -u GITHUB_EVENT_PATH -u L9_PR_BODY \
+            python ops/scripts/validate_root_file_protection.py \
+              --base "${BASE}" --head "${HEAD_SHA}"
+          # 2) This entry's own change (its first parent is the previous queue entry,
+          #    or the base) with its own PR body: the stamp is required when it
+          #    touches an additive_only root file.
+          entry_base="$(git rev-parse "${HEAD_SHA}^1")"
+          git merge-base --is-ancestor "${BASE}" "${entry_base}" || {
+            echo "::error::queued entry parent ${entry_base} does not descend from ${BASE}"; exit 1; }
           python ops/scripts/validate_root_file_protection.py \
-            --base "${BASE}" --head "${HEAD_SHA}"
+            --base "${entry_base}" --head "${HEAD_SHA}" \
+            --pr-body-file "${RUNNER_TEMP}/queued-pr-body.md" --require-pr-body
