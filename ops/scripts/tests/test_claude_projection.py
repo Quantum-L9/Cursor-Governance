@@ -836,5 +836,151 @@ class ClaudeSettingsGeneratedContractTests(unittest.TestCase):
         self.assertTrue(sync.should_run({".claude/settings.json"}, (".claude/settings.json",)))
 
 
+class ProjectedL9NamesTests(unittest.TestCase):
+    """On-disk l9-* mounts are part of the register even with no state file."""
+
+    def test_missing_directory_is_empty(self) -> None:
+        from reconcile_claude_l9_skills import projected_l9_names
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(projected_l9_names(Path(tmp) / "absent"), set())
+
+    def test_copies_count_and_plain_files_do_not(self) -> None:
+        from reconcile_claude_l9_skills import projected_l9_names
+
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "skills"
+            target.mkdir()
+            source = Path(tmp) / "src"
+            source.mkdir()
+            (target / "l9-live").symlink_to(source, target_is_directory=True)
+            copied = target / "l9-copy"
+            copied.mkdir()
+            (copied / "SKILL.md").write_text("# s\n", encoding="utf-8")
+            (target / "l9-note").write_text("not a skill\n", encoding="utf-8")
+            (target / "l9-empty").mkdir()
+            consumer = target / "defense-attorney"
+            consumer.mkdir()
+            (consumer / "SKILL.md").write_text("# local\n", encoding="utf-8")
+
+            self.assertEqual(projected_l9_names(target), {"l9-live", "l9-copy"})
+
+
+class RegistryMirrorTests(unittest.TestCase):
+    """Default registry output keeps the Claude mirror when the adapter tree exists."""
+
+    def _root(self, base: Path, *, adapter: bool) -> Path:
+        root = base / "gov"
+        skill = root / "skills" / "l9-open"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text(
+            "---\nname: l9-open\ndescription: d\n---\n# open\n",
+            encoding="utf-8",
+        )
+        (root / "skills" / "AUTONOMY_MANIFEST.yaml").write_text(
+            "tiers:\n"
+            "  auto_invoke:\n"
+            "  - skill: l9-open\n"
+            "claude_routing:\n"
+            "  primary_skills: []\n"
+            "  supporting_skills: []\n"
+            "  routes: []\n",
+            encoding="utf-8",
+        )
+        if adapter:
+            (root / "environment" / "agents" / "adapters" / "claude-code").mkdir(parents=True)
+        return root
+
+    def _run(self, root: Path, *extra: str) -> tuple[int, str]:
+        import contextlib
+        import io
+
+        import build_claude_skill_registry as registry_mod
+
+        buf = io.StringIO()
+        argv = ["build_claude_skill_registry.py", "--root", str(root), *extra]
+        with mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(buf):
+            try:
+                code = registry_mod.main()
+            except SystemExit as exc:
+                code = exc.code if isinstance(exc.code, int) else 1
+        return code, buf.getvalue()
+
+    def test_missing_generated_dir_is_stale_then_recreated(self) -> None:
+        import build_claude_skill_registry as registry_mod
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._root(Path(tmp), adapter=True)
+            mirror = (root / registry_mod.CLAUDE_MIRROR_REL).resolve()
+            primary = (root / registry_mod.DEFAULT_OUT).resolve()
+            self.assertFalse(mirror.parent.is_dir())
+
+            check_code, check_out = self._run(root, "--check")
+            self.assertEqual(1, check_code)
+            self.assertIn(f"STALE: {mirror}", check_out)
+
+            write_code, write_out = self._run(root)
+            self.assertEqual(0, write_code)
+            self.assertIn(f"WROTE: {mirror}", write_out)
+            self.assertTrue(mirror.is_file())
+            self.assertEqual(
+                primary.read_text(encoding="utf-8"),
+                mirror.read_text(encoding="utf-8"),
+            )
+
+            again_code, again_out = self._run(root)
+            self.assertEqual(0, again_code)
+            self.assertIn(f"CURRENT: {mirror}", again_out)
+            self.assertNotIn("WROTE:", again_out)
+
+            mirror.write_text("{}\n", encoding="utf-8")
+            stale_code, stale_out = self._run(root, "--check")
+            self.assertEqual(1, stale_code)
+            self.assertIn(f"STALE: {mirror}", stale_out)
+            self.assertNotIn(f"STALE: {primary}", stale_out)
+
+    def test_registry_only_fixture_does_not_invent_a_mirror(self) -> None:
+        import build_claude_skill_registry as registry_mod
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._root(Path(tmp), adapter=False)
+            code, out = self._run(root)
+            mirror = root / registry_mod.CLAUDE_MIRROR_REL
+            self.assertEqual(0, code)
+            self.assertIn("WROTE:", out)
+            self.assertFalse(mirror.exists())
+            check_code, _check_out = self._run(root, "--check")
+            self.assertEqual(0, check_code)
+
+    def test_custom_out_does_not_write_the_mirror(self) -> None:
+        import build_claude_skill_registry as registry_mod
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._root(Path(tmp), adapter=True)
+            custom = root / "custom-registry.json"
+            code, out = self._run(root, "--out", str(custom))
+            self.assertEqual(0, code)
+            self.assertIn(f"WROTE: {custom.resolve()}", out)
+            self.assertFalse((root / registry_mod.CLAUDE_MIRROR_REL).exists())
+
+    def test_paths_outside_the_root_are_refused(self) -> None:
+        import build_claude_skill_registry as registry_mod
+
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = self._root(base, adapter=True)
+            outside = base / "outside" / "skill-registry.json"
+            with self.assertRaises(SystemExit) as raised:
+                registry_mod.registry_targets(root.resolve(), outside.resolve())
+            self.assertIn("outside repository root", str(raised.exception))
+
+            generated = root / "environment" / "agents" / "adapters" / "claude-code" / "generated"
+            generated.symlink_to(base / "outside", target_is_directory=True)
+            default_out = (root / registry_mod.DEFAULT_OUT).resolve()
+            with self.assertRaises(SystemExit) as mirror_raised:
+                registry_mod.registry_targets(root.resolve(), default_out)
+            self.assertIn("outside repository root", str(mirror_raised.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
