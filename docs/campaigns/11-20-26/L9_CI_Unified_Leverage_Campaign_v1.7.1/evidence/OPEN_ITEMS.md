@@ -19,7 +19,7 @@ is public, so rows about credentials carry counts and actions only, never locati
 | T21 | Cursor-Governance is public. Its files include operational detail and campaign packs that describe unfixed weaknesses. | observed | operator | Decide whether any content is scrubbed or moved while the repository stays public. | OPEN, decision |
 | T22 | CEG, EIE, Website-Bot and SEO-Bot were made public on 2026-11-20 (operator, about 17:50Z). Their secret-scanning alerts were not read first; full history is now public. Their Sonar projects were set public to match. | operator-reported, observed | operator | Triage each repository's secret-scanning alerts; rotate anything real. | OPEN, P0 |
 | T23 | (Fixed in EIE #367, merged by the operator: eleven whole-path allowlist classes removed; the two findings they hid were exempted on their own rule only; Gitleaks binary pinned with checksum.) EIE `.gitleaks.toml` allowlists whole path classes (tests, docs, JSON, Markdown, requirements files), so a secret there passes on every event. EIE also installs an older Gitleaks binary without a checksum in two workflows, while Core pins a newer one. | lane (F2) | CTO to assign | Done. | FIXED_PROVEN |
-| T24 | Cursor-Governance has 11 open Dependabot vulnerabilities (3 high, 5 moderate, 3 low) and 3 open code-scanning alerts. | observed, operator-reported | lane N1b | Triage; fix or record an exception with owner and expiry. | OPEN |
+| T24 | Cursor-Governance has 11 open Dependabot vulnerabilities (3 high, 5 moderate, 3 low) and 3 open code-scanning alerts. | observed, operator-reported | lane N1b | Triage; fix or record an exception with owner and expiry. | OUT_OF_SCOPE: a finding, not a CI defect (operator decision 2026-11-20). Owner: the repository. |
 
 ## Coverage that is not running
 
@@ -45,10 +45,10 @@ is public, so rows about credentials carry counts and actions only, never locati
 
 | T35 | Core uploads no coverage to Sonar, so every Core pull request that adds code fails SonarCloud with 0% coverage on new code (seen on #283, #286, #287). | observed | lane L2b | Feed coverage from an existing test run to the Sonar scan; no second test run. | OPEN, assigned |
 
-| T36 | EIE workflows use mutable action tags in 85 places on main, and `perplexity-code-review.yml` interpolates dispatch inputs into `run:`. | observed (Semgrep) | lane F2b | Pin to SHAs, move inputs to `env:`. See `SEMGREP_REVIEW.md`. | OPEN, assigned |
+| T36 | EIE workflows use mutable action tags in 85 places on main, and `perplexity-code-review.yml` interpolates dispatch inputs into `run:`. | observed (Semgrep) | lane F2b | Pin to SHAs, move inputs to `env:`. See `SEMGREP_REVIEW.md`. | OUT_OF_SCOPE: a finding, not a CI defect (operator decision 2026-11-20). Owner: the repository. |
 | T37 | Hosted Semgrep false positives on main (SDK Python 3.7 compatibility rule, literal-identifier SQL, env-indirected script input, a logger line). | observed (Semgrep) | operator | Operator authorized; applied by the CTO session through the Semgrep API: rule disabled in the Code detection policy, 26 main-branch findings ignored (18 false positive, 8 acceptable risk; Semgrep also closed 22 copies on pull-request refs). Re-read: none of the 26 remain open. | FIXED_PROVEN |
 | T38 | Consumers reference `Quantum-L9/l9-ci-core/...@v2` by a moving tag, and three `pyproject.toml` files have no uv dependency cooldown. | observed (Semgrep) | Core owner | One decision each, applied centrally. | OPEN |
-| T39 | Reachable critical certifi advisory in four template repositories outside the campaign. | observed (Semgrep) | repository owners | Relock certifi. Out of campaign scope; recorded so it is not lost. | OPEN, out of scope |
+| T39 | Reachable critical certifi advisory in four template repositories outside the campaign. | observed (Semgrep) | repository owners | Relock certifi. Out of campaign scope; recorded so it is not lost. | OUT_OF_SCOPE: a finding, not a CI defect (operator decision 2026-11-20). Owner: the repository. |
 
 ## Pending operator changes
 
@@ -62,6 +62,9 @@ is public, so rows about credentials carry counts and actions only, never locati
 | P6 | Turn off "Automatically import new GitHub repositories" in the Sonar organization binding. | https://sonarcloud.io/organizations/quantum-l9/edit | Any time. | T19. |
 
 ## Recorded operator decisions
+
+- 2026-11-20, about 19:00Z: the campaign fixes CI so that it runs efficiently and correctly. It does not fix the findings CI tools uncover. A finding enters the campaign only as evidence of a CI defect: a gate that did not run, ran the wrong scope, reported a false outcome, wasted time or money, or is configured to produce noise. Lane F2b (EIE action pinning) and lane N1b (Cursor-Governance dependency floors, PR #1082) were withdrawn; #1082 is left for the operator outside the campaign.
+- 2026-11-20, about 18:55Z: merge the Core and SDK campaign pull requests once the CTO is satisfied. Core: #289, #283, #286, #287, #285. SDK: #118 to #121 after the governance-seeder PR #117 they are stacked on.
 
 - 2026-11-20: merging is last. No campaign pull request is merged until the campaign has fully converged; agents never merge.
 - 2026-11-20: Cursor-Governance stays public; its open items are fixed inside the campaign.
