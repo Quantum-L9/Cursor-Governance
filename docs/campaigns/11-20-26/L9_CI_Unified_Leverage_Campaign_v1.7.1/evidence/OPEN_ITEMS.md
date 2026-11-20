@@ -60,6 +60,9 @@ is public, so rows about credentials carry counts and actions only, never locati
 | T46 | `lint-autofix.yml` in Cursor-Governance and CEG opens pull requests with `GITHUB_TOKEN`, which starts no workflows, so those PRs never get their required checks (the class behind SDK #117, fixed for the SDK in #126). | observed | each repository | Use the organization App token, or stop opening PRs; add a verification check. Row 7. | OPEN |
 | T47 | EIE Sonar on main fails its gate with no coverage imported; CEG sends no coverage to Sonar. | observed (canaries) | canary agents | One test run, `coverage.xml` reused by Sonar (the Core #289 pattern). Row 6. | OPEN, assigned |
 
+| T48 | Lock-owned tools are pinned locally in several repositories off Core's toolchain lock (finding row 15). | observed | L2h, L1g, G2, then per owner | Report in Core; remove local pins. | OPEN, assigned |
+| T49 | Core and SDK Dependabot configs do not ignore lock-owned tools; SDK #114 proposed lock-owned bumps; SDK #117 (rendered config restore) is blocked without required checks (finding row 16). | observed | operator (#114, #117), L2h | Close #114, re-run #117's checks, Core ignores lock-owned tools. | OPEN |
+
 ## Pending operator changes
 
 | ID | Change | Where | When | Why |
@@ -72,6 +75,10 @@ is public, so rows about credentials carry counts and actions only, never locati
 | P6 | Turn off "Automatically import new GitHub repositories" in the Sonar organization binding. | https://sonarcloud.io/organizations/quantum-l9/edit | Any time. | T19. |
 
 ## Recorded operator decisions
+
+- 2026-11-20, about 20:35Z: one source of tool versions. Core's toolchain lock must fully reach every repository before the campaign is DONE, and Dependabot may never create drift for a locked tool. The organization is locked to Python 3.12 (Core lock 3.12.14).
+- 2026-11-20, about 20:20Z: L2f authorized ("yes yes YES"): re-pin `org-ci.yml` to Core main, wire plan and aggregate into the required job, advance the SDK pin, add the ancestry guard. Rulesets and branch protection stay operator-only.
+- 2026-11-20, about 20:15Z: the five-agent pool limit is overridden for lane G2 (l9-graphiti-memory).
 
 - 2026-11-20, about 19:00Z: the campaign fixes CI so that it runs efficiently and correctly. It does not fix the findings CI tools uncover. A finding enters the campaign only as evidence of a CI defect: a gate that did not run, ran the wrong scope, reported a false outcome, wasted time or money, or is configured to produce noise. Lane F2b (EIE action pinning) and lane N1b (Cursor-Governance dependency floors, PR #1082) were withdrawn; #1082 is left for the operator outside the campaign.
 - 2026-11-20, about 19:10Z: the CTO or the swarm merges Core, SDK and .github campaign pull requests once satisfied. Cursor-Governance, EIE and CEG are not merged by this campaign while another agent is merging there.
