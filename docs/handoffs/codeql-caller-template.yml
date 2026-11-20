@@ -11,6 +11,11 @@
 # `.github/workflows/codeql.yml`. Repo-agnostic: no per-repo edits required.
 # The reusable workflow auto-detects the repo's languages. Delete any pre-existing
 # `.github/codeql/codeql-config.yml` in the target repo (config is centralized).
+#
+# This caller has no schedule. Overlay stays available only while pull requests
+# use the default suite. Copy codeql-nightly-caller-template.yml as
+# `.github/workflows/codeql-nightly.yml` for the nightly security-extended scan.
+# Do not put that schedule back on this file.
 
 name: "CodeQL (default suite)"
 

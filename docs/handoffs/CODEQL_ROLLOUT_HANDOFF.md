@@ -20,6 +20,13 @@ status: active
 
 Make CodeQL **security + code-quality** analysis org-wide from a **single source of truth**. This repo (`Cursor-Governance`) now hosts one **reusable workflow** + one **shared config**. Every other Quantum-L9 repo enables analysis by adding **one ~18-line thin caller** and deleting any local CodeQL config. Change analysis once here → it propagates to all callers pinned at `@main`.
 
+**Current caller contract (2026-11-19).** Copy two files, still with no local CodeQL config:
+
+- `docs/handoffs/codeql-caller-template.yml` → `.github/workflows/codeql.yml`. Default suite on push and pull request. No schedule, so overlay analysis stays available.
+- `docs/handoffs/codeql-nightly-caller-template.yml` → `.github/workflows/codeql-nightly.yml`. `security-extended` nightly, from the centralized config. Not a pull-request check.
+
+The fenced caller below is the July rollout example. Its Monday schedule is not the file to copy.
+
 **Non-negotiable guardrails (carry forward):**
 - **No auto-commit, ever.** Copilot Autofix / reviewer suggestions stay suggestion-only; a human reads every diff and commits. No workflow writes fixes back.
 - **Suppression is explicit** — via versioned `query-filters`/`paths-ignore`, never silent mass-dismissal.
@@ -34,7 +41,8 @@ Make CodeQL **security + code-quality** analysis org-wide from a **single source
 | `.github/workflows/codeql-reusable.yml` | Reusable (`workflow_call`) analysis: language auto-detect + per-language build-mode + `analyze`. |
 | `.github/codeql/codeql-config.yml` | Shared query policy: `security-and-quality` suite, `query-filters: exclude precision:low`, `paths-ignore` incl. `tests/`. |
 | `.github/workflows/codeql.yml` | This repo's own thin caller (self-scan). |
-| `docs/handoffs/codeql-caller-template.yml` | The verbatim caller to copy into every other repo. |
+| `docs/handoffs/codeql-caller-template.yml` | The verbatim pull-request caller to copy into every other repo. |
+| `docs/handoffs/codeql-nightly-caller-template.yml` | The verbatim nightly caller. `security-extended`, no pull request. |
 | `docs/handoffs/CODEQL_ROLLOUT_HANDOFF.md` | This packet. |
 
 ---
@@ -45,6 +53,7 @@ Scope: every repo under `https://github.com/Quantum-L9/` except `Cursor-Governan
 
 Per target repo:
 - **TODO-1** CREATE `.github/workflows/codeql.yml` = `docs/handoffs/codeql-caller-template.yml` (verbatim). Risk LOW.
+- **TODO-1b** CREATE `.github/workflows/codeql-nightly.yml` = `docs/handoffs/codeql-nightly-caller-template.yml` (verbatim). Risk LOW. This is the full-corpus `security-extended` scan. Do not satisfy it by putting a schedule back on `codeql.yml`.
 - **TODO-2** DELETE `.github/codeql/codeql-config.yml` and any standalone CodeQL workflow if present (config is centralized). Risk LOW.
 - **TODO-3** ADMIN: if the repo has CodeQL **default setup** enabled, switch it to **advanced** (see runbook) so the caller runs. Risk LOW, but **required** — default setup blocks the workflow.
 - **TODO-4** VERIFY per Phase 5. Risk LOW.
