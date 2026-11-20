@@ -50,6 +50,10 @@ is public, so rows about credentials carry counts and actions only, never locati
 | T38 | Consumers reference `Quantum-L9/l9-ci-core/...@v2` by a moving tag, and three `pyproject.toml` files have no uv dependency cooldown. | observed (Semgrep) | Core owner | One decision each, applied centrally. | OPEN |
 | T39 | Reachable critical certifi advisory in four template repositories outside the campaign. | observed (Semgrep) | repository owners | Relock certifi. Out of campaign scope; recorded so it is not lost. | OUT_OF_SCOPE: a finding, not a CI defect (operator decision 2026-11-20). Owner: the repository. |
 
+| T40 | Governance-seeder pull requests in l9-ci-sdk (#117) never run the two required checks, so they can never merge, and the SDK campaign stack (#118 to #121) is built on one. Main-based Dependabot PRs also fail `Analyze (central Core)`. | observed | lane L1e | Find the trigger or ruleset cause, fix it at the owner, or rebuild the SDK stack on main if it does not need #117. | OPEN, assigned |
+| T41 | The secret-scanning service monitors only the operator's personal GitHub account; no Quantum-L9 repository is monitored, so its CI check sees nothing for the organization. | observed | operator | Connect the organization in the service's GitHub integration. | OPEN, operator |
+| T42 | Codecov receives no usable report from any campaign repository; the one upload (CEG) is path-filtered, last ran 2026-03-11 and failed. | observed | cleanup wave | Retire in favour of Sonar coverage. See `CODECOV_REVIEW.md`. | OPEN, retire candidate |
+
 ## Pending operator changes
 
 | ID | Change | Where | When | Why |
@@ -64,6 +68,7 @@ is public, so rows about credentials carry counts and actions only, never locati
 ## Recorded operator decisions
 
 - 2026-11-20, about 19:00Z: the campaign fixes CI so that it runs efficiently and correctly. It does not fix the findings CI tools uncover. A finding enters the campaign only as evidence of a CI defect: a gate that did not run, ran the wrong scope, reported a false outcome, wasted time or money, or is configured to produce noise. Lane F2b (EIE action pinning) and lane N1b (Cursor-Governance dependency floors, PR #1082) were withdrawn; #1082 is left for the operator outside the campaign.
+- 2026-11-20, about 19:10Z: the CTO or the swarm merges Core, SDK and .github campaign pull requests once satisfied. Cursor-Governance, EIE and CEG are not merged by this campaign while another agent is merging there.
 - 2026-11-20, about 18:55Z: merge the Core and SDK campaign pull requests once the CTO is satisfied. Core: #289, #283, #286, #287, #285. SDK: #118 to #121 after the governance-seeder PR #117 they are stacked on.
 
 - 2026-11-20: merging is last. No campaign pull request is merged until the campaign has fully converged; agents never merge.
