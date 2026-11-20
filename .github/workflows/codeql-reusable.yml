@@ -27,7 +27,7 @@ on:
         description: "CodeQL config (owner/repo/path@ref or local path)."
         type: string
         required: false
-        default: "Quantum-L9/Cursor-Governance/.github/codeql/codeql-config.yml@615d16c5229c18b416d6d28c12bbb97989350769"
+        default: "Quantum-L9/Cursor-Governance/.github/codeql/codeql-config.yml@52d87ce2e217c16a96f0ef131f4da097ef7cd5e2"
       runner:
         description: "Runner label."
         type: string
@@ -107,7 +107,7 @@ jobs:
     permissions:
       contents: read
       security-events: write   # required to upload CodeQL results
-      actions: read
+      actions: write           # required to save the overlay-base database
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.detect.outputs.matrix) }}

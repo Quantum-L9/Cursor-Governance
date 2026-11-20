@@ -8,8 +8,9 @@ Registered `--class observer` on PostToolUse (Edit|Write|MultiEdit|NotebookEdit|
   changed as `additionalContext`, so they are fixed before anything is pushed.
 * Bash: when HEAD moved since the last call (a commit, amend, merge — however
   it was spelled), starts the heavy lanes (CodeQL, Semgrep, osv-scanner) for
-  the new commit in the background. The push gate and make pr reuse those
-  receipts. A `git push` also refreshes the SonarCloud PR read in the background.
+  the new commit in the background. A security-relevant diff then tells the
+  agent to read that receipt before publish. make pr does not start CodeQL.
+  A `git push` also refreshes the SonarCloud PR read in the background.
 
 Never blocks, never writes inside the worktree. Silent on non-Claude surfaces
 and when L9_CI_PARITY=0. See ops/ci_parity/README.md.
@@ -35,6 +36,15 @@ for _path in (GOV / "ops" / "autonomy", GOV / "ops" / "ci_parity"):
 EDIT_TOOLS = frozenset({"Edit", "Write", "MultiEdit", "NotebookEdit"})
 FILE_TIMEOUT = 12
 _PUSH = re.compile(r"(?:^|[;&|(]\s*)git(?:\s+-C\s+\S+|\s+-c\s+\S+)*\s+push\b")
+_SINK = re.compile(
+    r"\blogging\b|\bsubprocess\b|\bos\.path\b|\bpathlib\b|\brequests\b|\burllib\b|\bhttpx\b"
+)
+_RECEIPT_REMINDER = (
+    "codeql: this commit touches logging, subprocess, paths, or an HTTP client. "
+    "Before publish, read `python3 ops/ci_parity/run.py --status` and the codeql receipt. "
+    "A missing receipt or `codeql: database create failed` is not a pass. "
+    "Do not start a second scan and do not add CodeQL to make pr."
+)
 
 
 def claude_surface() -> bool:
@@ -90,6 +100,11 @@ def on_edit(tool_input: dict[str, Any]) -> None:
         _emit(proc.stdout.strip())
 
 
+def diff_is_security_relevant(diff: str) -> bool:
+    """True when a commit diff can feed a CodeQL taint sink."""
+    return bool(_SINK.search(diff))
+
+
 def on_bash(event: dict[str, Any]) -> None:
     cwd = Path(str(event.get("cwd") or os.getcwd()))
     top = _git(cwd, "rev-parse", "--show-toplevel")
@@ -115,6 +130,9 @@ def on_bash(event: dict[str, Any]) -> None:
                 [sys.executable, str(RUNNER), "--commit", head, "--background", "--workspace", top],
                 slug_dir / "commit.log",
             )
+            diff = _git(Path(top), "show", "--format=", "--unified=0", "HEAD")
+            if diff_is_security_relevant(diff):
+                _emit(_RECEIPT_REMINDER)
     command = str((event.get("tool_input") or {}).get("command") or "")
     if _PUSH.search(command) and SONAR.is_file():
         _detach([sys.executable, str(SONAR), "--auto", "--workspace", top], slug_dir / "sonar.log")
