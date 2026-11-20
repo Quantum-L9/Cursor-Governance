@@ -2,8 +2,9 @@
 
 Each case runs the helper in a real temporary git repository. The PR shape is
 the one GitHub tests for pull_request: a two-parent merge commit whose first
-parent is the base tip. Every state that is not that shape must fall back to
-the full suite (exit 1), because a wrong scope would hide tests.
+parent is the base tip. A pull request whose scope cannot be proved exits 2
+(PR_SCOPE_UNKNOWN or POLICY_PR_DEEP_FORBIDDEN) and must not be read as an
+instruction to run the full suite. Exit 1 is only "not a pull request".
 """
 
 from __future__ import annotations
@@ -106,14 +107,16 @@ def test_depth_one_checkout_fetches_the_parents(merged: Path, tmp_path: Path) ->
     assert result.stdout.splitlines() == ["a.txt", "c.txt"]
 
 
-def test_unfetchable_parents_fall_back_to_full_suite(merged: Path, tmp_path: Path) -> None:
+def test_unfetchable_parents_are_unknown_scope(merged: Path, tmp_path: Path) -> None:
     shallow = tmp_path / "shallow"
     _git(tmp_path, "clone", "-q", "--depth=1", f"file://{merged}", str(shallow))
     _git(shallow, "remote", "set-url", "origin", f"file://{tmp_path / 'missing'}")
     result = _run(shallow, **PR)
-    assert result.returncode == 1
+    assert result.returncode == 2
     assert result.stdout == ""
+    assert "PR_SCOPE_UNKNOWN" in result.stderr
     assert "could not fetch" in result.stderr
+    assert "full suite" not in result.stderr
 
 
 @pytest.mark.parametrize(
@@ -121,16 +124,35 @@ def test_unfetchable_parents_fall_back_to_full_suite(merged: Path, tmp_path: Pat
     [
         ({"GITHUB_ACTIONS": "true", "GITHUB_EVENT_NAME": "push"}, "event push"),
         ({"GITHUB_ACTIONS": "true", "GITHUB_EVENT_NAME": "workflow_dispatch"}, "event workflow"),
-        ({**PR, "L9_CI_FULL_SUITE": "1"}, "L9_CI_FULL_SUITE=1"),
     ],
 )
-def test_non_pr_or_forced_runs_use_full_suite(
+def test_non_pr_runs_are_not_a_pull_request_scope(
     merged: Path, env: dict[str, str], reason: str
 ) -> None:
     result = _run(merged, **env)
     assert result.returncode == 1
     assert result.stdout == ""
     assert reason in result.stderr
+
+
+def test_full_suite_override_is_refused_on_pull_request(merged: Path) -> None:
+    result = _run(merged, **PR, L9_CI_FULL_SUITE="1")
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert "POLICY_PR_DEEP_FORBIDDEN: L9_CI_FULL_SUITE=1" in result.stderr
+    assert "full suite" not in result.stderr
+
+
+def test_full_suite_override_off_pull_request_keeps_the_non_pr_profile(merged: Path) -> None:
+    result = _run(
+        merged,
+        GITHUB_ACTIONS="true",
+        GITHUB_EVENT_NAME="push",
+        L9_CI_FULL_SUITE="1",
+    )
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "L9_CI_FULL_SUITE=1" in result.stderr
 
 
 def test_local_shell_uses_full_suite_silently(merged: Path) -> None:
@@ -140,14 +162,16 @@ def test_local_shell_uses_full_suite_silently(merged: Path) -> None:
     assert result.stderr == ""
 
 
-def test_single_parent_head_uses_full_suite(merged: Path) -> None:
+def test_single_parent_head_is_unknown_scope(merged: Path) -> None:
     _git(merged, "switch", "-q", "feature")
     result = _run(merged, **PR)
-    assert result.returncode == 1
+    assert result.returncode == 2
+    assert "PR_SCOPE_UNKNOWN" in result.stderr
     assert "not a two-parent merge commit" in result.stderr
+    assert "full suite" not in result.stderr
 
 
-def test_merge_that_changes_nothing_uses_full_suite(tmp_path: Path) -> None:
+def test_merge_that_changes_nothing_is_unknown_scope(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init", "-q", "-b", "main")
@@ -159,8 +183,10 @@ def test_merge_that_changes_nothing_uses_full_suite(tmp_path: Path) -> None:
     _git(repo, "switch", "-q", "main")
     _git(repo, "merge", "-q", "--no-ff", "-m", "merge", "feature")
     result = _run(repo, **PR)
-    assert result.returncode == 1
+    assert result.returncode == 2
+    assert "PR_SCOPE_UNKNOWN" in result.stderr
     assert "changes no files" in result.stderr
+    assert "full suite" not in result.stderr
 
 
 def test_deletion_only_pr_scopes_to_nothing(tmp_path: Path) -> None:
@@ -183,11 +209,13 @@ def test_deletion_only_pr_scopes_to_nothing(tmp_path: Path) -> None:
     assert "0 changed path(s)" in result.stderr
 
 
-def test_pr_full_forces_the_full_suite_on_its_test_prerequisite() -> None:
-    """`make pr-full` is the full gate even inside a pull_request CI job.
+def test_pr_full_still_exports_full_suite_but_a_pull_request_refuses_it() -> None:
+    """`make pr-full` still exports L9_CI_FULL_SUITE for a non-PR full gate.
 
-    Read make's own database (-p) without running anything (-n -q): pr-full
-    must carry the target-specific export, which GNU make passes to `test`.
+    A pull_request refuses that override (see
+    test_full_suite_override_is_refused_on_pull_request). Make 4 prints the
+    target-specific variable as `pr-full: NAME := value`; Make 3.81 prints it
+    as a comment on the pr-full record.
     """
     repo = HELPER.parents[3]
     db = subprocess.run(
@@ -198,10 +226,10 @@ def test_pr_full_forces_the_full_suite_on_its_test_prerequisite() -> None:
         check=False,
         timeout=120,
     ).stdout
-    # make -p prints a target-specific variable as `<target>: NAME := value`.
-    assert "pr-full: L9_CI_FULL_SUITE := 1" in db.splitlines(), (
-        "make does not attach L9_CI_FULL_SUITE := 1 to pr-full"
-    )
-    # -p does not show `export`; without it the recipe's shell never sees the value.
+    attached = "pr-full: L9_CI_FULL_SUITE := 1" in db.splitlines()
+    if not attached:
+        record = db.split("\npr-full:", 1)[1].split("\n\n", 1)[0]
+        attached = "# L9_CI_FULL_SUITE := 1" in record.splitlines()
+    assert attached, "make does not attach L9_CI_FULL_SUITE := 1 to pr-full"
     publish = (repo / "ops" / "make" / "publish.mk").read_text(encoding="utf-8")
     assert "pr-full: export L9_CI_FULL_SUITE := 1" in publish.splitlines()
