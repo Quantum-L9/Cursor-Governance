@@ -17,6 +17,10 @@
 # caller repo's actual language composition and assigns a per-language
 # build-mode (interpreted -> none, compiled -> autobuild), so no standalone
 # autobuild step is needed and repos with no CodeQL-supported source are skipped.
+#
+# Unknown is not empty: a failed or malformed language lookup fails `detect`.
+# Only a successful lookup that names no CodeQL-supported language skips
+# analysis, and the step prints the languages it saw as the evidence.
 
 name: "CodeQL reusable (security + code quality)"
 
@@ -52,14 +56,25 @@ jobs:
           API: ${{ github.api_url }}
         run: |
           set -euo pipefail
-          DETECTED=$(curl -sfS \
+          # A failed lookup is unknown, never "nothing to analyze".
+          if ! DETECTED=$(curl -sfS --retry 3 \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            "${API}/repos/${REPO}/languages" || echo '{}')
+            "${API}/repos/${REPO}/languages"); then
+            echo "::error::CodeQL language lookup failed for ${REPO}: the language set is unknown, so analysis cannot be skipped as not applicable."
+            exit 1
+          fi
           export DETECTED
           MATRIX=$(python3 - <<'PY'
-          import json, os
-          data = json.loads(os.environ.get("DETECTED") or "{}")
+          import json, os, sys
+          try:
+              data = json.loads(os.environ["DETECTED"])
+          except (KeyError, ValueError):
+              data = None
+          if not isinstance(data, dict):
+              print("::error::CodeQL language lookup returned no JSON object: the language set is unknown.", file=sys.stderr)
+              sys.exit(1)
+          print(f"languages reported by GitHub: {sorted(data)}", file=sys.stderr)
           # GitHub Linguist language name -> CodeQL language id.
           lang_map = {
               "Python": "python",
@@ -94,6 +109,7 @@ jobs:
           echo "resolved matrix: ${MATRIX}"
           echo "matrix=${MATRIX}" >> "${GITHUB_OUTPUT}"
           if [ "${MATRIX}" = '{"include": []}' ] || [ "${MATRIX}" = '{"include":[]}' ]; then
+            echo "not applicable: the lookup succeeded and named no CodeQL-supported language"
             echo "empty=true" >> "${GITHUB_OUTPUT}"
           else
             echo "empty=false" >> "${GITHUB_OUTPUT}"
