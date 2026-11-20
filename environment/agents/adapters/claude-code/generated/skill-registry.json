@@ -1,5 +1,5 @@
 {
-  "generation_id": "b44968403c169804d00937a27b95170d3bd16d72c3dcc730e3f51ca582ab34e1",
+  "generation_id": "8eb6be3dbb99ab62c286599785f4b9fa25c14709a0bc90cf54355659105b071a",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1271,7 +1271,7 @@
       "path": "skills/l9-plan",
       "reason": "Program Execution campaign planner (PROGRAM_EXECUTION_PLANNER_V1) \u2014 renders a PLAN_DOCUMENT as a campaign-source.v2 that make campaign admits unchanged \u2014 and owner of the PLAN_DOCUMENT schema, validator and renderers that l9-plan-simple runs; a campaign runs only on the operator's own words and its broad planning description would hijack l9-plan-simple routing \u2014 user-invoked only",
       "skill_md": "skills/l9-plan/SKILL.md",
-      "skill_sha256": "4c2e6371e2457e4f78633ff1a92c31b4bbbde1e7fb5262cee39f54417d5f4c27",
+      "skill_sha256": "365f3054e05ff593188411fdb50dae1a43072e678ef7aec180242a917934e75f",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1427,7 +1427,7 @@
       "path": "skills/l9-repo-sync",
       "reason": "in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach",
       "skill_md": "skills/l9-repo-sync/SKILL.md",
-      "skill_sha256": "608dc41f3411264a1e190faee7b44fc26a14f2ac427b92a18ee101f84b1bb991",
+      "skill_sha256": "bbd4058e5e28f93ff94cbfbd782115dcdbd526561632d084aa046eb4111c8fd0",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1577,5 +1577,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "0cfc1ca9eca7517332b01ad272c4805734be5f748919dc1bf8cb67acce34a5c7",
-  "source_skill_corpus_sha256": "088fdc7f5cd943e9ec69bac76ae881841b565c65ddcd46f27130609cbfd280fd"
+  "source_skill_corpus_sha256": "2b6b8835f1f543ff6162a1580385a3ca7cbf1a660b1ef9b9db426a8496d1aab1"
 }

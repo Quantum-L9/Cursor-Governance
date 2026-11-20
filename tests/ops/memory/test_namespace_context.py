@@ -352,3 +352,81 @@ def test_lookalike_remotes_do_not_borrow_a_new_recon_slug(tmp_path: Path) -> Non
             registry, remote=nc.git_remote_url(repo), path_parts=set(repo.parts)
         )
         assert not set(matches) & new_slugs, (remote, matches)
+
+
+def _worktree_of(clone: Path, path: Path) -> Path:
+    """A linked worktree: ``.git`` is a file, the origin is the clone's."""
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(clone),
+            "-c",
+            "user.email=t@t",
+            "-c",
+            "user.name=t",
+            "commit",
+            "-q",
+            "--allow-empty",
+            "-m",
+            "seed",
+        ],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(clone), "worktree", "add", "-q", "--detach", str(path)],
+        check=True,
+        env={**__import__("os").environ, "L9_WORKTREE_ADD_AUTHORIZED": "test fixture"},
+    )
+    return path
+
+
+def test_a_multi_repo_container_resolves_one_namespace_per_repository(tmp_path: Path) -> None:
+    """A cloud container root is ambiguous for ONE hint, but each repo is not."""
+    _git_repo(tmp_path / "Cursor-Governance", "https://github.com/Quantum-L9/Cursor-Governance")
+    _git_repo(tmp_path / "PR_Repair", "git@github.com:Quantum-L9/PR_Repair.git")
+    _git_repo(tmp_path / "unregistered", "https://github.com/someone/else")
+    registry = _registry()
+    assert nc.resolve_namespace_context(tmp_path, registry=registry, env={}).method == (
+        nc.METHOD_AMBIGUOUS
+    )
+    found = nc.resolve_workspace_namespaces(tmp_path, registry=registry)
+    assert found.multi_repo is True
+    assert found.resolved is True
+    assert sorted(ns for _, ns in found.namespaces) == ["cursor-governance", "pr-repair"]
+    assert (str(tmp_path / "unregistered"), "no_namespace") in found.excluded
+
+
+def test_a_single_repository_is_not_reported_as_multi_repo(tmp_path: Path) -> None:
+    repo = _git_repo(tmp_path / "PR_Repair", "git@github.com:Quantum-L9/PR_Repair.git")
+    found = nc.resolve_workspace_namespaces(repo, registry=_registry())
+    assert found.multi_repo is False
+    assert found.namespaces == ((str(repo), "pr-repair"),)
+
+
+def test_a_second_checkout_of_one_repository_never_takes_a_slot(tmp_path: Path) -> None:
+    """A linked worktree beside its clone must not push a distinct repo past the cap."""
+    clone = _git_repo(
+        tmp_path / "Cursor-Governance", "https://github.com/Quantum-L9/Cursor-Governance"
+    )
+    _worktree_of(clone, tmp_path / "Cursor-Governance-wt")
+    _git_repo(tmp_path / "PR_Repair", "git@github.com:Quantum-L9/PR_Repair.git")
+    found = nc.resolve_workspace_namespaces(tmp_path, cap=2, registry=_registry())
+    assert [ns for _, ns in found.namespaces] == ["cursor-governance", "pr-repair"]
+    assert (str(tmp_path / "Cursor-Governance-wt"), nc.DROPPED_DUPLICATE_NAMESPACE) in (
+        found.excluded
+    )
+
+
+def test_the_cap_is_reported_not_silent(tmp_path: Path) -> None:
+    _git_repo(tmp_path / "Cursor-Governance", "https://github.com/Quantum-L9/Cursor-Governance")
+    _git_repo(tmp_path / "PR_Repair", "git@github.com:Quantum-L9/PR_Repair.git")
+    found = nc.resolve_workspace_namespaces(tmp_path, cap=1, registry=_registry())
+    assert len(found.namespaces) == 1
+    assert [reason for _, reason in found.excluded] == ["cap"]
+
+
+def test_an_empty_container_resolves_nothing(tmp_path: Path) -> None:
+    found = nc.resolve_workspace_namespaces(tmp_path, registry=_registry())
+    assert found.resolved is False
+    assert found.multi_repo is False

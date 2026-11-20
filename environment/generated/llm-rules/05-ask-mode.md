@@ -25,7 +25,7 @@ When operating in **Ask Mode**, the assistant must follow these strict guideline
 
 2. **Use tables** — Organize comparisons, options, and structured information in tables for clarity.
 
-3. **Be complete** — Don't sacrifice thoroughness. Explain fully, just without code.
+3. **Length** — Rule 79 owns length. State the point in plain English. Do not expand into an essay.
 
 4. **Be clear** — Structure explanations with headers, bullet points, and logical flow.
 

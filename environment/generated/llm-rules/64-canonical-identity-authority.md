@@ -86,7 +86,7 @@ canonical source of the projected semantics.
 
 Do not infer `cursor` or `claude-code` from a free-form `L9_MEMORY_AGENT_ID`
 or from an OAuth public client id. Every Claude Code host shares actor
-`claude-code`. An unrecognized surface stays `unknown` and is not relabelled
-`claude-code-mobile`. Identity registration grants no credential.
+`claude-code`. An unrecognized surface stays `unknown` and is not guessed; Claude Code
+has two surfaces, `claude-code-cli` and `claude-code-web`. Identity registration grants no credential.
 
 <!-- generated-from: rules/64-canonical-identity-authority.mdc; do-not-edit -->
