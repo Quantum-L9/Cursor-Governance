@@ -69,10 +69,10 @@ Legacy projection kept in place: [references/plan-workflow.md](references/plan-w
 7. **Doc / Root Surface Impact** — Update TODOs or N/A with reason.
 8. **Emit PLAN_DOCUMENT** — write JSON conforming to the schema.
 9. **Validate** — `python3 scripts/validate_plan_document.py <plan.json>`. FAIL → not ready.
-10. **Project (default)** — `python3 scripts/render_plan_pe_autonomy.py <plan.json> > .cursor/plans/<slug>_<8hex>.plan.md` (or hand-fill [executable-plan.pe-autonomy.template.md](references/executable-plan.pe-autonomy.template.md)). Must retain **Execute via @environment/program-execution + autonomy**.
+10. **Project (default)** — `python3 scripts/render_plan_pe_autonomy.py <plan.json> > .cursor/plans/<slug>_<8hex>.plan.md`. The projection renderer is the **only writer** of this file: its output carries YAML frontmatter (`name`, `overview`, `todos`, `kind`, `execute_via`) so the campaign stamp can land, and it must retain **Execute via @environment/program-execution + autonomy**. A hand-filled `.plan.md` is not a projection and cannot be stamped.
 11. **Kernel receipt** — ready only when `python3 scripts/validate_plan_kernel_receipt.py <bound.plan.md>` PASSes. Hooks enforce this; this step is the pointer.
-12. **Campaign source (campaign mode)** — `python3 scripts/render_campaign_source.py <plan.json> --plan-md <the .plan.md> [--target OWNER/REPO] [--out PATH]`. It refuses a writing todo without validation, an unknown or cyclic dependency, and an `ask`/`block` unknown; then judges the render with Program Execution's own front door, compiler and launchability (inference off). Only `ADMITTED` is a deliverable. The script keeps the blueprint beside the YAML and records `campaign_source` and `campaign_blueprint` on that `.plan.md`. Default output: `.l9/plans/<campaign_id>/CAMPAIGN_SOURCE.yaml`; set `campaign.campaign_id` / `campaign.target_repository` in the plan or pass the flags. The model does not write `CAMPAIGN_SOURCE.yaml`.
-13. **Handoff** — give the operator the printed `next` line: `make campaign <the .plan.md>`. Never run `make campaign` yourself. The command line is the operator invocation. The campaign finishes with the SSOT `make pr`. Optional `python3 scripts/emit_gmp_phase0.py <plan.json>` when also chaining GMP.
+12. **Campaign source (campaign mode)** — `python3 scripts/render_campaign_source.py <plan.json> --plan-md <the .plan.md> [--target OWNER/REPO] [--out PATH]`. Stamp-or-refuse: `--plan-md` is required, a missing `--plan-md` or a `.plan.md` without YAML frontmatter is **REFUSED**, and a run that admits the YAML and skips the stamp is not a deliverable. It refuses a writing todo without validation, an unknown or cyclic dependency, and an `ask`/`block` unknown; then judges the render with Program Execution's own front door, compiler and launchability (inference off). Only `ADMITTED`, printed after the stamp, is a deliverable. The script keeps the blueprint beside the YAML, records `campaign_source`, `campaign_source_sha256` and `campaign_blueprint` on that `.plan.md`, and clears the plan-pipeline latch bound to it. Default output: `.l9/plans/<campaign_id>/CAMPAIGN_SOURCE.yaml`; set `campaign.campaign_id` / `campaign.target_repository` in the plan or pass the flags. The model does not write `CAMPAIGN_SOURCE.yaml`.
+13. **Handoff** — give the operator the printed `next` line: `make campaign <the stamped .plan.md>`. The renderer prints it only after the stamp; an unstamped plan is not an operator handoff. Never run `make campaign` yourself. The command line is the operator invocation. The campaign finishes with the SSOT `make pr`. Optional `python3 scripts/emit_gmp_phase0.py <plan.json>` when also chaining GMP.
 
 ## Depth Classifier (escalate-only)
 
@@ -114,12 +114,14 @@ python3 scripts/validate_pack_structure.py .
 python3 scripts/validate_exemplary_skill.py .
 python3 scripts/route_plan.py --self-test
 python3 scripts/validate_plan_document.py fixtures/plan_pass.json
-python3 scripts/render_campaign_source.py fixtures/plan_campaign.json --out /tmp/l9-plan-campaign/CAMPAIGN_SOURCE.yaml
+mkdir -p /tmp/l9-plan-campaign
+printf -- '---\nname: campaign validation\n---\n' > /tmp/l9-plan-campaign/plan_campaign.plan.md
+python3 scripts/render_campaign_source.py fixtures/plan_campaign.json --out /tmp/l9-plan-campaign/CAMPAIGN_SOURCE.yaml --plan-md /tmp/l9-plan-campaign/plan_campaign.plan.md
 python3 scripts/validate_plan_kernel_receipt.py fixtures/plan_kernel_pass.plan.md
 python3 scripts/self_test.py
 ```
 
-A delivered **campaign** plan is incomplete (fail-closed) unless `render_campaign_source.py` prints `ADMITTED`. A delivered plan is incomplete (fail-closed) unless `validate_plan_document.py` PASSes, the PE+autonomy `.plan.md` projection exists with the execute pipeline section, **and** `validate_plan_kernel_receipt.py` PASSes on that `.plan.md`. Heading-complete legacy markdown alone is not ready.
+A delivered **campaign** plan is incomplete (fail-closed) unless `render_campaign_source.py` prints `ADMITTED` after stamping the `--plan-md` file (a run that admits the YAML and skips the stamp is REFUSED). A delivered plan is incomplete (fail-closed) unless `validate_plan_document.py` PASSes, the PE+autonomy `.plan.md` projection exists with the execute pipeline section, **and** `validate_plan_kernel_receipt.py` PASSes on that `.plan.md`. Heading-complete legacy markdown alone is not ready.
 
 ## Failure Handling
 

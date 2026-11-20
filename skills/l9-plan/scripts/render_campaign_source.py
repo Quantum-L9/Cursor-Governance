@@ -20,15 +20,21 @@ Program Execution itself, not by a second validator here:
 3. `launchability.check_tasks` with inference OFF, which must report the
    campaign launchable with no synthesized validation.
 
-On admission the script records `campaign_source` and `campaign_blueprint` on
-the `.plan.md` passed as `--plan-md`. `make campaign <plan.md>` reads those
-paths. It does not call this script.
+An admitting run stamps the plan: `--plan-md` is required (a run that admits
+the YAML and skips the stamp is not a deliverable, and a missing `--plan-md` or
+a `.plan.md` without YAML frontmatter is refused). On admission the script
+records `campaign_source`, `campaign_source_sha256` and `campaign_blueprint` on
+that `.plan.md`, clears the plan-pipeline latch bound to it, and prints the
+operator `next` line only after the stamp. `make campaign <plan.md>` reads the
+recorded paths. It does not call this script.
 
 usage:
-  render_campaign_source.py <plan.json> [--out PATH] [--target OWNER/REPO]
+  render_campaign_source.py <plan.json> --plan-md <projected .plan.md>
+                            [--out PATH] [--target OWNER/REPO]
                             [--campaign-id ID] [--no-check] [--json]
 
-Exit codes: 0 rendered and admitted; 1 refused (render or PE check); 2 usage.
+Exit codes: 0 rendered, admitted and stamped; 1 refused (render, PE check, or
+missing stamp); 2 usage.
 """
 
 from __future__ import annotations
@@ -515,6 +521,31 @@ def bind_blueprint_to_source(blueprint: Path, source: Path) -> str:
     return digest
 
 
+def _clear_plan_pipeline_latch(plan_md: Path, repo_root: Path) -> None:
+    """Clear the plan-pipeline latch bound to the stamped plan (best-effort).
+
+    The plan-kernel gate routes an unadmitted campaign plan's repair through
+    this renderer, so the repair is complete only when the latch clears —
+    exactly as run_plan_pipeline.py clears it for simple plans. A latch the
+    renderer cannot clear is reported; it never flips ADMITTED.
+    """
+    hooks = GOV_ROOT / "ops" / "hooks"
+    if not hooks.is_dir():
+        return
+    if str(hooks) not in sys.path:
+        sys.path.insert(0, str(hooks))
+    try:
+        import plan_kernel_gate  # noqa: PLC0415 - imported only after the stamp
+    except Exception as exc:  # noqa: BLE001 - a missing gate must not un-admit
+        print(f"WARN: plan pipeline latch not checked: {exc}", file=sys.stderr)
+        return
+    for workspace in {repo_root.resolve(), Path.cwd().resolve()}:
+        try:
+            plan_kernel_gate.clear_pipeline_required(workspace, plan_md)
+        except OSError:
+            continue
+
+
 def check_admission(source_path: Path, repo_root: Path, *, blueprint_dir: Path) -> dict[str, Any]:
     """Judge the rendered source with Program Execution's own front door and compiler.
 
@@ -604,6 +635,14 @@ def main(argv: list[str] | None = None) -> int:
             raise RenderError([f"PLAN_DOCUMENT invalid: {error}" for error in errors])
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
         repo_root = args.repo_root.resolve()
+        if not args.no_check and args.plan_md is None:
+            raise RenderError(
+                [
+                    "a campaign render that admits must stamp the plan: pass --plan-md "
+                    "<the projected .plan.md>. A run that admits the YAML and skips the "
+                    "stamp is not a deliverable."
+                ]
+            )
         campaign_id = resolve_campaign_id(plan, args.campaign_id)
         target = resolve_target(plan, args.target, repo_root)
         source = render(plan, target=target, campaign_id=campaign_id)
@@ -642,6 +681,7 @@ def main(argv: list[str] | None = None) -> int:
                 admission["source_sha256"] = source_sha256
             if args.plan_md is not None and blueprint_path is not None:
                 record_plan_paths(args.plan_md.resolve(), out, blueprint_path, source_sha256)
+                _clear_plan_pipeline_latch(args.plan_md.resolve(), repo_root)
         finally:
             # Admitted: the yaml is already at --out and the blueprint has been renamed.
             # Refused or interrupted: discard both staged artifacts.
@@ -656,6 +696,9 @@ def main(argv: list[str] | None = None) -> int:
             for error in exc.errors:
                 print(f"  - {error}", file=sys.stderr)
         return 1
+    next_lines: list[str] = []
+    if args.plan_md is not None and blueprint_path is not None:
+        next_lines.append("make campaign " + str(args.plan_md.resolve()))
     result = {
         "status": "ADMITTED" if not args.no_check else "RENDERED",
         "campaign_id": campaign_id,
@@ -663,19 +706,17 @@ def main(argv: list[str] | None = None) -> int:
         "source": str(out),
         "admission": admission,
         "blueprint": str(blueprint_path) if blueprint_path is not None else "",
-        "next": [
-            "make campaign "
-            + (str(args.plan_md.resolve()) if args.plan_md is not None else "<the .plan.md>")
-        ],
+        "next": next_lines,
     }
     if args.json:
         print(json.dumps(result, indent=2))
     else:
         print(f"{result['status']}: {out}")
         print(f"  campaign_id: {campaign_id}  target: {target}")
-        print("  next (operator only; an agent never sets the invocation):")
-        for line in result["next"]:
-            print(f"    {line}")
+        if next_lines:
+            print("  next (operator only; an agent never sets the invocation):")
+            for line in next_lines:
+                print(f"    {line}")
     return 0
 
 
