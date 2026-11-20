@@ -44,6 +44,12 @@ METHOD_REGISTRY = "registry"
 METHOD_EXPLICIT = "explicit_request"
 METHOD_AMBIGUOUS = "ambiguous"
 METHOD_UNRESOLVED = "unresolved"
+#: A repository with an origin remote but no registry entry (operator decision
+#: 2026-11-20: memory works in any checked-out repository). The namespace is
+#: derived deterministically from ``owner/name``; it is a request, never a grant.
+METHOD_DERIVED = "derived_from_remote"
+#: The memory store's namespace grammar (l9_graphite_memory projection names).
+_NAMESPACE_GRAMMAR = re.compile(r"^[a-z][a-z0-9-]{0,61}$")
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +79,27 @@ def aliases_for(registry: Mapping[str, Any], slug: str) -> tuple[str, ...]:
     config = (registry.get("repos") or {}).get(slug) or {}
     names = [config.get("github"), *(config.get("github_aliases") or [])]
     return tuple(str(name) for name in names if name)
+
+
+def legacy_namespaces_for(registry: Mapping[str, Any], slug: str) -> tuple[str, ...]:
+    """Namespaces a renamed slug wrote under before; read so history stays reachable."""
+
+    config = (registry.get("repos") or {}).get(slug) or {}
+    return tuple(str(n) for n in config.get("legacy_namespaces") or [] if str(n).strip())
+
+
+def derive_namespace(identity: str | None) -> str | None:
+    """A namespace for an unregistered repository, from its ``owner/name``.
+
+    Lowercase, every run of other characters becomes one hyphen, owner and name
+    joined by a hyphen (``acme/My_Repo`` -> ``acme-my-repo``). ``None`` when the
+    result does not fit the memory store's grammar.
+    """
+
+    if not identity or "/" not in identity:
+        return None
+    candidate = re.sub(r"[^a-z0-9]+", "-", identity.lower()).strip("-")
+    return candidate if _NAMESPACE_GRAMMAR.match(candidate) else None
 
 
 def match_registry_slugs(
@@ -289,11 +316,26 @@ def resolve_namespace_context(
             "to request one"
         )
     else:
-        warnings.append("no repository match in the namespace registry")
+        derived = derive_namespace(identity) if git_root else None
+        registered = set((registry.get("repos") or {}).keys())
+        if derived and derived not in forbidden and derived not in registered:
+            method = METHOD_DERIVED
+            write_hint = derived
+            warnings.append(
+                f"repository {identity} is not in the namespace registry; "
+                f"namespace {derived!r} is derived from its origin remote"
+            )
+        else:
+            warnings.append("no repository match in the namespace registry")
 
     read_hints: list[str] = []
     if write_hint:
         read_hints.append(write_hint)
+    if resolved_slug:
+        # A renamed slug keeps its history readable under the old namespace.
+        for legacy in legacy_namespaces_for(registry, resolved_slug):
+            if legacy not in read_hints and legacy not in forbidden:
+                read_hints.append(legacy)
     elif len(candidates) == 1:
         # Identity is plausible but the request contradicted it: still a read hint.
         read_hints.append(candidates[0])
@@ -496,6 +538,7 @@ __all__ = [
     "DROPPED_DUPLICATE_NAMESPACE",
     "ENV_NAMESPACE_REQUEST",
     "METHOD_AMBIGUOUS",
+    "METHOD_DERIVED",
     "METHOD_EXPLICIT",
     "METHOD_REGISTRY",
     "METHOD_UNRESOLVED",
@@ -504,9 +547,11 @@ __all__ = [
     "WorkspaceNamespaces",
     "aliases_for",
     "child_git_roots",
+    "derive_namespace",
     "forbidden_namespaces",
     "git_remote_url",
     "git_toplevel",
+    "legacy_namespaces_for",
     "load_registry",
     "locate_clone_for_namespace",
     "match_registry_slugs",

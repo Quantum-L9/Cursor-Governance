@@ -263,8 +263,12 @@ repos:
   # --- RECON-0 allowlist registered 2026-10-12: exact owner/repo remotes. Hints
   # only; Memory decides grants. Quantum-L9/.github carries no path hint: a
   # .github segment exists in nearly every checkout.
-  quantum-l9-github:
+  # Canonical id from Quantum-L9/.github semantics/repository_registry.yaml
+  # (operator decision 2026-11-20). Earlier records were written under
+  # quantum-l9-github and stay readable through legacy_namespaces.
+  dot-github:
     github: Quantum-L9/.github
+    legacy_namespaces: [quantum-l9-github]
     path_hints: []
     remote_patterns: ["*/Quantum-L9/.github", "*/Quantum-L9/.github.git", "*:Quantum-L9/.github", "*:Quantum-L9/.github.git"]
     integrates_with: [cursor-governance]

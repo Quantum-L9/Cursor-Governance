@@ -203,13 +203,50 @@ def test_ambiguous_container_has_no_write_hint_and_names_the_candidates(tmp_path
     assert context.read_namespace_hints == ("l9-workspace",)
 
 
-def test_unknown_repository_requests_only_the_shared_read(tmp_path: Path) -> None:
-    repo = _git_repo(tmp_path / "mystery", "git@github.com:Someone/mystery.git")
+def test_an_unregistered_repository_derives_its_namespace_from_its_remote(
+    tmp_path: Path,
+) -> None:
+    """Operator decision 2026-11-20: memory works in any checked-out repository."""
+    repo = _git_repo(tmp_path / "mystery", "git@github.com:Someone/My_Mystery.Repo.git")
+    context = nc.resolve_namespace_context(repo, registry=_registry(), env={})
+    assert context.method == nc.METHOD_DERIVED
+    assert context.write_namespace_hint == "someone-my-mystery-repo"
+    assert context.read_namespace_hints == ("someone-my-mystery-repo", "l9-workspace")
+    assert context.repository_identity == "Someone/My_Mystery.Repo"
+    assert any("derived from its origin remote" in w for w in context.warnings)
+
+
+def test_a_repository_without_a_remote_still_requests_only_the_shared_read(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "local-only"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
     context = nc.resolve_namespace_context(repo, registry=_registry(), env={})
     assert context.method == nc.METHOD_UNRESOLVED
     assert context.write_namespace_hint is None
     assert context.read_namespace_hints == ("l9-workspace",)
-    assert context.repository_identity == "Someone/mystery"
+
+
+def test_a_derived_namespace_never_shadows_a_registered_or_forbidden_one() -> None:
+    assert nc.derive_namespace("Acme/My_Repo") == "acme-my-repo"
+    assert nc.derive_namespace("Quantum-L9/.github") == "quantum-l9-github"
+    assert nc.derive_namespace("9lives/x") is None  # store grammar: leading letter
+    assert nc.derive_namespace(None) is None
+    assert nc.derive_namespace("no-slash") is None
+
+
+def test_a_renamed_slug_keeps_its_legacy_namespace_readable(tmp_path: Path) -> None:
+    registry = _registry()
+    registry["repos"]["dot-github"] = {
+        "github": "Quantum-L9/.github",
+        "legacy_namespaces": ["quantum-l9-github"],
+        "remote_patterns": ["*/Quantum-L9/.github"],
+    }
+    repo = _git_repo(tmp_path / "dotgithub", "https://github.com/Quantum-L9/.github")
+    context = nc.resolve_namespace_context(repo, registry=registry, env={})
+    assert context.write_namespace_hint == "dot-github"
+    assert context.read_namespace_hints == ("dot-github", "quantum-l9-github", "l9-workspace")
 
 
 def test_locate_clone_survives_an_unresolvable_start_path(tmp_path: Path) -> None:
@@ -239,7 +276,7 @@ def test_locate_clone_survives_an_unresolvable_start_path(tmp_path: Path) -> Non
 # --- RECON-0 allowlist (2026-10-12): the same 31 slugs Memory registers --------
 
 RECON_0_NAMESPACES = {
-    "Quantum-L9/.github": "quantum-l9-github",
+    "Quantum-L9/.github": "dot-github",
     "Quantum-L9/Cognitive.Engine.Graphs": "cognitive-engine-graphs",
     "Quantum-L9/Constellation.Gate": "constellation-gate",
     "Quantum-L9/Cursor-Governance": "cursor-governance",
@@ -309,7 +346,7 @@ def test_a_nested_dot_github_directory_is_not_the_dot_github_repository(tmp_path
     nested = seo / ".github" / "workflows"
     nested.mkdir(parents=True)
     assert nc.match_registry_slugs(registry, remote=None, path_parts=set(nested.parts)) != [
-        "quantum-l9-github"
+        "dot-github"
     ]
     assert nc.resolve_namespace_context(nested, registry=registry, env={}).write_namespace_hint == (
         "seo-bot"
@@ -320,14 +357,14 @@ def test_a_nested_dot_github_directory_is_not_the_dot_github_repository(tmp_path
     assert unresolved.write_namespace_hint is None
     real = _git_repo(tmp_path / ".github", "https://github.com/Quantum-L9/.github")
     assert nc.resolve_namespace_context(real, registry=registry, env={}).write_namespace_hint == (
-        "quantum-l9-github"
+        "dot-github"
     )
 
 
 def test_lookalike_remotes_do_not_borrow_a_new_recon_slug(tmp_path: Path) -> None:
     registry = nc.load_registry()
     new_slugs = {
-        "quantum-l9-github",
+        "dot-github",
         "ideaos",
         "l9-campaign-execution",
         "l9-learning-foundry",
@@ -386,6 +423,9 @@ def test_a_multi_repo_container_resolves_one_namespace_per_repository(tmp_path: 
     _git_repo(tmp_path / "Cursor-Governance", "https://github.com/Quantum-L9/Cursor-Governance")
     _git_repo(tmp_path / "PR_Repair", "git@github.com:Quantum-L9/PR_Repair.git")
     _git_repo(tmp_path / "unregistered", "https://github.com/someone/else")
+    no_remote = tmp_path / "no-remote"
+    no_remote.mkdir()
+    subprocess.run(["git", "init", "-q", str(no_remote)], check=True)
     registry = _registry()
     assert nc.resolve_namespace_context(tmp_path, registry=registry, env={}).method == (
         nc.METHOD_AMBIGUOUS
@@ -393,8 +433,14 @@ def test_a_multi_repo_container_resolves_one_namespace_per_repository(tmp_path: 
     found = nc.resolve_workspace_namespaces(tmp_path, registry=registry)
     assert found.multi_repo is True
     assert found.resolved is True
-    assert sorted(ns for _, ns in found.namespaces) == ["cursor-governance", "pr-repair"]
-    assert (str(tmp_path / "unregistered"), "no_namespace") in found.excluded
+    # An unregistered repository with a remote is in scope under its derived
+    # namespace (2026-11-20); only a repository without a remote has none.
+    assert sorted(ns for _, ns in found.namespaces) == [
+        "cursor-governance",
+        "pr-repair",
+        "someone-else",
+    ]
+    assert (str(tmp_path / "no-remote"), "no_namespace") in found.excluded
 
 
 def test_a_single_repository_is_not_reported_as_multi_repo(tmp_path: Path) -> None:
