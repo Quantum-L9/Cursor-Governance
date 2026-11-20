@@ -15,6 +15,8 @@
 # for mode=apply after the SHA check, once. Sonar consumes that same run's
 # coverage.xml and does not invoke pytest. mode=plan admits the contract and
 # stops. A second apply with the same dispatch key is refused before pytest.
+# That proof paginates every matching run; a truncated list refuses apply.
+# A missing SONAR_TOKEN does not skip pytest. The scan reports it.
 
 name: SonarCloud
 
@@ -129,33 +131,46 @@ jobs:
           CURRENT_RUN: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          runs="$(mktemp)"
-          # This step is before checkout, so gh has no git remote to infer.
-          gh run list --repo "$GH_REPO" --workflow sonarcloud.yml --limit 50 \
-            --json databaseId,displayTitle,status,conclusion,headSha,event > "${runs}"
-          count="$(jq --arg key "${DISPATCH_KEY}" --arg sha "${EXPECTED_SHA}" --argjson current "${CURRENT_RUN}" '
-            [.[]
-              | select(.databaseId != $current)
-              | select(.event == "workflow_dispatch")
-              | select(.headSha == $sha)
-              | select(.displayTitle | contains($key))
-              | select(.status == "in_progress" or .status == "queued" or .conclusion == "success")
-            ] | length
-          ' "${runs}")"
-          rm -f "${runs}"
-          if [ "${count}" != "0" ]; then
-            echo "::error::DUPLICATE_DISPATCH: ${DISPATCH_KEY} already ran for ${EXPECTED_SHA}"
+          # Before checkout, gh has no git remote. The endpoint carries GH_REPO.
+          # Every page is required. A short or unreadable list is unknown and
+          # refuses apply before pytest.
+          if ! [[ "${CURRENT_RUN}" =~ ^[0-9]+$ ]]; then
+            echo "::error::DUPLICATE_DISPATCH: current run id is unknown; apply is refused"
             exit 1
           fi
-
-      - name: Require SonarCloud analysis token
-        if: steps.admit.outputs.apply == 'true'
-        shell: bash
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          if [[ ! "${SONAR_TOKEN:-}" =~ [^[:space:]] ]]; then
-            echo "::error::SONAR_TOKEN is required for native SonarCloud analysis; no analysis or quality-gate proof was produced."
+          pages="$(mktemp)"
+          trap 'rm -f "${pages}"' EXIT
+          endpoint="repos/${GH_REPO}/actions/workflows/sonarcloud.yml/runs?event=workflow_dispatch&head_sha=${EXPECTED_SHA}&per_page=100"
+          if ! gh api --paginate "${endpoint}" | jq -s '.' > "${pages}"; then
+            echo "::error::DUPLICATE_DISPATCH: workflow run list is incomplete; apply is refused"
+            exit 1
+          fi
+          if ! jq -e '
+            if length == 0 then false
+            else
+              .[0].total_count as $total
+              | ($total | type) == "number"
+                and all(.[]; .total_count == $total and (.workflow_runs | type) == "array")
+                and (([.[].workflow_runs[]] | length) == $total)
+            end
+          ' "${pages}" >/dev/null; then
+            echo "::error::DUPLICATE_DISPATCH: workflow run list is truncated or unreadable; apply is refused"
+            exit 1
+          fi
+          if ! count="$(jq --arg key "${DISPATCH_KEY}" --arg sha "${EXPECTED_SHA}" --argjson current "${CURRENT_RUN}" '
+            [.[].workflow_runs[]
+              | select(.id != $current)
+              | select(.event == "workflow_dispatch")
+              | select(.head_sha == $sha)
+              | select(.status == "in_progress" or .status == "queued" or .conclusion == "success")
+              | select((.display_title // "") | contains($key))
+            ] | length
+          ' "${pages}")"; then
+            echo "::error::DUPLICATE_DISPATCH: workflow run list is unreadable; apply is refused"
+            exit 1
+          fi
+          if [ "${count}" != "0" ]; then
+            echo "::error::DUPLICATE_DISPATCH: ${DISPATCH_KEY} already ran for ${EXPECTED_SHA}"
             exit 1
           fi
 
@@ -218,8 +233,21 @@ jobs:
             nightly-suite-receipt.txt
           if-no-files-found: ignore
 
-      - name: SonarCloud Scan
+      - name: Require SonarCloud analysis token
+        id: sonar_token
         if: steps.admit.outputs.apply == 'true' && steps.coverage.outcome == 'success'
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${SONAR_TOKEN:-}" =~ [^[:space:]] ]]; then
+            echo "::error::SONAR_TOKEN is required for native SonarCloud analysis; no analysis or quality-gate proof was produced."
+            exit 1
+          fi
+
+      - name: SonarCloud Scan
+        if: steps.admit.outputs.apply == 'true' && steps.coverage.outcome == 'success' && steps.sonar_token.outcome == 'success'
         uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4  # v8.5.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
