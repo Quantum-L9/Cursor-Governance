@@ -162,7 +162,10 @@ def test_secret_material_is_rejected_and_not_stored_in_source() -> None:
     assert PUBLISHED_RESOURCE in connector_text
     assert "synthetic-secret" not in onboarding_text
     assert "synthetic-secret" not in connector_text
-    bootstrap = BOOTSTRAP.read_text(encoding="utf-8")
+    # The stub hands its secret scrub to setup.bootstrap_steps.sh (revision 2026-11-20.4).
+    bootstrap = BOOTSTRAP.read_text(encoding="utf-8") + BOOTSTRAP.with_name(
+        "setup.bootstrap_steps.sh"
+    ).read_text(encoding="utf-8")
     for name in oauth.HOSTED_OAUTH_SECRET_ENV:
         assert f"unset {name}" in bootstrap or name in bootstrap.split("unset ", 1)[-1]
 

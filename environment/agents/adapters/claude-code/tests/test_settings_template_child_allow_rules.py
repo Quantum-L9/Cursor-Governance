@@ -15,9 +15,9 @@ SessionStart re-projects untracked workspace settings wholly from the template
 (reconcile_claude_settings.merge_workspace_settings), so an injected rule is
 removed again, and injecting would also edit repository-owned settings.
 
-One bootstrap path (operator decision 2026-11-20): a swarm child starts from its
-lane's primary repository exactly as the CTO session does, so the environment's
-Setup script and SessionStart are its whole bootstrap. The Setup stub writes no
+One bootstrap path (operator ruling 2026-11-20): a swarm child starts with
+Quantum-L9/Cursor-Governance as its session source, whatever its lane, so the
+environment's Setup script and SessionStart are its whole bootstrap. The Setup stub writes no
 permission rule anywhere, and there is no DEGRADED child start or materializer.
 
 These tests pin that the template carries exactly these rules, that they are

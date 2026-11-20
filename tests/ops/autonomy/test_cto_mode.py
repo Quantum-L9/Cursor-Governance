@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -17,6 +18,18 @@ import cto_mode  # noqa: E402
 
 TC = "l9.projection/technical-coordination@1"
 SID = "session-a"
+MODEL = "child-model-x"
+
+
+def _stub_env(revision: str | None = None) -> dict[str, str]:
+    """A child process environment whose recorded Setup stub revision is `revision`
+    (default: the repository stub's own, so the launch preflight passes)."""
+    env = dict(os.environ)
+    env["L9_STUB_REVISION"] = (
+        revision
+        or projection_mode.launch_preflight({}, Path("/nonexistent"))["stub_revision_expected"]
+    )
+    return env
 
 
 @pytest.fixture(autouse=True)
@@ -402,6 +415,7 @@ def test_child_prompt_cli_prints_plain_text(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
         check=True,
+        env=_stub_env(),
     ).stdout
     assert out.startswith("ROLE: CODING AGENT")
     assert "session_cto_y" in out
@@ -579,7 +593,8 @@ def test_children_bootstrap_on_the_one_path_the_cto_uses() -> None:
     """Operator decision 2026-11-20: one bootstrap path, no child-only bootstrap."""
     protocol = cto_mode.load_contract()["operating_protocol"]
     launch = protocol["transport"]["claude-code"]["child_launch"]
-    assert "source_url = the lane's primary repository" in launch
+    assert "source_url = Quantum-L9/Cursor-Governance for every lane" in launch
+    assert "never Cursor-Governance" in launch
     assert "Quantum-L9/.github" not in launch
     assert "source_revision" not in launch
     invariant = protocol["invariants"]["repositories_attached_at_launch"]
@@ -684,13 +699,19 @@ FROZEN_PREFIXES = (
 )
 
 
-def test_child_launch_source_is_the_lane_primary_repository() -> None:
+def test_child_launch_source_is_cursor_governance_for_every_lane() -> None:
+    """Operator ruling 2026-11-20: children start with Cursor-Governance as source."""
     protocol = cto_mode.load_contract()["operating_protocol"]
     claude = protocol["transport"]["claude-code"]
-    assert claude["child_session"]["source"] == projection_mode.CHILD_SOURCE_LANE_PRIMARY
-    assert "governance_repository" not in claude["child_session"]
+    child = claude["child_session"]
+    assert child["source"] == projection_mode.CHILD_SOURCE_GOVERNANCE
+    assert child["source_repository"] == "Quantum-L9/Cursor-Governance"
+    assert child["effort"] == "medium"
+    assert child["permission_mode"] == "auto"
+    assert "model" not in child  # the contract pins no model id; launch-spec takes --model
     rules = " ".join(protocol["child_launch_rules"])
-    assert "lane's primary" in rules
+    assert "Quantum-L9/Cursor-Governance" in rules
+    assert "A lane repository is never" in rules
     assert "There is no child-only" in rules
     assert "ff.sh --ssot" not in rules
     assert "launch-spec" in rules
@@ -726,13 +747,16 @@ def test_launch_spec_shape() -> None:
         cto_mode.load_contract(),
         "session_cto_l",
         ["acme/lane", "ACME/lane"],
+        model=MODEL,
         title="Lane A",
         tags=["lane:a"],
     )
     assert spec["schema"] == "l9.cto-child-launch-spec/v1"
     assert spec["grants_permission"] is False
     create = spec["create_session"]
-    assert create["source_url"] == "https://github.com/acme/lane"
+    assert create["source_url"] == "https://github.com/Quantum-L9/Cursor-Governance"
+    assert create["model"] == MODEL
+    assert create["effort"] == "medium"
     assert create["permission_mode"] == "auto"
     assert create["tags"] == ["cto:session_cto_l", "lane:a"]
     assert create["title"] == "Lane A"
@@ -740,26 +764,62 @@ def test_launch_spec_shape() -> None:
         cto_mode.load_contract(), "session_cto_l"
     )
     assert "send_message" not in json.dumps(spec)
-    # The primary repository is the session source; governance comes from Setup.
-    assert spec["add_repo"] == []
+    # The lane repository is attached, never the session source.
+    assert spec["add_repo"] == [{"owner": "acme", "repo": "lane", "access": "push"}]
+
+
+@pytest.mark.parametrize(
+    "lanes",
+    [
+        ["acme/lane"],
+        ["acme/primary", "acme/second"],
+        ["Quantum-L9/Cursor-Governance"],
+        ["quantum-l9/cursor-governance", "acme/x"],
+        ["acme/x", "Quantum-L9/Cursor-Governance"],
+    ],
+)
+def test_launch_spec_source_is_cursor_governance_for_every_lane(lanes: list[str]) -> None:
+    spec = projection_mode.build_launch_spec(cto_mode.load_contract(), "s", lanes, model=MODEL)
+    assert spec["create_session"]["source_url"] == "https://github.com/Quantum-L9/Cursor-Governance"
+    attached = [f"{a['owner']}/{a['repo']}".lower() for a in spec["add_repo"]]
+    expected = [lane.lower() for lane in lanes if lane.lower() != "quantum-l9/cursor-governance"]
+    assert attached == expected
+    assert all(a["access"] == "push" for a in spec["add_repo"])
 
 
 def test_launch_spec_further_lane_repos_are_push_attachments() -> None:
     spec = projection_mode.build_launch_spec(
-        cto_mode.load_contract(), "s", ["acme/primary", "acme/second", "ACME/second"]
+        cto_mode.load_contract(),
+        "s",
+        ["acme/primary", "acme/second", "ACME/second"],
+        model=MODEL,
     )
-    assert spec["create_session"]["source_url"] == "https://github.com/acme/primary"
-    assert spec["add_repo"] == [{"owner": "acme", "repo": "second", "access": "push"}]
+    assert spec["add_repo"] == [
+        {"owner": "acme", "repo": "primary", "access": "push"},
+        {"owner": "acme", "repo": "second", "access": "push"},
+    ]
     assert "title" not in spec["create_session"]
 
 
-def test_launch_spec_refuses_any_other_child_source() -> None:
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("source", "lane_primary_repository"),
+        ("source", "https://github.com/Quantum-L9/.github"),
+        ("source_repository", "acme/lane"),
+        ("source_repository", "Quantum-L9/.github"),
+    ],
+)
+def test_launch_spec_refuses_a_lane_repository_source(field: str, value: str) -> None:
     contract = cto_mode.load_contract()
-    contract["operating_protocol"]["transport"]["claude-code"]["child_session"]["source"] = (
-        "https://github.com/Quantum-L9/.github"
-    )
+    contract["operating_protocol"]["transport"]["claude-code"]["child_session"][field] = value
     with pytest.raises(cto_mode.ContractError, match="CHILD_SESSION_SOURCE_UNSUPPORTED"):
-        projection_mode.build_launch_spec(contract, "s", ["acme/lane"])
+        projection_mode.build_launch_spec(contract, "s", ["acme/lane"], model=MODEL)
+
+
+def test_launch_spec_requires_a_model() -> None:
+    with pytest.raises(cto_mode.ContractError, match="CHILD_MODEL_REQUIRED"):
+        projection_mode.build_launch_spec(cto_mode.load_contract(), "s", ["acme/lane"], model=" ")
 
 
 @pytest.mark.parametrize(
@@ -772,14 +832,14 @@ def test_launch_spec_refuses_any_other_child_source() -> None:
 )
 def test_launch_spec_rejects_bad_lane_repos(lanes: list[str], reason: str) -> None:
     with pytest.raises(cto_mode.ContractError, match=reason):
-        projection_mode.build_launch_spec(cto_mode.load_contract(), "s", lanes)
+        projection_mode.build_launch_spec(cto_mode.load_contract(), "s", lanes, model=MODEL)
 
 
 def test_launch_spec_without_declared_child_session_fails_closed() -> None:
     contract = cto_mode.load_contract()
     del contract["operating_protocol"]["transport"]["claude-code"]["child_session"]
     with pytest.raises(cto_mode.ContractError, match="CHILD_SESSION_UNDECLARED"):
-        projection_mode.build_launch_spec(contract, "s", ["acme/lane"])
+        projection_mode.build_launch_spec(contract, "s", ["acme/lane"], model=MODEL)
 
 
 def test_launch_spec_cli_prints_json(tmp_path: Path) -> None:
@@ -792,6 +852,8 @@ def test_launch_spec_cli_prints_json(tmp_path: Path) -> None:
             "session_cto_c",
             "--lane-repo",
             "acme/lane",
+            "--model",
+            MODEL,
             "--tag",
             "lane:x",
             "--workspace",
@@ -800,14 +862,26 @@ def test_launch_spec_cli_prints_json(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
         check=True,
+        env=_stub_env(),
     ).stdout
     spec = json.loads(out)
-    assert spec["create_session"]["source_url"] == "https://github.com/acme/lane"
+    assert spec["create_session"]["source_url"] == "https://github.com/Quantum-L9/Cursor-Governance"
+    assert spec["create_session"]["model"] == MODEL
+    assert spec["add_repo"] == [{"owner": "acme", "repo": "lane", "access": "push"}]
+    assert spec["preflight"]["ok"] is True
     assert "cto:session_cto_c" in spec["create_session"]["tags"]
     assert not (tmp_path / ".l9").exists()
 
 
-@pytest.mark.parametrize("argv", [[], ["--cto-session", "s"], ["--lane-repo", "a/b"]])
+@pytest.mark.parametrize(
+    "argv",
+    [
+        [],
+        ["--cto-session", "s"],
+        ["--lane-repo", "a/b"],
+        ["--cto-session", "s", "--lane-repo", "a/b"],
+    ],
+)
 def test_launch_spec_cli_requires_session_and_lane(argv: list[str]) -> None:
     result = subprocess.run(
         [sys.executable, str(REPO / "ops/autonomy/cto_mode.py"), "launch-spec", *argv],
@@ -826,3 +900,71 @@ def test_launch_spec_is_cto_only(module: str) -> None:
     )
     assert result.returncode == 2
     assert "invalid choice: 'launch-spec'" in result.stderr
+
+
+def _cli(command: str, tmp_path: Path, env: dict[str, str], *extra: str):
+    argv = [sys.executable, str(REPO / "ops/autonomy/cto_mode.py"), command, "--cto-session", "s"]
+    if command == "launch-spec":
+        argv += ["--lane-repo", "acme/lane", "--model", MODEL]
+    return subprocess.run(
+        [*argv, "--workspace", str(tmp_path), *extra],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+
+def test_launch_preflight_reuses_the_account_env_revision_logic() -> None:
+    verifier = projection_mode._account_env_verifier()
+    expected = verifier.stub_revision_expected()
+    assert expected
+    ok = projection_mode.launch_preflight({"L9_STUB_REVISION": expected}, Path("/nonexistent"))
+    assert ok["ok"] is True and ok["direction"] == "same"
+    behind = projection_mode.launch_preflight(
+        {"L9_STUB_REVISION": "2000-01-01.1"}, Path("/nonexistent")
+    )
+    assert behind["ok"] is False and behind["direction"] == "behind"
+    unknown = projection_mode.launch_preflight({}, Path("/nonexistent"))
+    assert unknown["ok"] is False and unknown["stub_revision_actual"] is None
+
+
+@pytest.mark.parametrize("command", ["child-prompt", "launch-spec"])
+def test_launch_preflight_match_proceeds(command: str, tmp_path: Path) -> None:
+    result = _cli(command, tmp_path, _stub_env())
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "OVERRIDDEN" not in result.stderr
+    assert not (tmp_path / ".l9").exists()
+
+
+@pytest.mark.parametrize("command", ["child-prompt", "launch-spec"])
+@pytest.mark.parametrize("revision", ["2000-01-01.1", "2999-12-31.9", "garbage"])
+def test_launch_preflight_mismatch_is_refused(command: str, revision: str, tmp_path: Path) -> None:
+    result = _cli(command, tmp_path, _stub_env(revision))
+    assert result.returncode == projection_mode.EXIT_PREFLIGHT_REFUSED == 4
+    verdict = json.loads(result.stdout)
+    assert verdict["reason"] == "LAUNCH_PREFLIGHT_STUB_REVISION_DRIFT"
+    assert verdict["preflight"]["stub_revision_actual"] == revision
+    assert "ROLE: CODING AGENT" not in result.stdout
+
+
+@pytest.mark.parametrize("command", ["child-prompt", "launch-spec"])
+def test_launch_preflight_operator_override_is_logged(command: str, tmp_path: Path) -> None:
+    result = _cli(
+        command, tmp_path, _stub_env("2000-01-01.1"), "--allow-stub-drift", "operator says go"
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "L9 launch preflight OVERRIDDEN" in result.stderr
+    log = tmp_path / projection_mode.PREFLIGHT_OVERRIDE_LOG
+    entry = json.loads(log.read_text().splitlines()[-1])
+    assert entry["command"] == command
+    assert entry["reason"] == "operator says go"
+    assert entry["preflight"]["stub_revision_actual"] == "2000-01-01.1"
+    if command == "launch-spec":
+        assert json.loads(result.stdout)["preflight"]["override"]["reason"] == "operator says go"
+    else:
+        assert result.stdout.startswith("ROLE: CODING AGENT")
+
+
+def test_launch_preflight_blank_override_does_not_override(tmp_path: Path) -> None:
+    result = _cli("launch-spec", tmp_path, _stub_env("2000-01-01.1"), "--allow-stub-drift", " ")
+    assert result.returncode == 4

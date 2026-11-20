@@ -176,7 +176,15 @@ class StubRevisionTests(unittest.TestCase):
         self.assertFalse(run(env)["stub_drift"])
 
     def test_stub_writes_its_revision_into_the_session_env(self) -> None:
-        stub = (ADAPTER / "web" / "setup.bootstrap.sh").read_text(encoding="utf-8")
+        # Since revision 2026-11-20.4 the stub exports its revision and the durable
+        # env is written by the steps it hands to web/setup.sh.
+        stub = "\n".join(
+            (ADAPTER / "web" / name).read_text(encoding="utf-8")
+            for name in ("setup.bootstrap.sh", "setup.bootstrap_steps.sh")
+        )
+        self.assertIn(
+            "export L9_STUB_REVISION", (ADAPTER / "web" / "setup.bootstrap.sh").read_text()
+        )
         self.assertIn("export L9_STUB_REVISION=", stub)
         self.assertIn("unset GRAPHITI_MCP_URL GRAPHITI_MCP_TOKEN", stub)
         self.assertIn("bind_l9_memory_interpreter", stub)
@@ -365,10 +373,14 @@ class PasteIntegrityTests(unittest.TestCase):
 
     def test_stub_describes_the_current_secrets_plane(self) -> None:
         """Comments match the 2026-09-24 secrets law and the Context7 vault bridge."""
+        # The secrets-plane scrub moved into the hand-off steps at revision 2026-11-20.4.
+        body = self.body + (ADAPTER / "web" / "setup.bootstrap_steps.sh").read_text(
+            encoding="utf-8"
+        )
         for stale in ("behind the broker", "references it as ${VAR}", "Infisical UA into"):
-            self.assertNotIn(stale, self.body)
-        self.assertIn("run_vault_mcp_bridge.sh context7", self.body)
-        self.assertIn("L9_INFISICAL_CLIENT_SECRET", self.body)
+            self.assertNotIn(stale, body)
+        self.assertIn("run_vault_mcp_bridge.sh context7", body)
+        self.assertIn("L9_INFISICAL_CLIENT_SECRET", body)
 
     def test_stub_carries_both_paste_markers(self) -> None:
         """The docs tell a human to select between these; they must exist."""

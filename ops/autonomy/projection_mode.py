@@ -13,7 +13,8 @@ ACTIVE only when every required projection is ADMITTED_AND_CURRENT, and otherwis
 BLOCKED with each exact reason and nothing loaded from that projection. A mode changes
 what a session reads, never what it may do.
 
-Exit codes: 0 ACTIVE or OFF, 3 BLOCKED, 1 REJECTED or STALE, 2 usage.
+Exit codes: 0 ACTIVE or OFF, 3 BLOCKED, 1 REJECTED or STALE, 2 usage, 4 launch
+preflight refused (child-prompt and launch-spec only).
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import hashlib
+import importlib.util
 import json
 import os
 import subprocess
@@ -293,11 +295,14 @@ def render_child_prompt(contract: dict[str, Any], cto_session: str) -> str:
 
 LAUNCH_SPEC_SCHEMA = "l9.cto-child-launch-spec/v1"
 LAUNCH_HOST = "claude-code"
-_CHILD_SESSION_KEYS = ("source", "permission_mode")
-#: The one declared child source. A child starts from its lane's primary repository,
-#: exactly as the CTO session starts from its own, so the environment's Setup script
-#: and SessionStart are its whole bootstrap. There is no child-only bootstrap path.
-CHILD_SOURCE_LANE_PRIMARY = "lane_primary_repository"
+_CHILD_SESSION_KEYS = ("source", "source_repository", "permission_mode", "effort")
+#: The one declared child source (operator ruling 2026-11-20, verified on the EIE and CEG
+#: canaries): every child starts with Cursor-Governance as its session source, whatever
+#: its lane, because the environment's Setup clones governance from that checkout when
+#: it holds no credential. The lane repository is attached with add_repo; a lane
+#: repository as session source only works while governance stays publicly clonable.
+CHILD_SOURCE_GOVERNANCE = "governance_repository"
+GOVERNANCE_REPOSITORY = ("Quantum-L9", "Cursor-Governance")
 GITHUB_URL = "https://github.com"
 
 
@@ -306,6 +311,10 @@ def _repo_coordinate(value: str) -> tuple[str, str]:
     if len(parts) != 2 or not all(part.strip() for part in parts):
         raise ContractError(f"LANE_REPO_MALFORMED: {value}")
     return parts[0].strip(), parts[1].strip()
+
+
+def _is_governance(owner: str, repo: str) -> bool:
+    return f"{owner}/{repo}".lower() == "/".join(GOVERNANCE_REPOSITORY).lower()
 
 
 def _declared_child_session(contract: dict[str, Any]) -> dict[str, Any]:
@@ -317,13 +326,18 @@ def _declared_child_session(contract: dict[str, Any]) -> dict[str, Any]:
         _nonempty_str(child.get(key)) for key in _CHILD_SESSION_KEYS
     ):
         raise ContractError("CHILD_SESSION_UNDECLARED")
-    if str(child["source"]).strip() != CHILD_SOURCE_LANE_PRIMARY:
+    if str(child["source"]).strip() != CHILD_SOURCE_GOVERNANCE:
         raise ContractError(f"CHILD_SESSION_SOURCE_UNSUPPORTED: {child['source']}")
+    if not _is_governance(*_repo_coordinate(str(child["source_repository"]))):
+        raise ContractError(
+            f"CHILD_SESSION_SOURCE_UNSUPPORTED: {child['source_repository']} "
+            "(the child session source is Cursor-Governance, never a lane repository)"
+        )
     return child
 
 
 def _lane_coordinates(lane_repos: list[str]) -> list[tuple[str, str]]:
-    """Distinct lane repositories in order; the first is the primary (session source)."""
+    """Distinct lane repositories in order, as given."""
     if not lane_repos:
         raise ContractError("LANE_REPO_REQUIRED")
     lanes: list[tuple[str, str]] = []
@@ -338,12 +352,16 @@ def _lane_coordinates(lane_repos: list[str]) -> list[tuple[str, str]]:
 
 
 def _attachment_list(lanes: list[tuple[str, str]]) -> list[dict[str, str]]:
-    """Push attachments for every lane repository after the primary one.
+    """Push attachments for every lane repository except Cursor-Governance.
 
-    The primary repository is the session source, and governance plus the authority
-    checkout come from Setup and SessionStart, so neither is attached here.
+    Cursor-Governance is the session source, so a lane in it attaches nothing; the
+    authority checkout comes from Setup and SessionStart and is never attached.
     """
-    return [{"owner": owner, "repo": repo, "access": "push"} for owner, repo in lanes[1:]]
+    return [
+        {"owner": owner, "repo": repo, "access": "push"}
+        for owner, repo in lanes
+        if not _is_governance(owner, repo)
+    ]
 
 
 def _session_tags(cto_session: str, tags: list[str] | None) -> list[str]:
@@ -356,16 +374,19 @@ def _session_tags(cto_session: str, tags: list[str] | None) -> list[str]:
 
 def _create_session_args(
     child: dict[str, Any],
-    source_url: str,
     prompt: str,
     cto_session: str,
     *,
+    model: str,
     title: str | None,
     tags: list[str] | None,
 ) -> dict[str, Any]:
+    owner, repo = GOVERNANCE_REPOSITORY
     create: dict[str, Any] = {
-        "source_url": source_url,
+        "source_url": f"{GITHUB_URL}/{owner}/{repo}",
         "append_system_prompt": prompt,
+        "model": model.strip(),
+        "effort": str(child["effort"]).strip(),
         "permission_mode": str(child["permission_mode"]).strip(),
         "tags": _session_tags(cto_session, tags),
     }
@@ -379,28 +400,88 @@ def build_launch_spec(
     cto_session: str,
     lane_repos: list[str],
     *,
+    model: str,
     title: str | None = None,
     tags: list[str] | None = None,
 ) -> dict[str, Any]:
     """The create_session arguments and the add_repo list for one swarm child.
 
-    Every value comes from the mode contract or the arguments; nothing is inferred. It
-    grants nothing: the CTO still makes the call, and the child still attaches.
+    Every value comes from the mode contract or the arguments; nothing is inferred. The
+    model is an argument because the contract pins no model identifier. It grants
+    nothing: the CTO still makes the call, and the child still attaches.
     """
     child = _declared_child_session(contract)
+    if not _nonempty_str(model):
+        raise ContractError("CHILD_MODEL_REQUIRED")
     prompt = render_child_prompt(contract, cto_session)
     lanes = _lane_coordinates(lane_repos)
-    owner, repo = lanes[0]
-    source_url = f"{GITHUB_URL}/{owner}/{repo}"
     return {
         "schema": LAUNCH_SPEC_SCHEMA,
         "grants_permission": False,
         "host": LAUNCH_HOST,
         "create_session": _create_session_args(
-            child, source_url, prompt, cto_session, title=title, tags=tags
+            child, prompt, cto_session, model=model, title=title, tags=tags
         ),
         "add_repo": _attachment_list(lanes),
     }
+
+
+#: A launch is refused while the running session's Setup stub revision differs from the
+#: repository stub's: children inherit the environment's Setup field, so a drifted field
+#: starts every child on a stub that is not in HEAD (how children started degraded,
+#: 2026-11-20). The revision logic is verify_account_env.py's; it is not re-parsed here.
+EXIT_PREFLIGHT_REFUSED = 4
+PREFLIGHT_STUB_DRIFT = "LAUNCH_PREFLIGHT_STUB_REVISION_DRIFT"
+PREFLIGHT_OVERRIDE_LOG = Path(".l9") / "cto-mode" / "launch-preflight-overrides.jsonl"
+ACCOUNT_ENV_VERIFIER = REPO / "environment/agents/adapters/claude-code/verify_account_env.py"
+
+
+def _account_env_verifier() -> Any:
+    spec = importlib.util.spec_from_file_location("_l9_verify_account_env", ACCOUNT_ENV_VERIFIER)
+    if spec is None or spec.loader is None:
+        raise ContractError(f"ACCOUNT_ENV_VERIFIER_UNREADABLE: {ACCOUNT_ENV_VERIFIER}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def launch_preflight(
+    env: dict[str, str] | None = None, session_env: Path | None = None
+) -> dict[str, Any]:
+    """Compare this session's recorded Setup stub revision with the repository stub's.
+
+    An unrecorded or unparseable revision is not a match: unknown never passes.
+    """
+    verifier = _account_env_verifier()
+    expected = verifier.stub_revision_expected()
+    actual = verifier.stub_revision_actual(env, session_env)
+    match = bool(expected) and actual == expected
+    return {
+        "check": "stub_revision",
+        "stub_revision_expected": expected,
+        "stub_revision_actual": actual or None,
+        "direction": "same" if match else verifier.revision_direction(actual, expected),
+        "ok": match,
+    }
+
+
+def _log_preflight_override(
+    workspace: Path, command: str, preflight: dict[str, Any], reason: str
+) -> dict[str, Any]:
+    entry = {
+        "schema": "l9.cto-launch-preflight-override/v1",
+        "at": _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "command": command,
+        "reason": reason,
+        "preflight": dict(preflight),
+    }
+    print(f"L9 launch preflight OVERRIDDEN: {json.dumps(entry, sort_keys=True)}", file=sys.stderr)
+    log = workspace / PREFLIGHT_OVERRIDE_LOG
+    log.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_state_git_exclude(workspace)
+    with log.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(entry, sort_keys=True) + "\n")
+    return entry
 
 
 def resolve_session_id(explicit: str | None = None) -> str | None:
@@ -733,10 +814,21 @@ class ProjectionMode:
                 default=[],
                 help="launch-spec: owner/name of a lane repository the child attaches (push)",
             )
+            parser.add_argument(
+                "--model", help="launch-spec: the child's model (create_session model)"
+            )
             parser.add_argument("--title", help="launch-spec: the child session title")
             parser.add_argument(
                 "--tag", action="append", default=[], help="launch-spec: an extra session tag"
             )
+        parser.add_argument(
+            "--allow-stub-drift",
+            metavar="REASON",
+            help=(
+                "child-prompt/launch-spec: operator override of the Setup stub revision "
+                "preflight; the reason is required and every use is logged"
+            ),
+        )
         parser.add_argument("--workspace", type=Path, default=Path.cwd())
         parser.add_argument(
             "--authority-root",
@@ -752,8 +844,35 @@ class ProjectionMode:
         )
         return parser
 
+    def _preflight(
+        self, command: str, args: argparse.Namespace
+    ) -> tuple[int | None, dict[str, Any]]:
+        """Refuse a launch on stub revision drift unless the operator overrides it."""
+        try:
+            preflight = launch_preflight()
+        except (ContractError, OSError) as exc:
+            preflight = {"check": "stub_revision", "ok": False, "error": str(exc)}
+        if preflight["ok"]:
+            return None, preflight
+        override = (args.allow_stub_drift or "").strip()
+        if override:
+            preflight["override"] = _log_preflight_override(
+                args.workspace.resolve(), command, preflight, override
+            )
+            return None, preflight
+        print(
+            json.dumps(
+                {"mode": "REFUSED", "reason": PREFLIGHT_STUB_DRIFT, "preflight": preflight},
+                sort_keys=True,
+            )
+        )
+        return EXIT_PREFLIGHT_REFUSED, preflight
+
     def _print_child_prompt(self, args: argparse.Namespace) -> int:
         """Plain text on stdout: the child's launch system prompt, verbatim."""
+        refused, _ = self._preflight("child-prompt", args)
+        if refused is not None:
+            return refused
         try:
             # Default to the id cross-session tools address (session_<suffix>), not the
             # local host id: children must recognize the CTO's messages by it.
@@ -774,14 +893,21 @@ class ProjectionMode:
             parser.error("launch-spec requires --cto-session")
         if not args.lane_repo:
             parser.error("launch-spec requires at least one --lane-repo")
+        if not args.model or not args.model.strip():
+            parser.error("launch-spec requires --model")
+        refused, preflight = self._preflight("launch-spec", args)
+        if refused is not None:
+            return refused
         try:
             spec = build_launch_spec(
                 self.load_contract(),
                 args.cto_session,
                 args.lane_repo,
+                model=args.model,
                 title=args.title,
                 tags=args.tag,
             )
+            spec["preflight"] = preflight
         except ContractError as exc:
             print(json.dumps({"mode": "REJECTED", "reason": str(exc)}, sort_keys=True))
             return EXIT["REJECTED"]

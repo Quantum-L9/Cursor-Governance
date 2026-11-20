@@ -40,6 +40,24 @@ set -uo pipefail
 log() { printf '\n=== %s ===\n' "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# 0) Stub hand-off steps (Setup stub revision 2026-11-20.4 and later). The pasted
+#    stub only obtains the governance clone; the steps it used to run itself live
+#    in setup.bootstrap_steps.sh beside this file and run here, in their original
+#    order: the account-environment normalization before anything else, and the
+#    durable env, the status notes and the verdict on exit, with this script's
+#    exit code. A direct run of this script (no hand-off marker) is unaffected.
+if [ "${L9_GOVERNANCE_BOOTSTRAPPED:-}" = "1" ]; then
+  _L9_BOOTSTRAP_STEPS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/setup.bootstrap_steps.sh"
+  if [ ! -f "$_L9_BOOTSTRAP_STEPS" ]; then
+    echo "ERROR: missing $_L9_BOOTSTRAP_STEPS — stub hand-off steps cannot run" >&2
+    exit 1
+  fi
+  # shellcheck source=setup.bootstrap_steps.sh
+  . "$_L9_BOOTSTRAP_STEPS"
+  l9_bootstrap_prelude
+  trap 'l9_bootstrap_epilogue "$?"' EXIT
+fi
+
 # 1) GitHub CLI — needed for CI logs, reviews, pushes.
 if ! have gh; then
   log "Installing GitHub CLI (gh)"

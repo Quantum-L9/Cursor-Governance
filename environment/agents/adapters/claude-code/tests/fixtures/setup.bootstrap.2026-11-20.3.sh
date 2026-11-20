@@ -1,0 +1,388 @@
+#!/usr/bin/env bash
+# L9-PASTE-BEGIN — the Setup script field starts at the line above (#!/usr/bin/env bash).
+# ---------------------------------------------------------------------------
+# L9 Claude Code cloud Setup script — startup stub (Web · Mobile · --cloud).
+#
+# THIS FILE CONTAINS NO BACKTICKS, DELIBERATELY. Do not add any, and do not
+# "restore" markdown quoting to these comments. Reason, measured 2026-08-22:
+# docs/account-fields/SETUP_SCRIPT.md presents this stub inside a fenced
+# markdown code block. A human who selects the section rather than the fence body
+# pastes that fence into the field. A fence is THREE backticks, an odd count, so
+# bash opens a command substitution that never closes and swallows the rest of
+# the file. Every backtick that used to sit in these comments then closed or
+# reopened that substitution, which pushed the following prose out of comment
+# position and ran it as shell. The measured result was English executed as
+# commands, git clone invoked with an empty target directory, and exit 127 with
+# the environment half-built.
+#
+# With zero backticks in the file the damage is contained: the substitution
+# opened by the leading fence now runs to the CLOSING fence and no further, so
+# the stub is executed whole, in a subshell, instead of being shredded into
+# fragments of executable English. That is still wrong -- a subshell discards
+# every export and the exit code -- which is why the paste-integrity guard below
+# detects the fence and refuses outright. Both properties are enforced by
+# tests/test_account_drift_and_platform_blocks.py.
+#
+# Paste THIS into claude.ai/code -> environment -> Setup script. Do not paste
+# web/setup.sh: the field is a copy, not a live link, so the full script drifts
+# from main on every edit. This stub is stable — it normalizes the account
+# environment, materializes the governance SSOT, and hands off to the canonical
+# web/setup.sh from that clone, so setup.sh edits reach every new session with
+# no re-paste.
+#
+# Companion fields:
+#   Environment variables -> web/environment.env.example
+#   Network access        -> web/network-policy.md
+#
+# Anthropic snapshots the VM after the first successful run — keep this stub
+# small and put heavy probes in setup.sh / SessionStart hooks.
+#
+# Docs: https://code.claude.com/docs/en/cloud-environments
+# ---------------------------------------------------------------------------
+# No set -e: a single failed probe must never abort the environment build.
+# The two hard failures are the governance clone and a missing setup.sh, which
+# exit non-zero explicitly.
+set -uo pipefail
+
+# --- 0) Paste-integrity guard ----------------------------------------------
+# Fires when the Setup script field contains the markdown fence lines that wrap
+# this stub in docs/account-fields/SETUP_SCRIPT.md, not just the stub itself.
+#
+# A fence is three backticks. Bash reads that as backtick-pair (an empty command
+# substitution) plus one LEFTOVER backtick, which opens a command substitution
+# that runs until the closing fence closes it. Everything between the two fences
+# -- this entire file -- is then executed inside that substitution instead of at
+# top level, so every export, every variable and the exit code are discarded
+# into a subshell the environment build never sees, and this stub's own stdout
+# is handed back to the parent shell to execute as a command.
+#
+# Detection is on the CAUSE, not a symptom: read our own source and look for a
+# fence line. This file is backtick-free by contract (enforced by
+# tests/test_account_drift_and_platform_blocks.py), so a fence in it can only
+# have arrived with the paste. That is exact -- it cannot fire on a legitimate
+# invocation, however the platform chooses to launch the script.
+#
+# The fence pattern is built with printf octal escapes because writing three
+# literal backticks here would itself break the no-backtick contract above.
+#
+# BASH_SUBSHELL is the fallback for the case where the running script is not
+# readable: it is 0 at top level and non-zero inside a command substitution. It
+# is deliberately NOT the primary signal, because a platform that legitimately
+# wrapped this script in a subshell would trip it and block a healthy build.
+_l9_self="${BASH_SOURCE[0]:-$0}"
+_l9_fence="$(printf '\140\140\140')"
+if [ -r "$_l9_self" ]; then
+  if grep -qF "$_l9_fence" "$_l9_self"; then _l9_contaminated=1; else _l9_contaminated=0; fi
+else
+  if [ "${BASH_SUBSHELL:-0}" -ne 0 ]; then _l9_contaminated=1; else _l9_contaminated=0; fi
+fi
+unset _l9_self _l9_fence
+
+# Report to stderr, never stdout: in the contaminated case stdout is the
+# substitution's captured value, which the parent shell would then try to run.
+if [ "$_l9_contaminated" -ne 0 ]; then
+  printf '%s\n' \
+    'L9 bootstrap FATAL: the Setup script field contains markdown fence lines.' \
+    'L9 bootstrap FATAL:   You copied the code block MARKERS along with the code.' \
+    'L9 bootstrap FATAL:   Nothing below this point ran at top level; the environment is NOT built.' \
+    'L9 bootstrap FATAL:   Re-paste ONLY the lines from the L9-PASTE-BEGIN marker' \
+    'L9 bootstrap FATAL:   through the L9-PASTE-END marker -- no fence lines, no prose.' >&2
+  exit 2
+fi
+unset _l9_contaminated
+
+# Bump on EVERY change to this file. The Setup script field is a copy-paste, not
+# a live link, so the pasted stub silently drifts from main and there is no way
+# to see it from inside the sandbox. Recording the revision that actually ran
+# turns "is the pasted stub current?" from unanswerable into a comparison
+# (audit B-06). verify_account_env.py reads it back from cloud-session.env.
+L9_STUB_REVISION="2026-11-20.3"
+
+warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
+note() { printf 'L9 bootstrap: %s\n' "$*"; }
+
+# Cloud-only install paths (no-op on local CLI, which wires .claude/ from the repo).
+if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
+  exit 0
+fi
+
+# --- 1) Normalize the account environment ---------------------------------
+# The Environment variables field is literal .env text: Anthropic does NOT
+# expand $HOME. A pasted L9_GOVERNANCE_DIR=$HOME/.cursor-governance arrives
+# as that literal string, which would clone into a directory named $HOME and
+# hand every consumer (skill router, oversight, Graphiti bridge) a path that
+# does not exist. The cloud SSOT is always the real $HOME path — pin it here
+# and re-export the expanded value.
+GOV_DIR="$HOME/.cursor-governance"
+if [ -n "${L9_GOVERNANCE_DIR:-}" ] && [ "$L9_GOVERNANCE_DIR" != "$GOV_DIR" ]; then
+  warn "ignoring L9_GOVERNANCE_DIR='${L9_GOVERNANCE_DIR}' — cloud SSOT is always $GOV_DIR"
+  case "$L9_GOVERNANCE_DIR" in
+    *'$HOME'*)
+      warn "  that value is an UNEXPANDED \$HOME — delete L9_GOVERNANCE_DIR from the variables field"
+      ;;
+  esac
+fi
+export L9_GOVERNANCE_DIR="$GOV_DIR"
+
+# L9_GOVERNANCE_SURFACE is the governance-profile selector the Autonomy Surface
+# Profile matches on (ops/autonomy/surface_profile.yaml when:). Its value is the
+# canonical ACTOR id claude-code (Quantum-L9/.github actor_registry), not a
+# canonical surface id: the surface (claude-code-mobile, -web, -cli, ...) is
+# derived per host from runtime markers by ops/memory/agent_identity.py. A
+# surface-flavoured value such as claude-code-mobile is not a selector and would
+# silently drop the session out of standing A4.
+if [ -n "${L9_GOVERNANCE_SURFACE:-}" ] && [ "$L9_GOVERNANCE_SURFACE" != "claude-code" ]; then
+  warn "L9_GOVERNANCE_SURFACE='${L9_GOVERNANCE_SURFACE}' is not the governance-profile selector; using claude-code"
+fi
+export L9_GOVERNANCE_SURFACE="claude-code"
+
+# ADR-0006: the static HTTP memory side door is retired. Memory 3.0 OAuth is
+# the account connector and the Cursor native client, not this process.
+# Unsetting cleans this process — deleting the vars from the account field is
+# the real fix. The durable env below also unsets them for in-session Bash.
+for retired in L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN; do
+  if [ -n "${!retired:-}" ]; then
+    warn "$retired is set — retired ADR-0006 side door; delete it from the variables field"
+    unset "$retired"
+  fi
+done
+for oauth_secret in AUTH0_CLIENT_SECRET L9_MEMORY_OAUTH_CLIENT_SECRET \
+  L9_MEMORY_OAUTH_ACCESS_TOKEN L9_MEMORY_OAUTH_REFRESH_TOKEN; do
+  if [ -n "${!oauth_secret:-}" ]; then
+    warn "$oauth_secret is set — Memory OAuth credentials stay out of hosted sessions; unsetting"
+    unset "$oauth_secret"
+  fi
+done
+
+# Secrets plane (docs/DEGRADED_MODE_CONTRACT.md "Secrets plane, 2026-09-24";
+# same contract as ops/scripts/bootstrap_agent_environment.sh). This surface
+# holds exactly ONE bootstrap secret: its Infisical machine identity,
+# L9_INFISICAL_CLIENT_SECRET plus the non-secret L9_INFISICAL_CLIENT_ID, set
+# once in the Environment variables field. Every other secret is bound from
+# Infisical in-process (ops/secrets/capability_bind.py) and never exported.
+# The pair is deliberately NOT swept, here or in the unset list below. Any other
+# credential pasted into the field (a raw INFISICAL_CLIENT_SECRET, an Infisical
+# password or token, a downstream token, AWS keys) is stripped. The capability
+# broker is retired (never shipped) and plays no part.
+#
+# CONTEXT7_API_KEY is deliberately NOT in this list and never pasted into the
+# field: Context7 is a governed vault bridge (mcp.template.json runs
+# ops/secrets/run_vault_mcp_bridge.sh context7), which binds the key from
+# Infisical inside the bridge process. The key is never in this environment,
+# argv, .mcp.json or a file. Memory holds no transport credential on this
+# surface at all: Memory 3.0 is the account-managed OAuth connector, not a
+# project MCP entry and not a secret in this environment (memory ADR-016).
+for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
+              INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD \
+              AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID \
+              AWS_SESSION_TOKEN; do
+  leaked_value="${!leaked:-}"
+  [ -n "$leaked_value" ] || continue
+  # proxy-injected is the platform's sentinel for a credential it proxies, not
+  # a credential. Unsetting it would break the very proxying it announces.
+  if [ "$leaked_value" = "proxy-injected" ]; then
+    note "$leaked holds the platform proxy sentinel (no credential material) — leaving it"
+    continue
+  fi
+  warn "$leaked is set — PROHIBITED on this surface (Infisical/capability plane); unsetting"
+  unset "$leaked"
+done
+# GH_TOKEN / GITHUB_TOKEN are NOT swept, and must not be. The earlier sweep read
+# "the platform proxy authenticates" as covering both tools. It does not:
+#
+#   git ls-remote  with no GH_TOKEN -> works   (the proxy authenticates git)
+#   gh api /user   with no GH_TOKEN -> refuses ("please run gh auth login")
+#
+# So clearing it disabled every gh path on the surface, including the REST
+# calls docs/DEGRADED_MODE_CONTRACT.md lists as working and the open-PR telemetry
+# ops/scripts/pr_overlap_check.py needs before make pr may push. On a hosted
+# session this value is issued by the platform, not pasted by a human.
+#
+# The contract that still holds is on the FIELD, not the process: never paste a
+# PAT into Environment variables. verify_account_env.py reports a prohibited
+# credential there. Unsetting at runtime was the wrong lever — it could not tell
+# a pasted PAT from the platform's own credential, and destroyed both.
+#
+# CAVEAT for tools that are NOT gh (observed 2026-08-22): the platform value is
+# accepted by gh because the agent proxy is preconfigured for it, and by git
+# because the proxy injects credentials. A tool that authenticates DIRECTLY to
+# api.github.com with the literal string gets 401. gh auth status also reports
+# "the token in GH_TOKEN is invalid" while gh api user succeeds — so treat
+# gh auth status as unreliable here and probe with a real REST call instead.
+#
+# The concrete casualty is zizmor in the l9-ci-sdk pre-commit/pre-push gate: its
+# artipacked audit lists tags for actions/checkout over the GitHub API and
+# 401s, failing make check on a diff that touches no workflow file at all.
+# Running that ONE hook with the variable unset is the correct repair — the hook
+# still runs and still fail-closes (AGENTS.md: "local zizmor is fail-closed"):
+#
+#   env -u GH_TOKEN -u GITHUB_TOKEN git push        # gate runs, and passes
+#
+# Do NOT reach for --no-verify, and do NOT unset it globally here: gh needs
+# it, and ~/.profile sources the durable env unguarded.
+
+# True when the checkout at $1 has origin $2, compared case-insensitively and
+# without a trailing slash or ".git". A directory's name is not its identity:
+# only a checkout whose origin IS the expected repository may supply
+# governance code that this stub will execute.
+l9_origin_is() {
+  local url
+  url="$(git -C "$1" remote get-url origin 2>/dev/null)"
+  url="$(printf '%s' "$url" | tr '[:upper:]' '[:lower:]')"
+  url="${url%/}"
+  url="${url%.git}"
+  [ "$url" = "$2" ]
+}
+L9_GOV_ORIGIN="https://github.com/quantum-l9/cursor-governance"
+
+# --- 2) Governance SSOT ----------------------------------------------------
+GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
+GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
+
+mkdir -p "$(dirname "$GOV_DIR")"
+if [ -d "$GOV_DIR/.git" ]; then
+  git -C "$GOV_DIR" remote set-url origin "$GOV_REMOTE" 2>/dev/null || true
+  if git -C "$GOV_DIR" fetch --depth 1 origin "$GOV_BRANCH" 2>/dev/null; then
+    git -C "$GOV_DIR" checkout -f -B "$GOV_BRANCH" "origin/$GOV_BRANCH" 2>/dev/null \
+      || git -C "$GOV_DIR" reset --hard "origin/$GOV_BRANCH" 2>/dev/null \
+      || warn "could not reset governance clone to origin/$GOV_BRANCH"
+  else
+    warn "governance fetch failed — reusing existing clone (may be stale)"
+  fi
+else
+  rm -rf "$GOV_DIR"
+  if ! git clone --depth 1 --branch "$GOV_BRANCH" "$GOV_REMOTE" "$GOV_DIR"; then
+    rm -rf "$GOV_DIR"
+    warn "governance clone FAILED — $GOV_REMOTE could not be read"
+    # Since 2026-11-16 Quantum-L9/Cursor-Governance is PRIVATE, and the Setup
+    # script runs with NO GitHub credential: the platform does not hand Setup
+    # the environment's secrets, and its git proxy authenticates only after the
+    # session starts. Measured 2026-11-20 in a session that listed the repository
+    # under Repositories AND had it as a session source: the network clone still
+    # failed ("could not read Username"). What Setup does have is every session
+    # source already checked out under the working directory, so clone from that.
+    _l9_local=""
+    for _l9_c in Cursor-Governance cursor-governance; do
+      if [ -d "$PWD/$_l9_c/.git" ] && l9_origin_is "$PWD/$_l9_c" "$L9_GOV_ORIGIN"; then
+        _l9_local="$PWD/$_l9_c"
+        break
+      fi
+    done
+    if [ -n "$_l9_local" ] && git clone --depth 1 --branch "$GOV_BRANCH" "file://$_l9_local" "$GOV_DIR"; then
+      git -C "$GOV_DIR" remote set-url origin "$GOV_REMOTE"
+      note "governance cloned from the session checkout $_l9_local"
+    else
+      rm -rf "$GOV_DIR"
+      warn "  add Quantum-L9/Cursor-Governance AND Quantum-L9/.github under Repositories in"
+      warn "  this environment's settings (session title bar -> environment -> Edit), then"
+      warn "  start a NEW session; also confirm the network allows github.com"
+      exit 1
+    fi
+  fi
+fi
+
+SETUP="$GOV_DIR/environment/agents/adapters/claude-code/web/setup.sh"
+if [ ! -f "$SETUP" ]; then
+  warn "missing web/setup.sh in the governance clone — adapter tree incomplete"
+  exit 1
+fi
+
+# Preserve consumer workspace cwd (Anthropic runs setup before Claude starts).
+# Signal that this stub already materialized and checked out the governance tree
+# so canonical setup does not fetch/reset the very same clone a second time. The
+# marker is a claim, not an authorization: setup.sh re-validates the tree
+# (git repo, canonical files present, ref matches) and falls back to its own
+# synchronization if any check fails.
+L9_GOVERNANCE_BOOTSTRAPPED=1 bash "$SETUP"
+SETUP_RC=$?
+# The canonical setup's exit code is part of the contract. It used to be
+# discarded, so "adapter NOT wired in ANY workspace" still ended with
+# "cloud bootstrap complete" and exit 0 — Anthropic then cached that
+# environment as a successful build (audit B-02). The durable env below is
+# still written, because a half-built environment is easier to diagnose with
+# its variables in place than without them; the exit code carries the verdict.
+
+# --- 3) Durable exports for in-session Bash --------------------------------
+# CLAUDE_ENV_FILE is not present in every cloud runtime, so write our own env
+# file and source it from the shell profile when it is absent. Both paths are
+# idempotent — this stub re-runs on every environment rebuild.
+L9_ENV_FILE="$HOME/.l9/cloud-session.env"
+mkdir -p "$(dirname "$L9_ENV_FILE")"
+{
+  echo "# Written by L9 setup.bootstrap.sh — do not edit by hand."
+  echo "export L9_STUB_REVISION=$(printf %q "$L9_STUB_REVISION")"
+  echo "export L9_GOVERNANCE_DIR=$(printf %q "$GOV_DIR")"
+  echo "export L9_GOVERNANCE_SURFACE=claude-code"
+  # No provider URL is exported (stage C8): memory is the canonical control
+  # plane, bound per checkout (ops/config/memory-binding.json), never a URL.
+  # The retired capability-plane URL is deliberately not exported.
+  # No GH_TOKEN export and no GH_TOKEN unset: the platform issues it, gh needs
+  # it, and ~/.profile sources this file unguarded, so an unset here would strip
+  # it from every login shell.
+  # ADR-0006 + Infisical plane: keep vault credentials out of every in-session shell.
+  # No CONTEXT7_API_KEY line at all: the Context7 vault bridge binds its key
+  # inside its own process, so this environment never carries one to export
+  # or to strip.
+  echo "unset L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN"
+  echo "unset GRAPHITI_MCP_URL GRAPHITI_MCP_TOKEN"
+  echo "unset AUTH0_CLIENT_SECRET L9_MEMORY_OAUTH_CLIENT_SECRET"
+  echo "unset L9_MEMORY_OAUTH_ACCESS_TOKEN L9_MEMORY_OAUTH_REFRESH_TOKEN"
+  echo "unset INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD"
+  echo "unset SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN"
+  echo "unset AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN"
+  if [ -f "$GOV_DIR/ops/scripts/lib/bind_memory_interpreter.sh" ] \
+     && [ -x "$GOV_DIR/.venv/bin/python3" ]; then
+    # shellcheck source=/dev/null
+    . "$GOV_DIR/ops/scripts/lib/bind_memory_interpreter.sh"
+    bind_l9_memory_interpreter "$GOV_DIR/.venv/bin/python3" "$GOV_DIR"
+    if [ -n "${L9_MEMORY_INTERPRETER:-}" ]; then
+      echo "export L9_MEMORY_INTERPRETER=$(printf %q "$L9_MEMORY_INTERPRETER")"
+    fi
+  fi
+} > "$L9_ENV_FILE"
+
+# NOTE: Sonar project identity is deliberately NOT written here. It is
+# per-repository, this env file is per-session and outlives a cd into another
+# repo, and the canonical consumer (skills/l9-pr-remediation/scripts/sonar_fetch.py)
+# takes --project/--organization as required arguments rather than reading env.
+# install.sh resolves it from the active workspace instead.
+
+if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+  cat "$L9_ENV_FILE" >> "$CLAUDE_ENV_FILE"
+  note "durable env appended to CLAUDE_ENV_FILE"
+else
+  for profile in "$HOME/.bashrc" "$HOME/.profile"; do
+    [ -f "$profile" ] || touch "$profile"
+    grep -qF 'cloud-session.env' "$profile" 2>/dev/null \
+      || printf '%s\n' '. "$HOME/.l9/cloud-session.env"  # L9 governed session env' >> "$profile"
+  done
+  note "CLAUDE_ENV_FILE unset — sourcing $L9_ENV_FILE from the shell profile instead"
+fi
+
+# --- 4) Memory control plane (report, never block) --------------------------
+# Capability broker retired 2026-08-29 (never shipped). Do not probe it.
+# The only memory plane is the canonical l9-graphite-memory server
+# (memory-control-plane/v1). This hosted process does not receive a project
+# Memory MCP entry, an Auth0 client secret, or an access token. Native OAuth
+# belongs to the Claude account connector. A stdio package is not installed
+# from here. Never paste CONTEXT7_API_KEY or any downstream token into the
+# variables field; the only credential that belongs there is the Infisical
+# machine identity pair above. Status lines report names and sources only,
+# never a value.
+note "memory control plane: l9-graphite-memory (interpreter: ${L9_MEMORY_INTERPRETER:-unbound; make memory-readiness})"
+note "context7 mcp: vault bridge (ops/secrets/run_vault_mcp_bridge.sh context7; key bound from Infisical in-process)"
+if [ -n "${L9_INFISICAL_CLIENT_ID:-}" ] && [ -n "${L9_INFISICAL_CLIENT_SECRET:-}" ]; then
+  note "infisical machine identity: configured"
+else
+  warn "infisical machine identity: ABSENT — set L9_INFISICAL_CLIENT_ID and L9_INFISICAL_CLIENT_SECRET in Environment variables"
+fi
+note "capability plane: RETIRED (never shipped)"
+
+if [ "$SETUP_RC" -ne 0 ]; then
+  warn "cloud bootstrap FAILED — web/setup.sh exited $SETUP_RC"
+  warn "  the adapter is not wired; see ~/.l9/claude/bootstrap-state.json"
+  exit "$SETUP_RC"
+fi
+note "cloud bootstrap complete — governance at $GOV_DIR ($GOV_BRANCH)"
+exit 0
+# L9-PASTE-END — the Setup script field ends at the line above (exit 0).

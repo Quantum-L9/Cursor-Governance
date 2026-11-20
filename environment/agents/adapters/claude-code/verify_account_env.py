@@ -172,6 +172,58 @@ def stub_revision_actual(env: dict[str, str] | None = None, session_env: Path | 
     return match.group(1) if match else ""
 
 
+#: The Setup script field's limits on claude.ai/code.
+SETUP_FIELD_MAX_LINES = 100
+SETUP_FIELD_MAX_LINE_BYTES = 200
+SETUP_FIELD_REL = Path("docs") / "account-fields" / "SETUP_FIELD.txt"
+#: Words that would mean the field carries a second bootstrap path.
+SETUP_FIELD_FORBIDDEN = ("DEGRADED", "materialize", "l9_install_child_bootstrap", "child-only")
+
+
+class SetupFieldError(ValueError):
+    """The rendered Setup field would not fit the account field, or is unsafe to paste."""
+
+
+def render_setup_field(stub_body: str | None = None) -> str:
+    """The exact text to paste into the Setup script field.
+
+    Deterministic: the stub minus whole-line comments and blank lines, nothing else.
+    The shebang is kept; no command line is changed, joined or reordered. The stub has
+    no heredoc, so no comment-shaped line is content (asserted, not assumed). Refuses
+    to render text that would not fit the field or would carry a fence or a second
+    bootstrap path.
+    """
+    body = STUB.read_text(encoding="utf-8") if stub_body is None else stub_body
+    if "<<" in body:
+        raise SetupFieldError("stub contains a heredoc; comment stripping is unsafe")
+    lines = body.splitlines()
+    kept = [
+        line
+        for index, line in enumerate(lines)
+        if line.strip()
+        and not (line.lstrip().startswith("#") and not (index == 0 and line.startswith("#!")))
+    ]
+    text = "\n".join(kept) + "\n"
+    problems = []
+    if len(kept) > SETUP_FIELD_MAX_LINES:
+        problems.append(f"{len(kept)} lines > {SETUP_FIELD_MAX_LINES}")
+    long_lines = [
+        n
+        for n, line in enumerate(kept, 1)
+        if len(line.encode("utf-8")) > SETUP_FIELD_MAX_LINE_BYTES
+    ]
+    if long_lines:
+        problems.append(f"lines over {SETUP_FIELD_MAX_LINE_BYTES} bytes: {long_lines}")
+    if "`" in text:
+        problems.append("contains a backtick (a pasted fence would swallow the script)")
+    named = [word for word in SETUP_FIELD_FORBIDDEN if word.lower() in text.lower()]
+    if named:
+        problems.append(f"names a second bootstrap path: {', '.join(named)}")
+    if problems:
+        raise SetupFieldError("; ".join(problems))
+    return text
+
+
 _REVISION = re.compile(r"^(\d{4})-(\d{2})-(\d{2})\.(\d+)$")
 
 
@@ -328,7 +380,9 @@ the live runtime against this set.
 
 ## 2. Setup script
 
-Paste `environment/agents/adapters/claude-code/web/setup.bootstrap.sh` verbatim.
+Paste `docs/account-fields/SETUP_FIELD.txt` — the only thing to paste. It is
+rendered from `environment/agents/adapters/claude-code/web/setup.bootstrap.sh`
+(comments and blank lines removed, no command changed) to fit the field.
 
 - Revision: `{revision}`
 - Checksum: `{stub_checksum}`
@@ -401,8 +455,19 @@ def setup_script_markdown(revision: str) -> str:
 **Revision:** `{revision}` · **Checksum:** `{checksum}`
 **Applies to:** NEW sessions only.
 
+**Paste exactly one thing: [`SETUP_FIELD.txt`](SETUP_FIELD.txt)** — the whole file,
+nothing else. It is rendered deterministically from the stub below (comments and
+blank lines removed, no command changed) so it fits the field (at most
+{SETUP_FIELD_MAX_LINES} lines of at most {SETUP_FIELD_MAX_LINE_BYTES} bytes) and carries no
+backtick fence. Do not hand-condense the stub; regenerate with
+`verify_account_env.py --emit-fields`.
+
+```bash
+cat docs/account-fields/SETUP_FIELD.txt
+```
+
 Source of truth: `environment/agents/adapters/claude-code/web/setup.bootstrap.sh`.
-Paste the stub, never `web/setup.sh`. The field is a copy, not a live link, so a
+Never paste `web/setup.sh`. The field is a copy, not a live link, so a
 full script pasted into it drifts from `main` on every edit; the stub is stable
 and hands off to `web/setup.sh` from the governance clone, which means setup.sh
 changes reach every new session with no re-paste.
@@ -419,11 +484,12 @@ destroys that code silently.
 python3 environment/agents/adapters/claude-code/verify_account_env.py   # names the direction
 ```
 
-## Paste this
+## The source stub (for review; paste SETUP_FIELD.txt, not this)
 
-Copy **only** the script itself: the first line of the block below is
+The block below is the canonical stub SETUP_FIELD.txt is rendered from. If you
+ever copy from it instead, copy **only** the script itself: the first line of the block below is
 `#!/usr/bin/env bash`, immediately followed by an `L9-PASTE-BEGIN` marker, and
-the last is an `L9-PASTE-END` marker just after `exit 0`. Do **not** include
+the last is an `L9-PASTE-END` marker just after the final `exit`. Do **not** include
 the triple-backtick fence lines that open and close the block, this heading, or
 the prose that follows the block.
 
@@ -529,9 +595,15 @@ def main(argv: list[str] | None = None) -> int:
         # not a document about three fields.
         pane = REPO / "docs" / "account-fields"
         pane.mkdir(parents=True, exist_ok=True)
+        try:
+            field = render_setup_field()
+        except SetupFieldError as exc:
+            print(f"FATAL: Setup field does not render: {exc}", file=sys.stderr)
+            return 1
         for name, text in (
             ("ENVIRONMENT_VARIABLES.md", variables_field_markdown(expected)),
             ("SETUP_SCRIPT.md", setup_script_markdown(revision)),
+            (SETUP_FIELD_REL.name, field),
         ):
             (pane / name).write_text(text, encoding="utf-8")
             print(f"wrote {pane / name}")
@@ -579,7 +651,9 @@ def main(argv: list[str] | None = None) -> int:
             print("         destroys the only copy. Copy the field out, diff it against")
             print("         web/setup.bootstrap.sh, and commit what it added.")
         else:
-            print("         re-paste web/setup.bootstrap.sh into the Setup script field")
+            print(
+                "         re-paste docs/account-fields/SETUP_FIELD.txt into the Setup script field"
+            )
     elif result["stub_revision_actual"]:
         print(f"  OK: Setup script revision {result['stub_revision_actual']}")
 

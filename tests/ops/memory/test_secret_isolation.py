@@ -33,6 +33,7 @@ RUNTIME_SCRIPTS = (
     "ops/hooks/session_start_bootstrap.sh",
     "ops/scripts/bootstrap_agent_environment.sh",
     "environment/agents/adapters/claude-code/web/setup.bootstrap.sh",
+    "environment/agents/adapters/claude-code/web/setup.bootstrap_steps.sh",
     "environment/agents/adapters/claude-code/web/setup.sh",
     "environment/agents/adapters/claude-code/install.sh",
     "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",

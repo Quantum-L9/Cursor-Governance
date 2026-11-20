@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -uo pipefail
+_l9_self="${BASH_SOURCE[0]:-$0}"
+_l9_fence="$(printf '\140\140\140')"
+if [ -r "$_l9_self" ]; then
+  if grep -qF "$_l9_fence" "$_l9_self"; then _l9_contaminated=1; else _l9_contaminated=0; fi
+else
+  if [ "${BASH_SUBSHELL:-0}" -ne 0 ]; then _l9_contaminated=1; else _l9_contaminated=0; fi
+fi
+unset _l9_self _l9_fence
+if [ "$_l9_contaminated" -ne 0 ]; then
+  printf '%s\n' \
+    'L9 bootstrap FATAL: the Setup script field contains markdown fence lines.' \
+    'L9 bootstrap FATAL:   You copied the code block MARKERS along with the code.' \
+    'L9 bootstrap FATAL:   Nothing below this point ran at top level; the environment is NOT built.' \
+    'L9 bootstrap FATAL:   Re-paste ONLY the lines from the L9-PASTE-BEGIN marker' \
+    'L9 bootstrap FATAL:   through the L9-PASTE-END marker -- no fence lines, no prose.' >&2
+  exit 2
+fi
+unset _l9_contaminated
+L9_STUB_REVISION="2026-11-20.4"
+export L9_STUB_REVISION
+warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
+note() { printf 'L9 bootstrap: %s\n' "$*"; }
+if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
+  exit 0
+fi
+GOV_DIR="$HOME/.cursor-governance"
+l9_origin_is() {
+  local url
+  url="$(git -C "$1" remote get-url origin 2>/dev/null)"
+  url="$(printf '%s' "$url" | tr '[:upper:]' '[:lower:]')"
+  url="${url%/}"
+  url="${url%.git}"
+  [ "$url" = "$2" ]
+}
+L9_GOV_ORIGIN="https://github.com/quantum-l9/cursor-governance"
+GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
+GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
+mkdir -p "$(dirname "$GOV_DIR")"
+if [ -d "$GOV_DIR/.git" ]; then
+  git -C "$GOV_DIR" remote set-url origin "$GOV_REMOTE" 2>/dev/null || true
+  if git -C "$GOV_DIR" fetch --depth 1 origin "$GOV_BRANCH" 2>/dev/null; then
+    git -C "$GOV_DIR" checkout -f -B "$GOV_BRANCH" "origin/$GOV_BRANCH" 2>/dev/null \
+      || git -C "$GOV_DIR" reset --hard "origin/$GOV_BRANCH" 2>/dev/null \
+      || warn "could not reset governance clone to origin/$GOV_BRANCH"
+  else
+    warn "governance fetch failed — reusing existing clone (may be stale)"
+  fi
+else
+  rm -rf "$GOV_DIR"
+  if ! git clone --depth 1 --branch "$GOV_BRANCH" "$GOV_REMOTE" "$GOV_DIR"; then
+    rm -rf "$GOV_DIR"
+    warn "governance clone FAILED — $GOV_REMOTE could not be read"
+    _l9_local=""
+    for _l9_c in Cursor-Governance cursor-governance; do
+      if [ -d "$PWD/$_l9_c/.git" ] && l9_origin_is "$PWD/$_l9_c" "$L9_GOV_ORIGIN"; then
+        _l9_local="$PWD/$_l9_c"
+        break
+      fi
+    done
+    if [ -n "$_l9_local" ] && git clone --depth 1 --branch "$GOV_BRANCH" "file://$_l9_local" "$GOV_DIR"; then
+      git -C "$GOV_DIR" remote set-url origin "$GOV_REMOTE"
+      note "governance cloned from the session checkout $_l9_local"
+    else
+      rm -rf "$GOV_DIR"
+      warn "  add Quantum-L9/Cursor-Governance AND Quantum-L9/.github under Repositories in"
+      warn "  this environment's settings (session title bar -> environment -> Edit), then"
+      warn "  start a NEW session; also confirm the network allows github.com"
+      exit 1
+    fi
+  fi
+fi
+SETUP="$GOV_DIR/environment/agents/adapters/claude-code/web/setup.sh"
+if [ ! -f "$SETUP" ]; then
+  warn "missing web/setup.sh in the governance clone — adapter tree incomplete"
+  exit 1
+fi
+L9_GOVERNANCE_BOOTSTRAPPED=1 bash "$SETUP"
+SETUP_RC=$?
+exit "$SETUP_RC"
