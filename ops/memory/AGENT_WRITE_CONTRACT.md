@@ -95,8 +95,8 @@ from the upstream registries pinned in `environment/agents/agent_registry.yaml`
 
 | ActorIdentity | SurfaceIdentity | Derived from |
 |---|---|---|
-| `l9.actor-registry/global@1#cursor` | `l9.surface-registry/global@1#cursor-ide` | `CURSOR_AGENT`. Cursor wins when Claude markers are also present. |
-| `l9.actor-registry/global@1#claude-code` | `l9.surface-registry/global@1#claude-code-cli` | Claude markers and local `CLAUDE_CODE_ENTRYPOINT=cli` |
+| `l9.actor-registry/global@1#cursor` | `l9.surface-registry/global@1#cursor-ide` | `CURSOR_AGENT` and no Claude runtime. |
+| `l9.actor-registry/global@1#claude-code` | `l9.surface-registry/global@1#claude-code-cli` | Claude markers and local `CLAUDE_CODE_ENTRYPOINT=cli`, or `CLAUDE_CODE_ENTRYPOINT=claude-vscode` for the CLI process inside Cursor. A live Claude runtime wins over an inherited `CURSOR_AGENT`. |
 | `l9.actor-registry/global@1#claude-code` | `l9.surface-registry/global@1#claude-code-mobile` | `CLAUDE_CODE_REMOTE=true` and `CLAUDE_CODE_ENTRYPOINT=remote_mobile` |
 | `l9.actor-registry/global@1#claude-code` | `unknown` | Claude markers with any other entrypoint, including empty, `remote_web`, and `remote_unknown`. The `surface:` tag is omitted. |
 | `l9.actor-registry/global@1#codex` | `unknown` | `L9_MEMORY_AGENT_ID=codex` and no host markers |
