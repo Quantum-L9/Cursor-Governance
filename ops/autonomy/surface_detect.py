@@ -10,9 +10,12 @@ Return values:
 Precedence:
   1. A Cursor host marker overrides a projected Claude explicit surface
      (``L9_GOVERNANCE_SURFACE=claude-code`` from ``.claude/settings.json``
-     loaded inside Cursor). Markers: ``CURSOR_AGENT``,
-     ``CURSOR_CONVERSATION_ID``, ``CURSOR_EXTENSION_HOST_ROLE``.
-     Intentional non-Claude explicit ids still win.
+     loaded inside Cursor) only while no live Claude runtime marker is set.
+     The claude-vscode extension runs the real CLI inside Cursor, so its
+     ``CLAUDECODE`` runtime wins over the host-marker override. Markers:
+     ``CURSOR_AGENT``, ``CURSOR_CONVERSATION_ID``,
+     ``CURSOR_EXTENSION_HOST_ROLE``. Intentional non-Claude explicit ids
+     still win.
   2. Explicit ``L9_GOVERNANCE_SURFACE`` when it is a known id.
   3. Runtime markers break ties toward the adapter (Claude remote, Claude
      desktop/CLI, then Cursor).
@@ -43,7 +46,9 @@ CLAUDE_GATE_SURFACES: Final[frozenset[str]] = frozenset({"claude-code", "claude-
 #: primary one; the other two remain when a hook child inherits the Cursor
 #: process environment but not ``CURSOR_AGENT``. Any one of them means this
 #: process is Cursor, including when a projected ``.claude/settings.json``
-#: has set ``L9_GOVERNANCE_SURFACE=claude-code``.
+#: has set ``L9_GOVERNANCE_SURFACE=claude-code`` — unless a live Claude
+#: runtime marker is also set (the claude-vscode extension runs the real
+#: CLI inside Cursor).
 CURSOR_HOST_MARKERS: Final[tuple[str, ...]] = (
     "CURSOR_AGENT",
     "CURSOR_CONVERSATION_ID",
@@ -65,9 +70,10 @@ def scrub_cursor_host_markers(delete: Callable[..., object]) -> None:
     """Remove every Cursor host marker via ``delete(name, raising=False)``.
 
     ``detect_surface`` treats any one marker as Cursor, including when a test
-    has set ``L9_GOVERNANCE_SURFACE=claude-code``. Deleting only
-    ``CURSOR_AGENT`` leaves ``CURSOR_CONVERSATION_ID`` and the surface stays
-    Cursor inside a Cursor session.
+    has set ``L9_GOVERNANCE_SURFACE=claude-code`` and no live Claude runtime
+    marker is set. Deleting only ``CURSOR_AGENT`` leaves
+    ``CURSOR_CONVERSATION_ID`` and the surface stays Cursor inside a Cursor
+    session.
     """
     for marker in CURSOR_HOST_MARKERS:
         delete(marker, raising=False)
@@ -77,7 +83,11 @@ def detect_surface(env: Mapping[str, str] | None = None) -> str:
     """Return the surface id for ``env`` (defaults to ``os.environ``)."""
     source = os.environ if env is None else env
     explicit = (source.get("L9_GOVERNANCE_SURFACE") or "").strip().lower()
-    if cursor_host_present(source) and explicit in CLAUDE_GATE_SURFACES:
+    if (
+        cursor_host_present(source)
+        and explicit in CLAUDE_GATE_SURFACES
+        and not claude_runtime_present(source)
+    ):
         return "cursor"
     if explicit in KNOWN_SURFACES:
         return explicit
@@ -114,7 +124,9 @@ def claude_runtime_present(env: Mapping[str, str] | None = None) -> bool:
 
     ``L9_GOVERNANCE_SURFACE=claude-code`` from ``.claude/settings.json`` is not
     a runtime. Cursor loads that file, so the string alone must not arm a
-    Claude-only gate.
+    Claude-only gate. The claude-vscode extension launches the real CLI
+    (``CLAUDECODE`` and friends are set), so in :func:`detect_surface` its
+    runtime beats a Cursor host-marker override.
     """
     source = os.environ if env is None else env
     if (source.get("CLAUDE_CODE_REMOTE") or "").strip().lower() == "true":

@@ -2928,6 +2928,46 @@ def _verify_state_error(task: dict[str, Any] | None, task_id: str) -> Controller
     )
 
 
+def _evidence_causality_module() -> Any:
+    path = Path(__file__).resolve().parents[4] / "scripts" / "evidence_causality.py"
+    if not path.is_file():
+        raise ControllerError(f"evidence causality checker missing: {path}")
+    spec = importlib.util.spec_from_file_location("evidence_causality", path)
+    if spec is None or spec.loader is None:
+        raise ControllerError(f"cannot load evidence causality checker: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _satisfy_produced_catalog(
+    db: StateDB,
+    task_id: str,
+    *,
+    candidate_sha: str,
+    receipt_path: Path,
+    produced_at: str,
+    digest: str | None,
+) -> None:
+    """A passing task records the catalog ids it produces, not only a new runtime id.
+
+    Successors wait on the exact catalog id. ``EVID-RUNTIME-<task>-<attempt>``
+    does not satisfy that wait.
+    """
+    module = _evidence_causality_module()
+    updates = module.catalog_updates_for_passed_task(
+        db.evidence_items(),
+        task_id,
+        db.tasks(),
+        revision=candidate_sha,
+        source=str(receipt_path),
+        produced_at=produced_at,
+        digest=digest,
+    )
+    for item in updates:
+        db.upsert_evidence(item)
+
+
 def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
@@ -3252,6 +3292,14 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 }
             )
             if verdict == "PASSED_LOCAL":
+                _satisfy_produced_catalog(
+                    db,
+                    task_id,
+                    candidate_sha=candidate_sha or "",
+                    receipt_path=target,
+                    produced_at=verification["verified_at"],
+                    digest=verification["receipt_digest"],
+                )
                 # Declared requirements the task's own validation collects are
                 # realized here, before any gate is evaluated against them.
                 _realize_planned_evidence(db, workspace, task_id, candidate_sha, verification)
