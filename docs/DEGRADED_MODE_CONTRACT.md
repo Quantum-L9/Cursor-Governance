@@ -589,3 +589,40 @@ catch-up, and the DEGRADED start with `l9-materialize-governance`.
 - A child calls `add_repo` only for further repositories in its campaign set, never
   for governance. A missing governance clone or authority checkout is CTO-BLOCKER,
   never a workaround, and no brief carries a bootstrap step.
+
+## Swarm child launch, 2026-11-20 (later) — Cursor-Governance is every child's session source; supersedes the launch source of the section above
+
+Operator ruling, 2026-11-20 (verbatim): "the way you just launched [the EIE and CEG
+canary] agents is how all agents must be launched using swarm protocol - they loaded
+Perfectly." This section supersedes, in the 2026-11-20 section above, the rule that a
+child's `source_url` is its lane's primary repository, and the rule that a child calls
+`add_repo` only for further repositories. The one-bootstrap-path rule stands unchanged.
+
+| Session | Launch arguments | Observed (as reported by the CTO session `session_017xwbxvn4RrcFtW27s3aYG4`) |
+|---|---|---|
+| `session_017xwbxwRYfYS9DoHzuPpL5n`, `session_017xwbxvNFTA46kLjbBF3E7P` (EIE and CEG canaries, 19:34Z) | `source_url` = `https://github.com/Quantum-L9/Cursor-Governance`; `effort` `medium`; `permission_mode` `auto`; tags `cto:`, `lane:`, `campaign:`; `append_system_prompt` = the role contract; lane repository attached by the child with `add_repo` (push) | Setup cloned governance from the session's Cursor-Governance checkout and ran its normal `web/setup.sh`; both loaded cleanly |
+
+**Why Cursor-Governance and not the lane repository.** The Setup stub clones
+governance from github.com and, when it holds no credential for it, from the
+session's own Cursor-Governance checkout. A lane repository as session source
+therefore works only while Cursor-Governance stays publicly clonable; with
+Cursor-Governance as source it works either way.
+
+**Consequence.**
+
+- `cto_mode.py launch-spec` emits `source_url` =
+  `https://github.com/Quantum-L9/Cursor-Governance` for every lane, `model` (from
+  `--model`; the contract pins no model identifier), `effort` and `permission_mode`
+  from `governance/cto-mode/MODE.yaml`, and every lane repository except
+  Cursor-Governance under `add_repo` with push. A contract declaring any other source
+  is refused (`CHILD_SESSION_SOURCE_UNSUPPORTED`).
+- The child confirms `$HOME/.cursor-governance/.git` and
+  `$HOME/.cursor-governance/ops/autonomy/session_role.py`, else CTO-BLOCKER; then
+  attaches its lane repository with `add_repo` (push), clones it and calls
+  `register_repo_root`. A lane in Cursor-Governance attaches nothing.
+- `launch-spec` and `child-prompt` refuse (exit 4,
+  `LAUNCH_PREFLIGHT_STUB_REVISION_DRIFT`) while the running session's
+  `L9_STUB_REVISION` differs from the repository stub's, using
+  `verify_account_env.py`'s revision logic. The environment's field at
+  `2026-11-20.2` against the repository's `2026-11-20.3` is how children started
+  degraded. `--allow-stub-drift "<reason>"` is the logged operator override.
