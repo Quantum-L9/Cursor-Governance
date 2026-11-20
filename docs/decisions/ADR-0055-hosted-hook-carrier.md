@@ -133,3 +133,15 @@ principal* — an Auth0 client-credentials token from the application
 CANONICAL_LAW §8.11 item 2 (the carrier set) and item 4 (the agent carries it);
 ADR-0054 decision item 3 (the Stop hook blocks). ADR-0054 otherwise stands as
 the relay fallback.
+
+## Amendment (2026-11-20): hosted tool map
+
+The hosted carrier calls the tool the server binds for a hook principal
+(l9-graphiti-memory `docs/REMOTE_MCP_CONTRACT.md` §2b), not the relay's
+connector tool: `write` → `memory.ingest`, `ingest_candidate` →
+`memory.ingest_governed_candidate`, `close` → `memory.close`
+(`ops/memory/hosted_hook_transport.py` `HOSTED_TOOLS`). A `write` is shaped to
+`memory.ingest`'s declared fields and refused locally if it carries any other.
+The relay outbox keeps `memory.write_agent`, because an agent carries those
+entries and writes as itself. Decision item 3's "tool names are the relay's `CONNECTOR_TOOLS`" wording
+above is superseded for the hosted carrier only.

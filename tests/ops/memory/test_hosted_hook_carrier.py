@@ -27,6 +27,7 @@ from typing import Any
 
 import pytest
 import yaml
+from l9_graphite_memory import mcp_tools
 
 from ops.memory import hosted_hook_transport as hht
 from ops.memory import relay
@@ -246,25 +247,28 @@ def test_the_override_is_decided_before_any_credential_is_bound() -> None:
     assert asked == []
 
 
-def test_hook_credentials_bind_once_the_live_list_names_them() -> None:
-    """The committed mirror omits names the vault does not hold. The live list grants them."""
+def test_hook_credentials_are_listed_and_bind_only_when_their_values_exist() -> None:
+    """The committed mirror lists both names (2026-11-20, lane MEM-HOOK).
+
+    Listing makes the names bindable without the live list; the carrier is
+    still ``hosted`` only when both values are actually present.
+    """
     inventory = yaml.safe_load(
         (ROOT / "ops/secrets/infisical-cursor-governance.yaml").read_text(encoding="utf-8")
     )
     for name in HOOK_CREDENTIALS:
-        assert name not in inventory["root_env_keys"]
+        assert name in inventory["root_env_keys"]
     secrets = str(ROOT / "ops" / "secrets")
     if secrets not in sys.path:
         sys.path.insert(0, secrets)
     import capability_bind as bind
 
-    env = {HOOK_CLIENT_ID: CLIENT_ID_VALUE, HOOK_CLIENT_SECRET: CLIENT_SECRET_VALUE}
     bind.remember_vault_names(frozenset())
     bind.reset_cache()
     try:
-        assert resolve_carrier(env) != "hosted"
+        assert resolve_carrier({}) != "hosted"
         bind.reset_cache()
-        bind.remember_vault_names(frozenset(HOOK_CREDENTIALS))
+        env = {HOOK_CLIENT_ID: CLIENT_ID_VALUE, HOOK_CLIENT_SECRET: CLIENT_SECRET_VALUE}
         assert resolve_carrier(env) == "hosted"
     finally:
         bind.remember_vault_names(None)
@@ -275,6 +279,53 @@ def test_relay_and_hosted_are_the_same_store() -> None:
     assert store_of("relay") == store_of("hosted") == "hosted"
     assert store_of("local") == "local"
     assert store_of(None) is None
+
+
+# --- the hosted tool map (REMOTE_MCP_CONTRACT §2b) ---------------------------
+
+
+def test_hosted_map_is_the_hook_principal_map() -> None:
+    assert dict(hht.HOSTED_TOOLS) == {
+        "write": "memory.ingest",
+        "ingest_candidate": "memory.ingest_governed_candidate",
+        "close": "memory.close",
+    }
+
+
+def test_hosted_map_never_names_write_agent() -> None:
+    assert "memory.write_agent" not in hht.HOSTED_TOOLS.values()
+    assert all("write_agent" not in tool for tool in hht.HOSTED_TOOLS.values())
+
+
+def test_relay_keeps_write_agent_because_the_agent_carries_it() -> None:
+    assert relay.CONNECTOR_TOOLS["write"] == "memory.write_agent"
+    assert set(relay.CONNECTOR_TOOLS) == set(hht.HOSTED_TOOLS)
+
+
+def test_write_arguments_fit_memory_ingest() -> None:
+    args = {"namespace": NS, "content": "x", "memory_class": "meta", "tags": ["t"]}
+    assert hht.hosted_arguments("write", args) == args
+    with pytest.raises(hht.HostedUnavailable, match="not declared by memory.ingest"):
+        hht.hosted_arguments("write", {**args, "agent": "x"})
+    with pytest.raises(hht.HostedUnavailable, match="missing memory.ingest fields"):
+        hht.hosted_arguments("write", {"namespace": NS})
+    candidate = {"candidate": {"source": {}}}
+    assert hht.hosted_arguments("ingest_candidate", candidate) == candidate
+
+
+def test_ingest_fields_match_the_bound_release_schema() -> None:
+    (tool,) = [t for t in mcp_tools.CANONICAL_TOOLS if t["name"] == "memory.ingest"]
+    schema = tool["inputSchema"]
+    assert set(schema["properties"]) == hht.INGEST_FIELDS
+    assert tuple(schema.get("required", ())) == hht.INGEST_REQUIRED
+
+
+@pytest.mark.usefixtures("hosted_env")
+def test_an_undeclared_write_field_is_parked_not_sent(bound, fake_cli, endpoint, tmp_path) -> None:
+    transport = _transport(endpoint)
+    result = transport.call("write", {"namespace": NS, "content": "x", "agent": "y"})
+    assert result.unavailable and "not declared by memory.ingest" in (result.reason or "")
+    assert endpoint.calls == []
 
 
 # --- OK, and only OK with a UUID receipt -------------------------------------
@@ -292,7 +343,7 @@ def test_write_is_sent_as_the_hook_principal_and_reports_ok(
     assert fake_cli.calls == [], "the hosted carrier never spawns the local runtime"
     assert not relay.relay_dir(tmp_path).exists()
     (params,) = endpoint.tool_calls
-    assert params["name"] == relay.CONNECTOR_TOOLS["write"]
+    assert params["name"] == "memory.ingest"
     assert params["arguments"]["tags"] == [
         "topic:memory",
         "carrier:hosted",
@@ -332,8 +383,8 @@ def test_close_and_candidate_use_their_connector_tools(bound, fake_cli, endpoint
     assert admitted.status is OutcomeStatus.OK, admitted.error
     assert admitted.receipt.record_id == "cont-1"
     assert [p["name"] for p in endpoint.tool_calls] == [
-        relay.CONNECTOR_TOOLS["close"],
-        relay.CONNECTOR_TOOLS["ingest_candidate"],
+        "memory.close",
+        "memory.ingest_governed_candidate",
     ]
     assert endpoint.tool_calls[1]["arguments"] == {"candidate": candidate}
 
@@ -517,7 +568,7 @@ def test_a_token_endpoint_off_the_issuer_host_is_refused(endpoint) -> None:
 
     result = hht.HostedHookTransport(
         http=elsewhere, onboarding=ONBOARDING, credential=_credential
-    ).call("write", {"namespace": NS})
+    ).call("write", {"namespace": NS, "content": "x"})
     assert result.unavailable
     assert "not on the issuer's host" in (result.reason or "")
     assert not any(u.startswith("https://attacker") for _m, u, _h, _b in endpoint.calls)
@@ -596,6 +647,14 @@ def test_drain_settles_a_refusal_and_stops_on_a_transport_failure(endpoint, tmp_
     assert report["remaining"] == 2
     assert "URLError" in report["stopped"]
     assert len(endpoint.calls) == calls_before + 1, "a failed endpoint is asked once per drain"
+
+
+def test_drain_sends_relay_entries_to_the_hook_tool_not_write_agent(endpoint, tmp_path) -> None:
+    _owe(tmp_path, "a")
+    (entry,) = relay.pending(tmp_path)
+    assert entry["tool"] == "memory.write_agent", "the outbox still names the agent-carried tool"
+    hht.drain(tmp_path, transport=_transport(endpoint))
+    assert [p["name"] for p in endpoint.tool_calls] == ["memory.ingest"]
 
 
 def test_drain_with_an_empty_outbox_sends_nothing(endpoint, tmp_path) -> None:
