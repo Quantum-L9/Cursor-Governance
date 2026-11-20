@@ -72,7 +72,7 @@ PR_REMEDIATE=0 make pr  sole path to GitHub (gate + open_pr_after_gate.sh)
 
 There is no git commit hook. Do not run `pre-commit install`. Live hook list and toolchain pins stay in `AGENTS.md` §4–6 and [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
 
-### Workflow map (13 files under `.github/workflows/`)
+### Workflow map (14 files under `.github/workflows/`)
 
 Index only. Job tables and pin versions live in the workflow files and `AGENTS.md`.
 
@@ -85,7 +85,7 @@ Index only. Job tables and pin versions live in the workflow files and `AGENTS.m
 - `repo-hygiene.yml` — job `repo-hygiene`
 - `governance.yml` — jobs `pr`, `issue`
 - `supply-chain.yml` — jobs `license-compliance`, `dependency-review`, `cyclonedx-sbom`
-- `codeql.yml` — job `codeql` (calls `codeql-reusable.yml`)
+- `codeql.yml` — job `codeql` (calls `codeql-reusable.yml`). Pull requests and pushes to `main` use the default query suite. The config sets no `queries` and no `query-filters`, so overlay analysis can reuse the `main` database.
 - `memory-cross-repo.yml` — job `proof` (exact-head memory lifecycle against the
   wheel rebuilt from `ops/config/memory-binding.json` `source.ref`; required
   mode, never skips — see `ops/memory/README.md` "Proof")
@@ -96,6 +96,7 @@ Index only. Job tables and pin versions live in the workflow files and `AGENTS.m
 - `branch-hygiene.yml` — schedule / dispatch
 - `on-org-update.yml` — `repository_dispatch` / dispatch
 - `codeql-reusable.yml` — `workflow_call` only (not a standalone trigger)
+- `codeql-nightly.yml` — schedule / dispatch on `main` only. Runs `security-extended`. Not a pull-request check and not a required check.
 
 ### Verified exclusions (do not treat as silent skips)
 

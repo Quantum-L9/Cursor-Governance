@@ -195,6 +195,12 @@ prohibited.
   traceability, and per-iteration convergence state (head SHA, CI + CodeQL checks, active
   alerts, review threads, fixes, commit SHA, result).
 
+## Repeat query pack
+
+The first fire of a rule id is a code fix. Trace the flow and fix the earliest trust boundary. A negative test is part of that fix.
+
+A second fire of the same rule id is the trigger to add a pinned query pack. That pack runs only from `.github/workflows/codeql-nightly.yml` and `.github/codeql/codeql-config-nightly.yml`. Do not add it to `.github/codeql/codeql-config.yml`. A pack or a `queries` key on the pull-request config disables overlay analysis and forces a full-corpus scan.
+
 ## Final verdict
 
 - `GREEN_CODEQL_CLEAN_REVIEW_RESOLVED` — all confirmed in-scope alerts resolved; coverage
