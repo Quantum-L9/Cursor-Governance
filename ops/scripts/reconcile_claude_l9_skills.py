@@ -2,8 +2,12 @@
 """Reconcile L9 skills into LLM adapter discovery directories.
 
 Managed entries are per-skill symlinks into the governance SSOT
-(`skills/` == `.cursor-commands/skills`). Unmanaged consumer skills are never
-overwritten or removed. L9-named directory copies are replaced with symlinks.
+(`skills/` == `.cursor-commands/skills`). The projection is the skill register:
+every `l9-*` symlink or copied skill directory in the target is created from
+`ops/generated/skill-registry.json` and removed when the register no longer
+names it, even if the state file lost that name. Unmanaged non-`l9-*` skills
+are never overwritten or removed. L9-named directory copies of register skills
+are replaced with symlinks.
 """
 
 from __future__ import annotations
@@ -154,6 +158,24 @@ def is_l9_duplicate(name: str, destination: Path) -> bool:
     return destination.is_dir() and (destination / "SKILL.md").is_file()
 
 
+def projected_l9_names(target: Path) -> set[str]:
+    """l9-* symlinks and copied skill dirs currently mounted in a projection.
+
+    The register is the only list of L9 skills Claude Code may see. A retired
+    skill whose state-file entry was lost is still a projection of an old
+    register and has to leave, or the mount diverges from the register.
+    """
+    if not target.is_dir():
+        return set()
+    names: set[str] = set()
+    for child in target.iterdir():
+        if not child.name.startswith("l9-"):
+            continue
+        if child.is_symlink() or is_l9_duplicate(child.name, child):
+            names.add(child.name)
+    return names
+
+
 def scope_target(scope: str, workspace: Path, target_override: Path | None = None) -> Path:
     if target_override is not None:
         return target_override
@@ -252,7 +274,9 @@ def reconcile_scope(
             install_entry(source, destination, mode)
             result.created.append(name)
 
-    for stale in sorted(previous - set(desired)):
+    # On-disk l9-* mounts are part of the projection even when the state file
+    # never recorded them. Non-l9 consumer skills are not in this set.
+    for stale in sorted((previous | projected_l9_names(target)) - set(desired)):
         stale_path = target / stale
         if check:
             if stale_path.exists() or stale_path.is_symlink():

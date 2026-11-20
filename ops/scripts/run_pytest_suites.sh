@@ -42,11 +42,28 @@ if is_l9_isolate_workspace "$ROOT"; then
 fi
 bash "$ROOT/ops/scripts/ensure_gov_python.sh" "$ROOT"
 # A GitHub Actions pull_request run (Core's required `make test`) tests only the
-# PR's changed files; every other run keeps the full suite. See the helper.
+# PR's changed files. Unknown scope and L9_CI_FULL_SUITE=1 exit nonzero on a
+# pull request; they never fall through to the full suite or --profile ci.
+# Every other event keeps the non-PR profile. See the helper.
 # shellcheck source=lib/ci_pr_scope.sh
 source "$ROOT/ops/scripts/lib/ci_pr_scope.sh"
 scope_args=()
+scope_rc=0
 if scope_paths="$(l9_ci_pr_changed_files)"; then
+  scope_rc=0
+else
+  scope_rc=$?
+fi
+if [[ "$scope_rc" -ne 0 ]]; then
+  if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" || "$scope_rc" -ge 2 ]]; then
+    echo "FAIL: pull-request scope status ${scope_rc}; full suite refused" >&2
+    exit "$scope_rc"
+  fi
+elif [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" && -z "$scope_paths" ]]; then
+  echo "PR_SCOPE_UNKNOWN: no changed path remains on HEAD; full suite refused" >&2
+  exit 2
+fi
+if [[ "$scope_rc" -eq 0 ]]; then
   scope_file="$(mktemp "${TMPDIR:-/tmp}/l9-ci-scope.XXXXXX")"
   if [[ -n "$scope_paths" ]]; then
     printf '%s\n' "$scope_paths" >"$scope_file"
