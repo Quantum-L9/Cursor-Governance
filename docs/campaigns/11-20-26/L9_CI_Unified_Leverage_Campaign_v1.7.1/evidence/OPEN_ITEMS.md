@@ -17,7 +17,7 @@ is public, so rows about credentials carry counts and actions only, never locati
 | T19 | Sonar auto-import of new GitHub repositories is on, and automatic analysis is the default for new projects. That is how T18 happened. | operator-reported | operator | Turn off "Automatically import new GitHub repositories" in the Sonar organization binding. No documented API call was found. | OPEN |
 | T20 | Push-protection bypass in Cursor-Governance is "anyone with write access", so any agent with write access can bypass a blocked secret. | operator-reported | operator | Decide whether to restrict bypass. Restricting adds an approval step. | OPEN, decision |
 | T21 | Cursor-Governance is public. Its files include operational detail and campaign packs that describe unfixed weaknesses. | observed | operator | Decide whether any content is scrubbed or moved while the repository stays public. | OPEN, decision |
-| T22 | The operator intends to make CEG, EIE, Website-Bot and SEO-Bot public during development. Their secret-scanning alert counts are unknown. | operator-reported | operator | Before changing visibility, read each repository's secret-scanning count and triage it; publication exposes full history and cannot be recalled. | OPEN, precondition |
+| T22 | CEG, EIE, Website-Bot and SEO-Bot were made public on 2026-11-20 (operator, about 17:50Z). Their secret-scanning alerts were not read first; full history is now public. Their Sonar projects were set public to match. | operator-reported, observed | operator | Triage each repository's secret-scanning alerts; rotate anything real. | OPEN, P0 |
 | T23 | EIE `.gitleaks.toml` allowlists whole path classes (tests, docs, JSON, Markdown, requirements files), so a secret there passes on every event. EIE also installs an older Gitleaks binary without a checksum in two workflows, while Core pins a newer one. | lane (F2) | CTO to assign | Narrow the allowlist with a reason per entry and align the binary pin, as a lane after #366 merges. | OPEN |
 | T24 | Cursor-Governance has 11 open Dependabot vulnerabilities (3 high, 5 moderate, 3 low) and 3 open code-scanning alerts. | observed, operator-reported | CTO to assign | Triage; fix or record an exception with owner and expiry. | OPEN |
 
@@ -26,9 +26,9 @@ is public, so rows about credentials carry counts and actions only, never locati
 | ID | Item | Source | Owner | Next action | State |
 |---|---|---|---|---|---|
 | T15 | Sonar has not analyzed Cursor-Governance since #1062 merged. Zero dispatch runs exist. | lane (N1) | other CTO (Core scheduler) | Core's nightly dispatcher is plan-only and returns "apply closed" for `mode=apply`. Until it applies, Sonar coverage here is `NOT_EXECUTED`. | OPEN, reported |
-| T25 | Sonar free plan allows 50k private lines. After T18, CEG (about 89k), EIE (27k), Website-Bot (87k) and SEO-Bot (44k) are private in Sonar, so their analysis may be refused. | observed | operator | Decide per repository: paid tier, narrower scope, public project, or no Sonar. A 100k tier does not fit them. | OPEN, decision |
+| T25 | Sonar free plan allows 50k private lines. | observed | operator | Settled 2026-11-20: CEG, EIE, Website-Bot, SEO-Bot and Cursor-Governance are public on GitHub and in Sonar, so their lines are free. Revisit if any goes private again. | SETTLED |
 | T26 | Copilot pull-request review fails on quota in Cursor-Governance and EIE; the last 15 EIE runs all failed. Codex posts usage-limit notices. | observed, lane (F2) | operator | Raise or reset the limit, or switch the reviewer off. Accepted as a known red check for merge on 2026-11-20. | OPEN, decision |
-| T27 | CodeRabbit produced no review on EIE's last 12 pull requests. Whether the app is installed and whether the central config repository exists is unknown. | lane (F2) | operator | Confirm installation and the central repository (launch precondition P5). | BLOCKED |
+| T27 | CodeRabbit was never installed on Quantum-L9 (No Plan, no repositories), which is why it reviewed nothing. On 2026-11-20 the operator started the 2-week Advanced trial, installed the app on .github, CEG and EIE only, and saved an organization review policy (version 3: chill, no auto-approvals, summary in the walkthrough, exclusions only). | operator-reported | operator, CTO | Score the trial per pull request against Codex; operator decides near day 12 whether to buy Essentials. | OPEN, trial |
 | T28 | EIE's Perplexity review workflow has not run since April 2026. | lane (F2) | operator | Retire candidate. Nothing was changed. | OPEN, decision |
 
 ## Spend
@@ -38,6 +38,27 @@ is public, so rows about credentials carry counts and actions only, never locati
 | T29 | GitHub Code Quality "AI findings" scans are on in Cursor-Governance and the page says AI credits are billed per push. | operator-reported | operator | Turn off unless its findings are valued. It may share the credit pool behind T26; that is not confirmed. | OPEN, decision |
 | T30 | GitHub Code Quality runs CodeQL a second time on every pull request and push, about 6 minutes each, beside the repository's own CodeQL workflow. It overlaps with Sonar's purpose. | observed, lane (N1) | CTO | Compare unique findings from Code Quality, CodeQL and Sonar in the tool matrix; then keep or drop. | OPEN |
 | T31 | GitHub Secret Protection and Code Security are both enabled on private repositories and billed per active committer. The licence count and bill are unknown. | operator-reported | operator | Read the organization licensing page once. Public repositories are free. | UNKNOWN |
+
+| T32 | The SDK inventory reports JavaScript as `unsupported` in Cursor-Governance, so the central Semgrep path plans no JavaScript instance there. Visible, not hidden; CodeQL covers JavaScript separately. | observed (I1) | SDK owner | Decide whether the TypeScript pack is extended to JavaScript after fixture proof. | OPEN |
+| T33 | CEG's and EIE's repository `.coderabbit.yaml` lack `inheritance: true`, so they override the organization policy. EIE's sets assertive, request changes, and a summary written into the PR description that `make pr` owns, and excludes docs. | observed | lanes C1 (CEG), C2 (EIE) | Add inheritance, drop the contradicting keys, prove the effective configuration with `@coderabbitai configuration`. | OPEN, assigned |
+| T34 | Stage 1 integration, 2026-11-20: Core #283's new `tests/governance/test_ci_runtime_invariants.py` fails to import under Core's full-suite discovery (`tests/tools` shadows top-level `tools`). Main passes the same command (1075 tests). PR CI does not run that invocation; the nightly full suite would go red after merge. | observed (I1) | lane L2 | CTO REMEDIATE 283 sent. | OPEN, assigned |
+
+## Pending operator changes
+
+| ID | Change | Where | When | Why |
+|---|---|---|---|---|
+| P1 | Turn off Codex automatic pull-request review on Cognitive.Engine.Graphs. | https://chatgpt.com/codex/cloud/settings/general | After CodeRabbit has reviewed its first pull request there. | Codex posted 117 comments and 7 usage-limit notices on 2026-11-20 across six repositories; CodeRabbit takes over routine review. |
+| P2 | Keep Codex automatic review on Enrichment.Inference.Engine for the trial only. | same | Until the CodeRabbit decision. | Head-to-head comparison on the same pull requests. |
+| P3 | Turn off Codex automatic review on .github. | same | With P1. | CodeRabbit is installed there. |
+| P4 | Keep Codex for on-demand `@codex review` on pull requests that change CI workflows, permissions, or the Core and SDK contracts. Candidate lane: agents request it automatically only for those paths (change to Cursor-Governance publication rules; not started). | Cursor-Governance | After the trial. | Spend Codex credits where a second deep review pays. |
+| P5 | Turn off Copilot automatic pull-request review. | GitHub organization or repository Copilot settings | Any time. | It fails on quota on every pull request and has produced no review since 2026-11-05. |
+| P6 | Turn off "Automatically import new GitHub repositories" in the Sonar organization binding. | https://sonarcloud.io/organizations/quantum-l9/edit | Any time. | T19. |
+
+## Recorded operator decisions
+
+- 2026-11-20: merging is last. No campaign pull request is merged until the campaign has fully converged; agents never merge.
+- 2026-11-20: Cursor-Governance stays public; its open items are fixed inside the campaign.
+- 2026-11-20: the Copilot quota failure is accepted as a known red check.
 
 ## Held for the operator
 
