@@ -1,0 +1,177 @@
+status: candidate_not_admitted
+purpose: Exact scoped invariant wording and owner placement for the Unified CI campaign. Not a new L9 contract
+  or live policy.
+source_anchors:
+  canonical_repository: Quantum-L9/.github
+  canonical_sha: c788b991f2ed5f670a2d5660a7faa4e1d52f64e3
+  canonical_invariants_path: semantics/invariants.yaml
+  core_repository: Quantum-L9/l9-ci-core
+  core_sha: 3579bdc19a7f36973e4f0fe516ea5aa6c5ab9437
+  core_contract_path: .l9/governance-contract.yaml
+  sdk_repository: Quantum-L9/l9-ci-sdk
+  sdk_sha: ab8a25543bf99de4c932f1930841a1e5f2ef2f27
+  sdk_contract_path: .l9/integration-contract.yaml
+global_canonical_reuse:
+- id: L9-OWNER-001
+  application: One canonical owner for each semantic scope; consumer copy and SDK execution do not transfer
+    ownership.
+- id: L9-MONOTONIC-001
+  application: Subordinate product rules may strengthen constraints, not weaken central requirements.
+- id: L9-ASSURANCE-001
+  application: A green job is not proof of executed scan, effective enforcement or complete coverage.
+- id: L9-UNKNOWN-001
+  application: Skipped, missing, ambiguous, unavailable and unproved states remain explicit.
+- id: L9-EVIDENCE-001
+  application: SDK observations and receipts cannot grant governance or execution authority.
+- id: L9-CAPABILITY-001
+  application: Tool existence, entitlement, availability, authorization, and successful invocation are distinct.
+- id: L9-COORD-001
+  application: Tool, ruleset, configuration and CI results bind to exact governing revisions.
+- id: L9-INTEGRATION-001
+  application: Cross-owner merged state requires integrated acceptance, not component green checks alone.
+- id: L9-HARD-001
+  application: CI cost optimization cannot compensate for violation of required hard controls.
+proposed_owner_invariants:
+  Quantum-L9/l9-ci-core:
+    owner_path: .l9/governance-contract.yaml
+    owner_field: ci_runtime_invariants
+    source_revision: 3579bdc19a7f36973e4f0fe516ea5aa6c5ab9437
+    entries:
+    - id: L9-CI-CORE-001
+      title: Central control is non-delegable
+      statement: Core resolves provider requiredness and enforcement policy from SDK-detected capabilities,
+        as well as immutable tool versions, event profiles and central configuration at the evaluated revision.
+        A consumer may declare its native project facts but must not select, override, disable or shadow these
+        central decisions.
+      good: Consumer with no local scanner configuration inherits the Core-resolved tool and policy; a product-only
+        declaration is accepted.
+      bad: A consumer-local file attempts to set a weaker scanner mode, replace the provider pin or suppress
+        an organization rule; required CI refuses or ignores the override with evidence.
+    - id: L9-CI-CORE-002
+      title: Central configuration is inherited without stamp churn
+      statement: For centrally governed tools, the effective configuration is selected from reviewed Core/SDK
+        revision-bound sources at runtime, with an exact content digest. Consumer-stamped defaults are not
+        required once the owning stamp and repository-execution contracts are safely migrated; genuine product
+        settings remain product-owned.
+      good: A new Python or TypeScript repo without copied tool configs runs applicable centrally configured
+        checks; its native test/project config still works.
+      bad: Removing a formerly stamped config causes an accidental drift failure, or an unpinned downloaded
+        rule changes results between identical evaluated revisions.
+    - id: L9-CI-CORE-003
+      title: All required applicable checks must conclude truthfully
+      statement: Core must schedule every required provider/language instance selected by the SDK for the exact
+        evaluated repository revision, account for each terminal status and enforce the applicable technical
+        gate. Missing, skipped, timed-out, untrusted or unevaluated required instances cannot yield a passing
+        required check.
+      good: A Python+TypeScript fixture produces separate valid completed executions and an aggregated required
+        result.
+      bad: One language is skipped or a required provider times out while the required organization check is
+        green.
+    - id: L9-CI-CORE-004
+      title: Central promotion precedes consumer retirement
+      statement: A centrally changed tool, rulepack or enforcement policy is promoted only through pinned Core/SDK
+        compatibility, representative known-bad and known-good tests, canary execution, integrated parity evidence
+        and a reversible rollout. A consumer-local equivalent control remains until its central successor is
+        proven.
+      good: Central scanner reproduces a consumer rule finding and its negative fixture in live canary CI before
+        that consumer workflow is retired.
+      bad: A local Semgrep/CodeQL/Sonar check is deleted on static config similarity or a green SDK unit test
+        without integrated execution proof.
+    - id: L9-CI-CORE-005
+      title: Native privileged scanners retain proper trust boundaries
+      statement: Central CI must not move write-scoped SaaS, CodeQL or vendor publication credentials into
+        untrusted read-only pull-request execution. Native providers may execute at their authorized owners
+        and contribute exact-run evidence without Core or SDK impersonating their execution or authority.
+      good: A read-only PR scan and separate authorized CodeQL analysis both report real, revision-bound results
+        without exposing write tokens to PR code.
+      bad: Central PR job acquires security-events write, cloud scanner token or unrelated paid account permission
+        merely to combine reports.
+    - id: L9-CI-CORE-006
+      title: Coverage is proved at the actual enforcement boundary
+      statement: Claims of fleet-wide required CI coverage require current effective GitHub ruleset targeting,
+        branches, required-check freshness, bypass policy and execution observations for every in-scope repository.
+        Other account owners are not covered by Quantum-L9 rulesets by implication.
+      good: An eligible org repository and a separately governed cryptoxdog repository each have independent
+        verified enforcement and run evidence.
+      bad: A green workflow in one repo or a rule in the Quantum-L9 org is reported as proof that Odoo under
+        cryptoxdog is protected.
+  Quantum-L9/l9-ci-sdk:
+    owner_path: .l9/integration-contract.yaml
+    owner_field: ci_provider_invariants
+    source_revision: ab8a25543bf99de4c932f1930841a1e5f2ef2f27
+    entries:
+    - id: L9-CI-SDK-001
+      title: Repository capability selection is exhaustive and deterministic
+      statement: For one exact repository snapshot the SDK must enumerate every supported applicable language,
+        framework and provider prerequisite; it must not collapse a mixed repository into a single preferred
+        language. Unsupported or uncertain detections must remain visible.
+      good: A mixed Python+TypeScript repository selects both required scan targets, and Odoo detection recognizes
+        relevant Python and XML capabilities.
+      bad: A primary-language heuristic hides a supported second language, or malformed manifest evidence is
+        silently accepted as absence.
+    - id: L9-CI-SDK-002
+      title: Not applicable and coverage are evidence states
+      statement: The SDK must distinguish applicability, planned selection, actual invocation, completed execution,
+        analyzed paths, explicit exclusions, failed steps and missing evidence for each provider. Not-applicable
+        requires evidence of nonapplicability; skip, unsupported and unknown cannot become completed-pass.
+      good: A no-supported-code fixture has a reasoned not-applicable outcome, while a repo with a missing
+        provider executable reports incomplete/failure.
+      bad: Scanner reports zero findings after scanning zero relevant files, or the wrapper maps process skip
+        to successful completion.
+    - id: L9-CI-SDK-003
+      title: Rulepack composition is immutable and monotonic
+      statement: Every effective scanner rulepack is the reproducible composition of versioned SDK baseline,
+        applicable language/framework packs and authorized product-specific restrictions. Resolve exact rule
+        content/configuration digests; subordinate rules cannot suppress the organization baseline, and mutable
+        remote registry labels alone do not prove reproducibility.
+      good: SDK baseline plus tested Odoo and product-specific rules resolves the same rule IDs and content
+        digest on repeated runs.
+      bad: A consumer-local exclusion disables a baseline rule, or a remote registry update changes results
+        without a pinned content coordinate.
+    - id: L9-CI-SDK-004
+      title: Specialized rule behavior is preserved by falsifiable fixtures
+      statement: Before consolidating or retiring any effective scanner rule or configuration, prove its unique
+        intended behavior with at least one known-bad trigger and known-good nontrigger. Where equivalence
+        is not proven, retain the scoped owner and report the coverage gap.
+      good: EIE/CEG portable Semgrep rules and Odoo indirect SQL rules preserve positive and negative detection
+        tests after consolidation.
+      bad: A product rule is removed because its name resembles a central rule, without testing SQL taint or
+        scope exclusions.
+    - id: L9-CI-SDK-005
+      title: Native facts and unique findings survive normalization
+      statement: SDK observations preserve exact provider identity, original rule IDs, source revision, report
+        provenance, scope and failures. Deduplication may correlate findings but may not erase a distinct native
+        result, unsupported severity, independent source or unique coverage; SDK emits no final Assurance verdict.
+      good: The same vulnerability reported by Semgrep and CodeQL remains traceable to both native reports
+        while presented as correlated evidence.
+      bad: A distinct native finding disappears during dedup, a skipped CodeQL scan is described as SDK-executed,
+        or a technical gate is labeled final Assurance.
+global_new_invariants_proposed: []
+non_global_dispositions:
+  paid_tool_roi: Tool-value acceptance evidence under TOOL_VALUE.md; no cross-domain constitutional invariant
+    or unapproved purchase mandate.
+  native_product_tests: Actual project test commands and domain-specific requirements remain in product-owned
+    contracts, not Core/SDK policy.
+  codeql: Existing CodeQL native owner retained; campaign does not create a new CodeQL owner or duplicate its
+    configuration.
+admission_rule: Validate owner schema/contracts/tests and current target SHA; publish reviewable owner PRs.
+  This campaign ZIP does not itself admit or enforce these invariants.
+
+adr_binding:
+  Quantum-L9/l9-ci-core:
+    docs/adr/0001-top-down-ci-control-and-runtime-inheritance.md:
+    - L9-CI-CORE-001
+    - L9-CI-CORE-002
+    - L9-CI-CORE-003
+    - L9-CI-CORE-006
+    docs/adr/0002-governed-promotion-native-provider-boundaries-and-cost.md:
+    - L9-CI-CORE-004
+    - L9-CI-CORE-005
+    - L9-CI-CORE-006
+  Quantum-L9/l9-ci-sdk:
+    docs/adr/0020-all-applicable-capabilities-and-lossless-provider-evidence.md:
+    - L9-CI-SDK-001
+    - L9-CI-SDK-002
+    - L9-CI-SDK-003
+    - L9-CI-SDK-004
+    - L9-CI-SDK-005
