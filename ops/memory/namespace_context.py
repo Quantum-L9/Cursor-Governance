@@ -44,6 +44,12 @@ METHOD_REGISTRY = "registry"
 METHOD_EXPLICIT = "explicit_request"
 METHOD_AMBIGUOUS = "ambiguous"
 METHOD_UNRESOLVED = "unresolved"
+#: A repository with an origin remote but no registry entry (operator decision
+#: 2026-11-20: memory works in any checked-out repository). The namespace is
+#: derived deterministically from ``owner/name``; it is a request, never a grant.
+METHOD_DERIVED = "derived_from_remote"
+#: The memory store's namespace grammar (l9_graphite_memory projection names).
+_NAMESPACE_GRAMMAR = re.compile(r"^[a-z][a-z0-9-]{0,61}$")
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +79,27 @@ def aliases_for(registry: Mapping[str, Any], slug: str) -> tuple[str, ...]:
     config = (registry.get("repos") or {}).get(slug) or {}
     names = [config.get("github"), *(config.get("github_aliases") or [])]
     return tuple(str(name) for name in names if name)
+
+
+def legacy_namespaces_for(registry: Mapping[str, Any], slug: str) -> tuple[str, ...]:
+    """Namespaces a renamed slug wrote under before; read so history stays reachable."""
+
+    config = (registry.get("repos") or {}).get(slug) or {}
+    return tuple(str(n) for n in config.get("legacy_namespaces") or [] if str(n).strip())
+
+
+def derive_namespace(identity: str | None) -> str | None:
+    """A namespace for an unregistered repository, from its ``owner/name``.
+
+    Lowercase, every run of other characters becomes one hyphen, owner and name
+    joined by a hyphen (``acme/My_Repo`` -> ``acme-my-repo``). ``None`` when the
+    result does not fit the memory store's grammar.
+    """
+
+    if not identity or "/" not in identity:
+        return None
+    candidate = re.sub(r"[^a-z0-9]+", "-", identity.lower()).strip("-")
+    return candidate if _NAMESPACE_GRAMMAR.match(candidate) else None
 
 
 def match_registry_slugs(
@@ -289,11 +316,34 @@ def resolve_namespace_context(
             "to request one"
         )
     else:
-        warnings.append("no repository match in the namespace registry")
+        derived = derive_namespace(identity) if git_root else None
+        repos = registry.get("repos") or {}
+        # A derived namespace never shadows one that already means something:
+        # a registered slug, a legacy namespace a renamed slug still reads
+        # (Quantum-L9/github must not write into .github's quantum-l9-github
+        # history), the shared read fan-in, or the legacy workspace group. Same
+        # exclusion as l9_graphite_memory.group_resolver (Quantum-L9/l9-graphiti-memory#142).
+        reserved = set(repos.keys()) | set(shared) | {str(registry.get("workspace_group") or "")}
+        for slug in repos:
+            reserved.update(legacy_namespaces_for(registry, slug))
+        if derived and derived not in forbidden and derived not in reserved:
+            method = METHOD_DERIVED
+            write_hint = derived
+            warnings.append(
+                f"repository {identity} is not in the namespace registry; "
+                f"namespace {derived!r} is derived from its origin remote"
+            )
+        else:
+            warnings.append("no repository match in the namespace registry")
 
     read_hints: list[str] = []
     if write_hint:
         read_hints.append(write_hint)
+    if resolved_slug:
+        # A renamed slug keeps its history readable under the old namespace.
+        for legacy in legacy_namespaces_for(registry, resolved_slug):
+            if legacy not in read_hints and legacy not in forbidden:
+                read_hints.append(legacy)
     elif len(candidates) == 1:
         # Identity is plausible but the request contradicted it: still a read hint.
         read_hints.append(candidates[0])
@@ -378,19 +428,138 @@ def locate_clone_for_namespace(
     return None
 
 
+#: Exclusion reason for a second checkout of an already-selected repository.
+DROPPED_DUPLICATE_NAMESPACE = "duplicate_namespace"
+
+
+@dataclass(frozen=True)
+class WorkspaceNamespaces:
+    """Per-repository write namespaces for a workspace that may hold several.
+
+    A namespace identifies a REPOSITORY, never a container. A cloud container
+    root (several checkouts side by side) is correctly ambiguous for one write
+    hint, so callers that report readiness must resolve each repository root
+    instead. Root selection is the shared ``select_workspace_roots`` with the
+    same cap and predicate the SessionStart prefetch hydrates under, so this
+    report and the hydrated set cannot disagree.
+    """
+
+    workspace: str
+    multi_repo: bool
+    namespaces: tuple[tuple[str, str], ...]
+    excluded: tuple[tuple[str, str], ...]
+
+    @property
+    def resolved(self) -> bool:
+        return bool(self.namespaces)
+
+
+def select_namespace_roots(
+    workspace: str | Path,
+    *,
+    cap: int | None = None,
+    registry: Mapping[str, Any] | None = None,
+):
+    """The repository roots in memory scope for ``workspace``: one per namespace.
+
+    The single selection both SessionStart hydration
+    (``memory_prefetch._hydration_selection``) and the bootstrap readiness
+    report use, so what is reported in scope is exactly what is hydrated.
+    It is the shared ``select_workspace_roots`` with a predicate that admits a
+    root only when it resolves to a write namespace of its OWN that no earlier
+    root already claimed. A second checkout of one repository (a linked
+    worktree beside its clone) must not take a slot under the cap and push a
+    distinct repository out of scope; it is returned in ``dropped`` as
+    ``duplicate_namespace``. A resolver fault never drops a root.
+    """
+
+    from ops.scripts.lib.workspace_roots import (  # noqa: PLC0415
+        DEFAULT_MAX_ROOTS,
+        RootSelection,
+        select_workspace_roots,
+    )
+
+    path = Path(workspace).expanduser().resolve()
+    reg = load_registry() if registry is None else registry
+    claimed: set[str] = set()
+    duplicates: list[tuple[Path, str]] = []
+
+    def _eligible(root: Path) -> bool:
+        # Broad by design: a resolver fault must not drop a root.
+        # nosemgrep: l9.baseline.python.broad-except
+        try:
+            namespace = resolve_namespace_context(root, registry=reg, env={}).write_namespace_hint
+        except Exception:  # noqa: BLE001
+            return True
+        if not namespace:
+            return False
+        if namespace in claimed:
+            duplicates.append((root, DROPPED_DUPLICATE_NAMESPACE))
+            return False
+        claimed.add(namespace)
+        return True
+
+    selection = select_workspace_roots(
+        path,
+        cap=DEFAULT_MAX_ROOTS if cap is None else cap,
+        predicate=_eligible,
+    )
+    duplicate_roots = {root for root, _ in duplicates}
+    dropped = [item for item in selection.dropped if item[0] not in duplicate_roots]
+    return RootSelection(selection.selected, dropped + duplicates)
+
+
+def resolve_workspace_namespaces(
+    workspace: str | Path,
+    *,
+    cap: int | None = None,
+    registry: Mapping[str, Any] | None = None,
+) -> WorkspaceNamespaces:
+    """Write namespace per repository root in memory scope for ``workspace``.
+
+    The roots are ``select_namespace_roots``: the same set SessionStart
+    hydrates. A single repository yields its own namespace; a container
+    yields one entry per selected repository, and every excluded child with
+    the rule that excluded it (``cap``, ``no_namespace``,
+    ``duplicate_namespace``).
+    """
+
+    from ops.scripts.lib.workspace_roots import is_repository  # noqa: PLC0415
+
+    path = Path(workspace).expanduser().resolve()
+    reg = load_registry() if registry is None else registry
+    selection = select_namespace_roots(path, cap=cap, registry=reg)
+    pairs = [
+        (str(root), ns)
+        for root in selection.selected
+        if (ns := resolve_namespace_context(root, registry=reg, env={}).write_namespace_hint)
+    ]
+    return WorkspaceNamespaces(
+        workspace=str(path),
+        multi_repo=not is_repository(path) and bool(pairs),
+        namespaces=tuple(pairs),
+        excluded=tuple((str(root), reason) for root, reason in selection.dropped),
+    )
+
+
 __all__ = [
+    "DROPPED_DUPLICATE_NAMESPACE",
     "ENV_NAMESPACE_REQUEST",
     "METHOD_AMBIGUOUS",
+    "METHOD_DERIVED",
     "METHOD_EXPLICIT",
     "METHOD_REGISTRY",
     "METHOD_UNRESOLVED",
     "REGISTRY_PATH",
     "NamespaceContext",
+    "WorkspaceNamespaces",
     "aliases_for",
     "child_git_roots",
+    "derive_namespace",
     "forbidden_namespaces",
     "git_remote_url",
     "git_toplevel",
+    "legacy_namespaces_for",
     "load_registry",
     "locate_clone_for_namespace",
     "match_registry_slugs",
@@ -398,5 +567,7 @@ __all__ = [
     "repository_matches",
     "repository_state_digest",
     "resolve_namespace_context",
+    "resolve_workspace_namespaces",
+    "select_namespace_roots",
     "shared_read_namespaces",
 ]

@@ -113,49 +113,25 @@ agents:
     binding_status: active
   claude-code:
     actor_ref: l9.actor-registry/global@1#claude-code
+    # Operator decision 2026-11-20: claude-code has exactly two surfaces.
+    # claude-code-web is every hosted cloud session (any remote_* entrypoint,
+    # phone included); claude-code-cli is the local CLI (also inside an IDE).
+    # claude-code-desktop / claude-code-ide / claude-code-mobile are drift and
+    # are not bound here.
     surface_refs:
       - l9.surface-registry/global@1#claude-code-cli
       - l9.surface-registry/global@1#claude-code-web
-      - l9.surface-registry/global@1#claude-code-mobile
     user_id: claude_code_agent
     principal_id: claude-code-memory-client
     token_env: L9_MEMORY_TOKEN__CLAUDE_CODE
     role: implementer
+    # Operator decision 2026-11-20: memory works in every repository a
+    # Claude Code session checks out, registered or not (an unregistered
+    # repository's namespace is derived from its origin remote). The grant
+    # matches Cursor's. Forbidden namespaces (main, default, test, empty)
+    # stay refused by namespace resolution; memory still decides admission.
     assigned_groups:
-      - cursor-governance
-      - l9-graphiti-memory
-      - l9-node-template
-      # RECON-0 allowlist (2026-10-12): bounded write-grant expansion for this
-      # actor only. Finite list, no wildcard, role unchanged.
-      - quantum-l9-github
-      - cognitive-engine-graphs
-      - constellation-gate
-      - enrichment-inference-engine
-      - gate-sdk
-      - ideaos
-      - seo-bot
-      - splitwisely-ai
-      - website-bot
-      - l9-assurance
-      - l9-campaign-execution
-      - l9-ci-core
-      - l9-ci-debt-intelligence
-      - l9-ci-debt-lsp
-      - l9-ci-debt-resolver
-      - l9-ci-sdk
-      - l9-cognitive-runtime
-      - l9-constellation-topology
-      - l9-harness
-      - l9-learning-foundry
-      - l9-meta-injector
-      - l9-observability-core
-      - pr-repair
-      - l9-repo-template
-      - l9-revops
-      - l9-semantic-compiler-engine
-      - l9-state
-      - l9-wip
-      - ib-odoo-19
+      - "*"
     adapter: claude-code
     binding_status: active
   manus:

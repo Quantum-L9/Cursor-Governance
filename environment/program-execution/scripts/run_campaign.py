@@ -3216,7 +3216,7 @@ def _peer_identity() -> tuple[str, str, str | None]:
     # execution surfaces; the surface is derived by the one resolver
     # (ops/memory/agent_identity.py) from the remaining host markers. An
     # entrypoint that does not select an assigned surface has no surface and
-    # fails below rather than being labelled desktop, web, or mobile.
+    # fails below rather than being guessed (only cli and web exist).
     identity = _agent_identity_module()
     claude_actor = identity.CLAUDE_ACTOR
     claude_env = {k: v for k, v in os.environ.items() if k != "CURSOR_AGENT"}
@@ -3229,7 +3229,8 @@ def _peer_identity() -> tuple[str, str, str | None]:
     coarse = detect_surface(os.environ)
     aliases = {
         "claude-cli": (claude_actor, identity.CLAUDE_CLI_SURFACE),
-        "claude-mobile": (claude_actor, identity.CLAUDE_MOBILE_SURFACE),
+        "claude-mobile": (claude_actor, identity.CLAUDE_WEB_SURFACE),
+        "claude-web": (claude_actor, identity.CLAUDE_WEB_SURFACE),
         "cursor": ("cursor", "cursor-ide"),
         "cursor-ide": ("cursor", "cursor-ide"),
         "codex": ("codex", "codex-cloud"),
@@ -7114,6 +7115,65 @@ def _require_source_binding(source_path: Path, blueprint_path: Path, front: dict
         )
 
 
+def _bind_rendered_admission_evidence(run: _CampaignRun) -> dict[str, Any]:
+    """Bind collect_at_admission rows before bootstrap freezes the catalog.
+
+    This is not default_admit. The rendered path already stamped acceptance.
+    """
+    blueprint = run.blueprint
+    catalog_path = blueprint / "EVIDENCE_CATALOG.yaml"
+    if not catalog_path.is_file() or yaml is None:
+        return {"bound": []}
+    catalog = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
+    pending = [
+        item
+        for item in (catalog.get("evidence") or [])
+        if isinstance(item, dict)
+        and item.get("freshness") == "collect_at_admission"
+        and item.get("status") == "planned"
+    ]
+    if not pending:
+        return {"bound": []}
+    run.ensure_target_checkout_once()
+    measured = measure_admission_evidence(Path(run.target_worktree))
+    if not measured.get("available"):
+        raise CampaignError(
+            f"cannot measure admission evidence for {run.campaign_id}: "
+            f"{run.target_worktree} is not a readable git checkout",
+            error_code="ADMISSION_EVIDENCE",
+        )
+    revision = str(measured["revision"])
+    ops = _load_script("blueprint_ops_stamp", PE_ROOT / "scripts/blueprint_ops.py")
+    manifest_path = blueprint / "MANIFEST.yaml"
+    previous = ops.load_yaml(manifest_path) if manifest_path.is_file() else {}
+    bound_source = ""
+    if isinstance(previous, dict):
+        bound_source = str(previous.get("source_sha256") or "").strip()
+    collect = _load_script("collect_evidence", COLLECT_EVIDENCE)
+    bound: list[str] = []
+    for item in pending:
+        evidence_id = str(item.get("id") or "")
+        try:
+            collect.collect_evidence(
+                blueprint,
+                evidence_id=evidence_id,
+                revision=revision,
+                digest=None,
+                notes="rendered-plan admission bind before claim",
+                producer="make-campaign",
+                expires_at=None,
+            )
+        except RuntimeError as exc:
+            raise CampaignError(str(exc), error_code="ADMISSION_EVIDENCE") from exc
+        bound.append(evidence_id)
+    if bound_source:
+        rewritten = ops.load_yaml(manifest_path)
+        if isinstance(rewritten, dict):
+            rewritten["source_sha256"] = bound_source
+            ops.dump_yaml(manifest_path, rewritten)
+    return {"bound": bound, "revision": revision}
+
+
 def _run_rendered_plan(
     intent_path: Path,
     *,
@@ -7132,8 +7192,9 @@ def _run_rendered_plan(
 ) -> CampaignReport:
     """Validate the blueprint /l9-plan already rendered, then start work.
 
-    stack_proof, plan_window, a second compile, check_launchability,
-    admission_evidence, and default_admit do not run on this path.
+    stack_proof, plan_window, a second compile, check_launchability, and
+    default_admit do not run on this path. Evidence marked
+    collect_at_admission is bound before bootstrap freezes the catalog.
     """
     source_path, blueprint, document = _require_rendered_plan(intent_path)
     causality = _load_script(
@@ -7232,6 +7293,9 @@ def _run_rendered_plan(
     )
     log(f"rendered plan {intent_path}")
     log(f"campaign id: {campaign_id}")
+    _bind_rendered_admission_evidence(run)
+    run.accepted_blueprint_inventory = blueprint_byte_inventory(run.blueprint)
+    run.compile_generation = blueprint_fingerprint(run.blueprint)
     return _stage_runtime(run)
 
 

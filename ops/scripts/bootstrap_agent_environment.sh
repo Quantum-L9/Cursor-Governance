@@ -510,19 +510,40 @@ for pinned in L9_MEMORY_NAMESPACE_REQUEST GRAPHITI_GROUP_ID; do
 done
 # The namespace context (ops/memory/namespace_context.py) is the sole identity
 # producer since stage C2; it hints, memory authorizes. No provider is called.
-NAMESPACE_RESOLVE=$(cd "$WORKSPACE" && PYTHONPATH="$GOV_DIR${PYTHONPATH:+:$PYTHONPATH}" "$GOV_PY" -c '
-import json, sys
+# A namespace identifies a REPOSITORY. A cloud container root holds several
+# checkouts side by side and is correctly ambiguous for ONE write hint, so it is
+# resolved per repository root with the same selector, cap and predicate the
+# SessionStart prefetch hydrates under (resolve_workspace_namespaces).
+NAMESPACE_REPORT=$(cd "$WORKSPACE" && PYTHONPATH="$GOV_DIR${PYTHONPATH:+:$PYTHONPATH}" "$GOV_PY" -c '
+import sys
 from pathlib import Path
-from ops.memory.namespace_context import resolve_namespace_context
-c = resolve_namespace_context(Path(sys.argv[1]))
-print(json.dumps({"namespace": c.write_namespace_hint or "", "method": c.method}))
+from ops.memory.namespace_context import resolve_namespace_context, resolve_workspace_namespaces
+ws = Path(sys.argv[1])
+found = resolve_workspace_namespaces(ws)
+if not found.multi_repo:
+    c = resolve_namespace_context(ws)
+    print("single\t" + (c.write_namespace_hint or "") + "\t" + c.method)
+else:
+    names = ", ".join(ns for _, ns in found.namespaces)
+    excluded = ", ".join(f"{Path(p).name} ({why})" for p, why in found.excluded)
+    print(f"multi\t{names}\t{len(found.namespaces)}\t{excluded}")
 ' "$WORKSPACE" 2>/dev/null)
-GROUP_RESOLVED=$(printf '%s' "$NAMESPACE_RESOLVE" | sed -n 's/.*"namespace"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
-GROUP_METHOD=$(printf '%s' "$NAMESPACE_RESOLVE" | sed -n 's/.*"method"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
-if [ -n "$GROUP_RESOLVED" ]; then
-  say "memory namespace hint for this workspace: $GROUP_RESOLVED (via ${GROUP_METHOD:-unknown})"
+NS_KIND=$(printf '%s' "$NAMESPACE_REPORT" | cut -f1)
+if [ "$NS_KIND" = "multi" ]; then
+  NS_NAMES=$(printf '%s' "$NAMESPACE_REPORT" | cut -f2)
+  NS_COUNT=$(printf '%s' "$NAMESPACE_REPORT" | cut -f3)
+  NS_EXCLUDED=$(printf '%s' "$NAMESPACE_REPORT" | cut -f4)
+  say "memory namespaces for multi-repo workspace $WORKSPACE ($NS_COUNT, one per repository): $NS_NAMES"
+  if [ -n "$NS_EXCLUDED" ]; then say "  not in scope this session: $NS_EXCLUDED"; fi
+  say "  writes name one repository: --group-id <namespace> or run from that checkout"
 else
-  warn "memory namespace unresolved for $WORKSPACE — memory hydrate/close will report NAMESPACE_UNRESOLVED"
+  GROUP_RESOLVED=$(printf '%s' "$NAMESPACE_REPORT" | cut -f2)
+  GROUP_METHOD=$(printf '%s' "$NAMESPACE_REPORT" | cut -f3)
+  if [ -n "$GROUP_RESOLVED" ]; then
+    say "memory namespace hint for this workspace: $GROUP_RESOLVED (via ${GROUP_METHOD:-unknown})"
+  else
+    warn "memory namespace unresolved for $WORKSPACE — memory hydrate/close will report NAMESPACE_UNRESOLVED"
+  fi
 fi
 
 # Sonar project identity. The canonical consumer

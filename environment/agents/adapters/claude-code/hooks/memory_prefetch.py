@@ -61,7 +61,7 @@ for _path in (_GOV_LIB, _GOV_SCRIPTS, _GOV_AUTONOMY):
         sys.path.insert(0, str(_path))
 
 from surface_detect import is_claude_gate_surface  # noqa: E402
-from workspace_roots import DROPPED_CAP  # noqa: E402
+from workspace_roots import DEFAULT_MAX_ROOTS, DROPPED_CAP  # noqa: E402
 from workspace_roots import select_workspace_roots as _shared_select_workspace_roots  # noqa: E402
 
 
@@ -83,7 +83,9 @@ def prefetch_agent_id(env: dict[str, str] | None = None) -> str:
 #: Cloud containers put several repositories side by side. The roots in scope
 #: are capped rather than unbounded — and the cap is reported in the emitted
 #: text, because a silent truncation reads as "everything was covered".
-_MAX_HYDRATION_ROOTS = 6
+#: One source: the shared selector's default (workspace_roots.DEFAULT_MAX_ROOTS),
+#: so this hook and the bootstrap report can never disagree on the cap.
+_MAX_HYDRATION_ROOTS = DEFAULT_MAX_ROOTS
 
 
 def _repo_count(workspace: Path) -> int:
@@ -125,12 +127,27 @@ def _hydration_roots(workspace: Path) -> list[Path]:
 
 
 def _hydration_selection(workspace: Path):
-    """`_hydration_roots`, keeping the roots it dropped and why."""
-    return _shared_select_workspace_roots(
-        workspace,
-        cap=_MAX_HYDRATION_ROOTS,
-        predicate=_resolves_to_own_namespace,
-    )
+    """`_hydration_roots`, keeping the roots it dropped and why.
+
+    One selection for hydration and for the bootstrap readiness report
+    (``namespace_context.select_namespace_roots``), so a repository is never
+    reported in scope without being hydrated. It admits one root per
+    namespace: a second checkout of one repository never takes a slot under
+    the cap. Falls back to the own-namespace predicate alone only when the
+    shared selector cannot be imported.
+    """
+    # Broad by design: an import fault must not empty the selection.
+    # nosemgrep: l9.baseline.python.broad-except
+    try:
+        from ops.memory.namespace_context import select_namespace_roots
+
+        return select_namespace_roots(workspace, cap=_MAX_HYDRATION_ROOTS)
+    except Exception:  # noqa: BLE001
+        return _shared_select_workspace_roots(
+            workspace,
+            cap=_MAX_HYDRATION_ROOTS,
+            predicate=_resolves_to_own_namespace,
+        )
 
 
 def _dropped_summary(dropped: list[tuple[Path, str]]) -> str:
@@ -138,7 +155,8 @@ def _dropped_summary(dropped: list[tuple[Path, str]]) -> str:
     if not dropped:
         return ""
     by_cap = [p.name for p, reason in dropped if reason == DROPPED_CAP]
-    by_ns = [p.name for p, reason in dropped if reason != DROPPED_CAP]
+    by_dup = [p.name for p, reason in dropped if reason == "duplicate_namespace"]
+    by_ns = [p.name for p, reason in dropped if reason not in (DROPPED_CAP, "duplicate_namespace")]
     parts = []
     if by_cap:
         parts.append(
@@ -147,6 +165,8 @@ def _dropped_summary(dropped: list[tuple[Path, str]]) -> str:
         )
     if by_ns:
         parts.append(f"no namespace of their own: {', '.join(by_ns)}")
+    if by_dup:
+        parts.append(f"second checkout of a repository already in scope: {', '.join(by_dup)}")
     return "; ".join(parts)
 
 
