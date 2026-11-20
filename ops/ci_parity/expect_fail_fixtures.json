@@ -37,6 +37,9 @@
         },
         "canary/ci_ul/override_ignored_dir/central_rule_bad_ignored.py": {
           "bandit": ["B602"]
+        },
+        "canary/ci_ul/biome_bad.json": {
+          "biome": ["format"]
         }
       }
     }
