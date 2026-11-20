@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   codeql:
-    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@a01485a4a3c16a8c78012b15d2a11d48e1836ed1 # retargeted in the pin commit
+    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@52d87ce2e217c16a96f0ef131f4da097ef7cd5e2 # security-extended; action v4.39.3
     with:
       config-file: ./.github/codeql/codeql-config-nightly.yml
     permissions:

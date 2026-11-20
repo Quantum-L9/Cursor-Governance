@@ -12,7 +12,7 @@
 # The reusable workflow auto-detects the repo's languages. Delete any pre-existing
 # `.github/codeql/codeql-config.yml` in the target repo (config is centralized).
 
-name: "CodeQL (security + code quality)"
+name: "CodeQL (default suite)"
 
 on:
   push:
@@ -23,8 +23,6 @@ on:
       - "**/*.md"
       - "docs/**"
       - "**/*.mdc"
-  schedule:
-    - cron: "24 3 * * 1"     # weekly, Monday 03:24 UTC
   workflow_dispatch: {}
 
 permissions:
@@ -34,7 +32,9 @@ permissions:
 
 jobs:
   codeql:
-    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@main
+    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@52d87ce2e217c16a96f0ef131f4da097ef7cd5e2
+    with:
+      config-file: Quantum-L9/Cursor-Governance/.github/codeql/codeql-config.yml@52d87ce2e217c16a96f0ef131f4da097ef7cd5e2
     permissions:
       contents: read
       security-events: write

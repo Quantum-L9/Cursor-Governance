@@ -38,7 +38,7 @@ permissions:
 
 jobs:
   codeql:
-    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@a01485a4a3c16a8c78012b15d2a11d48e1836ed1  # CodeQL init+analyze v4.37.9
+    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@52d87ce2e217c16a96f0ef131f4da097ef7cd5e2  # default suite; action v4.39.3
     with:
       # Override the reusable workflow's remote @main default: this repo IS
       # Cursor-Governance, so the config file already sits in the checked-out

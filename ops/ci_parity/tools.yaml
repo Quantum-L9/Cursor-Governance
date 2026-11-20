@@ -23,17 +23,17 @@ cache_root: ~/.cache/l9-ci-parity
 
 tools:
   codeql:
-    version: 2.27.0
+    version: 2.27.4
     method: release_archive
-    url: https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.27.0/codeql-bundle-linux64.tar.gz
-    sha256: 8e870433e5c80d0e916c3c1aa9005fc88aab990bcdcc649fade9dfc4d7e94305
+    url: https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.27.4/codeql-bundle-linux64.tar.gz
+    sha256: 89ed56c8ec6bfccef6a0d2e7fe86da0469ca24b4db08b88016ec134b942c17a4
     binary: codeql/codeql
     version_cmd: [version, --format=terse]
-    expect: 2.27.0
+    expect: 2.27.4
     ci_ref:
       path: .github/workflows/codeql.yml
-      contains: a01485a4a3c16a8c78012b15d2a11d48e1836ed1
-      observed: codeql-action v4.37.9 cdf488f5 runs CLI 2.27.0 (PR #658 CI log, 2026-09-24)
+      contains: 52d87ce2e217c16a96f0ef131f4da097ef7cd5e2
+      observed: codeql-action v4.39.3 33d7b85d defaults.json pins CLI 2.27.4; linux64 checksum from the bundle release
   actionlint:
     version: 1.7.12
     method: release_archive
