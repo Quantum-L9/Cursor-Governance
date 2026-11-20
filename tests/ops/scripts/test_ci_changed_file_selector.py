@@ -10,6 +10,7 @@ SCRIPTS = ROOT / "ops" / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
+import run_python_test_suites as suite_runner  # noqa: E402
 import select_pr_pytest_paths as selector  # noqa: E402
 from run_python_test_suites import (  # noqa: E402
     _load_json,
@@ -20,6 +21,7 @@ from run_python_test_suites import (  # noqa: E402
 )
 from select_pr_pytest_paths import (  # noqa: E402
     REGISTRY_PATH,
+    classify_pr_scope,
     infer_test_path,
     select_pr_pytest_paths,
 )
@@ -35,7 +37,12 @@ def test_workflow_scope_exports_files_and_test_suite_does_not_recall_gh() -> Non
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "files: ${{ steps.decide.outputs.files }}" in text
     assert "files_unusable: ${{ steps.decide.outputs.files_unusable }}" in text
-    assert "fail open to --profile ci" in text
+    assert "fail open" not in text
+    assert "PR_SCOPE_UNKNOWN" in text
+    assert "POLICY_PR_DEEP_FORBIDDEN: --profile ci" in text
+    assert "POLICY_PR_DEEP_FORBIDDEN: L9_CI_FULL_SUITE=1" in text
+    assert "name: Test Suite" in text
+    assert "name: Lint and Type Check" in text
     test_block = text.split("name: Test Suite", 1)[1]
     assert 'gh api "repos/' not in test_block
     assert "--changed-file" in test_block
@@ -77,6 +84,20 @@ def test_test_suite_environment_is_owned_by_ensure_gov_python() -> None:
     assert "profile=local" in active_text
     assert "profile=ci" in active_text
     assert 'gh api "repos/' not in active_text
+
+
+def test_required_check_names_stay() -> None:
+    assert "name: Test Suite" in WORKFLOW.read_text(encoding="utf-8")
+    assert "name: Lint and Type Check" in WORKFLOW.read_text(encoding="utf-8")
+    assert "name: Root-file append-only gate" in (
+        ROOT / ".github" / "workflows" / "root-file-protection.yml"
+    ).read_text(encoding="utf-8")
+    governance = (ROOT / ".github" / "workflows" / "governance-self-check.yml").read_text(
+        encoding="utf-8"
+    )
+    hygiene = (ROOT / ".github" / "workflows" / "repo-hygiene.yml").read_text(encoding="utf-8")
+    assert "name: governance-self-check" in governance
+    assert "name: repo-hygiene" in hygiene
 
 
 def test_runner_help_names_local_and_pull_request() -> None:
@@ -169,6 +190,41 @@ def test_selected_skill_test_does_not_run_skill_self_tests() -> None:
 
 def test_markdown_only_file_list_is_empty_mapped_set() -> None:
     assert select_pr_pytest_paths(["README.md", "docs/plans/x.plan.md"]) == []
+
+
+def test_profile_ci_and_full_suite_override_are_refused_on_pull_request(monkeypatch) -> None:
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
+    monkeypatch.delenv("L9_CI_FULL_SUITE", raising=False)
+    assert suite_runner.main(["--profile", "ci"]) == 2
+    monkeypatch.setenv("L9_CI_FULL_SUITE", "1")
+    assert suite_runner.main(["--profile", "local"]) == 2
+
+
+def test_empty_pull_request_scope_exits_nonzero(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
+    monkeypatch.delenv("L9_CI_FULL_SUITE", raising=False)
+    changed = tmp_path / "changed.txt"
+    changed.write_text("", encoding="utf-8")
+    assert suite_runner.main(["--profile", "local", "--changed-file", str(changed)]) == 2
+
+
+def test_scope_classification_never_selects_the_full_suite() -> None:
+    status, paths = classify_pr_scope(["README.md"])
+    assert status == "CRITICAL_ONLY"
+    assert paths == []
+    status, paths = classify_pr_scope(["ops/scripts/select_pr_pytest_paths.py"])
+    assert status == "SELECTED"
+    assert paths
+    assert "." not in paths
+    status, paths = classify_pr_scope([])
+    assert status == "UNKNOWN"
+    assert paths == []
+    status, paths = classify_pr_scope(["-k=all"])
+    assert status == "UNKNOWN"
+    assert paths == []
+    status, paths = classify_pr_scope(["../outside.py"])
+    assert status == "UNKNOWN"
+    assert paths == []
 
 
 def test_suite_env_strips_inherited_ceremony_knobs(monkeypatch) -> None:
