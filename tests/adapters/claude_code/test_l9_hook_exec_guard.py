@@ -299,3 +299,43 @@ def test_extension_environment_runs_memory_gate(tmp_path: Path) -> None:
     assert "skipped" not in proc.stderr.lower()
     assert not _denied(proc)
     assert GATE in run_log.read_text(encoding="utf-8")
+
+
+def test_real_memory_gate_evaluates_an_extension_session(monkeypatch) -> None:
+    """The real gate must read the event when the extension runtime is live.
+
+    The launcher test records a stub interpreter. This one imports the gate:
+    a Cursor host marker plus a Claude runtime reaches event evaluation, and a
+    Cursor host with no Claude runtime still returns before the event.
+    """
+    import importlib
+    import sys
+
+    sys.path.insert(0, str(HOOK.parent))
+    sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
+    import memory_gate
+
+    importlib.reload(memory_gate)
+    seen: dict[str, bool] = {}
+
+    def _load(_stream: object) -> None:
+        seen["event"] = True
+        raise json.JSONDecodeError("marker", "", 0)
+
+    monkeypatch.setattr(memory_gate.json, "load", _load)
+    for key in (
+        "CLAUDECODE",
+        "CLAUDE_CODE_ENTRYPOINT",
+        "CLAUDE_CODE_SESSION_ID",
+        "CLAUDE_CODE_REMOTE",
+    ):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("CURSOR_AGENT", "1")
+    assert memory_gate.main() == 0
+    assert "event" not in seen
+
+    for key, value in EXTENSION.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "claude-vscode")
+    assert memory_gate.main() == 0
+    assert seen.get("event") is True

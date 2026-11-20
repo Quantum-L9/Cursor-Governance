@@ -128,14 +128,16 @@ def main() -> int:
     # Deliberately NO ENFORCEMENT-off escape hatch.
     # Cursor loads .claude/settings.json, which sets L9_GOVERNANCE_SURFACE to
     # claude-code and registers this gate. That string is not a Claude process.
-    # Enforce only when a Claude runtime marker is present, and never when this
-    # process is Cursor. Otherwise a Cursor write waits on memory_prefetch.py,
-    # which Cursor SessionStart does not run.
+    # Enforce only when a Claude runtime marker is present. A Cursor host
+    # marker is not a veto: the claude-vscode extension runs the CLI inside
+    # Cursor, so the same process carries both. A projected
+    # L9_GOVERNANCE_SURFACE without a live runtime is still Cursor, and this
+    # gate stays out of that write.
     try:
-        from surface_detect import claude_runtime_present, cursor_host_present
+        from surface_detect import claude_runtime_present
     except ImportError:
         return 0
-    if cursor_host_present() or not claude_runtime_present():
+    if not claude_runtime_present():
         return 0
 
     try:
