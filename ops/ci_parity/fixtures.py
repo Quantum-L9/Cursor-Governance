@@ -45,10 +45,12 @@ class FixtureManifestError(ValueError):
 
 class FindingLike(Protocol):
     @property
-    def rule(self) -> str: ...
+    def rule(self) -> str:
+        raise NotImplementedError
 
     @property
-    def path(self) -> str: ...
+    def path(self) -> str:
+        raise NotImplementedError
 
 
 @dataclass(frozen=True)

@@ -396,3 +396,12 @@ def test_security_gate_bandit_fails_when_a_declared_rule_does_not_fire(tmp_path:
     out = _security_gate(tmp_path, {EIE_BAD: "import subprocess\n"})
     assert f"{fixtures.MISSING_RULE}: declared B602 did not fire" in out, out
     assert "FAIL: bandit: declared expect-fail fixtures" in out, out
+
+
+def test_security_gate_needs_no_bash4_builtin_for_the_fixture_split() -> None:
+    """macOS ships Bash 3.2: no mapfile/readarray. Under `set +e` a missing
+    builtin would leave the fixture list empty and block declared fixtures."""
+    import re
+
+    text = SECURITY_GATE.read_text(encoding="utf-8")
+    assert not re.search(r"^\s*[^#\n]*\b(mapfile|readarray)\s+-", text, re.M)

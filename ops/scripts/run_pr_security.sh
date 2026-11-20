@@ -295,7 +295,11 @@ run_bandit() {
     fail "bandit: the expect-fail fixture manifest could not be read"
     return 0
   fi
-  [[ -n "$fixture_out" ]] && mapfile -t fixture_rel <<<"$fixture_out"
+  # A read loop, not mapfile: stock macOS Bash 3.2 has no mapfile, and a failed
+  # mapfile under `set +e` would leave the list empty and scan fixtures as ordinary files.
+  while IFS= read -r f; do
+    [[ -n "$f" ]] && fixture_rel+=("$f")
+  done <<<"$fixture_out"
   for f in "${py_rel[@]}"; do
     [[ " ${fixture_rel[*]} " == *" $f "* ]] || py+=("$WS/$f")
   done
