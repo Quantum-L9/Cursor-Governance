@@ -1,49 +1,153 @@
-# SonarCloud CI scan (#717), modelled on the org SonarCloud workflow in
-# Quantum-L9/Enrichment.Inference.Engine (.github/workflows/sonarcloud.yml).
+# SonarCloud deep entrypoint for Quantum-L9/Cursor-Governance.
 #
 # Organization quantum-l9 / project Quantum-L9_Cursor-Governance, read from
 # sonar-project.properties (the CI-scanner config; .sonarcloud.properties is
 # the Automatic Analysis config). A CI scan and Automatic Analysis cannot both
-# be enabled on one SonarCloud project: Automatic Analysis must be turned off
-# in the project's SonarCloud settings for this job to analyze anything.
+# be enabled on one SonarCloud project.
 #
-# SONAR_TOKEN is the org Actions secret (ops/secrets/actions-secret-sync.json
-# org_secrets, visibility all, because this repository is public). The first
-# step fails closed without it: no token means no analysis and no quality-gate
-# proof, never a silent pass.
+# Dispatch-only. This workflow has no pull request trigger, no push trigger,
+# and no schedule. Waiting on Core apply: nothing in this repository dispatches
+# mode=apply, and a push of main does not run this suite.
+# No nightly Sonar run is claimed.
 #
-# Fork pull requests skip this entire secret-bearing job. A skipped job is not
-# a quality-gate PASS and provides no analysis proof.
-#
-# Unlike EIE this job runs no test suite: the repository's suites are owned by
-# ops/scripts/run_python_test_suites.py in l9-lint-test.yml, and #717 needs the
-# PR-scoped issue census, not a second test run. Coverage is not reported.
+# Inputs are the frozen dispatch contract: expected_sha, utc_slot,
+# deep_contract, dispatch_key, and mode. Heavy pytest and coverage run only
+# for mode=apply after the SHA check, once. Sonar consumes that same run's
+# coverage.xml and does not invoke pytest. mode=plan admits the contract and
+# stops. A second apply with the same dispatch key is refused before pytest.
 
 name: SonarCloud
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Lowercase 40-hex commit that must equal github.sha on main
+        required: true
+        type: string
+      utc_slot:
+        description: Scheduler UTC slot key
+        required: true
+        type: string
+      deep_contract:
+        description: Deep-contract identity
+        required: true
+        type: string
+      dispatch_key:
+        description: Idempotency key for this dispatch
+        required: true
+        type: string
+      mode:
+        description: plan admits only; apply runs the suite and Sonar after the SHA check
+        required: true
+        type: string
+
+run-name: SonarCloud ${{ inputs.mode }} ${{ inputs.dispatch_key }} ${{ inputs.expected_sha }}
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: sonarcloud-${{ github.ref }}
-  cancel-in-progress: true
+  group: sonarcloud-${{ inputs.dispatch_key }}
+  cancel-in-progress: false
 
 jobs:
   sonarqube:
     name: SonarCloud Scan
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'Quantum-L9/Cursor-Governance'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+      UTC_SLOT: ${{ inputs.utc_slot }}
+      DEEP_CONTRACT: ${{ inputs.deep_contract }}
+      DISPATCH_KEY: ${{ inputs.dispatch_key }}
+      MODE: ${{ inputs.mode }}
 
     steps:
+      - name: Admit dispatch before any heavy step
+        id: admit
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ "${EVENT_NAME}" != "workflow_dispatch" ]; then
+            echo "::error::deep entrypoint accepts workflow_dispatch only"
+            exit 1
+          fi
+          if [ "${REPOSITORY}" != "Quantum-L9/Cursor-Governance" ]; then
+            echo "::error::untrusted repository ${REPOSITORY}"
+            exit 1
+          fi
+          if [ "${REF}" != "refs/heads/main" ]; then
+            echo "::error::STALE_SHA: ref ${REF} is not refs/heads/main"
+            exit 1
+          fi
+          if ! printf '%s' "${EXPECTED_SHA}" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::STALE_SHA: expected_sha must be lowercase 40 hex"
+            exit 1
+          fi
+          if [ "${SHA}" != "${EXPECTED_SHA}" ]; then
+            echo "::error::STALE_SHA: github.sha ${SHA} != expected_sha"
+            exit 1
+          fi
+          token_ok() {
+            printf '%s' "$2" | grep -Eq '^[A-Za-z0-9._:-]{1,200}$' || {
+              echo "::error::${1} is missing or not a canonical token"
+              exit 1
+            }
+          }
+          token_ok utc_slot "${UTC_SLOT}"
+          token_ok deep_contract "${DEEP_CONTRACT}"
+          token_ok dispatch_key "${DISPATCH_KEY}"
+          case "${MODE}" in
+            plan)
+              echo "apply=false" >> "${GITHUB_OUTPUT}"
+              echo "Admitted mode=plan for ${EXPECTED_SHA}. Heavy pytest and Sonar wait on Core apply."
+              ;;
+            apply)
+              echo "apply=true" >> "${GITHUB_OUTPUT}"
+              echo "Admitted mode=apply for ${EXPECTED_SHA}."
+              ;;
+            *)
+              echo "::error::mode must be plan or apply"
+              exit 1
+              ;;
+          esac
+
+      - name: Reject duplicate dispatch key
+        if: steps.admit.outputs.apply == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_RUN: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          runs="$(mktemp)"
+          gh run list --workflow sonarcloud.yml --limit 50 \
+            --json databaseId,displayTitle,status,conclusion,headSha,event > "${runs}"
+          count="$(jq --arg key "${DISPATCH_KEY}" --arg sha "${EXPECTED_SHA}" --argjson current "${CURRENT_RUN}" '
+            [.[]
+              | select(.databaseId != $current)
+              | select(.event == "workflow_dispatch")
+              | select(.headSha == $sha)
+              | select(.displayTitle | contains($key))
+              | select(.status == "in_progress" or .status == "queued" or .conclusion == "success")
+            ] | length
+          ' "${runs}")"
+          rm -f "${runs}"
+          if [ "${count}" != "0" ]; then
+            echo "::error::DUPLICATE_DISPATCH: ${DISPATCH_KEY} already ran for ${EXPECTED_SHA}"
+            exit 1
+          fi
+
       - name: Require SonarCloud analysis token
+        if: steps.admit.outputs.apply == 'true'
         shell: bash
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -53,32 +157,67 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout
+      - name: Checkout expected SHA
+        if: steps.admit.outputs.apply == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
+          ref: ${{ inputs.expected_sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      # Coverage for the quality gate's "coverage on new code" condition. Same
-      # interpreter setup and runner as the Test Suite job (l9-lint-test.yml); the
-      # ci profile's repo-root suite writes coverage.xml at the repository root.
+      - name: Verify checked out SHA
+        if: steps.admit.outputs.apply == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          head="$(git rev-parse HEAD)"
+          if [ "${head}" != "${EXPECTED_SHA}" ]; then
+            echo "::error::STALE_SHA: HEAD ${head} != expected_sha"
+            exit 1
+          fi
+
       - name: Set up Python
+        if: steps.admit.outputs.apply == 'true'
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
+
       - name: Install test tools
+        if: steps.admit.outputs.apply == 'true'
         run: |
           set -euo pipefail
           command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
           bash ops/scripts/ensure_gov_python.sh "$PWD"
+
       - name: Tests with coverage (Cobertura XML)
+        id: coverage
+        if: steps.admit.outputs.apply == 'true'
         env:
           TESTING: "true"
         run: |
           set -euo pipefail
           .venv/bin/python ops/scripts/run_python_test_suites.py --profile ci
           test -s coverage.xml
+          {
+            echo "sha=${EXPECTED_SHA}"
+            echo "mode=apply"
+            echo "dispatch_key=${DISPATCH_KEY}"
+            echo "utc_slot=${UTC_SLOT}"
+            echo "deep_contract=${DEEP_CONTRACT}"
+          } > nightly-suite-receipt.txt
+
+      - name: Preserve failed coverage
+        if: steps.admit.outputs.apply == 'true' && always() && steps.coverage.outcome == 'failure'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: nightly-coverage-${{ inputs.expected_sha }}
+          path: |
+            coverage.xml
+            nightly-suite-receipt.txt
+          if-no-files-found: ignore
+
       - name: SonarCloud Scan
+        if: steps.admit.outputs.apply == 'true' && steps.coverage.outcome == 'success'
         uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4  # v8.5.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
