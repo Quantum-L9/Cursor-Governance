@@ -125,11 +125,13 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           CURRENT_RUN: ${{ github.run_id }}
         run: |
           set -euo pipefail
           runs="$(mktemp)"
-          gh run list --workflow sonarcloud.yml --limit 50 \
+          # This step is before checkout, so gh has no git remote to infer.
+          gh run list --repo "$GH_REPO" --workflow sonarcloud.yml --limit 50 \
             --json databaseId,displayTitle,status,conclusion,headSha,event > "${runs}"
           count="$(jq --arg key "${DISPATCH_KEY}" --arg sha "${EXPECTED_SHA}" --argjson current "${CURRENT_RUN}" '
             [.[]

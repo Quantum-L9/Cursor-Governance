@@ -127,6 +127,17 @@ class SonarCloudWorkflowTests(unittest.TestCase):
         self.assertIn("apply", invocations[0]["if"])
         self.assertIn("DUPLICATE_DISPATCH", self.text)
         self.assertIn("cancel-in-progress: false", self.text)
+        reject = next(
+            step for step in self.steps if step["name"] == "Reject duplicate dispatch key"
+        )
+        checkout = next(
+            step
+            for step in self.steps
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+        self.assertLess(self.steps.index(reject), self.steps.index(checkout))
+        self.assertEqual(reject["env"]["GH_REPO"], "${{ github.repository }}")
+        self.assertIn('--repo "$GH_REPO"', reject["run"])
 
     def test_scan_consumes_coverage_and_does_not_invoke_pytest(self) -> None:
         scan = next(
