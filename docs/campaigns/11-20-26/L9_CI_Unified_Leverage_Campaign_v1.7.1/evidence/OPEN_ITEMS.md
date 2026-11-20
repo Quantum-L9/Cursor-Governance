@@ -74,7 +74,27 @@ is public, so rows about credentials carry counts and actions only, never locati
 | P5 | Turn off Copilot automatic pull-request review. | GitHub organization or repository Copilot settings | Any time. | It fails on quota on every pull request and has produced no review since 2026-11-05. |
 | P6 | Turn off "Automatically import new GitHub repositories" in the Sonar organization binding. | https://sonarcloud.io/organizations/quantum-l9/edit | Any time. | T19. |
 
+## Close-out checklist
+
+The campaign closes when every row is DONE with evidence. Side work (hosted hook memory, secret
+registration, the Claude Code host default) does not block close-out.
+
+| # | Item | Owner | Done when |
+|---|---|---|---|
+| X1 | Promotion is live: the required job runs current Core and SDK code | L2 (L2f step 1 merged as Core #292; step 2 open) | `Analyze (central Core)` on a consumer PR shows Core main and the advanced SDK pin |
+| X2 | Core consumer gaps closed: security scans in org-ci, blocking toolchain alignment, conflict-marker step, Cursor-Governance deep entrypoint, supply-chain lane (HARVEST_LEDGER C1 to C5) | L2 | Each merged and observed on a Cursor-Governance PR |
+| X3 | One source of tool versions reaches Cursor-Governance, Core, SDK, l9-graphiti-memory and IB-Odoo_19; Dependabot cannot bump a Core-owned tool | CG-CUTOVER, L1 (SDK #129), G2 (IB-Odoo_19 #560), L2 | Pins equal Core's lock and the blocking alignment check passes |
+| X4 | Expensive checks run nightly only where code changed | L2 (planner merged; apply needs the operator's GitHub App) | The planner dispatches only changed repositories, including Cursor-Governance's Sonar |
+| X5 | Cursor-Governance is cut over: dead and duplicate CI retired, required-check plan written, `CURSOR_CANARY_PASS` with evidence | CG-CUTOVER | `evidence/CURSOR_CANARY_RESULT.md` reports PASS against CURSOR_CANARY.md Gates 0-4 |
+| X6 | Secondary canaries recorded (CEG, EIE) | C-CEG, C-EIE | Gate 2-3 verdicts with run ids; findings in CI_CONFIG_FINDINGS |
+| X7 | Harvest ledgered with destinations | CTO | `evidence/HARVEST_LEDGER.md` (this change) |
+| X8 | Merge queue on Cursor-Governance main | CTO, after L2's merge_group proof | Ruleset carries the queue and a PR merges through it |
+| X9 | Close-out evidence | CTO | PROOF.md filled from real runs; this register closed |
+
 ## Recorded operator decisions
+
+- 2026-11-20, about 21:50Z: close-out scope. The campaign includes cutting **Cursor-Governance** over to organization CI, debugging it and proving it works, so that the organization is ready to roll out. Rolling out to the other repositories is not part of this campaign; the harvest ledger's rows for EIE, CEG and IB-Odoo_19 are that campaign's starting backlog.
+- 2026-11-20, about 21:40Z: harvest custom CI from Cursor-Governance, EIE, CEG and IB-Odoo_19 and move it upstream, so the organization benefits and consumers stop depending on their own copies. Ledger: `evidence/HARVEST_LEDGER.md`.
 
 - 2026-11-20, about 20:35Z: one source of tool versions. Core's toolchain lock must fully reach every repository before the campaign is DONE, and Dependabot may never create drift for a locked tool. The organization is locked to Python 3.12 (Core lock 3.12.14).
 - 2026-11-20, about 20:20Z: L2f authorized ("yes yes YES"): re-pin `org-ci.yml` to Core main, wire plan and aggregate into the required job, advance the SDK pin, add the ancestry guard. Rulesets and branch protection stay operator-only.
