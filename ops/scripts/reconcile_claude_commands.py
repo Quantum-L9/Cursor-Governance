@@ -130,6 +130,7 @@ _GOV_LIB = Path(__file__).resolve().parent / "lib"
 if str(_GOV_LIB) not in sys.path:
     sys.path.insert(0, str(_GOV_LIB))
 
+from session_git_excludes import apply_session_git_excludes  # noqa: E402
 from workspace_roots import adopted_projection_roots, projection_roots  # noqa: E402
 
 #: Project-scope target, relative to a mount root. Kept beside the target
@@ -152,6 +153,12 @@ def reconcile_commands_scope(
         target = Path.home() / ".claude" / "commands"
     else:
         target = workspace / PROJECT_TARGET_REL
+
+    if scope == "project" and target_override is None and not check:
+        # Writer and exclude are one step: this mount root may be a clone that
+        # SessionStart never excluded (the container fan-out, or a repository
+        # attached after SessionStart). Library refuses a blanket `.claude/`.
+        apply_session_git_excludes(workspace)
 
     state_path = target / STATE_NAME
     old_state = read_state(state_path)
