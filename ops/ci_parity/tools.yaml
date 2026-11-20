@@ -144,16 +144,21 @@ tools:
     # Installed for manual use and parity; it has no lane because the make pr
     # security wave already runs this exact pin when dependency files change,
     # and osv-scanner covers lockfiles at commit time.
-    version: 2.10.1
+    version: 2.9.0
     method: uv_tool
     package: pip-audit
     binary: pip-audit
     version_cmd: [--version]
-    expect: 2.10.1
+    expect: 2.9.0
     ci_ref:
-      path: requirements.txt
-      contains: pip-audit==2.10.1
-      observed: make pr security wave pins this version (run_pr_security.sh)
+      repo: Quantum-L9/l9-ci-core
+      ref: main
+      path: .github/actions/install-consumer-ci/toolchain-lock.json
+      contains: '"pip-audit": "2.9.0"'
+      observed: >-
+        Core's toolchain lock owns this version (l9-ci-core main 75a521f,
+        2026-11-20); requirements.txt mirrors it and the make pr security wave
+        reads it from there (run_pr_security.sh).
 
 # Lanes: when a tool runs, over which changed files, and what blocks.
 #   tier fast  — single-file, edit-time (seconds) and in every commit/gate run
