@@ -5,23 +5,43 @@ L9_TARGETS += \
 # Program Execution, registered stage (CANONICAL_LAW
 # PROGRAM_EXECUTION_REGISTERED_STAGE_V1). The only two Program Execution
 # targets in the root graph; the rest of ops/make/program-execution.mk stays
-# uncomposed. A campaign still runs only on the operator's own words
-# (L9_PE_OPERATOR_INVOCATION) and only while that operator's session has
+# uncomposed. A rendered plan runs while that operator's session has
 # /coding-agent on in WS; the runner refuses otherwise. It finishes with the
 # governance SSOT make pr (PROGRAM_EXECUTION_MAKE_PR_FINISH_V1).
 #
-#   L9_PE_OPERATOR_INVOCATION="<your words>" \
-#     make -C "$HOME/.cursor-governance" campaign INTENT=<path> WS="$PWD"
+#   make campaign <plan.md>
 #
-# INTENT is resolved against WS when relative. CAMPAIGN_UNTIL=execute stops at
-# verified local commits; nothing runs past pr.
+# The plan path is the operator invocation. Make reads it from MAKECMDGOALS
+# and gives that extra goal an empty recipe so an existing file is not a
+# second target. INTENT= remains for a campaign input that is not a rendered
+# .plan.md. CAMPAIGN_UNTIL=execute stops at verified local commits; nothing
+# runs past pr.
 # ---------------------------------------------------------------------------
-CAMPAIGN_INTENT = $(abspath $(if $(filter /%,$(INTENT)),$(INTENT),$(WS)/$(INTENT)))
+CAMPAIGN_PLAN_PATH :=
+ifneq ($(filter campaign,$(MAKECMDGOALS)),)
+CAMPAIGN_PLAN_PATH := $(filter-out campaign,$(MAKECMDGOALS))
+endif
+ifeq ($(words $(CAMPAIGN_PLAN_PATH)),0)
+CAMPAIGN_INTENT := $(if $(INTENT),$(abspath $(if $(filter /%,$(INTENT)),$(INTENT),$(WS)/$(INTENT))),)
+else ifeq ($(words $(CAMPAIGN_PLAN_PATH)),1)
+CAMPAIGN_INTENT := $(abspath $(CAMPAIGN_PLAN_PATH))
+else
+$(error make campaign accepts one plan path)
+endif
+ifeq ($(words $(CAMPAIGN_PLAN_PATH)),1)
+.PHONY: $(CAMPAIGN_PLAN_PATH)
+$(CAMPAIGN_PLAN_PATH):
+	@:
+endif
 campaign:
-	@test -n "$(INTENT)" || ( \
-		echo "INTENT= path to a campaign input (make campaign-check-input) is required" >&2; \
-		exit 2 \
-	)
+	@if [ -z "$(CAMPAIGN_INTENT)" ]; then \
+		echo "usage: make campaign <plan.md>" >&2; \
+		exit 2; \
+	fi; \
+	if [ -n "$(CAMPAIGN_PLAN_PATH)" ] && [ -z "$$L9_PE_OPERATOR_INVOCATION" ]; then \
+		L9_PE_OPERATOR_INVOCATION="make campaign $(CAMPAIGN_PLAN_PATH)"; \
+		export L9_PE_OPERATOR_INVOCATION; \
+	fi; \
 	L9_PE_MODE_WORKSPACE="$(WS)" \
 	TARGET="$(TARGET)" \
 		$(PYTHON) environment/program-execution/scripts/run_campaign.py \

@@ -26,6 +26,17 @@ DEFAULT_VALIDATION_TIMEOUT_S = 300
 _ENV_OVERRIDE = "L9_PE_PYTHON"
 _EVIDENCE_TAIL = 2000
 _STREAM_TAIL = 8000
+# Same four files as classify_workspace_kind / is_governance_identity_tree.
+_GOVERNANCE_IDENTITY = (
+    "CANONICAL_LAW.md",
+    "skills/AUTONOMY_MANIFEST.yaml",
+    "rules/RULES-MANIFEST.yaml",
+    "ops/scripts/check_governance_wiring.sh",
+)
+
+
+class ExecEnvError(RuntimeError):
+    """The task interpreter could not be resolved."""
 
 
 def _venv_root(python: Path) -> Path | None:
@@ -59,6 +70,30 @@ def is_l9_isolate_workspace(path: Path) -> bool:
     except ValueError:
         return False
     return len(parts) >= 2 and parts[0] in {"gov-worktrees", "programs"}
+
+
+def is_governance_identity_tree(path: Path) -> bool:
+    """True when the worktree is this governance repo, whatever directory it sits in."""
+    root = path.resolve()
+    return all((root / rel).is_file() for rel in _GOVERNANCE_IDENTITY)
+
+
+def _uv_package_disabled(project: Path) -> bool:
+    """True when pyproject says this tree is not an installable uv package."""
+    path = project / "pyproject.toml"
+    if not path.is_file():
+        return False
+    try:
+        import tomllib
+    except ImportError:  # pragma: no cover - Python 3.11+
+        return False
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return False
+    tool = data.get("tool")
+    uv = tool.get("uv") if isinstance(tool, dict) else None
+    return isinstance(uv, dict) and uv.get("package") is False
 
 
 def is_consumer_task_worktree(path: Path) -> bool:
@@ -105,6 +140,13 @@ def _discover_python(cwd: Path | None) -> Path:
         located = shutil.which(override)
         if located:
             return _keep_venv_shim(Path(located))
+    # A governance checkout is this repo even when it lives under programs/.
+    # Its pyproject is not an installable package, so uv must not provision it.
+    if cwd is not None and is_governance_identity_tree(cwd):
+        donor = _donor_toolchain_python()
+        if donor is None:
+            raise ExecEnvError("governance worktree has no donor toolchain; set L9_PE_PYTHON")
+        return donor
     consumer = cwd is not None and is_consumer_task_worktree(cwd)
     # Governance isolates are not uv projects. Their local .venv, if any, is
     # pytest-less. Validation must use the donor toolchain that owns extras.
@@ -182,6 +224,8 @@ def _consumer_project_python(cwd: Path) -> Path | None:
     """
     if not (cwd / "pyproject.toml").is_file():
         return None
+    if _uv_package_disabled(cwd):
+        return _sync_unpacked_project(cwd)
     existing = _provisioned_python(cwd) or _existing_venv_python(cwd)
     uv = shutil.which("uv")
     root = exec_env_root(cwd)
@@ -212,7 +256,48 @@ def _consumer_project_python(cwd: Path) -> Path | None:
         timeout=600,
     )
     if installed.returncode != 0:
-        return python
+        detail = (installed.stderr or installed.stdout or "").strip().splitlines()
+        reason = detail[-1] if detail else "non-zero exit"
+        raise ExecEnvError(
+            "editable install failed and was not adopted as the task interpreter: " + reason
+        )
+    return python
+
+
+def _sync_unpacked_project(cwd: Path) -> Path | None:
+    """Sync dependencies for ``[tool.uv] package = false`` without installing the project.
+
+    ``package = false`` means the tree is not an installable distribution. It
+    does not mean the project has no dependencies. ``uv sync --no-install-project``
+    updates the environment. The environment lives beside the controller
+    runtime, not inside the candidate worktree.
+    """
+    uv = shutil.which("uv")
+    root = exec_env_root(cwd)
+    if uv is None or root is None:
+        return _provisioned_python(cwd) or _existing_venv_python(cwd)
+    venv = root / ".venv"
+    root.mkdir(parents=True, exist_ok=True)
+    env = os.environ.copy()
+    env["UV_PROJECT_ENVIRONMENT"] = str(venv)
+    synced = subprocess.run(
+        [uv, "sync", "--no-install-project", "--directory", str(cwd)],
+        cwd=str(cwd),
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=600,
+    )
+    if synced.returncode != 0:
+        detail = (synced.stderr or synced.stdout or "").strip().splitlines()
+        reason = detail[-1] if detail else "non-zero exit"
+        raise ExecEnvError(
+            "dependency sync failed and was not adopted as the task interpreter: " + reason
+        )
+    python = _existing_venv_python(root)
+    if python is None:
+        raise ExecEnvError("uv sync reported success but left no interpreter")
     return python
 
 

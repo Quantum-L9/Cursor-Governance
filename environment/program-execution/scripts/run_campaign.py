@@ -3222,6 +3222,11 @@ def _peer_identity() -> tuple[str, str, str | None]:
     claude_env = {k: v for k, v in os.environ.items() if k != "CURSOR_AGENT"}
     claude_surface = identity.resolve_surface_id({**claude_env, "CLAUDECODE": "1"})
     claude_here = (claude_actor, claude_surface) if claude_surface else None
+    if str(GOV_ROOT) not in sys.path:
+        sys.path.append(str(GOV_ROOT))
+    from ops.autonomy.surface_detect import detect_surface  # noqa: PLC0415
+
+    coarse = detect_surface(os.environ)
     aliases = {
         "claude-cli": (claude_actor, identity.CLAUDE_CLI_SURFACE),
         "claude-mobile": (claude_actor, identity.CLAUDE_MOBILE_SURFACE),
@@ -3234,6 +3239,10 @@ def _peer_identity() -> tuple[str, str, str | None]:
     if claude_here is not None:
         aliases["claude-code"] = claude_here
     binding = aliases.get(governance_surface)
+    if binding is None and coarse == "cursor":
+        binding = aliases["cursor"]
+        if provider_ref is None:
+            provider_ref = "cursor-foreground"
     if binding is None:
         raise CampaignError(
             "Peer Execution requires a canonical runtime binding. Set L9_PE_AGENT_REF and "
@@ -3938,13 +3947,16 @@ def _terminalize_root_authority(
     contract: dict[str, Any],
     changed: list[str],
     candidate_sha: str | None,
+    status: str | None = None,
 ) -> str | None:
     """Hand the root executor lease its terminal result, or leave it revoked.
 
     Root autonomy does not get to say the Program task passed — the Controller
     does that next, independently. What this closes is the child authority: a
     completed executor action releases the lease and its resource claims, so a
-    finished worker keeps no live mutation authority.
+    finished worker keeps no live mutation authority. A recon grant's action
+    contract expects a ReconReport, so the subordinate's own outcome status
+    travels with the result instead of a mutation payload.
     """
     grant = unit.get("grant")
     if not grant:
@@ -3957,6 +3969,7 @@ def _terminalize_root_authority(
             candidate_sha=candidate_sha,
             contract_digest=str(contract.get("contract_digest") or ""),
             evidence={"attempt_receipt_path": str(contract.get("attempt_receipt_path") or "")},
+            status=status,
         )
     except Exception as exc:  # noqa: BLE001 — a failed handoff must revoke, not linger
         grants.revoke_task_grant(
@@ -4701,6 +4714,7 @@ def _finish_peer_unit(
             contract=contract,
             changed=actual_changed,
             candidate_sha=receipt.get("candidate_sha"),
+            status=outcome.get("status"),
         )
         emit(
             trace,
@@ -4746,15 +4760,23 @@ def _finish_peer_unit(
             f"incomplete gates={json.dumps(incomplete_gates(verification), sort_keys=True)}"
         )
     # Commit only the exact work the Controller just verified. Provider execution
-    # owns mutation; PE retains the local commit boundary.
-    candidate = write_and_commit_output(
-        worktree,
-        unit["rel"],
-        unit["title"],
-        writable=writable,
-        commit_authorized=contract_allows_commit(contract),
-        observed=[str(path) for path in (verification.get("observed_changed_files") or [])],
-    )
+    # owns mutation; PE retains the local commit boundary. A read-only contract
+    # whose verdict observed no changes has nothing to commit and skips the
+    # boundary: `local_write` is not commit authority, so the commit step runs
+    # only when the contract requests commit or the verdict observed work.
+    observed_paths = [str(path) for path in (verification.get("observed_changed_files") or [])]
+    if contract_allows_commit(contract) or observed_paths:
+        candidate = write_and_commit_output(
+            worktree,
+            unit["rel"],
+            unit["title"],
+            writable=writable,
+            commit_authorized=contract_allows_commit(contract),
+            observed=observed_paths,
+        )
+    else:
+        candidate = target_head_sha(worktree)
+        log(f"{task_id}: read-only verdict observed no changes; nothing to commit")
     emit(
         trace,
         "TASK_LOCAL_COMMIT",
@@ -6981,6 +7003,238 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     )
 
 
+RENDERED_BY = "skills/l9-plan/scripts/render_campaign_source.py"
+_PLAN_FRONTMATTER = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|\Z)", re.S)
+
+
+def _plan_frontmatter(path: Path) -> dict[str, Any]:
+    if yaml is None:
+        raise CampaignError(
+            "PyYAML is required to read a rendered plan", error_code="PLAN_FRONTMATTER"
+        )
+    text = path.read_text(encoding="utf-8")
+    match = _PLAN_FRONTMATTER.match(text)
+    if not match:
+        return {}
+    loaded = yaml.safe_load(match.group(1)) or {}
+    if not isinstance(loaded, dict):
+        raise CampaignError(f"{path} frontmatter is not a mapping", error_code="PLAN_FRONTMATTER")
+    return loaded
+
+
+def _stamp_blueprint_accepted(blueprint: Path) -> None:
+    """Stamp accepted after template validation. This is not default_admit."""
+    ops = _load_script("blueprint_ops_stamp", PE_ROOT / "scripts/blueprint_ops.py")
+    program_path = blueprint / "PROGRAM.yaml"
+    program = ops.load_yaml(program_path)
+    block = program.get("program") if isinstance(program, dict) else None
+    if not isinstance(block, dict):
+        raise CampaignError(
+            f"{program_path} has no program block to stamp accepted",
+            error_code="BLUEPRINT_STAMP",
+        )
+    block["definition_status"] = "accepted"
+    ops.dump_yaml(program_path, program)
+    ops.dump_yaml(
+        blueprint / "RENDERED_ACCEPTANCE.yaml",
+        {
+            "schema": "l9.rendered-plan-acceptance.v1",
+            "definition_status": "accepted",
+            "stamped_because": "validate_blueprint.py template mode returned no errors",
+        },
+    )
+    manifest_path = blueprint / "MANIFEST.yaml"
+    previous = ops.load_yaml(manifest_path) if manifest_path.is_file() else {}
+    bound = ""
+    if isinstance(previous, dict):
+        bound = str(previous.get("source_sha256") or "").strip()
+    ops.write_manifest(blueprint, "rendered-plan")
+    if bound:
+        rewritten = ops.load_yaml(manifest_path)
+        if isinstance(rewritten, dict):
+            rewritten["source_sha256"] = bound
+            ops.dump_yaml(manifest_path, rewritten)
+
+
+def _require_rendered_plan(intent_path: Path) -> tuple[Path, Path, dict[str, Any]]:
+    front = _plan_frontmatter(intent_path)
+    source_raw = str(front.get("campaign_source") or "").strip()
+    blueprint_raw = str(front.get("campaign_blueprint") or "").strip()
+    if not source_raw or not blueprint_raw:
+        raise CampaignError(
+            f"{intent_path} has no rendered campaign. Run /l9-plan so "
+            "render_campaign_source.py records campaign_source and campaign_blueprint.",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+    source_path = Path(source_raw)
+    blueprint_path = Path(blueprint_raw)
+    if not source_path.is_file() or not blueprint_path.is_dir():
+        raise CampaignError(
+            f"{intent_path} records campaign files that are not on disk "
+            f"(source={source_path}, blueprint={blueprint_path}). Run /l9-plan.",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+    if yaml is None:
+        raise CampaignError(
+            "PyYAML is required to read a rendered campaign", error_code="PLAN_FRONTMATTER"
+        )
+    document = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    if not isinstance(document, dict):
+        raise CampaignError(
+            f"{source_path} is not a campaign source mapping",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+    rendered_by = str((document.get("metadata") or {}).get("rendered_by") or "").strip()
+    if rendered_by != RENDERED_BY:
+        raise CampaignError(
+            f"{source_path} was not produced by {RENDERED_BY}. "
+            "A hand-authored source does not take the rendered-plan path.",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+    _require_source_binding(source_path, blueprint_path, front)
+    return source_path, blueprint_path, document
+
+
+def _require_source_binding(source_path: Path, blueprint_path: Path, front: dict[str, Any]) -> None:
+    """The blueprint and the plan must name the bytes of this source."""
+    manifest_path = blueprint_path / "MANIFEST.yaml"
+    if yaml is None or not manifest_path.is_file():
+        raise CampaignError(
+            f"{blueprint_path} has no manifest binding it to {source_path}",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    bound = str(manifest.get("source_sha256") or "").strip() if isinstance(manifest, dict) else ""
+    actual = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    recorded = str(front.get("campaign_source_sha256") or "").strip()
+    if not bound or bound != actual or (recorded and recorded != actual):
+        raise CampaignError(
+            f"{blueprint_path} is not the blueprint compiled from {source_path}",
+            error_code="RENDERED_PLAN_REQUIRED",
+        )
+
+
+def _run_rendered_plan(
+    intent_path: Path,
+    *,
+    until: str,
+    requested_until: str,
+    primary: Path,
+    host_root: Path,
+    l9_home: Path,
+    host_repo: str,
+    hooks: Hooks,
+    fast: bool,
+    trace: pe_trace.ExecutionTrace | None,
+    target_checkout: Path | None,
+    timing: Any,
+    timer: Any,
+) -> CampaignReport:
+    """Validate the blueprint /l9-plan already rendered, then start work.
+
+    stack_proof, plan_window, a second compile, check_launchability,
+    admission_evidence, and default_admit do not run on this path.
+    """
+    source_path, blueprint, document = _require_rendered_plan(intent_path)
+    causality = _load_script(
+        "evidence_causality",
+        PE_ROOT / "scripts" / "evidence_causality.py",
+    )
+    source_errors = list(causality.errors_for_campaign_source(document))
+    if source_errors:
+        raise CampaignError(
+            "evidence causality failed: " + "; ".join(source_errors),
+            error_code="BLUEPRINT_VALIDATE",
+        )
+    seed = campaign_input_module().seed_view(document)
+    campaign_id = str(seed.get("campaign_id") or "").strip()
+    if not campaign_id:
+        raise CampaignError(f"rendered campaign has no campaign_id: {source_path}")
+    refuse_hash_campaign_id(campaign_id)
+    target = seed.get("target") or {}
+    repository_id = str(target.get("repository_id") or "").strip()
+    source_of_truth = str(target.get("source_of_truth") or "")
+    errors = (hooks.validate_blueprint or default_validate_blueprint)(blueprint)
+    if errors:
+        raise CampaignError(
+            "template validate failed: " + "; ".join(errors),
+            error_code="BLUEPRINT_VALIDATE",
+        )
+    _stamp_blueprint_accepted(blueprint)
+    launch = _load_script("launchability_rendered_count", PE_ROOT / "scripts/launchability.py")
+    task_count = len(launch.blueprint_tasks(blueprint))
+    pec_workspace = l9_home / "programs" / campaign_id
+    target_path = (target_checkout or (l9_home / "program-worktrees" / campaign_id)).resolve()
+    report = CampaignReport(
+        campaign_id=campaign_id,
+        until=until,
+        worktree=str(target_path),
+        primary=str(primary),
+        blueprint=str(blueprint),
+        pec_workspace=str(pec_workspace),
+        mode="rendered-plan",
+        launchability={"task_count": task_count, "launchable": True},
+    )
+    report.stages_completed.extend(["validate_blueprint", "accept"])
+    primed_root = l9_home / "primed"
+    cache = timing.StageCache(primed_root / campaign_id, enabled=fast)
+    prepare = _load_script("pe_prepare_state", PE_ROOT / "scripts/pe_prepare_state.py")
+    reuse = prepare.PrepareCache(
+        cache,
+        prepare.PrepareState.load(
+            primed_root / campaign_id / "PREPARE_STATE.json", campaign_id=campaign_id
+        ),
+    )
+
+    def ensure_target_checkout_once() -> None:
+        default_ensure_target_checkout(
+            target_path,
+            repository_id,
+            donor=host_root,
+            source_of_truth=source_of_truth,
+        )
+
+    run = _CampaignRun(
+        fast=fast,
+        hooks=hooks,
+        host_repo=host_repo,
+        host_root=host_root,
+        intent_path=intent_path,
+        l9_home=l9_home,
+        primary=primary,
+        requested_until=requested_until,
+        until=until,
+        blueprint=blueprint,
+        campaign_id=campaign_id,
+        campaign_source_doc=document,
+        compile_generation=blueprint_fingerprint(blueprint),
+        ensure_target_checkout_once=ensure_target_checkout_once,
+        pec_workspace=pec_workspace,
+        prepare=prepare,
+        primed_root=primed_root,
+        repo_root=host_root,
+        report=report,
+        repository_id=repository_id,
+        resolved_intent=source_path,
+        reuse=reuse,
+        scoped_resume=False,
+        seed=seed,
+        source_of_truth=source_of_truth,
+        target_checkout=target_checkout,
+        target_path=target_path,
+        target_worktree=str(target_path),
+        timer=timer,
+        timing=timing,
+        trace=trace,
+        accepted_blueprint_inventory=blueprint_byte_inventory(blueprint),
+        worktree=target_path,
+        write_root=host_root,
+    )
+    log(f"rendered plan {intent_path}")
+    log(f"campaign id: {campaign_id}")
+    return _stage_runtime(run)
+
+
 def _run_campaign_stages(
     intent_path: Path,
     *,
@@ -7010,6 +7264,22 @@ def _run_campaign_stages(
     # Analyze (central Core). Callers that need L9_ROOT / L9_RUNTIME_ROOT
     # agreement still use campaign_runtime_root() directly.
     l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
+    if intent_path.name.endswith(".plan.md"):
+        return _run_rendered_plan(
+            intent_path,
+            until=until,
+            requested_until=requested_until,
+            primary=primary,
+            host_root=host_root,
+            l9_home=l9_home,
+            host_repo=host_repo,
+            hooks=hooks,
+            fast=fast,
+            trace=trace,
+            target_checkout=target_checkout,
+            timing=timing,
+            timer=timer,
+        )
     run = _CampaignRun(
         fast=fast,
         hooks=hooks,

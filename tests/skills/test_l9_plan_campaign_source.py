@@ -174,6 +174,79 @@ def test_the_handoff_carries_the_operator_invocation_and_mode(
     )
     assert code == 0
     result = json.loads(capsys.readouterr().out)
-    assert result["next"][0].startswith("/coding-agent on")
-    assert 'L9_PE_OPERATOR_INVOCATION="<your own words' in result["next"][1]
-    assert f"INTENT={out}" in result["next"][1]
+    assert result["next"] == ["make campaign <the .plan.md>"]
+    assert (out.parent / "blueprint").is_dir()
+
+
+def test_persisted_blueprint_keeps_each_validation_command(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    plan = _plan()
+    plan["todos"].append(
+        {
+            "id": "T3",
+            "task": "Confirm the runtime marker is documented",
+            "files": [
+                "docs/program-execution/l9-plan-render-proof/NOTE.md",
+                "docs/program-execution/l9-plan-render-proof/SUMMARY.md",
+            ],
+            "effort": "S",
+            "risk": "medium",
+            "dependencies": ["T2"],
+            "operation": "Replace",
+            "anchor": "existing file",
+            "layer": "docs",
+            "leverage_rank": 3,
+            "shared_root_cause": "prose-only plans",
+            "validation": [
+                (
+                    "grep -q l9_claude_runtime_present "
+                    + "docs/program-execution/l9-plan-render-proof/NOTE.md"
+                ),
+                (
+                    "grep -q l9_claude_runtime_present "
+                    + "docs/program-execution/l9-plan-render-proof/SUMMARY.md"
+                ),
+            ],
+            "acceptance": "Both docs name the runtime marker.",
+        }
+    )
+    plan_md = tmp_path / "demo.plan.md"
+    plan_md.write_text("---\nname: demo\noverview: proof\n---\n\n# body\n", encoding="utf-8")
+    out = tmp_path / "CAMPAIGN_SOURCE.yaml"
+    code = render.main(
+        [
+            str(_write(tmp_path, plan)),
+            "--out",
+            str(out),
+            "--repo-root",
+            str(REPO),
+            "--plan-md",
+            str(plan_md),
+            "--json",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert code == 0, captured.out + captured.err
+    result = json.loads(captured.out)
+    cards = yaml.safe_load(
+        (out.parent / "blueprint" / "TASK_CARDS.yaml").read_text(encoding="utf-8")
+    )
+    by_id = {task["id"]: task for task in cards["tasks"]}
+    expected = {
+        "TASK-001": plan["todos"][0]["validation"],
+        "TASK-002": plan["todos"][1]["validation"],
+        "TASK-003": plan["todos"][2]["validation"],
+    }
+    for task_id, commands in expected.items():
+        found = [
+            entry["command_or_inspection"]
+            for entry in by_id[task_id]["validation"]
+            if entry["method"] == "command"
+        ]
+        assert found == commands
+    recorded = plan_md.read_text(encoding="utf-8")
+    assert str(out.resolve()) in recorded
+    assert str((out.parent / "blueprint").resolve()) in recorded
+    assert "# body" in recorded.split("---", 2)[-1]
+    assert result["next"] == [f"make campaign {plan_md.resolve()}"]
