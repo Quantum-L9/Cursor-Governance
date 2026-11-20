@@ -1,0 +1,40 @@
+diff --git a/.l9/integration-contract.yaml b/.l9/integration-contract.yaml
+--- a/.l9/integration-contract.yaml
++++ b/.l9/integration-contract.yaml
+@@ -177,3 +177,36 @@
+     - minimum SDK requirements are explicit
+     - exact SDK pinning is required for central CI
+     - consumers must not infer compatibility from artifact shape alone
++
++ci_provider_invariants:
++  - id: L9-CI-SDK-001
++    statement: >-
++      For one exact repository snapshot the SDK must enumerate every supported applicable
++      language, framework and provider prerequisite; it must not collapse a mixed repository
++      into a single preferred language. Unsupported or uncertain detections must remain
++      visible.
++  - id: L9-CI-SDK-002
++    statement: >-
++      The SDK must distinguish applicability, planned selection, actual invocation,
++      completed execution, analyzed paths, explicit exclusions, failed steps and missing
++      evidence for each provider. Not-applicable requires evidence of nonapplicability;
++      skip, unsupported and unknown cannot become completed-pass.
++  - id: L9-CI-SDK-003
++    statement: >-
++      Every effective scanner rulepack is the reproducible composition of versioned SDK
++      baseline, applicable language/framework packs and authorized product-specific
++      restrictions. Resolve exact rule content/configuration digests; subordinate rules
++      cannot suppress the organization baseline, and mutable remote registry labels alone do
++      not prove reproducibility.
++  - id: L9-CI-SDK-004
++    statement: >-
++      Before consolidating or retiring any effective scanner rule or configuration, prove
++      its unique intended behavior with at least one known-bad trigger and known-good
++      nontrigger. Where equivalence is not proven, retain the scoped owner and report the
++      coverage gap.
++  - id: L9-CI-SDK-005
++    statement: >-
++      SDK observations preserve exact provider identity, original rule IDs, source revision,
++      report provenance, scope and failures. Deduplication may correlate findings but may
++      not erase a distinct native result, unsupported severity, independent source or unique
++      coverage; SDK emits no final Assurance verdict.

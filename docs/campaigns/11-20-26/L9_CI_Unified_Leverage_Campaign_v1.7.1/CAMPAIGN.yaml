@@ -1,0 +1,136 @@
+schema: l9.campaign-handoff/local-v1
+schema_note: informational campaign index; not canonical L9 authority
+campaign_id: L9-CI-UNIFIED-LEVERAGE-2026-11-20-v1.7.1
+supersedes: L9_CI_Unified_Leverage_Campaign_v1.7.0
+status: corrected_handoff_not_executed
+execution_surface: Cursor-Governance /lcto CTO mode, Claude Code cloud
+owner: operator
+created_at: '2026-11-20'
+launch_binding: 09_EXECUTION_BINDING.md
+architecture_frozen: true
+frozen_artifacts:
+  - INVARIANTS.yaml
+  - ADRS.md
+  - candidates/adr/l9-ci-core/docs/adr/0001-top-down-ci-control-and-runtime-inheritance.md
+  - candidates/adr/l9-ci-core/docs/adr/0002-governed-promotion-native-provider-boundaries-and-cost.md
+  - candidates/adr/l9-ci-core/docs/adr/README.md
+  - candidates/adr/l9-ci-sdk/docs/adr/0020-all-applicable-capabilities-and-lossless-provider-evidence.md
+  - candidates/core-governance-contract.patch
+  - candidates/sdk-integration-contract.patch
+  - candidates/sdk-adr-index.patch
+cto_session: session_017xwbxvn4RrcFtW27s3aYG4
+swarm_protocol: Cursor-Governance/governance/cto-mode/MODE.yaml operating_protocol v2
+max_pool_slots: 5
+nondelegable_integrator: CTO
+merge_policy: operator merges; no agent merges on its own initiative
+publication_policy: sanctioned ceremony per repository (09_EXECUTION_BINDING.md, Publication)
+
+repository_set:
+  Quantum-L9/.github: {branch: main, writer: CTO session only}
+  Quantum-L9/l9-ci-sdk: {branch: main, writer: L1}
+  Quantum-L9/l9-ci-core: {branch: main, writer: L2}
+  Quantum-L9/Cognitive.Engine.Graphs: {branch: main, writer: F1}
+  Quantum-L9/Enrichment.Inference.Engine: {branch: main, writer: F2}
+  Quantum-L9/Cursor-Governance: {branch: main, writer: N1, cto_paths: [docs/campaigns/11-20-26/**]}
+  cryptoxdog/IB-Odoo_19: {branch: Staging, writer: H1}
+
+launch_base_revisions:
+  observed_at: '2026-11-20'
+  Quantum-L9/.github: c788b991f2ed5f670a2d5660a7faa4e1d52f64e3
+  Quantum-L9/l9-ci-sdk: ab8a25543bf99de4c932f1930841a1e5f2ef2f27
+  Quantum-L9/l9-ci-core: 3579bdc19a7f36973e4f0fe516ea5aa6c5ab9437
+  Quantum-L9/Cognitive.Engine.Graphs: b2150980874180d386221b8b2ffd6cca91880a06
+  Quantum-L9/Enrichment.Inference.Engine: e1a61f781d99e18da3f4130fa8017485acdbfa7b
+  Quantum-L9/Cursor-Governance: a95562c9c4cb22c5c489c989d554415b4e55ef1e
+  cryptoxdog/IB-Odoo_19: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+  rule: recheck every head in the bootstrap sitting; a lane branches from the fetched tip, not from this list
+
+foreign_open_pull_requests:
+  - {repo: Quantum-L9/l9-ci-core, number: 281, head: agent/fleet-b2/pr-expense-guard, overlap: [.github/workflows/org-ci.yml]}
+  - {repo: Quantum-L9/Cognitive.Engine.Graphs, number: 514, head: agent/fleet-d/ceg-pilot, overlap: [.github/workflows/ci-quality.yml]}
+  - {repo: Quantum-L9/Enrichment.Inference.Engine, number: 365, head: agent/fleet-e/eie-pilot, overlap: [.github/workflows/sonarcloud.yml]}
+  - {repo: Quantum-L9/.github, number: 274, head: campaign/l9-org-ci-pr-fast-consumer-verification, overlap: []}
+  - {repo: Quantum-L9/Cursor-Governance, number: 1073, head: claude-mobile/bold-shannon-u7r6p4, overlap: [], launch_blocker: true}
+
+launch_preconditions:
+  P1: operator merges Quantum-L9/Cursor-Governance#1073
+  P2: CTO session in Auto permission mode
+  P3: operator says launch
+  P4: operator starts or defers G0
+  P5: operator confirms whether Quantum-L9/coderabbit exists
+
+lanes:
+  - id: S0
+    executor: cto
+    kind: read_only_plus_pack
+    brief: lanes/S0_CTO_PREFLIGHT_AND_G0.md
+  - id: L1
+    executor: pool
+    slot: 1
+    primary_repository: Quantum-L9/l9-ci-sdk
+    read_repositories: [Quantum-L9/Enrichment.Inference.Engine, Quantum-L9/Cognitive.Engine.Graphs, Quantum-L9/Cursor-Governance, cryptoxdog/IB-Odoo_19]
+    brief: lanes/L1_SDK.md
+    invariants: [L9-CI-SDK-001, L9-CI-SDK-002, L9-CI-SDK-003, L9-CI-SDK-004, L9-CI-SDK-005]
+  - id: L2
+    executor: pool
+    slot: 2
+    primary_repository: Quantum-L9/l9-ci-core
+    read_repositories: [Quantum-L9/l9-ci-sdk]
+    brief: lanes/L2_CORE.md
+    invariants: [L9-CI-CORE-001, L9-CI-CORE-002, L9-CI-CORE-003, L9-CI-CORE-004, L9-CI-CORE-005, L9-CI-CORE-006]
+    findings: [T04]
+    soft_dependency: L1 capability-inventory head, pinned when it exists
+  - id: F1
+    executor: pool
+    slot: 3
+    primary_repository: Quantum-L9/Cognitive.Engine.Graphs
+    read_repositories: [Quantum-L9/l9-ci-core]
+    brief: lanes/F1_CEG.md
+    findings: [T01, T02, T03, T07, T08, T14]
+    g0_gated: [Codecov authentication change]
+  - id: F2
+    executor: pool
+    slot: 4
+    primary_repository: Quantum-L9/Enrichment.Inference.Engine
+    read_repositories: [Quantum-L9/l9-ci-core]
+    brief: lanes/F2_EIE.md
+    findings: [T05, T06, T10-EIE, T13]
+  - id: N1
+    executor: pool
+    slot: 5
+    primary_repository: Quantum-L9/Cursor-Governance
+    read_repositories: [Quantum-L9/l9-ci-core]
+    brief: lanes/N1_CURSOR_GOVERNANCE.md
+    findings: [T15]
+    g0_gated: [CodeQL and Sonar workflow or config edits, any scan or test dispatch]
+  - id: H1
+    executor: pool
+    slot: first idle, by CTO ASSIGN
+    primary_repository: cryptoxdog/IB-Odoo_19
+    read_repositories: [Quantum-L9/l9-ci-sdk]
+    brief: lanes/H1_ODOO.md
+    findings: [T10-Odoo]
+  - id: G1
+    executor: cto
+    primary_repository: Quantum-L9/.github
+    brief: lanes/G1_DOTGITHUB_CTO.md
+    findings: [T12]
+  - id: I1
+    executor: cto
+    kind: integration
+    brief: lanes/I1_CTO_INTEGRATION_AND_CANARY.md
+    depends_on: [L1 ready-to-merge, L2 ready-to-merge]
+    wave_2_requires: operator merges and Core SDK pin advance
+
+delegated_findings:
+  T09: sibling campaign pull requests (CEG #514, EIE #365, Core #281, Cursor-Governance #1062 merged)
+  T11: sibling campaign pull requests (CEG #514, EIE #365)
+  T16: operator (Cursor-Governance #1073)
+
+wave_1_exit:
+  - every L1, L2, F1, F2, N1 and H1 pull request reported ready-to-merge or BLOCKED with owner and next action
+  - Stage 1 integration result on the exact combined Core and SDK heads
+  - findings T01 to T16 each with a disposition
+  - CURSOR_CANARY_BLOCKED, reason BLOCKED_ON_PROMOTION
+closure_verdicts: [PASS, PARTIAL, BLOCKED]
+row_verdicts: [PASS, BLOCKED, NOT_PROVEN]
