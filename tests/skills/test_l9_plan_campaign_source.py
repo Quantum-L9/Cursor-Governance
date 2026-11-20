@@ -199,10 +199,14 @@ def test_persisted_blueprint_keeps_each_validation_command(
             "leverage_rank": 3,
             "shared_root_cause": "prose-only plans",
             "validation": [
-                "grep -q l9_claude_runtime_present "
-                "docs/program-execution/l9-plan-render-proof/NOTE.md",
-                "grep -q l9_claude_runtime_present "
-                "docs/program-execution/l9-plan-render-proof/SUMMARY.md",
+                (
+                    "grep -q l9_claude_runtime_present "
+                    + "docs/program-execution/l9-plan-render-proof/NOTE.md"
+                ),
+                (
+                    "grep -q l9_claude_runtime_present "
+                    + "docs/program-execution/l9-plan-render-proof/SUMMARY.md"
+                ),
             ],
             "acceptance": "Both docs name the runtime marker.",
         }
