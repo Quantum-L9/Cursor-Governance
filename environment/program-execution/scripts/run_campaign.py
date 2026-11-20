@@ -7043,7 +7043,17 @@ def _stamp_blueprint_accepted(blueprint: Path) -> None:
             "stamped_because": "validate_blueprint.py template mode returned no errors",
         },
     )
+    manifest_path = blueprint / "MANIFEST.yaml"
+    previous = ops.load_yaml(manifest_path) if manifest_path.is_file() else {}
+    bound = ""
+    if isinstance(previous, dict):
+        bound = str(previous.get("source_sha256") or "").strip()
     ops.write_manifest(blueprint, "rendered-plan")
+    if bound:
+        rewritten = ops.load_yaml(manifest_path)
+        if isinstance(rewritten, dict):
+            rewritten["source_sha256"] = bound
+            ops.dump_yaml(manifest_path, rewritten)
 
 
 def _require_rendered_plan(intent_path: Path) -> tuple[Path, Path, dict[str, Any]]:
