@@ -36,6 +36,27 @@ def claude(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("L9_GOVERNANCE_SURFACE", "claude-code")
 
 
+#: Every marker ``surface_detect`` reads as a live Claude runtime or an explicit
+#: surface. A live runtime outranks a Cursor host marker (claude-vscode runs the
+#: real CLI inside Cursor), so a Cursor test run from a Claude session must clear
+#: all of them or the detector correctly reports Claude.
+_CLAUDE_SURFACE_MARKERS = (
+    "L9_GOVERNANCE_SURFACE",
+    "CLAUDECODE",
+    "CLAUDE_CODE_ENTRYPOINT",
+    "CLAUDE_CODE_SESSION_ID",
+    "CLAUDE_CODE_REMOTE",
+)
+
+
+@pytest.fixture
+def cursor(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in _CLAUDE_SURFACE_MARKERS:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.delenv("L9_CI_PARITY", raising=False)
+    monkeypatch.setenv("CURSOR_AGENT", "1")
+
+
 def _stub_runner(tmp_path: Path, rc: int, out: str) -> Path:
     stub = tmp_path / "runner.py"
     stub.write_text(f"import sys\nprint({out!r})\nsys.exit({rc})\n")
@@ -144,9 +165,11 @@ def test_posttool_edit_returns_findings_as_context(
 
 
 def test_posttool_is_silent_on_cursor(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    cursor: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setenv("CURSOR_AGENT", "1")
     hook = _load("ci_parity_posttool")
     monkeypatch.setattr(hook, "RUNNER", _stub_runner(tmp_path, 0, "findings"))
     target = tmp_path / "a.sh"
@@ -235,18 +258,12 @@ def test_receipt_reminder_matches_sinks_and_does_not_start_a_scan() -> None:
 
 
 def test_receipt_reminder_is_not_emitted_off_claude(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    cursor: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     post = _load("ci_parity_posttool")
-    for name in (
-        "L9_GOVERNANCE_SURFACE",
-        "CLAUDECODE",
-        "CLAUDE_CODE_ENTRYPOINT",
-        "CLAUDE_CODE_SESSION_ID",
-        "CLAUDE_CODE_REMOTE",
-    ):
-        monkeypatch.delenv(name, raising=False)
-    monkeypatch.setenv("CURSOR_AGENT", "1")
     rc = _run_main(
         post,
         {"tool_name": "Bash", "cwd": str(tmp_path), "tool_input": {"command": "git commit"}},
