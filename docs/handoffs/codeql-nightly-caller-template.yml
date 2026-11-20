@@ -12,6 +12,8 @@
 # No local CodeQL config. The config-file input is the centralized
 # security-extended config. This workflow has no pull_request trigger, so it
 # does not disable overlay analysis on the pull-request caller.
+# GitHub runs the schedule from the repository default branch, whatever that
+# branch is named. Do not add branches: [main].
 
 name: "CodeQL nightly (security-extended)"
 
