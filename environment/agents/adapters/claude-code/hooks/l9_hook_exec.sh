@@ -151,11 +151,17 @@ if [ "${L9_SURFACE_GUARD:-1}" != "0" ]; then
     . "$_L9_SD_LIB"
     _L9_SURFACE="$(l9_detect_surface)"
 
-    # memory_gate enforces only on a Claude runtime. Cursor executes this
-    # settings file with L9_GOVERNANCE_SURFACE=claude-code and without
-    # CLAUDECODE; that must not block writes on the Claude prefetch.
+    # memory_gate enforces only on a Claude runtime, and its skip depends on
+    # that absence ALONE. Cursor executes this settings file with
+    # L9_GOVERNANCE_SURFACE=claude-code and without CLAUDECODE — a projected
+    # surface is not a runtime, so a plain Cursor host still skips here. But a
+    # Cursor host marker must not veto the gate when a live Claude runtime IS
+    # present: the claude-vscode extension runs the real CLI inside Cursor,
+    # and the launcher must not skip the gate in exactly the environment the
+    # surface detector reports as claude-code. The cursor-host disjunct this
+    # replaced made the two detectors disagree about the same process.
     if [ "$HOOK_NAME" = "memory_gate.py" ]; then
-      if l9_cursor_host_present || ! l9_claude_runtime_present; then
+      if ! l9_claude_runtime_present; then
         printf 'l9-hook: gate %s skipped (surface=%s; memory gate is Claude-runtime only)\n' \
           "$HOOK_NAME" "$_L9_SURFACE" >&2
         unset _L9_SURFACE _L9_SD_LIB _L9_WALK _L9_HOOK_DIR

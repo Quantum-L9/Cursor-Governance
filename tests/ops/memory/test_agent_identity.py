@@ -108,8 +108,16 @@ def test_surface_follows_evidence_and_does_not_default() -> None:
     assert ai.resolve_surface_id({**CLAUDE, "CLAUDE_CODE_ENTRYPOINT": "cli"}) == "claude-code-cli"
     assert ai.resolve_surface_id(MOBILE) == "claude-code-mobile"
     assert ai.resolve_surface_id({"CURSOR_AGENT": "1"}) == "cursor-ide"
-    assert ai.resolve_agent_id({"CURSOR_AGENT": "1", **CLAUDE}) == "cursor"
-    assert ai.resolve_surface_id({"CURSOR_AGENT": "1", **CLAUDE}) == "cursor-ide"
+    assert ai.resolve_agent_id({"CURSOR_AGENT": "1", **CLAUDE}) == "claude-code"
+    assert ai.resolve_surface_id({"CURSOR_AGENT": "1", **CLAUDE}) == ""
+    panel = {
+        "CURSOR_AGENT": "1",
+        "L9_GOVERNANCE_SURFACE": "claude-code",
+        "CLAUDE_CODE_ENTRYPOINT": "claude-vscode",
+    }
+    assert ai.resolve_agent_id(panel) == "claude-code"
+    assert ai.resolve_surface_id(panel) == "claude-code-cli"
+    assert ai.resolve_surface_id({"CLAUDE_CODE_ENTRYPOINT": "claude-vscode"}) == "claude-code-cli"
     assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "codex"}) == ""
     assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "manus"}) == ""
     assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "gemini"}) == ""

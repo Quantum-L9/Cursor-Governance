@@ -29,7 +29,7 @@ tests. Consumers must not maintain private marker lists.
 
 | Precedence | Condition | Result |
 |---:|---|---|
-| 1 | A Cursor host marker (`CURSOR_AGENT`, `CURSOR_CONVERSATION_ID`, or `CURSOR_EXTENSION_HOST_ROLE`) is set and explicit `L9_GOVERNANCE_SURFACE` is `claude-code` or `claude-code-remote` | `cursor` |
+| 1 | A Cursor host marker (`CURSOR_AGENT`, `CURSOR_CONVERSATION_ID`, or `CURSOR_EXTENSION_HOST_ROLE`) is set, explicit `L9_GOVERNANCE_SURFACE` is `claude-code` or `claude-code-remote`, and no live Claude runtime marker is set | `cursor` |
 | 2 | explicit `L9_GOVERNANCE_SURFACE` is one of `cursor`, `claude-code`, `claude-code-remote`, `codex`, `gemini`, `manus` | explicit id |
 | 3 | `CLAUDE_CODE_REMOTE=true` | `claude-code-remote` |
 | 4 | `CLAUDECODE` or `CLAUDE_CODE_ENTRYPOINT` or `CLAUDE_CODE_SESSION_ID` | `claude-code` |
@@ -37,12 +37,18 @@ tests. Consumers must not maintain private marker lists.
 | 6 | nothing matched | `unknown` |
 
 The precedence is intentionally not “explicit always wins.” The projected
-Claude triad must not steal a Cursor session.
+Claude triad must not steal a Cursor session — the row-1 override applies only
+while no live Claude runtime marker is set. `l9_claude_runtime_present` is true
+when `CLAUDE_CODE_REMOTE=true`, `CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`, or
+`CLAUDE_CODE_SESSION_ID` is set; the claude-vscode extension runs the real CLI
+inside Cursor, so those markers win over the override.
 
 Existing helpers are the public contract:
 
-- Python: `detect_surface`, `is_claude_gate_surface`, `CLAUDE_GATE_SURFACES`
-- Shell: `l9_detect_surface`, `l9_is_claude_gate_surface`
+- Python: `detect_surface`, `is_claude_gate_surface`, `claude_runtime_present`,
+  `CLAUDE_GATE_SURFACES`
+- Shell: `l9_detect_surface`, `l9_is_claude_gate_surface`,
+  `l9_claude_runtime_present`
 
 Do not add a second detect API.
 
@@ -93,11 +99,15 @@ Claude-only `case`). `session_debt_wrap.py` is classified as a gate but is not
 registered in `settings.template.json`: `session_debt.py` runs on demand
 (`rules/42-no-abandoned-work`), never as a Stop gate.
 
-`memory_gate.py` runs only when `claude_runtime_present` is true
+`memory_gate.py` runs only when `l9_claude_runtime_present` is true
 (`CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`, `CLAUDE_CODE_SESSION_ID`, or
-`CLAUDE_CODE_REMOTE=true`) and no Cursor host marker is set. A projected
-`L9_GOVERNANCE_SURFACE=claude-code` is not a runtime. Cursor loads that
-string from `.claude/settings.json` and does not run `memory_prefetch.py`.
+`CLAUDE_CODE_REMOTE=true`), and its skip depends on that absence alone. A
+Cursor host marker does not veto the gate when a live Claude runtime is
+present — the claude-vscode extension runs the real CLI inside Cursor, and
+the launcher must not skip the gate in exactly the environment the detector
+reports as `claude-code`. A projected `L9_GOVERNANCE_SURFACE=claude-code` is
+not a runtime. Cursor loads that string from `.claude/settings.json` and does
+not run `memory_prefetch.py`.
 
 Other `unknown` gates still fail toward enforcing. Observers fail toward
 non-injection.
