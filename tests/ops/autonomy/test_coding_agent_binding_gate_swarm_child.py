@@ -234,4 +234,5 @@ def test_claude_code_host_default_binding_does_not_satisfy_the_child_gate(
     assert "host_binding" not in source and "host-bindings" not in source
 
     mode_state(tmp_path)
-    assert write(tmp_path, is_child=child).allow
+    allowed = write(tmp_path, is_child=child)
+    assert allowed.allow
