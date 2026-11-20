@@ -49,3 +49,16 @@ rules and is the required gate. The hosted platform runs registry rules, Supply 
 | certifi critical, reachable | l9-repo-template, l9-node-template, l9-dependency-template, l9-ci-debt-lsp | outside the campaign's seven repositories | repository owners |
 
 Medium findings not listed above are not individually triaged here.
+
+## Applied on 2026-11-20 (operator authorized)
+
+| Change | Route | Result (observed) |
+|---|---|---|
+| `python.lang.compatibility.python37.python37-compatibility-importlib2` added to the Code detection policy's disabled list | `PUT /api/policies/v2/deployments/103775/detection-policy/code` with the prior `state_version`; rulesets `p/comment`, `p/default` unchanged | 200; read back shows the rule disabled and nothing else changed |
+| 18 findings ignored as false positive | `POST /api/v1/deployments/l9_ci_constellation/triage` | 200; 34 triaged (the 18 plus copies on pull-request refs) |
+| 8 `k8s-deploy.yml` findings ignored as acceptable risk | same | 200; 14 triaged |
+
+Open on `main` after the change: EIE 97, Cursor-Governance 15, .github 12, CEG 4, SDK 1, Core 0.
+The deploy-workflow `run-shell-injection` triage reopens automatically if the trigger stops being `workflow_dispatch` only, only if Semgrep reports it as a new finding; a code change does not reopen it by itself.
+
+Merge-order note from lane L2: Core #289 (coverage into Sonar) merges before #283, #285, #286 and #287, so their Sonar new-code coverage is measured.
