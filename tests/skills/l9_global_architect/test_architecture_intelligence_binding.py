@@ -1037,7 +1037,16 @@ def test_generation_holds_no_repository_publication_authority() -> None:
     workflow_path = REPO / ".github/workflows/l9-projection-bundle-verify.yml"
     workflow = yaml.safe_load(workflow_path.read_text())
     triggers = workflow[True] if True in workflow else workflow["on"]
-    assert set(triggers) == {"pull_request", "push"}
+    # Scheduled and dispatched runs detect authority drift on main; they add no permission
+    # and no secret, and the publication assertions below hold for every trigger.
+    assert set(triggers) == {
+        "pull_request",
+        "push",
+        "schedule",
+        "workflow_dispatch",
+        "repository_dispatch",
+    }
+    assert triggers["repository_dispatch"] == {"types": ["l9-semantic-authority-updated"]}
     assert workflow["permissions"] == {"contents": "read"}
     for job in workflow["jobs"].values():
         assert job["permissions"] == {"contents": "read"}

@@ -52,8 +52,13 @@ AUTHORITY_ENVIRONMENT: dict[str, str] = {
     "L9_AUTONOMY_AUTHORITY_DIGEST": "authority_digest",
 }
 
-GATE_OVERRIDE_ENV = "L9_EXECUTION_GATE"
 GATE_RELATIVE = Path("ops/autonomy/local_execution_gate.py")
+#: The checkout this hook ships in. The provider registers the hook from the
+#: grant's repository root (`ClaudeCodeProvider`: repository_root /
+#: WORKER_EFFECT_HOOK), so the gate it hands events to is that checkout's gate.
+#: The gate is never chosen by the window's environment: an enforcement hook
+#: whose downstream gate an environment value can redirect is not enforcing.
+_OWN_ROOT = _HERE.parents[3]
 
 
 class HookDenied(RuntimeError):
@@ -131,17 +136,29 @@ def recorded_authority(claimed: Mapping[str, str]) -> dict[str, Any]:
     return authority
 
 
-def _downstream_gate(authority: Mapping[str, Any], environment: Mapping[str, str]) -> Path:
-    override = str(environment.get(GATE_OVERRIDE_ENV) or "").strip()
-    candidate = (
-        Path(override) if override else Path(str(authority["repository_root"])) / GATE_RELATIVE
-    )
+def _require_own_root(authority: Mapping[str, Any]) -> None:
+    """The grant must name the checkout this hook ships in, or nothing runs."""
+    try:
+        recorded_root = Path(str(authority["repository_root"])).resolve()
+    except (KeyError, OSError, RuntimeError) as exc:
+        raise HookDenied("ROOT_AUTHORITY_INCOMPLETE: grant names no repository root") from exc
+    if recorded_root != _OWN_ROOT.resolve():
+        raise HookDenied(
+            f"ROOT_GATE_FOREIGN: the grant names repository {recorded_root}, "
+            f"but this hook belongs to {_OWN_ROOT}"
+        )
+
+
+def _own_gate() -> Path:
+    """The root execution gate of this hook's own checkout."""
+    candidate = _OWN_ROOT / GATE_RELATIVE
     if not candidate.is_file():
         raise HookDenied(f"ROOT_GATE_MISSING: no execution gate at {candidate}")
     return candidate
 
 
-def main() -> int:
+def main(gate_override: Path | None = None) -> int:
+    """Authorize one effect; ``gate_override`` is for in-process test drivers only."""
     raw = sys.stdin.buffer.read()
     try:
         event = json.loads(raw)
@@ -165,7 +182,8 @@ def main() -> int:
             raise HookDenied(str(exc)) from exc
         if not decision.allowed:
             raise HookDenied(f"{decision.code}: {decision.message}")
-        gate = _downstream_gate(authority, os.environ)
+        _require_own_root(authority)
+        gate = _own_gate() if gate_override is None else gate_override
     except HookDenied as exc:
         return _deny(str(exc))
     except Exception as exc:  # noqa: BLE001 - enforcement boundary: any fault denies

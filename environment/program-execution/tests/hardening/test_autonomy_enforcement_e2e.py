@@ -38,6 +38,7 @@ and no root evidence surviving a verdict that rejected it.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import sqlite3
@@ -64,6 +65,20 @@ for _path in (str(_REPO_ROOT), str(_PE_ROOT), str(_INTEGRATION), str(_PEC_SCRIPT
 from peer_execution.imports import load_module  # noqa: E402
 
 WRAPPER = _INTEGRATION / "worker_effect_hook.py"
+
+#: Runs the real hook as its own process, exactly as Claude Code would, except
+#: that its downstream gate is the stub. The hook takes its gate from its own
+#: checkout and never from the environment, so the stub reaches it only
+#: through main()'s in-process ``gate_override`` parameter.
+DRIVER = """import importlib.util
+import pathlib
+import sys
+
+spec = importlib.util.spec_from_file_location("worker_effect_hook", sys.argv[1])
+hook = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(hook)
+raise SystemExit(hook.main(gate_override=pathlib.Path(sys.argv[2])))
+"""
 
 #: The stub stands in for `ops/autonomy/local_execution_gate.py` only so its
 #: stdin is observable. It exits 0 unconditionally, so every denial in this
@@ -269,11 +284,10 @@ class Harness:
         env = {
             **os.environ,
             **(self.worker_environment() if environment is None else environment),
-            "L9_EXECUTION_GATE": str(self.stub_gate),
             "L9_TEST_GATE_LOG": str(self.gate_log),
         }
         completed = subprocess.run(
-            [sys.executable, str(WRAPPER)],
+            [sys.executable, "-c", DRIVER, str(WRAPPER), str(self.stub_gate)],
             input=raw,
             capture_output=True,
             env={key: value for key, value in env.items() if value is not None},
@@ -769,3 +783,26 @@ def test_coverage_refuses_to_run_without_a_named_phase(harness: Harness) -> None
     """`phase=None` would mean "count any decision" — the hole itself."""
     with pytest.raises(harness.grants.AutonomyGrantError, match="COVERAGE_PHASE_REQUIRED"):
         harness.grants.unmediated_changed_paths(harness.grant, [WRITABLE], phase="")
+
+
+def _hook_module() -> Any:
+    spec = importlib.util.spec_from_file_location("worker_effect_hook_under_test", WRAPPER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_gate_is_this_checkouts_and_never_chosen_by_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hook = _hook_module()
+    monkeypatch.setenv("L9_EXECUTION_GATE", str(tmp_path / "permissive_gate.py"))
+    hook._require_own_root({"repository_root": str(_REPO_ROOT)})
+    assert hook._own_gate() == _REPO_ROOT / "ops" / "autonomy" / "local_execution_gate.py"
+
+
+def test_a_grant_naming_another_repository_is_refused(tmp_path: Path) -> None:
+    hook = _hook_module()
+    with pytest.raises(hook.HookDenied, match="ROOT_GATE_FOREIGN"):
+        hook._require_own_root({"repository_root": str(tmp_path)})

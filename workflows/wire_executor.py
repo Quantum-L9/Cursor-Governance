@@ -47,6 +47,27 @@ REPO_ROOT = Path(__file__).parent.parent
 REPORT_GENERATOR = REPO_ROOT / "scripts" / "generate_gmp_report.py"
 STATE_FILE = REPO_ROOT / ".wire_executor_state.json"
 
+#: A dotted Python module path. The component is checked against this before it
+#: reaches any command, so it can only ever name a module.
+_MODULE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
+
+
+def _module_name(name: str) -> str:
+    if not _MODULE_NAME.fullmatch(name):
+        raise ValueError(f"not a Python module path: {name!r}")
+    return name
+
+
+def _import_check_argv(module: str) -> list[str]:
+    """Import ``module`` in a fresh interpreter; the name is data, never code."""
+    return [
+        sys.executable,
+        "-c",
+        "import importlib, sys; importlib.import_module(sys.argv[1])",
+        _module_name(module),
+    ]
+
+
 # Protected files - escalate to /gmp if touched
 PROTECTED_FILES = {
     "core/agents/executor.py",
@@ -162,15 +183,13 @@ class WireExecutor:
             STATE_FILE.unlink()
         self.state = None
 
-    def _run_shell(self, cmd: str, capture: bool = True) -> tuple[int, str, str]:
-        """Run shell command."""
-        result = subprocess.run(  # noqa: S602 - shell=True required for DAG executor
-            cmd,
-            shell=True,
-            cwd=REPO_ROOT,
-            capture_output=capture,
-            text=True,
-        )
+    def _run(self, argv: list[str]) -> tuple[int, str, str]:
+        """Run one command as an argument list, never through a shell.
+
+        The component name, paths and messages here come from the command
+        line and state files, so none of them is ever parsed by a shell.
+        """
+        result = subprocess.run(argv, cwd=REPO_ROOT, capture_output=True, text=True, check=False)
         return result.returncode, result.stdout, result.stderr
 
     def _print_header(self, title: str):
@@ -188,8 +207,7 @@ class WireExecutor:
         print(f"Searching for references to: {component}\n")
 
         # Search for imports and usages
-        cmd = f'rg "{component}" --type py -n 2>/dev/null || true'
-        _code, stdout, _stderr = self._run_shell(cmd)
+        _code, stdout, _stderr = self._run(["rg", "-n", "--type", "py", "-e", component])
 
         references = []
         for line in stdout.strip().split("\n"):
@@ -313,8 +331,10 @@ class WireExecutor:
                     match = re.search(r"from\s+([\w.]+)\s+import", module_part)
                     if match:
                         module_name = match.group(1)
-                        cmd = f'python3 -c "from {module_name} import *" 2>&1'
-                        code, _stdout, _stderr = self._run_shell(cmd)
+                        try:
+                            code, _stdout, _stderr = self._run(_import_check_argv(module_name))
+                        except ValueError:
+                            code = 1  # a relative or malformed name cannot import standalone
                         if code != 0:
                             ref["status"] = "broken"
                             actions.append(
@@ -381,8 +401,8 @@ class WireExecutor:
 
         # py_compile on modified files
         if self.state.files_modified:
-            files_str = " ".join(str(REPO_ROOT / f) for f in self.state.files_modified)
-            code, stdout, stderr = self._run_shell(f"python3 -m py_compile {files_str}")
+            paths = [str(REPO_ROOT / f) for f in self.state.files_modified]
+            code, stdout, stderr = self._run([sys.executable, "-m", "py_compile", *paths])
             if code == 0:
                 validations.append({"check": "py_compile", "status": "✅"})
                 print("✅ py_compile: PASSED")
@@ -394,11 +414,9 @@ class WireExecutor:
 
         # Try to import the component
         component = self.state.component
-        if "." in component:
-            cmd = f'python3 -c "from {component} import *" 2>&1'
-        else:
-            cmd = f'python3 -c "import {component}" 2>&1'
-        code, stdout, stderr = self._run_shell(cmd)
+        cmd = _import_check_argv(component)
+        code, stdout, stderr = self._run(cmd)
+        stdout += stderr
         if code == 0:
             validations.append({"check": "import", "status": "✅"})
             print("✅ import: PASSED")
@@ -418,8 +436,7 @@ class WireExecutor:
         component = self.state.component
 
         # Re-run discovery
-        cmd = f'rg "{component}" --type py -n 2>/dev/null || true'
-        _code, stdout, _stderr = self._run_shell(cmd)
+        _code, stdout, _stderr = self._run(["rg", "-n", "--type", "py", "-e", component])
 
         # Count references
         ref_count = len([ln for ln in stdout.strip().split("\n") if ln and ":" in ln])
@@ -446,11 +463,9 @@ class WireExecutor:
         checks = []
 
         # 1. Verify imports resolve
-        if "." in component:
-            cmd = f'python3 -c "from {component} import *" 2>&1'
-        else:
-            cmd = f'python3 -c "import {component}" 2>&1'
-        code, stdout, _stderr = self._run_shell(cmd)
+        cmd = _import_check_argv(component)
+        code, stdout, stderr = self._run(cmd)
+        stdout += stderr
         if code == 0:
             checks.append({"check": "Imports resolve", "status": "✅"})
             print("✅ Imports resolve")
@@ -459,8 +474,9 @@ class WireExecutor:
             print(f"❌ Imports resolve: {stdout[:100]}")
 
         # 2. Find consumers
-        cmd = f'rg "from.*{component}|import.*{component}" --type py -l 2>/dev/null || true'
-        code, stdout, _stderr = self._run_shell(cmd)
+        code, stdout, _stderr = self._run(
+            ["rg", "-l", "--type", "py", "-e", f"from.*{component}|import.*{component}"]
+        )
         consumers = [f for f in stdout.strip().split("\n") if f]
         checks.append({"check": "Consumers found", "status": f"{len(consumers)} files"})
         print(f"✅ Consumers: {len(consumers)} files")
@@ -501,31 +517,38 @@ class WireExecutor:
         # Build TODO items from actions
         todo_args = []
         for a in self.state.actions:
-            todo_args.append(
-                f'--todo "{a["id"]}|{a["file"]}|{a.get("line", "N/A")}|WIRE|{a["action"]}"'
-            )
+            todo_args += [
+                "--todo",
+                f"{a['id']}|{a['file']}|{a.get('line', 'N/A')}|WIRE|{a['action']}",
+            ]
 
         # Build validation items
         val_args = []
         for v in self.state.validation_results:
-            val_args.append(f'--validation "{v["check"]}|{v["status"]}"')
+            val_args += ["--validation", f"{v['check']}|{v['status']}"]
 
         # If no actions, add a placeholder
         if not todo_args:
-            todo_args.append(f'--todo "W1|{self.state.component}|N/A|VERIFY|Wiring verification"')
+            todo_args += ["--todo", f"W1|{self.state.component}|N/A|VERIFY|Wiring verification"]
         if not val_args:
-            val_args.append('--validation "wiring|✅"')
+            val_args += ["--validation", "wiring|✅"]
 
-        cmd = f'''python3 {REPORT_GENERATOR} \
-            --task "Wire {self.state.component}" \
-            --tier RUNTIME_TIER \
-            {" ".join(todo_args)} \
-            {" ".join(val_args)} \
-            --summary "Wiring verification via /wire DAG executor" \
-            --skip-verify 2>/dev/null || echo "Report generation skipped"'''
+        argv = [
+            sys.executable,
+            str(REPORT_GENERATOR),
+            "--task",
+            f"Wire {self.state.component}",
+            "--tier",
+            "RUNTIME_TIER",
+            *todo_args,
+            *val_args,
+            "--summary",
+            "Wiring verification via /wire DAG executor",
+            "--skip-verify",
+        ]
 
         print("Generating report...")
-        _code, stdout, _stderr = self._run_shell(cmd)
+        _code, stdout, _stderr = self._run(argv)
 
         # Extract report path
         for line in stdout.split("\n"):
@@ -552,8 +575,7 @@ class WireExecutor:
             return True
 
         # Stage files
-        files_str = " ".join(self.state.files_modified)
-        self._run_shell(f"git add {files_str}")
+        self._run(["git", "add", "--", *self.state.files_modified])
 
         # Create commit message
         component = self.state.component
@@ -568,14 +590,14 @@ class WireExecutor:
         # finding to repair, not a flag to add (contract
         # l9-commit-verification-integrity); a hook failure lands in the
         # `else` below and is reported rather than silently committed.
-        cmd = f'git commit -m "{commit_msg}" 2>&1 || true'
-        code, stdout, _stderr = self._run_shell(cmd)
+        code, stdout, stderr = self._run(["git", "commit", "-m", commit_msg])
+        stdout += stderr
 
         if "nothing to commit" in stdout.lower():
             print("✅ Nothing to commit — working tree clean")
         elif code == 0 or "create mode" in stdout.lower():
             # Get commit hash
-            code, hash_out, _ = self._run_shell("git rev-parse --short HEAD")
+            code, hash_out, _ = self._run(["git", "rev-parse", "--short", "HEAD"])
             self.state.commit_hash = hash_out.strip()
             print(f"✅ Committed: {self.state.commit_hash}")
             print(f"   Message: {commit_msg}")
@@ -617,7 +639,7 @@ class WireExecutor:
             print(f"Resuming wire: {self.state.component}")
         else:
             self.state = WireState(
-                component=component,
+                component=_module_name(component),
                 component_type="unknown",
                 started_at=datetime.now(UTC).isoformat(),
                 current_step=STEP_ORDER[0],
