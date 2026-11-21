@@ -147,7 +147,7 @@ def test_core_blocking_checks_block_at_exact_core_pins() -> None:
 
 def test_uv_tool_spec_pins_pypi_by_version_and_git_by_commit() -> None:
     loaded = manifest.load()
-    assert install.uv_tool_spec(loaded.tools["semgrep"]) == "semgrep==1.171.0"
+    assert install.uv_tool_spec(loaded.tools["semgrep"]) == "semgrep==1.186.0"
     sdk = loaded.tools["l9-ci"]
     assert install.uv_tool_spec(sdk) == f"{sdk.package}@{sdk.version}"
 
