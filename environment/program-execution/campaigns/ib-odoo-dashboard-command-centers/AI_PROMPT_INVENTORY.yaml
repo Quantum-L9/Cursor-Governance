@@ -1,0 +1,138 @@
+schema: l9.campaign.ai-prompt-inventory.v1
+campaign_id: ib-odoo-dashboard-command-centers
+source_version: "1.4.0"
+decision: DEC-018
+status: target_inventory_only
+note: >-
+  Target inventory for the seven folder-level Odoo AI Auto-Sort prompts.
+  This file defines role, allowed actions, exception conditions and tests.
+  It contains no final prompt text and activates nothing. Final prompts are
+  written by TASK-071 (prompt 1) and TASK-073 (prompts 2-7) in
+  plasticos_documents_ai and activated only by an explicit administrator
+  action; real documents are sent only after GATE-005.
+
+common_contract:
+  model: deepseek-flash (non-thinking, reasoning.effort none) through the TASK-068 adapter
+  tools: [move-in-folder, add-tags]
+  forbidden_tools: [vendor bill or customer invoice creation, next_activity, code, webhook, object_write, object_create]
+  ai_scope: classification, tagging and routing only
+  never_by_ai:
+    - business association to a load, transaction, order or partner (exact association command, human)
+    - evidence verification (plasticos.document.action_verify, human Documents user)
+    - accounting posting or bill creation (existing accounting owners and digitization)
+    - Linda external communication (Linda remains the sole logistics-document chase sender)
+  fallback: add Needs Review and do not move (Operations triage via the TASK-060 router)
+  never_applied_by_ai: [Verified]
+  skip_when: [document carries Needs Review, doc_type_source is human, document is a shortcut or a folder]
+  exception_checks_first: true
+  owner_routing: by the DEC-010 router from the resulting type tag; activities are never created by the AI
+  versioning: prompt_version recorded in the rule's chatter; a new version is applied only through the explicit activation action
+
+activation_slices:
+  - slice: 1
+    prompts: [P1]
+    task: TASK-071
+    precondition: [TASK-068 done, TASK-069 done, TASK-070 done, UNK-006 probe recorded with synthetic documents]
+  - slice: 2
+    prompts: [P2, P3, P4, P5, P6, P7]
+    task: TASK-073
+    precondition: [slice 1 measured by TASK-072, GATE-006 loop and conflict proof, explicit operator activation]
+
+prompts:
+  - id: P1
+    name: Inbox master classification and routing
+    folder_xmlid: plasticos_documents_native.folder_plasticos_inbox
+    role: Classify every incoming document and route it to exactly one destination folder with exactly one type tag.
+    allowed_moves: [Bills of Lading, Scale Tickets, Loading Pics, Customer Orders, Vendor Bills, Compliance]
+    allowed_tags: [BOL, Scale Ticket, Certified Scale Ticket (CST), Loading Pic, Customer Order, Purchase Order, Packing List, Receiving Report, Delivery Order Confirmation, Vendor Bill, Customer Invoice, Certification, Carrier Certification, Permit, Lab Report, Contract, Correspondence, Photo, To Split, Needs Review]
+    routing:
+      Bills of Lading: [BOL]
+      Scale Tickets: [Scale Ticket, Certified Scale Ticket (CST)]
+      Loading Pics: [Loading Pic, Photo when it is loading evidence]
+      Customer Orders: [Purchase Order, Customer Order, Packing List, Receiving Report, Delivery Order Confirmation]
+      Vendor Bills: [Vendor Bill, Customer Invoice]
+      Compliance: [Certification, Carrier Certification, Permit, Lab Report, Contract, Correspondence]
+    exception_conditions:
+      - multipage document with several documents -> To Split, stop
+      - contradictory references, unreadable content, wrong or unknown company, ambiguous identity -> Needs Review, stay in Inbox
+      - more than one plausible type family -> Needs Review, stay in Inbox
+      - no confident match -> Needs Review, stay in Inbox
+    owner_after_routing: Logistics for shipping paperwork and evidence; Operations Manager for financial documents and every Needs Review
+    tests:
+      - each routing row with a mocked model lands in its folder with its tag and one DEC-010 owner activity
+      - each exception condition leaves the document in Inbox with Needs Review and one Operations activity
+      - rule carries exactly move-in-folder and add-tags
+      - Verified can never be applied
+  - id: P2
+    name: Bills of Lading
+    folder_xmlid: plasticos_documents_native.folder_plasticos_bols
+    role: Confirm a BOL is a BOL and flag shipping-evidence gaps; never re-route.
+    allowed_moves: []
+    allowed_tags: [BOL, Needs Review]
+    exception_conditions:
+      - not a BOL or a second type family present -> Needs Review (no move)
+      - missing load or shipment reference, illegible signature block -> Needs Review
+    owner_after_routing: Logistics (attributed shipping evidence); Operations Manager when Needs Review is classification doubt
+    tests: [no move ever issued, wrong-type document gets Needs Review only, human-classified document skipped]
+  - id: P3
+    name: Scale Tickets
+    folder_xmlid: plasticos_documents_native.folder_plasticos_scale_tickets
+    role: Distinguish ordinary from certified (CST) scale tickets and flag weight-evidence gaps.
+    allowed_moves: []
+    allowed_tags: [Scale Ticket, Certified Scale Ticket (CST), Needs Review]
+    exception_conditions:
+      - certification status unclear -> Needs Review
+      - gross/tare/net missing or inconsistent on the ticket -> Needs Review (AP weight consequences stay with Operations)
+      - not a scale ticket -> Needs Review
+    owner_after_routing: Logistics for physical evidence; Operations Manager for financial consequences and classification doubt
+    tests: [CST vs ordinary tagging, inconsistent weights get Needs Review, no move ever issued]
+  - id: P4
+    name: Loading Pictures
+    folder_xmlid: plasticos_documents_native.folder_plasticos_loading_pics
+    role: Confirm loading or delivery photographic evidence; never infer load attribution.
+    allowed_moves: []
+    allowed_tags: [Loading Pic, Photo, Needs Review]
+    exception_conditions:
+      - image is not loading or delivery evidence -> Needs Review
+      - several loads visible or no identifiable load marking -> Needs Review
+    owner_after_routing: Logistics
+    tests: [non-loading image gets Needs Review, no load association written, no move ever issued]
+  - id: P5
+    name: Orders and Shipping Paperwork
+    folder_xmlid: plasticos_documents_native.folder_plasticos_customer_orders
+    folder_rename: none (existing Customer Orders folder; a rename needs separate justification)
+    role: Distinguish PO, SO/Customer Order, packing list, receiving report and delivery order; flag gaps.
+    allowed_moves: []
+    allowed_tags: [Purchase Order, Customer Order, Packing List, Receiving Report, Delivery Order Confirmation, Needs Review]
+    exception_conditions:
+      - PO vs SO direction unclear (buyer/seller roles ambiguous) -> Needs Review
+      - commercial terms or prices inconsistent with the paperwork type -> Needs Review (no price action; Logistics has no commercial authority)
+      - not shipping paperwork -> Needs Review
+    owner_after_routing: Logistics for shipping paperwork; Operations Manager for classification doubt
+    tests: [each type tagged correctly, direction ambiguity gets Needs Review, no move ever issued]
+  - id: P6
+    name: Vendor Bills and financial documents
+    folder_xmlid: plasticos_documents_native.folder_plasticos_vendor_bills
+    role: Separate AP vendor bills from AR customer invoices and flag financial anomalies; never create or post accounting records.
+    allowed_moves: []
+    allowed_tags: [Vendor Bill, Customer Invoice, Needs Review]
+    exception_conditions:
+      - AP vs AR direction unclear -> Needs Review
+      - possible duplicate (same reference and party already present), amounts inconsistent within the document, wrong company -> Needs Review
+    owner_after_routing: Operations Manager (AP/AR); bill creation and posting stay with digitization and the existing account_move guard
+    tests: [AP vs AR tagging, duplicate signal gets Needs Review, no accounting tool attached, no move ever issued]
+  - id: P7
+    name: Compliance and supporting evidence
+    folder_xmlid: plasticos_documents_native.folder_plasticos_compliance
+    role: Classify certifications, carrier certifications, permits, lab reports, contracts and correspondence.
+    allowed_moves: []
+    allowed_tags: [Certification, Carrier Certification, Permit, Lab Report, Contract, Correspondence, Needs Review]
+    exception_conditions:
+      - expired or unreadable certification -> Needs Review
+      - carrier vs material certification unclear -> Needs Review
+    owner_after_routing: Logistics for carrier certifications; Operations Manager for other compliance evidence and classification doubt
+    tests: [carrier vs material certification, expired certificate gets Needs Review, no move ever issued]
+
+loop_safety:
+  rule: Only P1 may move documents; P2-P7 never move, so no AI move can trigger a second folder rule.
+  proof: TASK-073 cross-rule chain tests with adversarial mocked outputs (move to source, move to another prompted folder, tag from another family) before GATE-006.

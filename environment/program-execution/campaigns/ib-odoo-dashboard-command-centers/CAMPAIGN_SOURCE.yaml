@@ -4,9 +4,11 @@ schema_version: 2.0.0
 metadata:
   campaign_id: "ib-odoo-dashboard-command-centers"
   title: "IB-Odoo_19 Dashboard Command Centers — correctness first, native-first UI"
-  version: "1.3.0"
+  version: "1.4.0"
   created_at: "2026-11-20T23:30:00Z"
   status: operator_intake
+  execution_status: NOT_EXECUTED
+  decision_record: "Operator decisions 2026-11-21 (DEC-002, DEC-004, DEC-005, DEC-011, DEC-017, DEC-018): publish the definition to PR #1101 only; activation, lane launch, IB-Odoo_19 changes, merge, deploy and live DeepSeek calls are separate authorizations."
   owner: "Igor Beylin"
   intended_drop_path: >-
     environment/program-execution/campaigns/ib-odoo-dashboard-command-centers/CAMPAIGN_SOURCE.yaml
@@ -86,7 +88,7 @@ operator_directive:
 program:
   id: "ib-odoo-dashboard-command-centers"
   name: "IB-Odoo_19 Dashboard Command Centers"
-  version: "1.3.0"
+  version: "1.4.0"
   owner: "Igor Beylin"
   definition_status: ready
   snapshot_at: "2026-11-20"
@@ -208,17 +210,17 @@ decisions:
     required_evidence_ids: [EVID-001, EVID-007]
     locked_consequence: "No custom analytics framework, analytics database or duplicate transaction model. Dashboards carry group_ids per role and company_ids; record rules still filter their data. Shipped dashboards are updatable module records, so -u reproduces them; UI edits to them are not a source of truth. Basis: EVID-007 (official 19.0 source and docs)."
   - id: DEC-002
-    question: "Which business date assigns a closed deal to a financial period (MTD/YTD revenue, margin, commission, closed counts, rep performance)?"
+    question: "Which business date assigns a closed deal to a financial period?"
     authority_id: AUTH-001
-    status: pending
+    status: accepted
     options:
-      - {id: OPT-A, description: "plasticos.transaction.commission_earned_date (Date, indexed, set on live close, already used by the payout generator) — recommended."}
+      - {id: OPT-A, description: "plasticos.transaction.commission_earned_date for closed-deal and earned-commission period attribution."}
       - {id: OPT-B, description: "Customer invoice date (customer_invoice_id.invoice_date)."}
       - {id: OPT-C, description: "actual_delivery_date on the transaction."}
-    selected_option_id: null
-    blocking_task_ids: [TASK-012]
+    selected_option_id: OPT-A
+    blocking_task_ids: []
     required_evidence_ids: [EVID-001]
-    locked_consequence: "write_date never assigns a financial period. Basis: admin_dashboard.py:296,325-336,736-744; transaction_commission.py:52,114; commission_payout.py:234-235."
+    locked_consequence: "Operator 2026-11-21. write_date is never a business date. Transaction-based figures are operational closed-deal revenue/margin/commission attributed by commission_earned_date and must never be labelled accounting-recognized revenue. Accounting-posted revenue (posted account.move by accounting date), invoice aging (invoice_date_due) and cash (payment dates) are separate KPIs with their own source dates. Every KPI states its semantics and source date in its label or help text. Basis: admin_dashboard.py:296,325-336,736-744; transaction_commission.py:52,114; commission_payout.py:234-235."
   - id: DEC-003
     question: "May Sales dashboard rows open the owning plasticos.transaction?"
     authority_id: AUTH-001
@@ -231,27 +233,27 @@ decisions:
     required_evidence_ids: [EVID-001]
     locked_consequence: "Navigation never widens access; the button is invisible where the transaction is not readable."
   - id: DEC-004
-    question: "Which module hosts the Operations Manager command center? (Adding a module is ask-first, AGENTS.md:544.)"
+    question: "Which module hosts the Operations Manager workbench?"
     authority_id: AUTH-001
-    status: pending
+    status: accepted
     options:
-      - {id: OPT-A, description: "New module plasticos_ops_dashboard depending on logistics, claims, documents, commission and security_base — recommended."}
-      - {id: OPT-B, description: "Extend plasticos_admin_dashboard and add claims/documents to its depends."}
-    selected_option_id: null
-    blocking_task_ids: [TASK-040]
+      - {id: OPT-A, description: "New module plasticos_ops_dashboard depending on logistics, claims, documents, documents_native, commission and security_base."}
+      - {id: OPT-B, description: "Extend plasticos_admin_dashboard."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
     required_evidence_ids: [EVID-001]
-    locked_consequence: "One host; no circular dependency."
+    locked_consequence: "Operator 2026-11-21. Strictly a presentation/workflow integration module: it reuses mail.activity, Documents, Accounting, claims, transactions and Linda. No independent exception queue, duplicated business records, learning system or second AI engine. It is the Operations command center, not an AI-training subsystem."
   - id: DEC-005
-    question: "Approve the security changes the campaign needs? (a) Operations Manager read access to plasticos.claim; (b) Ops command center menu groups; (c) company record rule on plasticos.admin.kpi; (d) company isolation for pending (non-legacy, not yet accepted) plasticos.document rows, which rule_document_operation_scope_company leaves unscoped. Groups and record rules are ask-first, AGENTS.md:546."
+    question: "Approve the security changes the campaign needs?"
     authority_id: AUTH-001
-    status: pending
+    status: accepted
     options:
-      - {id: OPT-A, description: "Approve (a), (b), (c) and (d) as stated — recommended."}
-      - {id: OPT-B, description: "Approve (b) and (c) only; the Ops queue omits claims."}
-    selected_option_id: null
-    blocking_task_ids: [TASK-040]
-    required_evidence_ids: [EVID-001]
-    locked_consequence: "No group or record rule changes without this decision. Basis: claims_security.xml:14-41; security_groups.xml:112-117."
+      - {id: OPT-A, description: "All four: (a) Operations Manager read-only access to plasticos.claim; (b) Operations workbench menus restricted to group_operations_manager; (c) company isolation for plasticos.admin.kpi records; (d) company isolation for pending (non-legacy, not yet accepted) plasticos.document evidence."}
+      - {id: OPT-B, description: "(b) and (c) only."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-001, EVID-008]
+    locked_consequence: "Operator 2026-11-21. No write escalation on claims. Existing group implications and company-aware record rules are preserved; Sales and Logistics gain no access to financial or claims records. A pending document whose company cannot be resolved fails closed (invisible to company-scoped users and routed to Operations through the TASK-060 router, never shown cross-company). Every change carries ACL, multi-company and negative-access tests. Changes land in: (a) and (b) plasticos_ops_dashboard/security (TASK-040); (c) plasticos_admin_dashboard/security (TASK-013); (d) plasticos_documents/security (TASK-065)."
   - id: DEC-006
     question: "What is the source of truth for the commission locked amount and payout state shown on the Sales dashboard?"
     authority_id: AUTH-003
@@ -309,17 +311,17 @@ decisions:
     required_evidence_ids: [EVID-001, EVID-008]
     locked_consequence: "Purpose is decided from the business association and obligation (associated model, obligation_kind, account.move move_type in_invoice vs out_invoice), never from a filename, a tag alone or an AI guess: INV lumps invoice and vendor bill and no PO/SO/carrier-cert tag exists (N-006). One original may carry several obligations, each with its own owner; the original and plasticos.document verification decisions are preserved. Logistics document handling grants no price, credit or posting authority."
   - id: DEC-011
-    question: "Which Linda held-command classes may group_logistics_ops decide (approve/reject), and which stay Operations Manager only?"
+    question: "Which Linda held-command classes may group_logistics_ops decide, and under what safety rule?"
     authority_id: AUTH-001
-    status: pending
+    status: accepted
     options:
-      - {id: OPT-A, description: "Recommended split. Logistics Ops may decide execution-timing commands schedule_load, dispatch_load, accept_appointment, confirm_ready, record_actual_event, propose_shipment_event, accept_shipment_event, record_gate_in, record_departure when edge_case is unverified_linda_reply, acceptance, out_of_sequence or evidence_unverified. Operations Manager only: correct_fact (correction, value_conflict), record_verified_gross_mass, record_container_tare, record_regulatory_parties, any unit_mismatch, any refusal_retry."}
-      - {id: OPT-B, description: "Logistics Ops may decide every class except correct_fact."}
+      - {id: OPT-A, description: "Logistics Operations decides the routine operational classes: schedule_load, accept_appointment, propose_shipment_event, accept_shipment_event, record_gate_in, record_departure, record_actual_event, confirm_ready, dispatch_load. Operations Manager keeps correct_fact (correction, value_conflict), record_container_tare, record_verified_gross_mass, record_regulatory_parties, every value_conflict, every unit_mismatch and every refusal_retry, and every case requiring a prohibited override."}
+      - {id: OPT-B, description: "Logistics Ops decides every class except correct_fact."}
       - {id: OPT-C, description: "No change; Operations Manager only."}
-    selected_option_id: null
-    blocking_task_ids: [TASK-061]
+    selected_option_id: OPT-A
+    blocking_task_ids: []
     required_evidence_ids: [EVID-008]
-    locked_consequence: "Authority is checked server-side per (command, edge_case) in linda_approval._require_approver, never by UI buttons; Linda stays refused; replay revalidation, FOR UPDATE locking, the pending unique index, refusal records and the archived-Linda kill switch are unchanged; unauthorized roles fail with AccessError at the server. Basis: linda_approval.py:50,265-295,374-457."
+    locked_consequence: "Operator 2026-11-21, OPT-A with a fail-closed refinement. Routing an exception to Logistics never authorizes overriding an operational safety gate. A Logistics approval replays the command against the exact current business state with every owner guard active; if any guard still refuses (including evidence_unverified and out_of_sequence cases that remain unresolved), the command is not applied, the result is recorded as blocked and the case is re-routed to Operations Manager. dispatch, release, readiness and other consequential commands never become executable merely because a Logistics user clicked Approve. Operations Manager approvals keep the existing semantics. The Linda kill switch, server-side authorization, FOR UPDATE locking, replay/idempotency checks and audit history are preserved; Logistics users are never added to group_operations_manager. Every authorized (command, edge_case) combination has a positive and a negative test."
   - id: DEC-012
     question: "What carries an exception obligation?"
     authority_id: AUTH-003
@@ -371,25 +373,37 @@ decisions:
     status: accepted
     options:
       - {id: OPT-A, description: "Superseded: OpenAI gpt-4.1 through Odoo's native provider."}
-      - {id: OPT-B, description: "Operator 2026-11-21: DeepSeek deepseek-flash (DeepSeek-V4.1-Flash-1017; 1M context; tool calls, vision and file input supported) through a provider adapter, because Odoo 19 ai hard-codes providers to openai and google (ai/utils/llm_providers.py PROVIDERS; llm_api_service.py:88-98,211-229,524-534). Adapter settings that respect DeepSeek's API: Responses API at https://api.deepseek.com/responses; thinking disabled ({'thinking': {'type': 'disabled'}}) so temperature applies, tool_choice is unrestricted and no reasoning_content round-trip is needed; strict removed from tool schemas (strict is /beta-only); parallel_tool_calls and store left to DeepSeek defaults (ignored / always false); temperature 0; images as base64 data-URL input_image; PDFs per DEC-017; no user_id with personal data; HTTP 429 retried with backoff; request timeout raised above Odoo's 30 s default for the synchronous upload path. Key in ir.config_parameter ai.deepseek_key set by the operator on each database, never in the repository."}
+      - {id: OPT-B, description: "Operator 2026-11-21: DeepSeek deepseek-flash (DeepSeek-V4.1-Flash-1017; 1M context; tool calls, vision and file input supported) through a provider adapter, because Odoo 19 ai hard-codes providers to openai and google (ai/utils/llm_providers.py PROVIDERS; llm_api_service.py:88-98,211-229,524-534). Adapter settings that respect DeepSeek's API: Responses API at https://api.deepseek.com/responses; thinking disabled with reasoning: {effort: 'none'} (the Responses-API control; the Chat Completions thinking.type shape is not used) so temperature applies, tool_choice is unrestricted and no reasoning round-trip is needed; function_call and function_call_output items resent in full each turn (stateless API); strict removed from tool schemas (strict is /beta-only); parallel_tool_calls and store left to DeepSeek defaults (ignored / always false); temperature 0; images as base64 data-URL input_image; documents only by file_id (inline file content and file URLs are not supported for documents); PDFs per DEC-017; no user_id with personal data; HTTP 429 retried with backoff; request timeout raised above Odoo's 30 s default for the synchronous upload path. Key in ir.config_parameter ai.deepseek_key set by the operator on each database, never in the repository."}
       - {id: OPT-C, description: "deepseek-flash in thinking mode (reasoning). Used only if TASK-072 shows non-thinking accuracy below threshold; requires passing reasoning back on every tool turn and forbids tool_choice required."}
       - {id: OPT-D, description: "deepseek-v4-pro: rejected — text only, no vision or file input."}
     selected_option_id: OPT-B
     blocking_task_ids: []
     required_evidence_ids: [EVID-010, EVID-012]
+    operator_evidence: "Operator-reported 2026-11-21: deepseek-flash has outperformed GPT-4o in the operator's own usage. This is an operator observation, not an independent benchmark; TASK-072 measures this workload's classification accuracy and no comparative result is claimed until then."
     locked_consequence: "There is no separate DeepSeek document-analysis reasoning model; deepseek-flash is the only DeepSeek model that reads documents or images. Odoo's Responses body (inline input_file file_data, strict tools) is not accepted unchanged, so the adapter is mandatory; its exact request/response contract is UNK-006, settled by TASK-068 against the live API."
   - id: DEC-017
-    question: "Where does the DeepSeek adapter live, how are PDFs sent, and is the data-sharing acknowledged?"
+    question: "Where does the DeepSeek adapter live, how are documents sent, and how are external processing and retention controlled?"
     authority_id: AUTH-001
-    status: pending
+    status: accepted
     options:
-      - {id: OPT-A, description: "Recommended. New auto_install glue module plasticos_documents_ai (depends plasticos_documents_native, ai_documents) holds the provider adapter, the Auto-Sort setup and its tests. PDFs: send the attachment's extracted text layer as input_text when it has one (no upload, no parsing cost); scanned PDFs without a text layer are uploaded once to DeepSeek /files with purpose text_recognition and referenced by file_id (billed per page, original not retrievable or downloadable from DeepSeek); images go inline. Operator acknowledges that document content, names and tag names are sent to DeepSeek, whose data region and retention are not stated in its API docs."}
-      - {id: OPT-B, description: "Same host; text layer only — scanned PDFs are never sent and go straight to Needs Review."}
-      - {id: OPT-C, description: "Same host; every PDF through DeepSeek /files document parsing."}
-    selected_option_id: null
-    blocking_task_ids: [TASK-068, TASK-071, TASK-072]
+      - {id: OPT-A, description: "Modified OPT-A (operator 2026-11-21): a minimal dedicated addon plasticos_documents_ai, isolated from the existing native Documents bridge (plasticos_documents_native keeps the bridge; the addon holds only the provider adapter, the Auto-Sort prompt builders and their tests). auto_install False; installing it sends nothing — AI activation is an explicit administrator action per folder slice. deepseek-flash, non-thinking (reasoning.effort none). Documents: directly extracted PDF text only where it preserves enough information to classify; scanned or layout-dependent PDFs and images go through DeepSeek's Files API with purpose text_recognition (text only) or rich_layout_recognition (text and figures) chosen by the document's needs, always uploaded with expires_after[anchor]=created_at and a bounded expires_after[seconds] (3600-2592000; a value at the low end is the default) and deleted with DELETE /files/{id} after the classification turn; originals stay in Odoo; no unnecessary metadata (no partner names, emails or user identities beyond what classification needs; no user_id with personal data); the key stays in Odoo settings; no secrets or document payloads in logs, chatter tool logs beyond Odoo's own, test fixtures or PR text. The addon's README documents external processing, what is sent, retention and deletion."}
+      - {id: OPT-B, description: "Text layer only; scanned PDFs never sent."}
+      - {id: OPT-C, description: "Every PDF through the Files API."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
     required_evidence_ids: [EVID-012]
-    locked_consequence: "Adding a module is ask-first (AGENTS.md:544). The data-sharing acknowledgment is an operator act, recorded with the decision."
+    locked_consequence: "Design and synthetic-data contract tests are authorized. Transmitting live Production customer, supplier or financial documents is NOT authorized: real-document activation waits for an explicit operator external-data-processing approval (GATE-005). DeepSeek retains uploads permanently when expires_after is omitted (files_api.md), and neither originals nor parse results can be downloaded back."
+  - id: DEC-018
+    question: "Which folder-level Auto-Sort prompts exist, in which order are they activated, and what may each do?"
+    authority_id: AUTH-001
+    status: accepted
+    options:
+      - {id: OPT-A, description: "Operator 2026-11-21: the seven-prompt target inventory in AI_PROMPT_INVENTORY.yaml — (1) Inbox master classification and routing, (2) Bills of Lading, (3) Scale Tickets, (4) Loading Pictures, (5) Orders and Shipping Paperwork on the existing Customer Orders folder (no rename), (6) Vendor Bills and financial documents, (7) Compliance and supporting evidence — each with role, allowed actions, exception conditions and tests. The Inbox classifier is activation slice 1; destination-folder prompts are slice 2 and are activated only after loop-safety and conflicting-classification proof (GATE-006)."}
+      - {id: OPT-B, description: "Activate all seven prompts at once."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-010]
+    locked_consequence: "This planning PR writes no final prompt text and activates nothing. AI is limited to classification, tagging and routing; business association, verification, accounting posting and Linda's external communication keep their existing owners."
 unknowns:
   - id: UNK-001
     statement: >-
@@ -449,11 +463,12 @@ unknowns:
       The exact DeepSeek Responses API behaviour for Odoo's request shape:
       tool schema handling without strict, function-call output items and
       tool-result inputs in Odoo's stateless loop, inline input_image, and
-      file_id input_file from /files, with thinking disabled.
+      file_id input_file from /files with bounded expiration and deletion,
+      with reasoning.effort none.
     owner: AUTH-003
     status: open
     blocking_task_ids: [TASK-071]
-    resolution_method: "TASK-068 live contract probe on Staging with the operator's key, recorded as fixtures for offline tests"
+    resolution_method: "TASK-068 contract probe on Staging with the operator's key using synthetic documents only, recorded as redacted fixtures for offline tests; no live call is made in the definition phase"
     resolution_evidence_ids: [EVID-012]
 evidence_requirements:
   - id: EVID-001
@@ -628,6 +643,14 @@ dependency_edges:
   - {from: TASK-069, to: TASK-070, kind: depends_on}
   - {from: TASK-069, to: TASK-071, kind: depends_on}
   - {from: TASK-068, to: TASK-071, kind: depends_on}
+  - {from: TASK-071, to: TASK-073, kind: same_module_serialization}
+  - {from: TASK-073, to: TASK-050, kind: depends_on}
+  - {from: TASK-060, to: TASK-065, kind: same_module_serialization}
+  - {from: TASK-065, to: TASK-040, kind: depends_on}
+  - {from: TASK-061, to: TASK-032, kind: same_file_serialization}
+  - {from: TASK-064, to: TASK-065, kind: same_module_serialization}
+  - {from: TASK-060, to: TASK-031, kind: depends_on}
+  - {from: TASK-012, to: TASK-031, kind: same_file_serialization}
   - {from: TASK-031, to: TASK-050, kind: depends_on}
   - {from: TASK-032, to: TASK-050, kind: depends_on}
   - {from: TASK-033, to: TASK-050, kind: depends_on}
@@ -642,12 +665,12 @@ waves:
     exit_gate_ids: [GATE-002]
   - id: W1
     name: correctness_repairs
-    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064, TASK-069, TASK-070, TASK-068]
+    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064, TASK-065, TASK-069, TASK-070, TASK-068]
     predecessor_wave_ids: []
     exit_gate_ids: [GATE-001]
   - id: W2
     name: command_centers
-    task_ids: [TASK-071, TASK-040, TASK-032, TASK-031, TASK-033]
+    task_ids: [TASK-071, TASK-073, TASK-040, TASK-032, TASK-031, TASK-033]
     predecessor_wave_ids: [W0, W1]
     exit_gate_ids: [GATE-003]
   - id: W3
@@ -846,16 +869,18 @@ tasks:
 
   - id: TASK-012
     title: "Financial period business date"
-    definition_status: blocked
+    definition_status: ready
     workstream_id: WS-01
     wave_id: W1
     target_id: TARGET-001
     execution_kind: repo_local
     kernel_profile: BUILD
     objective: >-
-      Replace write_date with the DEC-002 business date in every closed-deal
-      period predicate (KPI SQL and rep view), so editing an old transaction
-      never moves it between periods.
+      Replace write_date with commission_earned_date (DEC-002) in every
+      closed-deal and earned-commission period predicate (KPI SQL and rep
+      view), so editing an old transaction never moves it between periods;
+      relabel those KPIs as operational closed-deal figures with their source
+      date, distinct from accounting-posted revenue, invoice aging and cash.
     authority_basis_ids: [AUTH-001]
     required_decision_ids: [DEC-002]
     blocking_unknown_ids: []
@@ -869,7 +894,7 @@ tasks:
       - add_test_editing_closed_deal_keeps_its_period
     acceptance:
       - id: AC-012
-        statement: "A closed transaction edited today stays in its original period in MTD, YTD and the rep view."
+        statement: "A closed transaction edited today stays in its original period in MTD, YTD and the rep view; no transaction-based KPI is labelled accounting revenue; each KPI names its source date."
         required_evidence_types: [test_result]
     validation:
       - id: VAL-012
@@ -877,7 +902,7 @@ tasks:
         command_or_inspection: make check
         environment: repo_local
         expected_result: PASS
-    negative_cases: [edit_moves_deal_into_current_period]
+    negative_cases: [edit_moves_deal_into_current_period, write_date_used_as_business_date, transaction_kpi_labelled_accounting_revenue]
     rollback: *rollback_local
     risk: {tier: T2, reversibility: reversible, blast_radius: plasticos_admin_dashboard}
     authorization_ceiling: *ceiling_local
@@ -894,16 +919,17 @@ tasks:
     objective: >-
       Add company_id to plasticos.admin.kpi, make _get_or_create per
       company, and scope every KPI query to the user's allowed companies per
-      DEC-008. The record rule part waits for DEC-005(c); the field, queries
-      and tests do not.
+      DEC-008, and add the DEC-005(c) company record rule on
+      plasticos.admin.kpi.
     authority_basis_ids: [AUTH-003]
-    required_decision_ids: [DEC-008]
+    required_decision_ids: [DEC-005, DEC-008]
     blocking_unknown_ids: []
     input_evidence_ids: [EVID-001]
     paths:
       - plasticos_admin_dashboard/models/admin_dashboard.py
       - plasticos_admin_dashboard/tests/**
       - plasticos_admin_dashboard/migrations/**
+      - plasticos_admin_dashboard/security/**
       - plasticos_admin_dashboard/__manifest__.py
     actions:
       - add_company_id_and_per_company_singleton
@@ -912,7 +938,7 @@ tasks:
       - bump_module_version_minor_with_repeatable_migration
     acceptance:
       - id: AC-013
-        statement: "With data in two companies, each company's KPI record counts only its own transactions, loads and invoices."
+        statement: "With data in two companies, each company's KPI record counts only its own transactions, loads and invoices; a user of company A cannot read company B's KPI record (negative-access test); ACL rows unchanged except the record rule."
         required_evidence_types: [test_result]
     validation:
       - id: VAL-013
@@ -1066,7 +1092,7 @@ tasks:
 
   - id: TASK-061
     title: "Linda approval authority by command class (DEC-011)"
-    definition_status: blocked
+    definition_status: ready
     workstream_id: WS-06
     wave_id: W1
     target_id: TARGET-001
@@ -1075,8 +1101,13 @@ tasks:
     objective: >-
       Change linda_approval._require_approver (linda_approval.py:50,374-378)
       from a single Operations Manager check to a server-side (command,
-      edge_case) authority table per DEC-011, granting group_logistics_ops only
-      the decided classes; Operations Manager keeps all. Linda stays refused.
+      edge_case) authority table per DEC-011 OPT-A, granting
+      group_logistics_ops only the routine operational classes; Operations
+      Manager keeps all. A Logistics approval replays the command against
+      the exact current state with every owner guard active and without the
+      override token; if any guard still refuses, nothing is applied, the
+      result is blocked and the case is re-routed to Operations Manager.
+      Linda stays refused; no user is added to group_operations_manager.
       On hold_for_approval, schedule one idempotent activity for the class's
       owning role (today a pending approval notifies no one). Replay
       revalidation, FOR UPDATE locking, the pending unique index, refusal
@@ -1097,7 +1128,7 @@ tasks:
       - server_side_refusal_tests_per_class
     acceptance:
       - id: AC-061
-        statement: "For every (command, edge_case) class: the authorized role's approve/reject succeeds through the unchanged replay path; every other role, Linda and a plain Logistics user get AccessError at the server; a pending approval has exactly one open activity for its owning role."
+        statement: "Table-driven tests cover every authorized (command, edge_case) combination with a positive and a negative case: Logistics approval applies only when the replay passes every current guard; a still-failing evidence_unverified or out_of_sequence case, or any dispatch/readiness/release case needing an override, is blocked and re-routed to Operations Manager; Operations-only classes and every other role, Linda and a plain Logistics user get AccessError; kill switch, locking and replay idempotency hold; a pending approval has exactly one open activity for its owning role."
         required_evidence_types: [test_result]
     validation:
       - id: VAL-061
@@ -1105,7 +1136,7 @@ tasks:
         command_or_inspection: make check
         environment: repo_local
         expected_result: PASS
-    negative_cases: [ui_only_authorization, linda_self_approval, logistics_decides_ops_only_class, replay_safeguard_bypassed]
+    negative_cases: [ui_only_authorization, linda_self_approval, logistics_decides_ops_only_class, replay_safeguard_bypassed, logistics_approve_overrides_safety_gate, logistics_user_added_to_ops_group]
     rollback: *rollback_local
     risk: {tier: T3, reversibility: reversible, blast_radius: plasticos_logistics_linda_approval}
     authorization_ceiling: *ceiling_local
@@ -1153,40 +1184,48 @@ tasks:
     completion_gate_ids: [GATE-001]
 
   - id: TASK-068
-    title: "DeepSeek provider adapter for Odoo ai (DEC-016 OPT-B)"
-    definition_status: blocked
+    title: "DeepSeek provider adapter in plasticos_documents_ai (DEC-016 OPT-B, DEC-017)"
+    definition_status: ready
     workstream_id: WS-07
     wave_id: W1
     target_id: TARGET-001
     execution_kind: repo_local
     kernel_profile: BUILD
     objective: >-
-      In the DEC-017 host, register provider deepseek with model deepseek-flash
-      ('DeepSeek Flash') in Odoo's provider resolution, base URL
-      https://api.deepseek.com, key from ir.config_parameter ai.deepseek_key,
-      and route _request_llm for that provider through the OpenAI Responses
-      path with DeepSeek adjustments: thinking disabled, strict stripped from
-      tool schemas, temperature 0, PDFs per DEC-017 (text layer as input_text,
-      scanned via /files text_recognition file_id), images inline, 429 backoff,
-      longer timeout. Probe the live API once on Staging with the operator's key
-      (UNK-006) and record request/response fixtures; all CI tests run offline
-      on those fixtures. The key never appears in code, tests, fixtures, logs or
-      PR text.
+      Create the minimal addon plasticos_documents_ai (auto_install False;
+      depends plasticos_documents_native and ai_documents). Register provider
+      deepseek / model deepseek-flash in Odoo's provider resolution through
+      super() overrides (no Enterprise file edits), base URL
+      https://api.deepseek.com, key from ir.config_parameter ai.deepseek_key.
+      Requests go to POST /responses with reasoning {effort: none}, temperature
+      0, strict removed from function tools, full function_call /
+      function_call_output history resent each turn, images as base64
+      input_image, documents only by file_id. Document strategy per DEC-017:
+      extracted PDF text as input_text only when it carries enough to classify;
+      otherwise upload to POST /files (purpose before file) with
+      text_recognition or rich_layout_recognition, expires_after[anchor]
+      created_at and bounded expires_after[seconds], then DELETE /files/{id}
+      after the turn. Retry 429 with backoff; raise the timeout. Send no
+      unnecessary metadata; log no keys or payloads. README documents external
+      processing, what is sent, retention and deletion. Contract tests run
+      offline on synthetic fixtures; the one live probe (UNK-006) uses synthetic
+      documents only, on Staging, with the operator's key.
     authority_basis_ids: [AUTH-001, AUTH-003]
     required_decision_ids: [DEC-016, DEC-017]
     blocking_unknown_ids: []
     input_evidence_ids: [EVID-010, EVID-012]
     paths:
-      - <DEC-017 host: plasticos_documents_ai/**>
+      - plasticos_documents_ai/**
     actions:
-      - provider_registration_and_settings_selection
-      - responses_path_with_deepseek_adjustments
-      - pdf_and_image_input_strategy
-      - live_contract_probe_and_recorded_fixtures
-      - offline_contract_tests
+      - create_minimal_addon_no_auto_install
+      - provider_registration_via_super_overrides
+      - responses_request_shape_with_effort_none
+      - document_strategy_with_bounded_expiry_and_delete
+      - synthetic_fixture_contract_tests
+      - external_processing_readme
     acceptance:
       - id: AC-068
-        statement: "With recorded fixtures: a tool-calling Auto-Sort turn round-trips (function call -> tool result -> final) through the adapter; the request carries thinking disabled, no strict, temperature 0 and no personal user_id; a text PDF is sent as input_text and a scanned PDF by file_id; a 429 is retried; a missing key yields the existing 'No API key set' error logged to chatter without failing the upload."
+        statement: "Offline synthetic-fixture tests prove: provider deepseek/deepseek-flash is selectable; every request carries reasoning.effort none, temperature 0, no strict, no thinking key and no personal user_id; a tool turn round-trips through function_call / function_call_output; a text-rich PDF is sent as input_text; a scanned PDF is uploaded with expires_after and deleted after the turn; a 429 is retried; a missing key is logged without failing the upload; no key or document payload appears in logs or fixtures; installing the addon creates no Auto-Sort rule and sends nothing."
         required_evidence_types: [test_result, inspection]
     validation:
       - id: VAL-068
@@ -1194,9 +1233,9 @@ tasks:
         command_or_inspection: make check
         environment: repo_local
         expected_result: PASS
-    negative_cases: [strict_sent_to_non_beta_endpoint, thinking_mode_tool_loop_without_reasoning_passback, key_in_repository, upload_fails_on_provider_error]
+    negative_cases: [thinking_type_shape_on_responses, upload_without_expiration, uploaded_file_not_deleted, key_or_payload_in_logs_or_fixtures, auto_install_enables_ai, live_production_document_sent]
     rollback: *rollback_local
-    risk: {tier: T3, reversibility: reversible, blast_radius: new_glue_module}
+    risk: {tier: T3, reversibility: reversible, blast_radius: new_addon}
     authorization_ceiling: *ceiling_local
     completion_gate_ids: [GATE-001]
 
@@ -1244,6 +1283,50 @@ tasks:
     negative_cases: [existing_xmlid_renamed, new_type_without_legacy_mapping]
     rollback: *rollback_local
     risk: {tier: T2, reversibility: reversible, blast_radius: document_taxonomy_data}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-001]
+
+  - id: TASK-065
+    title: "Company isolation for pending document evidence (DEC-005 d)"
+    definition_status: ready
+    workstream_id: WS-06
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Extend plasticos_documents record rules so pending non-legacy
+      plasticos.document rows are company-isolated (rule_document_operation_scope_company
+      today leaves them unscoped, security.xml:37-41). A pending row whose
+      company cannot be resolved from its original or obligation fails
+      closed: invisible to company-scoped users and routed to Operations
+      through the TASK-060 router. Preserve existing implications and rules.
+    authority_basis_ids: [AUTH-001]
+    required_decision_ids: [DEC-005, DEC-010]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-008]
+    paths:
+      - plasticos_documents/security/**
+      - plasticos_documents/models/document.py
+      - plasticos_documents/tests/**
+      - plasticos_documents/__manifest__.py
+    actions:
+      - company_rule_for_pending_evidence
+      - fail_closed_unresolved_company
+      - acl_multi_company_and_negative_access_tests
+    acceptance:
+      - id: AC-065
+        statement: "A user of company A cannot read company B's pending evidence; an unresolved-company pending row is invisible to company-scoped users and has one Operations activity; legacy behaviour and accepted-row scoping are unchanged."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-065
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [pending_evidence_visible_cross_company, unresolved_company_fails_open]
+    rollback: *rollback_local
+    risk: {tier: T3, reversibility: reversible, blast_radius: plasticos_documents_security}
     authorization_ceiling: *ceiling_local
     completion_gate_ids: [GATE-001]
 
@@ -1304,46 +1387,46 @@ tasks:
     completion_gate_ids: [GATE-001]
 
   - id: TASK-071
-    title: "Native AI Auto-Sort configuration on existing folders (DEC-013 OPT-C)"
-    definition_status: blocked
+    title: "Auto-Sort slice 1: Inbox master classifier (DEC-013 OPT-C, DEC-018)"
+    definition_status: ready
     workstream_id: WS-07
     wave_id: W2
     target_id: TARGET-001
     execution_kind: repo_local
     kernel_profile: BUILD
     objective: >-
-      In the DEC-016 host, a versioned Python setup method (invoked from a
-      <function> in a noupdate block and from a migration for each later prompt
-      version, never on every upgrade) creates the ai_documents.sort rule for
-      folder_plasticos_inbox with explicit ai_tool_ids = move-in-folder and
-      add-tags only. The prompt embeds the existing folder ids (Bills of Lading,
-      Scale Tickets, Loading Pics, Customer Orders, Vendor Bills, Compliance)
-      and existing tags; exception checks first (multipage -> To Split, stop;
-      contradictory references, unreadable or ambiguous identity -> Needs
-      Review, stay in Inbox); recognized shipping paperwork (including the
-      DEC-014 types) -> its folder or Inbox and its type tag (Logistics);
-      customer invoices stay in Inbox with Customer Invoice (Operations);
-      vendor bills -> Vendor Bills
-      folder and type tag, financial extraction stays with existing
-      digitization; otherwise Needs Review. Prompt text is versioned in the
-      module (prompt_version recorded in the rule's chatter). The rule's
-      ir.actions.server uses ai model deepseek-flash through the TASK-068
-      adapter. Tests mock
-      LLMApiService._request_llm like Enterprise test_ai_documents.
+      In plasticos_documents_ai, implement prompt 1 of AI_PROMPT_INVENTORY.yaml
+      (Inbox master classification and routing) as a versioned prompt builder
+      plus an explicit administrator activation action (and its deactivation)
+      that creates the ai_documents.sort rule on folder_plasticos_inbox with
+      explicit ai_tool_ids = move-in-folder and add-tags only, AI model
+      deepseek-flash through the TASK-068 adapter. Nothing is created on
+      install or upgrade; a new prompt version is applied only through the
+      same explicit action, recording prompt_version in the rule's chatter.
+      Prompt contract: exception checks first (multipage -> To Split, stop;
+      contradictory references, unreadable, wrong-company or ambiguous identity
+      -> Needs Review, stay in Inbox); recognized BOL -> Bills of Lading; scale
+      tickets and CST -> Scale Tickets; loading evidence -> Loading Pics; PO,
+      SO/Customer Order, packing list, receiving report, delivery order ->
+      Customer Orders (Orders and Shipping Paperwork); vendor bills and
+      customer invoices -> Vendor Bills (financial documents); certifications,
+      carrier certifications, permits, lab reports, contracts,
+      correspondence -> Compliance; each with its type tag; otherwise Needs
+      Review. Tests mock LLMApiService._request_llm.
     authority_basis_ids: [AUTH-001, AUTH-003]
-    required_decision_ids: [DEC-013, DEC-014, DEC-015, DEC-016, DEC-017]
+    required_decision_ids: [DEC-013, DEC-014, DEC-015, DEC-016, DEC-017, DEC-018]
     blocking_unknown_ids: [UNK-004, UNK-006]
-    input_evidence_ids: [EVID-009, EVID-010]
+    input_evidence_ids: [EVID-009, EVID-010, EVID-012]
     paths:
-      - <DEC-016 host: plasticos_documents_ai/** or plasticos_documents_native/models/ai_sort_setup.py + data/ai_sort.xml + migrations/**>
-      - plasticos_documents_native/tests/test_ai_auto_sort*.py
+      - plasticos_documents_ai/**
     actions:
-      - versioned_prompt_builder_with_explicit_tools
-      - noupdate_function_and_migration_per_prompt_version
+      - versioned_inbox_prompt_builder
+      - explicit_activation_and_deactivation_action
+      - explicit_two_tool_rule
       - mocked_llm_routing_tests
     acceptance:
       - id: AC-071
-        statement: "With a mocked model: a BOL lands in Bills of Lading with the BOL tag and a Logistics activity; a scale ticket in Scale Tickets; an ambiguous or contradictory document stays in Inbox with Needs Review and an Operations activity; no bill, invoice, activity or code tool is attached to the rule; re-running module upgrade does not overwrite an administrator's prompt edit."
+        statement: "With a mocked model: each document class in the prompt contract lands in its folder with its type tag and one activity for the DEC-010 owner; ambiguous or contradictory documents stay in Inbox with Needs Review and one Operations activity; the rule carries only move-in-folder and add-tags; installing or upgrading the addon creates no rule; activation and deactivation are explicit and idempotent; an administrator prompt edit survives upgrade; no destination-folder prompt is active."
         required_evidence_types: [test_result, inspection]
     validation:
       - id: VAL-071
@@ -1351,21 +1434,75 @@ tasks:
         command_or_inspection: make check
         environment: repo_local
         expected_result: PASS
-    negative_cases: [bill_creation_tool_attached, unsure_model_leaves_document_unrouted, prompt_overwritten_on_upgrade, key_committed_to_repo]
+    negative_cases: [bill_creation_tool_attached, unsure_model_leaves_document_unrouted, rule_created_on_install, prompt_overwritten_on_upgrade, destination_prompt_active_in_slice_1]
     rollback: *rollback_local
-    risk: {tier: T3, reversibility: reversible, blast_radius: ai_sort_configuration}
+    risk: {tier: T3, reversibility: reversible, blast_radius: ai_sort_slice_1}
     authorization_ceiling: *ceiling_local
     completion_gate_ids: [GATE-003]
 
+  - id: TASK-073
+    title: "Auto-Sort slice 2: destination-folder prompts with loop safety (DEC-018)"
+    definition_status: ready
+    workstream_id: WS-07
+    wave_id: W2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Implement prompts 2-7 of AI_PROMPT_INVENTORY.yaml as versioned builders
+      with the same explicit activation action, inactive by default, each
+      rule carrying the add-tags tool only (no move tool; only P1 moves).
+      Prove
+      before any activation that they cannot loop or conflict: a destination
+      prompt never moves a document back to Inbox or to another prompted
+      folder, only adds or corrects tags within its folder's type family or
+      adds Needs Review; a document carrying Needs Review or a human
+      doc_type_source is skipped; a conflicting type tag (two type families)
+      yields Needs Review, never two moves. Tests drive base.automation chains
+      across all seven rules with a mocked model, including adversarial
+      outputs (move to source folder, move to another prompted folder, tag from
+      another family).
+    authority_basis_ids: [AUTH-001, AUTH-003]
+    required_decision_ids: [DEC-013, DEC-015, DEC-018]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-010]
+    paths:
+      - plasticos_documents_ai/**
+    actions:
+      - destination_prompt_builders_inactive_by_default
+      - loop_and_conflict_guards
+      - cross_rule_chain_tests_with_adversarial_outputs
+    acceptance:
+      - id: AC-073
+        statement: "Across all seven rules with adversarial mocked outputs, no document is moved more than once by AI, never returns to Inbox, never ends with two type families, and human-classified or Needs Review documents are skipped; destination prompts stay inactive until the operator activates them after GATE-006."
+        required_evidence_types: [test_result]
+    validation:
+      - id: VAL-073
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [routing_loop, conflicting_classification, destination_prompt_active_by_default, ai_overrides_human_classification]
+    rollback: *rollback_local
+    risk: {tier: T3, reversibility: reversible, blast_radius: ai_sort_slice_2}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-006]
+
   - id: TASK-072
     title: "AI learning verification and shipping prompt-revision loop (UNK-005)"
-    definition_status: blocked
+    definition_status: ready
     workstream_id: WS-07
     wave_id: W3
     target_id: TARGET-001
     execution_kind: repo_local
     kernel_profile: BUILD
     objective: >-
+      Classification accuracy first: measure this workload's per-type
+      precision and recall of the Inbox classifier against human labels
+      (synthetic set in CI; real documents only after GATE-005), recording
+      the operator-reported Flash-vs-GPT-4o observation as unverified and
+      claiming no comparative result. Thinking mode is never switched on
+      automatically; a measured shortfall becomes an operator decision.
       Invoices: runtime tests that a corrected and posted digitized bill sends
       its corrected values to the OCR validate path and that a second bill of
       the same layout predicts partner and lines from history; then an
@@ -1400,11 +1537,11 @@ tasks:
         command_or_inspection: test -s docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-072-ai-learning.md
         environment: repo_local
         expected_result: PASS
-    negative_cases: [learning_claimed_without_repeat_measurement, prompt_changed_without_replay]
+    negative_cases: [learning_claimed_without_repeat_measurement, prompt_changed_without_replay, comparative_benchmark_claimed, thinking_mode_enabled_automatically, real_documents_sent_before_gate_005]
     rollback: *rollback_local
     risk: {tier: T2, reversibility: reversible, blast_radius: report_and_tests}
     authorization_ceiling: *ceiling_local
-    completion_gate_ids: [GATE-004]
+    completion_gate_ids: [GATE-005, GATE-004]
 
   - id: TASK-031
     title: "Admin command center: full KPI drill coverage (F-005)"
@@ -1546,7 +1683,7 @@ tasks:
 
   - id: TASK-040
     title: "Operations Manager AI & Transaction Review Workbench"
-    definition_status: blocked
+    definition_status: ready
     workstream_id: WS-04
     wave_id: W2
     target_id: TARGET-001
@@ -1563,7 +1700,11 @@ tasks:
       UNKNOWN), the exact linked Odoo record and current values, the
       discrepancy, owner and due date, with actions Confirm Classification,
       Associate to Exact Record, Request Correction, Return to Logistics and
-      Open AP/AR Record — each calling an existing authorized command. Owl
+      Open AP/AR Record — each calling an existing authorized command. Host
+      plasticos_ops_dashboard (DEC-004): presentation and workflow only, no
+      exception queue, duplicated records, learning system or AI engine.
+      Security per DEC-005 (a) read-only claims ACL for Operations Manager,
+      (b) menus restricted to group_operations_manager. Owl
       client action only if native form/Documents views cannot show this
       (DEC-001). Company-scoped per DEC-008 and DEC-005(d).
     authority_basis_ids: [AUTH-001, AUTH-003]
@@ -1571,8 +1712,7 @@ tasks:
     blocking_unknown_ids: [UNK-004]
     input_evidence_ids: [EVID-001, EVID-008]
     paths:
-      - <DEC-004 host module>/**
-      - security records approved under DEC-005
+      - plasticos_ops_dashboard/**
     actions:
       - inbox_views_mine_team_unassigned_escalated
       - review_surface_with_original_facts_record_discrepancy
@@ -1580,7 +1720,7 @@ tasks:
       - parity_role_and_company_tests
     acceptance:
       - id: AC-040
-        statement: "Ambiguous AI classification and a digitized vendor bill with mismatched amounts appear in the Operations inbox; the bill stays unposted until the existing guard is satisfied; Return to Logistics reassigns the one activity rather than creating a second; counts equal drills; a sales rep cannot open the menu; no cross-company item or protected detail appears."
+        statement: "Ambiguous AI classification and a digitized vendor bill with mismatched amounts appear in the Operations inbox; the bill stays unposted until the existing guard is satisfied; Return to Logistics reassigns the one activity rather than creating a second; counts equal drills; a sales rep cannot open the menu; no cross-company item or protected detail appears; Operations Manager reads but cannot write claims; Sales and Logistics users cannot read claims or financial items (negative-access tests); the module defines no exception-queue model."
         required_evidence_types: [test_result]
     validation:
       - id: VAL-040
@@ -1588,7 +1728,7 @@ tasks:
         command_or_inspection: make check
         environment: repo_local
         expected_result: PASS
-    negative_cases: [ops_inbox_duplicates_logistics_items, bill_posted_while_blocked, cross_company_queue_items, ai_result_presented_as_verified]
+    negative_cases: [ops_inbox_duplicates_logistics_items, bill_posted_while_blocked, cross_company_queue_items, ai_result_presented_as_verified, ops_manager_writes_claims, sales_or_logistics_reach_claims_or_financials, workbench_creates_its_own_queue_records]
     rollback: *rollback_local
     risk: {tier: T3, reversibility: reversible, blast_radius: new_module_and_security}
     authorization_ceiling: *ceiling_local
@@ -1673,7 +1813,7 @@ gates:
     gate_type: wave_exit
     blocking: true
     owner_authority_id: AUTH-002
-    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064, TASK-069, TASK-070, TASK-068]
+    task_ids: [TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064, TASK-065, TASK-069, TASK-070, TASK-068]
     required_evidence_ids: [EVID-001, EVID-002, EVID-008]
     pass_criteria:
       - "Every W1 task's parity or reconciliation test passes in its lane PR's runtime stage."
@@ -1714,8 +1854,31 @@ gates:
       - "Runtime proof and query plans recorded."
       - "Operator acceptance walk PASS on Staging, including the complete document-review and Linda-resolution paths."
       - "Production untouched by the campaign."
+      - "GATE-005 recorded before any real-document AI measurement."
     failure_effect: BLOCKED
 
+  - id: GATE-005
+    name: external_data_processing_approved
+    gate_type: operator_approval
+    blocking: true
+    owner_authority_id: AUTH-001
+    task_ids: [TASK-072]
+    required_evidence_ids: [EVID-012]
+    pass_criteria:
+      - "The operator has recorded an explicit external-data-processing approval naming the database, document classes and DeepSeek retention settings before any real customer, supplier or financial document is sent."
+      - "Until then only synthetic documents reach DeepSeek."
+    failure_effect: BLOCKED
+  - id: GATE-006
+    name: destination_prompts_loop_safe
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-002
+    task_ids: [TASK-073]
+    required_evidence_ids: [EVID-002]
+    pass_criteria:
+      - "Cross-rule chain tests with adversarial outputs prove no routing loop and no conflicting classification."
+      - "Destination prompts remain inactive until the operator activates them after this gate."
+    failure_effect: BLOCKED
 risks:
   - id: RISK-001
     statement: "Corrected numbers will differ from what users saw; inflated rep revenue will drop."
@@ -1772,7 +1935,7 @@ risks:
     owner: AUTH-001
     likelihood: possible
     impact: medium
-    mitigations: ["DEC-017 acknowledgment and PDF strategy; Staging first; TASK-050 measures upload latency with Auto-Sort on; Needs Review is the fallback; alias mail goes through the batch cron, not the upload transaction."]
+    mitigations: ["DEC-017 bounded expires_after on every upload and DELETE after the turn; synthetic data until GATE-005; Staging first; TASK-050 measures upload latency with Auto-Sort on; Needs Review is the fallback; alias mail goes through the batch cron, not the upload transaction."]
     acceptance_status: accepted
   - id: RISK-009
     statement: "add_tags applies any tag by name; a model could apply Verified or a demo-duplicated tag name."

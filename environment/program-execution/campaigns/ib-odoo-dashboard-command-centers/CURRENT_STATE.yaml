@@ -1,7 +1,7 @@
 schema: l9.program-execution.current-state-delta.v1
 schema_version: 1.0.0
 campaign_id: ib-odoo-dashboard-command-centers
-source_version: "1.3.0"
+source_version: "1.4.0"
 collected_at: "2026-11-20T23:20:00Z"
 collection_method: read_only_inspection
 producer: "CTO session (claude-code-web), three read-only research passes"
@@ -192,13 +192,25 @@ official_platform_evidence:
     - "mail.activity activity_schedule never deduplicates; activity_search + reschedule/feedback is the idempotent pattern; done activities are archived."
     - "Owl is the documented approach only for ir.actions.client custom layouts."
 
-open_operator_decisions: [DEC-002, DEC-004, DEC-005, DEC-011, DEC-017]
-ready_tasks: [TASK-001, TASK-002, TASK-010, TASK-011, TASK-013, TASK-020, TASK-021, TASK-060, TASK-064, TASK-069, TASK-070]
-blocked_tasks:
-  TASK-012: DEC-002
-  TASK-040: [DEC-004, DEC-005, UNK-004]
-  TASK-061: DEC-011
-  TASK-068: DEC-017
-  TASK-071: [DEC-017, UNK-004, UNK-006]
-  TASK-072: DEC-017
+operator_decisions_2026_11_21:
+  DEC-002: "APPROVED OPT-A: commission_earned_date for closed-deal and earned-commission periods; never write_date; operational vs accounting/aging/cash KPIs kept distinct and labelled with their source dates."
+  DEC-004: "APPROVED OPT-A: plasticos_ops_dashboard, presentation/workflow integration only; no own queue, duplicate records, learning system or second AI engine."
+  DEC-005: "APPROVED OPT-A, all four: Ops read-only claims; role-restricted workbench menus; Admin KPI company isolation; pending document evidence company isolation (unresolved company fails closed); ACL, multi-company and negative-access tests required."
+  DEC-011: "APPROVED OPT-A with fail-closed refinement: Logistics decides routine operational classes, but an approval never overrides a safety gate; still-failing evidence_unverified/out_of_sequence and any consequential command needing an override are blocked and re-routed to Operations Manager."
+  DEC-017: "APPROVED modified OPT-A: minimal plasticos_documents_ai addon, no auto_install, explicit AI activation; reasoning.effort none; extracted text only where sufficient, Files API text_recognition/rich_layout_recognition otherwise, with bounded expires_after and deletion; no unnecessary metadata, secrets or payloads in logs/fixtures; README on external processing and retention; synthetic data only until GATE-005."
+  DEC-018: "APPROVED: seven-prompt target inventory (AI_PROMPT_INVENTORY.yaml); Inbox classifier is slice 1; destination prompts only after GATE-006."
+  DEC-016_operator_evidence: "Operator-reported: deepseek-flash outperformed GPT-4o in the operator's usage — not an independent benchmark; TASK-072 measures this workload."
+open_operator_decisions: []
+ready_tasks: [TASK-001, TASK-002, TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064, TASK-065, TASK-068, TASK-069, TASK-070, TASK-071, TASK-073, TASK-040, TASK-032, TASK-031, TASK-033, TASK-072, TASK-050, TASK-051]
+blocked_tasks: {}
+residual_execution_prerequisites:
+  - "Campaign activation and lane launch: separate operator authorization (this publication authorizes neither)."
+  - "CTO mode ACTIVE for swarm coordination: Cursor-Governance PR #1102 (identity bundle) merged by the operator, or an explicit operator instruction to coordinate without it."
+  - "Runtime test stack for IB-Odoo_19 make pr (install-smoke): Docker plus an Odoo Enterprise source matching Odoo.sh Staging; Quantum-L9/odoo-enterprise is a single import commit whose parity with Staging is unproven (UNK-004 / TASK-002 record the Staging versions)."
+  - "TASK-002 inputs: operator settings exports for Documents, AI, digitization and auto-post on Staging and Production."
+  - "UNK-006: DeepSeek contract probe on Staging with ai.deepseek_key set by the operator, synthetic documents only (TASK-068)."
+  - "GATE-005: explicit operator external-data-processing approval before any real customer, supplier or financial document reaches DeepSeek."
+  - "GATE-006: loop and conflict proof before destination-folder prompts are activated; activation itself is an explicit operator action."
+  - "Operator merges of lane PRs into Staging and the Staging acceptance walk (S01-S16); Production promotion is outside the campaign."
+execution_status: NOT_EXECUTED
 do_not_execute_from_this_receipt: true

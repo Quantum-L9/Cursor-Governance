@@ -1,6 +1,7 @@
 # LANE-B — Sales correctness + Sales command center
 
 ## MANIFEST
+- Execution status: NOT EXECUTED. This brief is used only after the operator authorizes activation and lane launch (binding ACT-1).
 - Campaign: `ib-odoo-dashboard-command-centers` v1.2.0 — definition in Quantum-L9/Cursor-Governance, execution in `cryptoxdog/IB-Odoo_19` off `Staging` @ `c422140`.
 - Tasks (order): TASK-020 → TASK-021 → TASK-033.
 - Writable paths: `plasticos_commission/models/sales_dashboard.py`, `plasticos_commission/views/sales_dashboard_views.xml`, `plasticos_commission/tests/**`, `plasticos_commission/__manifest__.py`. Everything else is read-only.
@@ -40,10 +41,10 @@ Make the Sales dashboard show real commission state and let a rep reach every un
 - Bump the module version on every Python/XML/security/migration change (PATCH for views/ACL/logic, MINOR for a new field/model, with `migrations/<new_version>/` when schema changes). Never ask whether to bump.
 - DEC-007 KPI-drill parity: each actionable KPI is declared once (model, domain, aggregate); the value and the drill come from that declaration; a test asserts `search_count(drill_domain) == displayed value` on fixtures.
 - A true zero must render distinctly from unavailable/stale; never default an error to 0.
-- Do not change security groups, record rules, crons or `plasticos_base` unless the campaign decision for it is accepted (DEC-005). Prohibited paths: `plasticos_base/**`, `plasticos_gate/**`, `.github/workflows/**`, `plasticos_transaction/models/**`, Docker/compose/.env files.
+- Security changes only as DEC-005 approves them (Ops read-only claims, Ops workbench menus, Admin KPI and pending-evidence company isolation), each with ACL, multi-company and negative-access tests; no other group, record-rule or cron change, and no `plasticos_base` change. Prohibited paths: `plasticos_base/**`, `plasticos_gate/**`, `.github/workflows/**`, `plasticos_transaction/models/**`, Docker/compose/.env files.
 - Runtime tests: rely on the `make pr` pre-push gate (pr-check incl. install-smoke) — do not run `make test-module` / `make test-odoo` ad hoc. Locally run `make check` and `make test`; run `python3 scripts/check_module_wiring.py` before each commit.
 - Exceptions are `mail.activity` records only (DEC-012): module-owned activity type per exception class, assignee via `plasticos_base` `_plasticos_escalation_manager_in_group`, `activity_search` before any create (Odoo never deduplicates), `activity_feedback` to close. No new queue table, scheduler or verification writer.
-- Native AI Auto-Sort (DEC-013 OPT-C) may only move documents between the existing Plasticos folders and add existing tags; no bill/invoice creation, activity or code tool; it never verifies evidence; no bill auto-post; no new external sender — Linda stays the sole logistics-document chase sender. An unsure or failed AI run leaves Needs Review for Operations; UNKNOWN stays UNKNOWN.
+- Native AI Auto-Sort (DEC-013 OPT-C, DEC-018) classifies, tags and routes only — the Inbox prompt may move documents between the existing Plasticos folders, destination prompts may only add tags; business association, verification, accounting posting and Linda's external communication keep their owners; no bill/invoice creation, activity or code tool; it never verifies evidence; no bill auto-post; no new external sender — Linda stays the sole logistics-document chase sender. An unsure or failed AI run leaves Needs Review for Operations; UNKNOWN stays UNKNOWN.
 - Authority is enforced server-side; a hidden or shown button is never the control.
 - Truth contract: report NOT RUN where a check did not run; never present a static read as runtime proof.
 

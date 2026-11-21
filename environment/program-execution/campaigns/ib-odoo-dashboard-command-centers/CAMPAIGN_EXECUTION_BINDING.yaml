@@ -1,37 +1,68 @@
 schema: l9.program-execution.campaign-execution-binding.v1
 schema_version: 1.0.0
 campaign_id: ib-odoo-dashboard-command-centers
-updated: "2026-11-20"
+updated: "2026-11-21"
 
 definition:
   host: Quantum-L9/Cursor-Governance
   path: environment/program-execution/campaigns/ib-odoo-dashboard-command-centers
   source: CAMPAIGN_SOURCE.yaml
-  source_version: "1.3.0"
+  source_version: "1.4.0"
+  prompt_inventory: AI_PROMPT_INVENTORY.yaml
 
 execution:
   mode: cto_swarm
   host: cryptoxdog/IB-Odoo_19
   default_branch: Staging
   pr_base: Staging
-  stacking: "Within a lane, a follow-on task stacks on the lane's open PR (make pr base=<parent branch>); lanes never stack on each other."
+  stacking: "Within a lane, a follow-on task stacks on the lane's open PR (make pr base=<parent branch>); lanes never stack on each other. A cross-lane dependency waits for the parent task's PR to merge into Staging."
   publication: "IB-Odoo_19 make pr (delegated once by governance publish-authority.json)"
   production: forbidden
 
 lanes:
-  - {id: LANE-A, name: admin, tasks: [TASK-010, TASK-011, TASK-013, TASK-012, TASK-031], paths: ["plasticos_admin_dashboard/**"]}
-  - {id: LANE-B, name: sales, tasks: [TASK-020, TASK-021, TASK-033], paths: ["plasticos_commission/models/sales_dashboard.py", "plasticos_commission/views/sales_dashboard_views.xml", "plasticos_commission/tests/**", "plasticos_commission/__manifest__.py"]}
-  - {id: LANE-C, name: logistics_control_tower, tasks: [TASK-001, TASK-032, TASK-061], paths: ["docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-001-*", "plasticos_logistics/models/load_dashboard.py", "plasticos_logistics/models/linda_approval.py", "plasticos_logistics/views/load_dashboard_views.xml", "plasticos_logistics/views/linda_approval_views.xml", "plasticos_logistics/data/**", "plasticos_logistics/tests/test_load_dashboard*.py", "plasticos_logistics/tests/test_s11_linda_approval.py", "plasticos_logistics/tests/__init__.py", "plasticos_logistics/__manifest__.py"], order_note: "TASK-032 starts once TASK-060 is merged; TASK-061 starts once DEC-011 is decided"}
-  - {id: LANE-D, name: routing_and_ops_workbench, tasks: [TASK-060, TASK-064, TASK-040], paths: ["plasticos_documents/**", "plasticos_documents_native/models/document_sync.py", "plasticos_documents_native/tests/test_document_sync*.py", "plasticos_documents_native/migrations/**", "plasticos_documents_native/__manifest__.py", "<DEC-004 host module>/**", "security changes approved under DEC-005"], order_note: "TASK-040 starts once DEC-004, DEC-005 are decided, TASK-002 recorded and TASK-013 merged"}
-  - {id: LANE-E, name: native_ai_auto_sort, tasks: [TASK-068, TASK-069, TASK-070, TASK-071, TASK-072], paths: ["plasticos_documents_native/** (except data/document_folders.xml semantics; document_sync.py only after TASK-060 merges)", "plasticos_documents/data/document_tags_data.xml and plasticos_documents/__manifest__.py (TASK-069 only, after TASK-060 merges)", "<DEC-017 host module>/**", "docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-072-*"], agent: "the cto-identity-bundle pool agent, by CTO ASSIGN once it reports idle", order_note: "TASK-068 as soon as DEC-017 is decided (independent of TASK-060); TASK-069 then TASK-070 after TASK-060 merges; TASK-071 after TASK-068, TASK-069, TASK-002 and UNK-006; TASK-072 after TASK-071"}
-  - {id: CTO, name: integration_capability_and_acceptance, tasks: [TASK-002, TASK-050, TASK-051], paths: ["docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-00[2]*", "docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-05*"]}
+  - id: LANE-A
+    name: admin
+    tasks: [TASK-010, TASK-011, TASK-013, TASK-012, TASK-031]
+    owns: ["plasticos_admin_dashboard/**"]
+    order_note: "Serial on admin_dashboard.py. TASK-031 after TASK-013 and TASK-001; it reads LANE-D's activity types once TASK-060 is merged."
+  - id: LANE-B
+    name: sales
+    tasks: [TASK-020, TASK-021, TASK-033]
+    owns: ["plasticos_commission/models/sales_dashboard.py", "plasticos_commission/views/sales_dashboard_views.xml", "plasticos_commission/tests/**", "plasticos_commission/__manifest__.py"]
+  - id: LANE-C
+    name: logistics_control_tower
+    tasks: [TASK-001, TASK-061, TASK-032]
+    owns: ["docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-001-*", "plasticos_logistics/models/load_dashboard.py", "plasticos_logistics/models/linda_approval.py", "plasticos_logistics/views/load_dashboard_views.xml", "plasticos_logistics/views/linda_approval_views.xml", "plasticos_logistics/data/**", "plasticos_logistics/tests/test_load_dashboard*.py", "plasticos_logistics/tests/test_s11_linda_approval.py", "plasticos_logistics/tests/__init__.py", "plasticos_logistics/__manifest__.py"]
+    order_note: "TASK-061 after TASK-001 (lane order); TASK-032 after TASK-061 (shared linda_approval_views.xml) and after TASK-060 merges (routed activity types)."
+  - id: LANE-D
+    name: routing_and_ops_workbench
+    tasks: [TASK-060, TASK-064, TASK-065, TASK-040]
+    owns: ["plasticos_documents/** except data/document_tags_data.xml", "plasticos_documents_native/models/document_sync.py (TASK-060 only)", "plasticos_documents_native/tests/test_document_sync*.py", "plasticos_documents_native/migrations/** and __manifest__.py (TASK-060 version bump only)", "plasticos_ops_dashboard/**"]
+    order_note: "Serial in plasticos_documents (TASK-060, TASK-064, TASK-065). TASK-040 after TASK-013, TASK-060, TASK-064, TASK-065, TASK-070 and TASK-002."
+  - id: LANE-E
+    name: native_ai_auto_sort
+    agent: "the cto-identity-bundle pool agent, by CTO ASSIGN once it reports idle"
+    tasks: [TASK-068, TASK-069, TASK-070, TASK-071, TASK-073, TASK-072]
+    owns: ["plasticos_documents_ai/**", "plasticos_documents_native/** except models/document_sync.py until TASK-060 merges", "plasticos_documents/data/document_tags_data.xml and plasticos_documents/__manifest__.py (TASK-069 only)", "docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-072-*"]
+    order_note: "TASK-068 can start first (new addon, independent of other lanes). TASK-069 then TASK-070 after TASK-060 merges (shared DOC_TYPE_TAG_MAP in document_sync.py). TASK-071 after TASK-068, TASK-069, TASK-070, TASK-002 and the UNK-006 synthetic probe. TASK-073 after TASK-071. TASK-072 after TASK-071; its real-document part only after GATE-005."
+  - id: CTO
+    name: integration_capability_and_acceptance
+    tasks: [TASK-002, TASK-050, TASK-051]
+    owns: ["docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-002-*", "docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-05*"]
 
-priority: "Operator 2026-11-20: after the W1 correctness repairs, the Operations workbench (TASK-040) and the Logistics Control Tower (TASK-032), fed by Auto-Sort (TASK-070, TASK-071), come before Admin (TASK-031) and Sales (TASK-033) command-center work."
+shared_file_serialization:
+  - {file: "plasticos_admin_dashboard/models/admin_dashboard.py", order: [TASK-010, TASK-011, TASK-013, TASK-012, TASK-031]}
+  - {file: "plasticos_commission/models/sales_dashboard.py", order: [TASK-020, TASK-021, TASK-033]}
+  - {file: "plasticos_documents_native/models/document_sync.py", order: [TASK-060, TASK-069, TASK-070]}
+  - {file: "plasticos_documents/models/document.py and security/**", order: [TASK-060, TASK-064, TASK-065]}
+  - {file: "plasticos_logistics/views/linda_approval_views.xml", order: [TASK-061, TASK-032]}
+  - {file: "plasticos_documents_ai/**", order: [TASK-068, TASK-071, TASK-073]}
 
+priority: "Operator 2026-11-20: after the W1 correctness and routing repairs, the Operations workbench (TASK-040) and the Logistics Control Tower (TASK-032), fed by Auto-Sort slice 1 (TASK-068 to TASK-071), come before Admin (TASK-031) and Sales (TASK-033) command-center work."
 
 pool:
   max_agents: 5
-  reuse: "The cto-identity-bundle agent joins as the fourth lane agent by CTO ASSIGN once idle."
+  composition: "LANE-A to LANE-D are new coding agents; LANE-E reuses the cto-identity-bundle agent."
 
 l4:
   local_commit: true
@@ -39,11 +70,43 @@ l4:
   publish: "make pr (IB-Odoo_19), PR into Staging"
   merge: operator_only
 
-preconditions_to_launch:
-  - "CTO mode ACTIVE (blocked by stale identity-attribution bundle; lane cto-identity-bundle is fixing it)"
-  - "cryptoxdog/IB-Odoo_19 attachable with push for child sessions"
-  - "Operator answers DEC-002, DEC-004, DEC-005, DEC-011, DEC-017 (only TASK-012, TASK-040, TASK-061, TASK-068, TASK-071 and TASK-072 wait on them)"
-  - "Operator sets ir.config_parameter ai.deepseek_key on Staging (never in the repository) before TASK-068 probes the live API"
+activation_boundaries:
+  - id: ACT-1
+    boundary: "Campaign activation and lane launch"
+    authority: operator
+    status: NOT_AUTHORIZED
+    note: "Publishing this definition (PR #1101) does not authorize execution."
+  - id: ACT-2
+    boundary: "CTO mode ACTIVE for swarm coordination"
+    authority: operator
+    status: OPEN
+    note: "Cursor-Governance PR #1102 (identity bundle) merged, or an explicit operator instruction to coordinate without it."
+  - id: ACT-3
+    boundary: "DeepSeek synthetic contract probe (UNK-006)"
+    authority: operator
+    status: OPEN
+    note: "Operator sets ai.deepseek_key on Staging; synthetic documents only."
+  - id: ACT-4
+    boundary: "Real-document AI processing (GATE-005)"
+    authority: operator
+    status: OPEN
+    note: "Explicit external-data-processing approval naming database, document classes and DeepSeek retention settings."
+  - id: ACT-5
+    boundary: "Inbox Auto-Sort activation (slice 1); destination prompts (slice 2, after GATE-006)"
+    authority: operator
+    status: OPEN
+    note: "Explicit administrator activation action per slice; installing plasticos_documents_ai activates nothing."
+  - id: ACT-6
+    boundary: "Lane PR merges into Staging; Production promotion"
+    authority: operator
+    status: OPEN
+    note: "Merges are operator-only; Production promotion is outside the campaign."
 
-status: ready_for_operator_go
+runtime_prerequisites:
+  - "Docker plus an Odoo Enterprise source matching Odoo.sh Staging for the IB-Odoo_19 make pr install-smoke stage; Quantum-L9/odoo-enterprise parity with Staging is unproven (TASK-002 records Staging versions)."
+  - "Operator settings exports for TASK-002 (Documents, AI, digitization, auto-post on Staging and Production)."
+  - "Operator Staging walk S01-S16 for TASK-051."
+
+status: definition_complete
+execution_status: NOT_EXECUTED
 execute_now: false
