@@ -134,8 +134,44 @@ def test_surface_follows_evidence_and_does_not_default() -> None:
     assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "gemini"}) == ""
 
 
+def test_manus_host_markers_derive_the_actor_and_its_one_surface() -> None:
+    """Manus is hosted: the host's own markers prove actor and surface.
+
+    The adapter id alone still proves no surface (test above). What changes the
+    surface is evidence the host injected, which an operator cannot paste.
+    """
+
+    for markers in (
+        {"MANUS_ADDON_RUNTIME_SPEC_PATH": "/tmp/manus-mcp/addon_runtime_launch_specs.json"},
+        {"MANUS_ADDON_REGISTRY_ENABLED": "1"},
+        {"MANUS_GROUP_ENABLED": "0"},
+        {"RUNTIME_API_HOST": "https://api.manus.im"},
+        {"RUNTIME_API_HOST": "api.manus.im"},
+    ):
+        assert ai.resolve_agent_id(markers) == "manus", markers
+        assert ai.resolve_surface_id(markers) == "manus-cloud", markers
+        assert ai.resolve_identity_coordinates(markers)["surface_identity"] == "manus-cloud"
+        # No surface is invented for the adapter id in the same environment.
+        assert ai.static_drift({**markers, "L9_MEMORY_AGENT_ID": "manus"}) == ""
+
+    # A lookalike host is not a Manus host.
+    for lookalike in ("https://manus.im.evil.example", "https://notmanus.im", "https://manus.im@"):
+        assert ai.resolve_agent_id({"RUNTIME_API_HOST": lookalike}) == "", lookalike
+        assert ai.resolve_surface_id({"RUNTIME_API_HOST": lookalike}) == "", lookalike
+
+    # Host evidence outranks the adapter label, and a disagreeing label is drift.
+    assert ai.resolve_agent_id({"MANUS_GROUP_ENABLED": "0", "L9_MEMORY_AGENT_ID": "codex"}) == (
+        "manus"
+    )
+    assert ai.static_drift({"MANUS_GROUP_ENABLED": "0", "L9_MEMORY_AGENT_ID": "codex"}) == "codex"
+
+    evidence = ai.normalized_runtime_evidence({"MANUS_GROUP_ENABLED": "0", "L9_MEMORY_AGENT_ID": "manus"})
+    assert evidence["manus_markers_present"] is True
+    assert evidence["L9_MEMORY_AGENT_ID"] == ""
+
+
 def test_the_derived_authors_are_the_actors() -> None:
-    assert ai.DERIVED_IDENTITIES == {"cursor", "claude-code"}
+    assert ai.DERIVED_IDENTITIES == {"cursor", "claude-code", "manus"}
     assert ai.ADAPTER_IDENTITIES == {"manus", "codex", "gemini"}
     assert ai.RETIRED == {"claude-code-desktop", "claude-code-mobile"}
 

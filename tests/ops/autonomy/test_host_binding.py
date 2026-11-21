@@ -185,7 +185,7 @@ def test_malformed_contract_is_rejected(tmp_path: Path, mutate, reason: str) -> 
     assert reason in report["reason"]
 
 
-@pytest.mark.parametrize("host", ["cursor", "claude-code"])
+@pytest.mark.parametrize("host", ["cursor", "claude-code", "manus"])
 def test_every_host_autobinds_at_session_start_without_a_skill(host: str) -> None:
     doc = host_binding.load_contract(host_binding.contract_path(host))
     assert doc["session_start"]["autobind"] is True
@@ -193,6 +193,31 @@ def test_every_host_autobinds_at_session_start_without_a_skill(host: str) -> Non
     assert doc["session_start"]["manual_bindings"] == MANUAL
     assert doc["base"]["ref"] == BASE
     assert doc["base"]["required"] is True
+
+
+def test_manus_binds_the_operating_plane_and_its_one_surface() -> None:
+    """Manus reaches the Claude Code default set through its own contract.
+
+    .github declares no manus consumer binding, so this is a local binding and
+    says so. Manus has one canonical surface: no manus-cli is invented.
+    """
+
+    doc = host_binding.load_contract(host_binding.contract_path("manus"))
+    assert doc["canonical_binding_ref"] is None
+    assert doc["host"] == {
+        "identity": "manus",
+        "actor_ref": "l9.actor-registry/global@1#manus",
+        "surface_refs": ["l9.surface-registry/global@1#manus-cloud"],
+    }
+    assert [d["ref"] for d in doc["domains"]] == [CODING]
+    report = _evaluate("manus")
+    assert report["status"] == "BOUND"
+    assert report["default"]["status"] == "BOUND"
+    (item,) = report["load"]
+    assert item["ref"] == CODING
+    assert all(Path(v).is_file() for v in item["views"])
+    # The contract states that the host fires no hook, rather than implying one.
+    assert any("no host hook" in c for c in doc["constraints"])
 
 
 def test_claude_code_binds_the_operating_plane_and_the_coding_projection() -> None:
@@ -261,7 +286,7 @@ def test_coding_projection_is_never_bound_without_the_base() -> None:
     assert report["domains"][0]["bound"] is False
 
 
-@pytest.mark.parametrize("host", ["cursor", "claude-code"])
+@pytest.mark.parametrize("host", ["cursor", "claude-code", "manus"])
 def test_default_is_bound_only_on_a_current_base(host: str) -> None:
     bound = _evaluate(host)["default"]
     assert bound["status"] == "BOUND"

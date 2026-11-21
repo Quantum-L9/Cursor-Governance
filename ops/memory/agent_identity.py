@@ -11,6 +11,10 @@ where the code is actually running:
                                 over an inherited CURSOR_AGENT. Desktop, CLI,
                                 and mobile are surfaces of this one actor,
                                 not authors.
+    manus         Manus         Manus host markers (MANUS_ADDON_*,
+                                MANUS_GROUP_ENABLED, or RUNTIME_API_HOST on
+                                manus.im). Manus is hosted: every such session
+                                is the ``manus-cloud`` surface.
 
 On a Cursor or Claude Code surface a static ``L9_MEMORY_AGENT_ID`` is IGNORED:
 the host's own markers are the only evidence, so a pasted surface author
@@ -20,7 +24,9 @@ the host's own markers are the only evidence, so a pasted surface author
 Agents with no host markers of their own are identified by the
 ``L9_MEMORY_AGENT_ID`` their ADAPTER sets (never an operator's pasted value),
 and only when it names one of ``manus``, ``codex``, or ``gemini``. Surface
-stays unknown: an adapter id is actor evidence, not surface evidence.
+stays unknown: an adapter id is actor evidence, not surface evidence. The
+``manus`` adapter id alone therefore still yields no surface; only the host's
+own markers do, and they yield ``manus-cloud``.
 
 ``perplexity``, ``perplexity-computer``, ``l-cto``, and ``igorbot`` are not
 actors in the canonical registry. ``human`` is canonical and has no agent
@@ -51,11 +57,13 @@ import os
 import sys
 from collections.abc import Mapping
 from typing import Any, Final
+from urllib.parse import urlsplit
 
 CURSOR: Final = "cursor"
 CLAUDE_ACTOR: Final = "claude-code"
+MANUS: Final = "manus"
 #: Every identity this resolver derives from host markers.
-DERIVED_IDENTITIES: Final = frozenset({CURSOR, CLAUDE_ACTOR})
+DERIVED_IDENTITIES: Final = frozenset({CURSOR, CLAUDE_ACTOR, MANUS})
 CLAUDE_IDENTITIES: Final = frozenset({CLAUDE_ACTOR})
 #: Adapter actors this plane resolves from ``L9_MEMORY_AGENT_ID`` when no host
 #: marker is present. Surface stays unknown. ``human`` is canonical and unbound.
@@ -70,6 +78,20 @@ HISTORICAL_ACTOR_ALIASES: Final = {name: CLAUDE_ACTOR for name in sorted(RETIRED
 CURSOR_SURFACE: Final = "cursor-ide"
 CLAUDE_CLI_SURFACE: Final = "claude-code-cli"
 CLAUDE_WEB_SURFACE: Final = "claude-code-web"
+#: Manus has exactly one canonical surface, the hosted cloud surface. There is
+#: no manus-cli: the local shell a Manus session runs commands in is not a
+#: separately registered interaction surface (surface_registry.yaml).
+MANUS_SURFACE: Final = "manus-cloud"
+#: Host-injected markers of the Manus runtime. They are the host's evidence,
+#: not a configured label: an operator cannot set these from a project
+#: instruction, and ``L9_MEMORY_AGENT_ID`` alone never produces a surface.
+MANUS_MARKERS: Final = (
+    "MANUS_ADDON_RUNTIME_SPEC_PATH",
+    "MANUS_ADDON_REGISTRY_ENABLED",
+    "MANUS_GROUP_ENABLED",
+)
+MANUS_RUNTIME_HOST: Final = "RUNTIME_API_HOST"
+MANUS_APEX_DOMAIN: Final = "manus.im"
 #: ``claude-vscode`` is the host marker for the CLI process inside an IDE.
 #: It selects ``claude-code-cli``; there is no separate IDE surface.
 LOCAL_ENTRYPOINTS: Final = {
@@ -123,6 +145,33 @@ def _is_claude(env: Mapping[str, str]) -> bool:
         or _flag(env, "CLAUDE_CODE_ENTRYPOINT")
         or _flag(env, "CLAUDE_CODE_SESSION_ID")
     )
+
+
+def _manus_api_host(env: Mapping[str, str]) -> str:
+    """The hostname of ``RUNTIME_API_HOST`` when it is a manus.im host, else "".
+
+    The apex is matched exactly and subdomains only with a dot boundary, so
+    ``manus.im.evil.example`` is not a Manus host.
+    """
+
+    raw = _flag(env, MANUS_RUNTIME_HOST)
+    if not raw:
+        return ""
+    try:
+        hostname = (urlsplit(raw if "//" in raw else f"//{raw}").hostname or "").lower()
+    except ValueError:
+        return ""
+    if hostname == MANUS_APEX_DOMAIN or hostname.endswith(f".{MANUS_APEX_DOMAIN}"):
+        return hostname
+    return ""
+
+
+def _is_manus(env: Mapping[str, str]) -> bool:
+    """True when the Manus host itself marked this process."""
+
+    if any(_flag(env, name) for name in MANUS_MARKERS):
+        return True
+    return bool(_manus_api_host(env))
 
 
 def _claude_identity(env: Mapping[str, str]) -> str:
@@ -205,6 +254,10 @@ def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
         return CLAUDE_ACTOR
     if _is_cursor(source):
         return CURSOR
+    # Manus sets its own markers on every hosted session; they outrank the
+    # adapter's L9_MEMORY_AGENT_ID because they are host evidence, not a label.
+    if _is_manus(source):
+        return MANUS
     # A public OAuth client id is not an actor. It neither selects one nor
     # denies a registered adapter whose marker happens to equal that string.
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
@@ -217,6 +270,10 @@ def resolve_surface_id(env: Mapping[str, str] | None = None) -> str:
     claude = _is_claude(source) or _flag(source, "CLAUDE_CODE_REMOTE").lower() == "true"
     if not claude and _is_cursor(source):
         return CURSOR_SURFACE
+    # Manus is hosted only: its host markers prove the cloud surface. A bare
+    # adapter id is not surface evidence and still returns "" below.
+    if not claude and _is_manus(source):
+        return MANUS_SURFACE
     if not claude:
         return ""
     entry = _flag(source, "CLAUDE_CODE_ENTRYPOINT").lower()
@@ -229,7 +286,7 @@ def static_drift(env: Mapping[str, str] | None = None) -> str:
     """A configured L9_MEMORY_AGENT_ID that disagrees with the derived identity, or ""."""
     source = os.environ if env is None else env
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
-    if not explicit or not (_is_cursor(source) or _is_claude(source)):
+    if not explicit or not (_is_cursor(source) or _is_claude(source) or _is_manus(source)):
         return ""
     return explicit if explicit != resolve_agent_id(source) else ""
 
@@ -250,7 +307,7 @@ def unresolved_reason(env: Mapping[str, str] | None = None) -> str:
     if explicit:
         known = ", ".join(sorted(ALL_IDENTITIES))
         return f"L9_MEMORY_AGENT_ID={explicit} is not a registered memory identity (known: {known})"
-    return "no host markers (CURSOR_AGENT / Claude Code) and no L9_MEMORY_AGENT_ID"
+    return "no host markers (CURSOR_AGENT / Claude Code / Manus) and no L9_MEMORY_AGENT_ID"
 
 
 def normalized_runtime_evidence(env: Mapping[str, str] | None = None) -> dict[str, Any]:
@@ -264,13 +321,21 @@ def normalized_runtime_evidence(env: Mapping[str, str] | None = None) -> dict[st
     source = os.environ if env is None else env
     cursor_present = _is_cursor(source)
     claude_present = _is_claude(source)
+    manus_present = _is_manus(source)
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
     adapter_id = ""
-    if not cursor_present and not claude_present and explicit in ADAPTER_IDENTITIES:
+    if (
+        not cursor_present
+        and not claude_present
+        and not manus_present
+        and explicit in ADAPTER_IDENTITIES
+    ):
         adapter_id = explicit
     return {
         "CURSOR_AGENT_present": cursor_present,
         "claude_markers_present": claude_present,
+        "manus_markers_present": manus_present,
+        "manus_runtime_api_host": _manus_api_host(source),
         "CLAUDE_CODE_REMOTE": _flag(source, "CLAUDE_CODE_REMOTE").lower() == "true",
         "CLAUDE_CODE_ENTRYPOINT": _flag(source, "CLAUDE_CODE_ENTRYPOINT").lower(),
         "CLAUDE_CODE_SESSION_ID_present": bool(_flag(source, "CLAUDE_CODE_SESSION_ID")),

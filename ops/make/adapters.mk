@@ -26,6 +26,7 @@ L9_TARGETS += \
 	manus-adapter-check \
 	manus-install \
 	manus-install-check \
+	manus-start \
 	cursor-projection-check \
 	skill-plane-test \
 	claude-preservation-check \
@@ -170,6 +171,15 @@ manus-install-check:
 		--governance "$(CURDIR)" \
 		--workspace "$(if $(WS),$(WS),$(CURDIR))" \
 		--check
+# The Manus host fires no hook, so this is the session's binding report — the
+# same one Cursor renders from its SessionStart. Read-only: it verifies and
+# prints, and binds nothing by itself.
+manus-start:
+	@cd "$(if $(WS),$(WS),$(CURDIR))" && \
+		$(PYTHON) "$(CURDIR)/ops/autonomy/host_binding.py" \
+			--host manus \
+			--workspace "$(if $(WS),$(WS),$(CURDIR))" \
+			--format line
 # ---------------------------------------------------------------------------
 # Virtual skill plane
 # ---------------------------------------------------------------------------

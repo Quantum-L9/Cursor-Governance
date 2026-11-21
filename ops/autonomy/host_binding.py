@@ -2,10 +2,12 @@
 """Host default projection binding — what every session of a host reads without opting in.
 
 Contract: governance/host-bindings/<host>.yaml (`l9.cursor-governance.host-binding/v1`), one
-per host (`cursor`, `claude-code`). Both hosts' SessionStart hooks call this module, so every
-bootstrapped session is bound automatically: no skill, command or opt-in is involved, and a
-contract that does not declare `session_start.autobind: true` with
-`depends_on_skill: false` is rejected.
+per host (`cursor`, `claude-code`, `manus`). Every host's SessionStart path calls this module,
+so every bootstrapped session is bound automatically: no skill, command or opt-in is involved,
+and a contract that does not declare `session_start.autobind: true` with
+`depends_on_skill: false` is rejected. Cursor and Claude Code fire a host hook; Manus has no
+hook, so its adapter bootstrap is the SessionStart path. `autobind` means "no skill gates it",
+not "the host fires a hook" — a Manus session whose bootstrap did not run is unbound.
 
 The default binding is the admitted operating plane
 (`l9.projection/cursor-governance-operating-plane@2`), verified by its own consumer adapter in
@@ -15,8 +17,8 @@ other adapter status leaves the session NOT_BOUND with the exact reason, and not
 operating plane may be cited.
 
 On top of the base a contract may list domain projections (the Cursor contract mirrors
-Quantum-L9/.github `l9.domain-consumer-binding/cursor@1`; the Claude Code contract binds the
-coding-agent execution projection through its own binding,
+Quantum-L9/.github `l9.domain-consumer-binding/cursor@1`; the Claude Code and Manus contracts
+bind the coding-agent execution projection through its own binding,
 `governance/authority-bindings/coding-agent-execution.yaml`), each verified by the verifier its
 binding declares — the same `projection_mode` reader the manual modes use, whichever binding
 shape it is. `always` domains are loaded in every session; a conditional domain
@@ -39,7 +41,7 @@ for the per-session state a mode writes. Other projections are bound only by the
 modes the contract lists (`session_start.manual_bindings`).
 
 Usage:
-  host_binding.py [--host cursor|claude-code] [--activate ACTIVATION ...] [--workspace DIR]
+  host_binding.py [--host cursor|claude-code|manus] [--activate ACTIVATION ...] [--workspace DIR]
                   [--authority-root DIR] [--domains-only] [--format json|markdown|line]
 
 json exits 0 BOUND, 3 DEGRADED or NOT_BOUND, 1 REJECTED; markdown and line are SessionStart
@@ -398,7 +400,9 @@ def failed_report(host: str, exc: BaseException) -> dict[str, Any]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--host", default="cursor", choices=("cursor", "claude-code"))
+    parser.add_argument(
+        "--host", default="cursor", choices=("cursor", "claude-code", "manus")
+    )
     parser.add_argument(
         "--activate",
         action="append",
