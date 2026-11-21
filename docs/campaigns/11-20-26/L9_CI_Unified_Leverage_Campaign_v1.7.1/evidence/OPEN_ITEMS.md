@@ -88,8 +88,9 @@ registration, the Claude Code host default) does not block close-out.
 | X5 | Cursor-Governance is cut over: dead and duplicate CI retired, required-check plan written, `CURSOR_CANARY_PASS` with evidence | CG-CUTOVER | `evidence/CURSOR_CANARY_RESULT.md` reports PASS against CURSOR_CANARY.md Gates 0-4 |
 | X6 | Secondary canaries recorded (CEG, EIE) | C-CEG, C-EIE | Gate 2-3 verdicts with run ids; findings in CI_CONFIG_FINDINGS |
 | X7 | Harvest ledgered with destinations | CTO, then each owner lane | Index in `evidence/HARVEST_LEDGER.md`; every row promoted during this campaign (at least C1 to C5) carries the full `HARVEST.md` fields and a delivery receipt. Rows not promoted stay as backlog for the rollout campaign |
-| X8 | Merge queue on Cursor-Governance main | CTO, after L2's merge_group proof | Ruleset carries the queue and a PR merges through it |
+| X8 | Merge queue on Cursor-Governance main, driven by `/l9-pr-remediation` (operator 2026-11-21: no separate merge script) | CTO; skill enqueue support assigned (X8-QUEUE) | All six required checks already run on `merge_group` (verified 02:30Z). Today `stack_safe_merge.py` only merges directly, which a queue refuses, and `merge_gate.py` denies `ccr/auto_merge`, the REST enqueue route. Done when the skill enqueues a granted, green head, the ruleset carries the queue, and the operator's `/l9-pr-remediation Quantum-L9/Cursor-Governance` lands at least two PRs through it with merge_group run ids recorded |
 | X9 | Close-out evidence | CTO | PROOF.md filled from real runs; this register closed |
+| X10 | CTO CI-run audit: bugs, duplicate and overlapping checks, misalignment with Core, and expensive per-PR checks that belong in nightly | CTO (operator directive 2026-11-21 02:30Z) | Each check on a green Cursor-Governance PR head and its merge-queue run is classified keep, retire (duplicate), fix (bug or misalignment) or move to nightly, with seconds measured from check runs; each retire or move is merged, or handed to the operator as a settings change with a click path; the measured per-PR delta goes in the receipt |
 
 ## Recorded operator decisions
 
