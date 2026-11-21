@@ -1,4 +1,4 @@
-# CURSOR_CANARY result: `CURSOR_CANARY_BLOCKED` (one gate item open: 2.4)
+# CURSOR_CANARY result: `CURSOR_CANARY_BLOCKED` (one gate item open: 2.4, blocked on PIN-ADVANCE-3)
 
 ## Re-run on current `main`, 2026-11-21 (outranks every 2026-11-20 verdict below)
 
@@ -25,21 +25,22 @@ evidence holds on a promoted revision; otherwise the exact blocker is named.
 | 2.1 Ruleset selected org-ci and evaluated the exact head | **PASS** | `Analyze (central Core)` on #1096 `73ad9c04` ([run 44870986301](https://github.com/Quantum-L9/Cursor-Governance/actions/runs/44870986301/job/136745236286)) and on #1108 `22710d5c` |
 | 2.2 Every applicable language has an instance, a valid not-applicable reason, or a fail | **PASS** | Same run: `semgrep:language:python` planned and run; "not planned semgrep:language:typescript: no typescript or javascript file this target analyzes is inside the declared scan scope: 2 file(s) excluded by directory_names"; `javascript` and `shell` visible, unsupported, not planned |
 | 2.3 Central config resolved from Core/SDK, not copied | **PASS** | SDK `47ae3ac5` provisioned by Core; Semgrep 1.171.0 and Biome 2.5.8 from Core locks; policy and identity maps under `.l9/runtime/org-governance/` |
-| 2.4 Cursor-owned rules effective in a scoped execution | **BLOCKED** | Same run: the report's rule ids are SDK baseline and registry rules only; none of the four `.semgrep/l9-pr.yml` rules ran in any CI job. They run only in local `make pr`. Owner: SDK/Core (a scoped consumer-rulepack binding), or an operator decision that local enforcement is their accepted home |
+| 2.4 Cursor-owned rules effective in a scoped execution | **BLOCKED on PIN-ADVANCE-3** | Same run: the report's rule ids are SDK baseline and registry rules only; none of the four `.semgrep/l9-pr.yml` rules ran in any CI job (only in local `make pr`). CTO decision (2026-11-21): bind them centrally; local `make pr` is not an accepted enforcement point. The mechanism is SDK [#136](https://github.com/Quantum-L9/l9-ci-sdk/pull/136) (ADR 0021, scoped consumer rulepack, SDK `d4bbdbd`), which is on SDK `main` but not in the SDK `47ae3ac5` that Core's org-ci provisions; it reaches org-ci with Core's next pin, PIN-ADVANCE-3 (lane N1e), together with the Core planner and `org-ci.yml` consumer step. The consumer side is [#1114](https://github.com/Quantum-L9/Cursor-Governance/pull/1114): `.l9/semgrep-consumer-rules.yaml` plus `canonical_rule_id` metadata, validated by SDK `main` `4a88739` `l9-ci semgrep consumer-run` (4 rules loaded, each fires on its known-bad file and stays inside its scope). PASS needs a central run id whose finding bundle shows the four rules in its coverage |
 | 2.5 Native and repo-owned checks report correctly | **PASS** | All six required checks green on #1108 `22710d5c`; CodeQL and Sonar keep their own owners and are not described as SDK-executed |
 | 3. Known-bad and known-good, central rule | **PASS** | `73ad9c04`: both `subprocess-shell-true` rules fire on `central_rule_bad.py:7`; `central_rule_good.py` scanned, no finding; `blocking_count: 6`, all on the canary's known-bad files |
-| 3. Cursor-specific memory/transport rule | **BLOCKED** (same cause as 2.4) | Fires locally, correctly scoped (2026-11-20 witness below); not executed centrally |
+| 3. Cursor-specific memory/transport rule | **BLOCKED on PIN-ADVANCE-3** (same cause as 2.4) | Fires locally, correctly scoped (2026-11-20 witness below), and fires in the SDK consumer execution on a scratch tree (#1114); not yet executed by org-ci |
 | 3. Consumer override refused | **PASS** | `73ad9c04`: inline `# nosemgrep` (`override_nosemgrep.py:7`) and consumer `.semgrepignore` (`override_ignored_dir/`) no longer hide the finding; both rules fire on both. Version and severity override: consumer files cannot change Core's tool versions (Core installs from its own locks) |
 | 3. Missing or failing required provider is FAIL or INCOMPLETE | **PASS** | 2026-11-20 runs 44825395263 and 44826737909: a required instance that could not complete ended `incomplete`, exit 6, job failure (never green); the same class is now an explicit not-planned reason (2.2) |
 | 3. Biome known-bad | **PASS** | `fa1ec0e9`: [Core run 44870756504](https://github.com/Quantum-L9/Cursor-Governance/actions/runs/44870756504/job/136744510501) `BIOME_STATUS: findings`, job failure; [SDK Biome run 44870757046](https://github.com/Quantum-L9/Cursor-Governance/actions/runs/44870757046/job/136744512137) failure |
 | 3. CodeQL PR default and nightly extended remain wired | **PASS** | Receipts reused, not forced: run 44870443753 (`codeql.yml`) and run 44731752123 (`codeql-nightly.yml`) |
 | 3. Before/after comparison | **PASS** | `Analyze (central Core)`: 3 min 12 s on 2026-11-20 (`4accb109`, one instance) and 2 min 58 s now (`73ad9c04`). Findings on `main`: 29 blocking, now 0. 0 Semgrep errors (no timeouts) on `73ad9c04` |
-| 4. Promotion and rollout decision | **BLOCKED** | One required item is open: 2.4, together with the matching Gate 3 memory-rule witness. Every consumer check stays in place (`L9-CI-CORE-004`) |
+| 4. Promotion and rollout decision | **BLOCKED** | One required item is open: 2.4, together with the matching Gate 3 memory-rule witness, both waiting on PIN-ADVANCE-3. Every consumer check stays in place (`L9-CI-CORE-004`) |
 
 **Overall: `CURSOR_CANARY_BLOCKED`.** Exact blocker: the four Cursor-owned rules in
-`.semgrep/l9-pr.yml` run in no CI job. Owner: SDK/Core, for a scoped consumer-rulepack binding
-(the memory-boundary rules must keep their `ops/memory/`-scoped paths). Next action: bind them centrally,
-or record an operator decision that local `make pr` is their accepted home; then this file can say PASS.
+`.semgrep/l9-pr.yml` run in no CI job. The CTO chose central binding. The SDK binding (#136) is merged on SDK
+`main` but not yet provisioned by org-ci; Core's PIN-ADVANCE-3 (lane N1e) carries it. Next action: when
+PIN-ADVANCE-3 merges and #1114 is on `main`, re-run gate 2.4 and the Gate 3 memory-rule witness on a
+Cursor-Governance head, and record the run id and the four rules in the central finding bundle's coverage here.
 Also open but not gating: L1's proof that a Semgrep timeout counts as incomplete coverage (2026-11-20 B5;
 not reproduced now).
 
