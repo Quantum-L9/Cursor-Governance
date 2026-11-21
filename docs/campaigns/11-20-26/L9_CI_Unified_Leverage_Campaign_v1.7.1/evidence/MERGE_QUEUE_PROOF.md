@@ -19,7 +19,7 @@ over REST from the REST-only gateway the operator's `/l9-pr-remediation` runs on
 | (iii) REST observes queue membership | PROVEN | The issue timeline (`GET issues/{n}/timeline`) carries `added_to_merge_queue` / `removed_from_merge_queue`, the signal `queue_state()` reads on the REST path. Also visible: the `gh-readonly-queue/main/pr-<n>-<base>` branch (`GET git/matching-refs/heads/gh-readonly-queue`) and `GET actions/runs?event=merge_group`. `pulls/{n}.auto_merge` stays `null` while a PR is queued, so it is not a membership signal. |
 | Eject detection | PROVEN | #1113 was closed while queued at 18:17:11Z; `removed_from_merge_queue` followed at 18:17:12Z; the watcher reported EJECTED ("removed from the queue without merging"). Nothing reached `main`. |
 | (i) a push to a queued PR dequeues it | DISPROVEN, stronger | GitHub refuses the push. Pushing to #1113's branch while queued (18:13:49Z) returned `GH006: Protected branch update failed … A pull request for this branch has been added to a merge queue. Branches that are queued for merging cannot be updated. To modify this branch, dequeue the associated pull request.` The same push to #1135 while queued was refused with the same GH006. A queued entry's head cannot move, so it stays bound to the granted head; the watcher's moved-head path is a second safeguard. |
-| (ii) REST `DELETE pulls/{n}/ccr/auto_merge` dequeues | NOT YET PROVEN | The first attempt (#1135) was denied by a stale guardrail copy and the PR merged (F3). To be run on a PR the CTO enqueues and that should be merged anyway. |
+| (ii) REST `DELETE pulls/{n}/ccr/auto_merge` dequeues | DISPROVEN | On #1145 (F6) the DELETE answered HTTP 200 `{"enabled":false}`, but the PR stayed in the queue and merged 25 minutes later. The route turns auto-merge off. It does not remove a queued entry. The first attempt (#1135) never reached GitHub, because a stale guardrail copy denied it (F3). |
 
 ### Merge-group runs
 
@@ -102,9 +102,33 @@ repository verification: `make test` exited 2 with
 `ops/scripts/run_pytest_suites.sh` refuses an empty list on `pull_request`. Every PR that only
 deletes files is blocked from `main` the same way, since that check is required.
 
+### F6 — the REST DELETE does not dequeue (#1145)
+
+#1145 was a wanted PR (head `bc82e38d`). It was enqueued with `PUT pulls/1145/ccr/auto_merge`
+(`{"enabled":true,"merge_method":"merge"}`) at 22:15:48Z.
+
+| Time (UTC) | Observation | Source |
+|---|---|---|
+| 22:15:48Z | `added_to_merge_queue` | `GET issues/1145/timeline` |
+| 22:16:06Z | merge group `gh-readonly-queue/main/pr-1145-bec7cff4…` (commit `5d4b2833`) starts five runs | `GET actions/runs?event=merge_group` |
+| 22:16:37Z | `DELETE pulls/1145/ccr/auto_merge` → `HTTP 200`, body `{"enabled":false}` | response |
+| 22:17:14Z | no `removed_from_merge_queue`; the queue ref still exists; runs 44955853004 and 44955853247 still running | timeline, `GET git/matching-refs/heads/gh-readonly-queue` |
+| 22:31:38Z | still queued; PR open and not merged; `pulls/1145.auto_merge` is `null` | timeline, refs, `GET pulls/1145` |
+| 22:41:28Z | Organization CI (Core) 44955853247 succeeds (the others finished earlier: 44955852912, 44955852888, 44955852935, 44955853004, all success) | runs |
+| 22:42:00Z | `removed_from_merge_queue` by `github-merge-queue[bot]` | timeline |
+| 22:42:01Z | `merged` as `5d4b2833` | timeline, `GET pulls/1145` |
+
+The DELETE switched auto-merge off and left the queue entry in place. The queue then merged
+the entry once its checks passed. On this REST-only surface, no REST route proven so far
+removes an entry without closing the PR. Closing it does remove it (eject detection, #1113).
+The `stack_safe_merge.py` withdraw path calls this DELETE, so the withdraw does not dequeue on
+this surface. The watcher still sees whether the entry leaves the queue, and the entry stays
+recorded as UNBOUND until it does.
+
 ## Operator readiness
 
 `/l9-pr-remediation Quantum-L9/Cursor-Governance` can hand a green, authorized stack to the
 queue from this surface: membership is observable over REST, a queued head cannot move, and
-a queue merge completed end to end. Until (ii) is proven, withdraw a queued PR (cancellation
-or timeout) with the web UI's **Remove from queue** or by closing it.
+a queue merge completed end to end. REST `DELETE pulls/{n}/ccr/auto_merge` does not dequeue (F6).
+To withdraw a queued PR (cancellation or timeout), use the web UI's **Remove from queue**, or close
+the PR.
