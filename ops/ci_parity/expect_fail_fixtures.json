@@ -47,9 +47,7 @@
     },
     "Quantum-L9/Cognitive.Engine.Graphs": {
       "note": "CI canary for campaign L9-CI-UNIFIED-LEVERAGE-2026-11-20-v1.7.1 (branch canary/ci-ul-ceg, PR #517, never merged). tests/canary/central_rule_witness.py is the known-bad for the central SDK rule tls-verify-disabled; tests/canary/override_witness.py is a consumer nosemgrep attempt to waive it, which must still fire. tests/canary/ceg_rule_witness.py carries no central finding, so it expects nothing.",
-      "roots": [
-        "tests/canary/"
-      ],
+      "roots": ["tests/canary/"],
       "files": {
         "tests/canary/central_rule_witness.py": {
           "semgrep-l9": [
