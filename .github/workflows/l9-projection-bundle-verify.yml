@@ -5,8 +5,8 @@
 #   layer: operations
 #   owner: governance-control-plane
 #   status: active
-#   version: 2.0.0
-#   updated: 2026-10-21
+#   version: 2.1.0
+#   updated: 2026-11-21
 name: L9 Projection Bundle Verify
 on:
   pull_request:
@@ -56,6 +56,16 @@ on:
       - "tools/authority/verify_coding_projection.py"
       - "ops/scripts/coding_projection_status.py"
       - "tools/authority/produce_projection_bundle.py"
+  # Drift detection: Quantum-L9/.github main moves without any Cursor-Governance change, so
+  # path triggers alone leave main green while a bundle is STALE. These runs verify the
+  # committed bundles on main against the current authority main and fail when one is not
+  # current. They never regenerate, commit or publish (operator decision 2026-11-21).
+  schedule:
+    - cron: "41 5 * * *"
+  workflow_dispatch:
+  repository_dispatch:
+    types:
+      - l9-semantic-authority-updated
 permissions:
   contents: read
 concurrency:
@@ -69,7 +79,12 @@ jobs:
     # Runs pull-request code, so it holds no secret and never touches the private compiler.
     # Producer attestation (byte-for-byte replay with the pinned compiler) runs only in the
     # trusted workflow l9-projection-bundle-trusted-replay.yml.
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event_name == 'push' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'repository_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
