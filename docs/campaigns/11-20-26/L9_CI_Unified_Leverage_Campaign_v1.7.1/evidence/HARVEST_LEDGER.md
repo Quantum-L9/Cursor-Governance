@@ -123,7 +123,7 @@ rollout campaign; next proof: `git rev-parse <head>:<path>` at the census head).
 | Ownership | Semantic owner Core. Source: `Quantum-L9/l9-ci-core/.github/workflows/security.yml`. Requiredness: org-ci `security` job enforced inside the required `Analyze (central Core)` context (#312). Consumer allowlists in `.gitleaks.toml` stay with the consumer (retain_domain) |
 | Evidence | Core `tests/workflows/test_security_consumer_scope.py` (+317 lines in #298) covers event ranges, config extension and refusal; Core runs it on itself (`self-security.yml`). Consumer good/bad witness: **Unknown**, since no consumer runs it until #312 merges (next proof: a planted secret failing `Analyze (central Core)` on a canary PR, and a clean PR passing) |
 | Disposition | promote_global |
-| Delivery | Step one: Core #298, merged `14396e9` (2026-11-20 23:24Z). Step two: Core #312, open, head `ef108215`; it adds the org-ci `security` job pinned at `security.yml@14396e9` and an `Enforce security scan (secrets, dependency audit)` step in the required job. Effective: **not yet**, because org-ci on Core `main` `4aa7f2b` has no consumer security job. Observed: none |
+| Delivery | Step one: Core #298, merged `14396e9` (2026-11-20 23:24Z). Step two: Core #312, open, head `ef108215` (corrected: merged 2026-11-21T08:16:54Z as `63ff7da5`); it adds the org-ci `security` job pinned at `security.yml@14396e9` and an `Enforce security scan (secrets, dependency audit)` step in the required job. Effective: **not yet**, because org-ci on Core `main` `4aa7f2b` has no consumer security job. Observed: none |
 | Retirement and recovery | No consumer copy is eligible. CEG's `security` job stays until #312 merges and a CEG run shows parity (secret found, clean pass). Rollback scope after #312: the org-ci `security` job and its enforce step; known-good is org-ci at Core `main` `4aa7f2b` |
 
 ### C2: toolchain alignment
@@ -135,7 +135,7 @@ rollout campaign; next proof: `git rev-parse <head>:<path>` at the census head).
 | Ownership | Core: `.github/actions/check-toolchain-alignment`, the lock above, and the org-ci steps `Report toolchain alignment (advisory)` and `Report toolchain alignment drift (advisory)` |
 | Evidence | Core `tests/governance/test_core_toolchain_alignment.py` (Core scans itself) and `tests/workflows/test_org_ci_toolchain_drift_report.py`. Real consumer: the receipt run logs `check-toolchain-alignment: aligned (41 declaration(s))` and `Toolchain drift (advisory): aligned, 0 declaration(s)`. Drift witness on a consumer: **Unknown** (no drifting consumer run observed in this lane) |
 | Disposition | promote_global, delivered **advisory**. The index target "made blocking" was superseded by the operator decision of 2026-11-20 about 22:20Z (OPEN_ITEMS: housekeeping never blocks); #302's first commit made it blocking and its second made it advisory |
-| Delivery | Core #295 merged `8667d53` (2026-11-20 22:09Z); Core #302 merged `b8d3e31` (2026-11-21 01:35Z). Effective at actions pin `284a5eb6`. Observed on Cursor-Governance in the receipt run. Consumer-side: CEG #524 (`ci/align-core-toolchain-lock`, head `46665232`, open, ready to merge) replaces CEG's hand list with `scripts/check_core_toolchain.py`, which reads Core's `core-owned-tools.json` and lock |
+| Delivery | Core #295 merged `8667d53` (2026-11-20 22:09Z); Core #302 merged `b8d3e31` (2026-11-21 01:35Z). Effective at actions pin `284a5eb6`. Observed on Cursor-Governance in the receipt run. Consumer-side: CEG #524 (`ci/align-core-toolchain-lock`, head `46665232`, open, ready to merge; corrected: merged 2026-11-21T08:04:20Z as `e1eb4f2d`) replaces CEG's hand list with `scripts/check_core_toolchain.py`, which reads Core's `core-owned-tools.json` and lock |
 | Retirement and recovery | CEG's hand list goes with CEG #524 (not yet merged). Other repositories' local guards: Unknown, rollout campaign. Rollback: a dedicated Core revert of #295 and #302, released through the usual two-step pin advance (Core AGENTS.md §16) and validated by Core's alignment tests and one consumer `Analyze (central Core)` run. Moving the shared actions pin back before `8667d53` would also drop C3 and C5, so it is not the rollback. The check is advisory, so no merge outcome depends on it |
 
 ### C3: conflict-marker scan
@@ -203,3 +203,8 @@ Campaign scope (operator decision, 2026-11-20): cut over **Cursor-Governance** o
 `CURSOR_CANARY_PASS`, and leave the organization ready to roll out. Rolling out to other repositories is
 not part of this campaign. Cutover items for Cursor-Governance are owned by lane CG-CUTOVER and depend on
 C1 to C5. The other donors' rows above are the starting backlog for the rollout campaign.
+
+## Corrections (REST, read 2026-11-21 13:10-13:20Z)
+
+- Core #312 is merged (`63ff7da5`, 2026-11-21T08:16:54Z); C1 (security scans in org-ci) is effective.
+- CEG #524 is merged (`e1eb4f2d`, 2026-11-21T08:04:20Z).
