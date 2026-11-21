@@ -59,6 +59,46 @@ merge_gate recognises both spellings, so a REST merge is gated exactly like the
 CLI one; that recognition shipped with this transport, not after it.
 
 Probe: L9_STACK_PROBE_FILE (tests) or live REST / `gh pr view` / `gh pr list`.
+
+Merge queue (``--queue ITEM...``, ITEM = ``<pr>@<head-sha>``)
+--------------------------------------------------------------
+When the base branch's rules (``GET repos/{o}/{r}/rules/branches/{base}``) carry
+a ``merge_queue`` rule, a direct merge is refused by GitHub, so the set is handed
+to the queue instead. Every item must be on that queue-protected base, have
+``board=merge`` (pr_board) and authorization for the granted head
+(``authorization_status``, the same check ``--run`` uses, so it holds with the
+merge-authority switch disabled or strict). Items are enqueued in the order
+given -- the caller passes ``merge_order``, bottom-up -- and then ONE watcher
+polls the set until each PR is merged, ejected or stopped. A base without the
+rule is refused here; ``--run`` keeps today's direct merge unchanged.
+
+Head binding is enforced in this code, not assumed from GitHub:
+
+* An enqueue counts only when the PR is observed in the queue at the granted
+  head right after the call. Anything else -- armed auto-merge waiting for
+  requirements, an unobservable state -- is disarmed and reported
+  MERGE_PENDING. Auto-merge is never left armed.
+* While queued, the watcher re-reads the head and re-checks authorization on
+  every poll, so a moved head or a cancelled instruction withdraws the entry.
+* Every withdrawal -- an enqueue not proven at the granted head, a moved head, a
+  revoked authorization, a watcher timeout -- runs ``withdraw``: dequeue
+  (GraphQL ``dequeuePullRequest``; on the REST-only gateway
+  ``DELETE pulls/{n}/ccr/auto_merge``) and disarm, then re-read. Only an entry
+  observably neither queued nor armed is reported MERGE_PENDING. Anything else is
+  UNBOUND_QUEUE_ENTRY (exit 5): it is recorded in the account's unbound-entry
+  ledger, the rest of the set is not enqueued, and no further enqueue runs for
+  that repository until the entry has left the queue.
+
+UNKNOWN, settled empirically by the operator-run check in the X8 pull request:
+(i) whether GitHub removes a queued PR when its head is pushed -- the
+documented removal reasons (failing merge-group CI, timeout, removal by API or
+UI, unresolvable branch protection) do not name a push, and the auto-merge
+page says a push by someone with write access leaves auto-merge enabled;
+(ii) whether ``DELETE ccr/auto_merge`` dequeues a queued PR; (iii) whether the
+REST issue timeline reports ``added_to_merge_queue`` / ``removed_from_merge_queue``
+(GitHub documents queue membership only over GraphQL: ``isInMergeQueue``,
+``mergeQueueEntry.headCommit``). Until (iii) is proven, a REST-only enqueue
+whose membership cannot be observed is disarmed, never assumed queued.
 """
 
 from __future__ import annotations
@@ -487,10 +527,471 @@ def _execute(selection: dict[str, Any], *, delete_branch: bool, head_sha: str = 
     return 0
 
 
+# ---------------------------------------------------------------------------
+# merge queue
+# ---------------------------------------------------------------------------
+
+#: Exit status for "a queued entry is no longer bound to its granted head".
+UNBOUND_QUEUE_EXIT = 5
+UNBOUND_LEDGER_NAME = "merge-queue-unbound.json"
+QUEUE_POLL_SECONDS = 30
+QUEUE_TIMEOUT_SECONDS = 4 * 3600
+
+
+def _rest_only() -> bool:
+    """The skill's one definition of a REST-only surface (no duplicate copy here)."""
+    scripts = _HERE.parent.parent / "skills" / "l9-pr-remediation" / "scripts"
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    import protocol  # noqa: PLC0415
+
+    return bool(protocol.rest_only())
+
+
+def _gh_graphql(query: str, **variables: str) -> dict[str, Any]:
+    argv = ["gh", "api", "graphql", "-f", f"query={query}"]
+    for name, value in variables.items():
+        argv += ["-f", f"{name}={value}"]
+    proc = subprocess.run(argv, capture_output=True, text=True, check=False)  # noqa: S603
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.strip() or f"gh api graphql exited {proc.returncode}")
+    payload = json.loads(proc.stdout or "{}")
+    if payload.get("errors"):
+        raise RuntimeError(json.dumps(payload["errors"])[:500])
+    return payload.get("data") or {}
+
+
+def _pull(repo: str, pr: str) -> dict[str, Any]:
+    view = _gh_rest_json(f"repos/{repo}/pulls/{pr}")
+    if not isinstance(view, dict):
+        raise RuntimeError("pull request payload was not an object")
+    return view
+
+
+def pr_base(repo: str, pr: str) -> str:
+    entry = _probe_file_entry(repo, str(pr))
+    if entry is not None:
+        return str(entry.get("base") or "")
+    return str((_pull(repo, pr).get("base") or {}).get("ref") or "")
+
+
+def queue_rule(repo: str, base: str, pr: str = "") -> dict[str, Any] | None:
+    """The base branch's ``merge_queue`` rule, or None. Raises RuntimeError when unreadable.
+
+    ``L9_STACK_PROBE_FILE`` entries may carry ``merge_queue`` (bool) so tests stay offline.
+    """
+    entry = _probe_file_entry(repo, str(pr)) if pr else None
+    if entry is not None:
+        return {"type": "merge_queue"} if entry.get("merge_queue") else None
+    if not base:
+        raise RuntimeError("base branch is unknown")
+    branch = urllib.parse.quote(base, safe="")
+    listing = _gh_rest_json(f"repos/{repo}/rules/branches/{branch}")
+    for item in listing or []:
+        if isinstance(item, dict) and item.get("type") == "merge_queue":
+            return item
+    return None
+
+
+def queue_state(repo: str, pr: str) -> dict[str, Any]:
+    """``{"queued": True|False|None, "head": sha, "merged": bool}``. ``None`` is unobservable.
+
+    GraphQL reads the documented ``isInMergeQueue`` and the entry's head commit.
+    REST has no documented membership signal; the issue timeline's last
+    ``added_to_merge_queue`` / ``removed_from_merge_queue`` event is read and an
+    absence of both stays None (UNKNOWN iii in the module docstring).
+    """
+    if not _rest_only():
+        owner, name = repo.split("/", 1)
+        data = _gh_graphql(
+            "query($o:String!,$n:String!,$p:Int!){repository(owner:$o,name:$n){"
+            "pullRequest(number:$p){merged headRefOid isInMergeQueue autoMergeRequest{enabledAt} "
+            "mergeQueueEntry{state headCommit{oid}}}}}",
+            o=owner,
+            n=name,
+            p=str(pr),
+        )
+        node = ((data.get("repository") or {}).get("pullRequest")) or {}
+        entry = node.get("mergeQueueEntry") or {}
+        return {
+            "queued": bool(node.get("isInMergeQueue")),
+            "head": str(node.get("headRefOid") or "").lower(),
+            "entry_head": str(((entry.get("headCommit") or {}).get("oid")) or "").lower() or None,
+            "merged": bool(node.get("merged")),
+            "armed": node.get("autoMergeRequest") is not None,
+        }
+    view = _pull(repo, pr)
+    queued: bool | None = None
+    try:
+        events = _gh_rest_json(f"repos/{repo}/issues/{pr}/timeline?per_page=100")
+    except RuntimeError:
+        events = None
+    for event in events or []:
+        kind = event.get("event") if isinstance(event, dict) else None
+        if kind == "added_to_merge_queue":
+            queued = True
+        elif kind == "removed_from_merge_queue":
+            queued = False
+    return {
+        "queued": queued,
+        "head": str((view.get("head") or {}).get("sha") or "").lower(),
+        "entry_head": None,
+        "merged": bool(view.get("merged")),
+        "armed": view.get("auto_merge") is not None,
+    }
+
+
+def _node_id(repo: str, pr: str) -> str:
+    node = str(_pull(repo, pr).get("node_id") or "")
+    if not node:
+        raise RuntimeError("REST did not report the pull request node id")
+    return node
+
+
+def enqueue_call(repo: str, pr: str, head_sha: str) -> None:
+    """Ask GitHub to queue ``repo#pr`` at ``head_sha``. Membership is proven by the caller."""
+    if not _rest_only():
+        _gh_graphql(
+            "mutation($id:ID!,$h:GitObjectID!){enqueuePullRequest(input:"
+            "{pullRequestId:$id,expectedHeadOid:$h}){mergeQueueEntry{id}}}",
+            id=_node_id(repo, pr),
+            h=head_sha,
+        )
+        return
+    if _run(["gh", "api", "--method", "PUT", f"repos/{repo}/pulls/{pr}/ccr/auto_merge"]) != 0:
+        raise RuntimeError("PUT ccr/auto_merge failed")
+
+
+def disarm_call(repo: str, pr: str) -> None:
+    """Remove an armed auto-merge (or a queue entry; UNKNOWN ii on REST)."""
+    if not _rest_only():
+        _gh_graphql(
+            "mutation($id:ID!){disablePullRequestAutoMerge(input:{pullRequestId:$id})"
+            "{clientMutationId}}",
+            id=_node_id(repo, pr),
+        )
+        return
+    if _run(["gh", "api", "--method", "DELETE", f"repos/{repo}/pulls/{pr}/ccr/auto_merge"]) != 0:
+        raise RuntimeError("DELETE ccr/auto_merge failed")
+
+
+def dequeue_call(repo: str, pr: str) -> None:
+    if not _rest_only():
+        _gh_graphql(
+            "mutation($id:ID!){dequeuePullRequest(input:{id:$id}){clientMutationId}}",
+            id=_node_id(repo, pr),
+        )
+        return
+    disarm_call(repo, pr)
+
+
+def board_verdict(repo: str, pr: str) -> dict[str, Any]:
+    import pr_board  # noqa: PLC0415
+
+    return pr_board.board_for(repo, str(pr))
+
+
+def _unbound_ledger_path() -> Path:
+    home = Path(pwd.getpwuid(os.getuid()).pw_dir)
+    return home / ".l9" / "autonomy" / UNBOUND_LEDGER_NAME
+
+
+def _read_ledger(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def record_unbound(entry: dict[str, Any], *, path: Path | None = None) -> None:
+    target = path or _unbound_ledger_path()
+    ledger = _read_ledger(target)
+    ledger.setdefault(str(entry["repo"]), {})[str(entry["pr"])] = entry
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(ledger, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def unbound_blockers(repo: str, *, path: Path | None = None) -> list[dict[str, Any]]:
+    """Unbound entries for ``repo`` still in the queue. Entries no longer queued are cleared.
+
+    An entry whose state cannot be read stays a blocker: unknown is not resolved.
+    """
+    target = path or _unbound_ledger_path()
+    ledger = _read_ledger(target)
+    entries = ledger.get(repo) or {}
+    remaining: dict[str, Any] = {}
+    for pr, entry in entries.items():
+        try:
+            state = queue_state(repo, pr)
+        except RuntimeError:
+            remaining[pr] = entry
+            continue
+        if state.get("queued") is not False:
+            remaining[pr] = entry
+    if remaining != entries:
+        if remaining:
+            ledger[repo] = remaining
+        else:
+            ledger.pop(repo, None)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(ledger, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return list(remaining.values())
+
+
+def parse_items(items: list[str]) -> list[tuple[str, str]]:
+    parsed: list[tuple[str, str]] = []
+    for item in items:
+        pr, _, sha = item.partition("@")
+        sha = sha.strip().lower()
+        if not pr.strip().isdigit() or not _FULL_SHA.match(sha):
+            raise ValueError(f"queue item {item!r} is not <pr>@<40-hex head sha>")
+        parsed.append((pr.strip(), sha))
+    return parsed
+
+
+def _pending(repo: str, pr: str, head: str, reason: str, **extra: Any) -> dict[str, Any]:
+    return {
+        "status": "MERGE_PENDING",
+        "repo": repo,
+        "pr": int(pr),
+        "granted_head": head,
+        "reason": reason,
+        **extra,
+    }
+
+
+def admit_for_queue(repo: str, pr: str, head: str) -> dict[str, Any] | None:
+    """None when ``repo#pr`` may be enqueued at ``head``; otherwise its MERGE_PENDING record."""
+    try:
+        base = pr_base(repo, pr)
+        rule = queue_rule(repo, base, pr)
+    except RuntimeError as exc:
+        return _pending(repo, pr, head, f"merge-queue rule unreadable ({exc}); not enqueued")
+    if rule is None:
+        return _pending(
+            repo,
+            pr,
+            head,
+            f"base '{base}' has no merge_queue rule; auto-merge is never used outside a queue "
+            "-- merge with --run instead",
+        )
+    auth = authorization_status(repo, pr, head)
+    if auth.get("status") != "AUTHORIZED":
+        return _pending(repo, pr, head, str(auth.get("reason")), authorization=auth)
+    board = board_verdict(repo, pr)
+    if board.get("board") != "merge":
+        return _pending(repo, pr, head, f"board is {board.get('board')}: {board.get('reason')}")
+    try:
+        live = live_head_sha(repo, pr)
+    except RuntimeError as exc:
+        return _pending(repo, pr, head, f"cannot recheck the live head ({exc})")
+    if live != head:
+        return _pending(repo, pr, head, f"head moved: granted {head}, live {live}", live_head=live)
+    return None
+
+
+def enqueue_one(repo: str, pr: str, head: str) -> dict[str, Any]:
+    """Enqueue at ``head`` and prove membership, or disarm and report MERGE_PENDING."""
+    try:
+        enqueue_call(repo, pr, head)
+    except RuntimeError as exc:
+        return _pending(repo, pr, head, f"enqueue refused ({exc})")
+    try:
+        state = queue_state(repo, pr)
+    except RuntimeError as exc:
+        state = {"queued": None, "head": "", "error": str(exc)}
+    bound = state.get("head") == head and state.get("entry_head") in (None, head)
+    if state.get("queued") is True and bound:
+        return {"status": "QUEUED", "repo": repo, "pr": int(pr), "granted_head": head}
+    if state.get("queued") is True:
+        reason = f"queued at {state.get('entry_head') or state.get('head')}, not the granted head"
+    elif state.get("queued") is None:
+        reason = "queue membership could not be observed after the enqueue call"
+    else:
+        reason = "the pull request did not enter the queue at once (auto-merge would wait armed)"
+    return withdraw(repo, pr, head, reason, observed_head=state.get("head") or "")
+
+
+def _withdrawn(state: dict[str, Any]) -> bool:
+    """True only when the PR is observably neither queued nor armed.
+
+    REST has no documented membership signal (UNKNOWN iii), so there a null
+    ``auto_merge`` with no queue event is the only evidence of removal.
+    """
+    queued = state.get("queued")
+    armed = state.get("armed")
+    if queued is False:
+        return armed is not True
+    return queued is None and armed is False
+
+
+def withdraw(
+    repo: str, pr: str, head: str, reason: str, *, observed_head: str = ""
+) -> dict[str, Any]:
+    """Dequeue and disarm ``repo#pr``, then prove it. MERGE_PENDING if proven, else UNBOUND.
+
+    Every path that stops trusting a queue entry -- an enqueue not proven at the
+    granted head, a head that moved, a revoked authorization, a watcher timeout --
+    ends here, so no entry is ever abandoned while it might still merge.
+    """
+    errors: list[str] = []
+    for call in (dequeue_call, disarm_call):
+        try:
+            call(repo, pr)
+        except RuntimeError as exc:
+            errors.append(f"{call.__name__}: {exc}")
+    try:
+        after = queue_state(repo, pr)
+    except RuntimeError as exc:
+        after = {"queued": None, "armed": None, "error": str(exc)}
+    if after.get("merged") and (after.get("head") or "") == head:
+        return {"status": "MERGED", "repo": repo, "pr": int(pr), "granted_head": head}
+    if after.get("merged"):
+        return _unbound(
+            repo,
+            pr,
+            head,
+            observed_head or after.get("head") or "unknown",
+            reason=f"{reason}; it merged before it could be withdrawn",
+            merged=True,
+        )
+    if _withdrawn(after):
+        return _pending(
+            repo,
+            pr,
+            head,
+            f"{reason}; withdrawn from the queue",
+            withdrawn=True,
+            moved_head=observed_head or None,
+        )
+    return _unbound(
+        repo,
+        pr,
+        head,
+        observed_head or after.get("head") or "unknown",
+        reason=reason,
+        observed_queued=after.get("queued"),
+        observed_armed=after.get("armed"),
+        errors=errors,
+    )
+
+
+def _unbound(repo: str, pr: str, head: str, moved: str, **extra: Any) -> dict[str, Any]:
+    entry = {
+        "status": "UNBOUND_QUEUE_ENTRY",
+        "repo": repo,
+        "pr": int(pr),
+        "granted_head": head,
+        "moved_head": moved,
+        **extra,
+    }
+    record_unbound(entry)
+    print(
+        f"UNBOUND_QUEUE_ENTRY MERGE_PENDING: {repo}#{pr} (grant covers {head}, observed "
+        f"{moved}) could not be proven out of the queue: {extra.get('reason', '')}. "
+        f"No further enqueue for {repo} until it has left the queue.",
+        file=sys.stderr,
+    )
+    return entry
+
+
+def watch_step(repo: str, pr: str, head: str) -> dict[str, Any] | None:
+    """One poll of one queued PR. None while it is still queued at the granted head."""
+    try:
+        state = queue_state(repo, pr)
+    except RuntimeError:
+        return None
+    if state.get("merged"):
+        return {"status": "MERGED", "repo": repo, "pr": int(pr), "granted_head": head}
+    moved = state.get("head") or ""
+    if state.get("queued") is not False and moved and moved != head:
+        return withdraw(repo, pr, head, f"head moved to {moved} while queued", observed_head=moved)
+    if state.get("queued") is not False:
+        # The latest instruction wins: a cancellation after the enqueue withdraws it.
+        auth = authorization_status(repo, pr, head)
+        if auth.get("status") != "AUTHORIZED":
+            return withdraw(
+                repo,
+                pr,
+                head,
+                f"authorization withdrawn while queued ({auth.get('reason')})",
+                observed_head=moved,
+            )
+    if state.get("queued") is False:
+        return {
+            "status": "EJECTED",
+            "repo": repo,
+            "pr": int(pr),
+            "granted_head": head,
+            "reason": "removed from the queue without merging; remediate, then re-enqueue",
+        }
+    return None
+
+
+def run_queue(
+    repo: str,
+    items: list[tuple[str, str]],
+    *,
+    poll: float = QUEUE_POLL_SECONDS,
+    timeout: float = QUEUE_TIMEOUT_SECONDS,
+    sleep: Any = None,
+    clock: Any = None,
+) -> list[dict[str, Any]]:
+    """Enqueue ``items`` in the given order, then watch them with one watcher."""
+    import time  # noqa: PLC0415
+
+    sleep = sleep or time.sleep
+    clock = clock or time.monotonic
+    blockers = unbound_blockers(repo)
+    if blockers:
+        return [
+            _pending(
+                repo,
+                pr,
+                head,
+                "unbound queue entry outstanding for this repository: "
+                + ", ".join(f"#{b['pr']}" for b in blockers),
+                blockers=blockers,
+            )
+            for pr, head in items
+        ]
+    results: dict[str, dict[str, Any]] = {}
+    watching: list[tuple[str, str]] = []
+    stopped = False
+    for pr, head in items:
+        if stopped:
+            results[pr] = _pending(repo, pr, head, "not enqueued: an earlier item is unbound")
+            continue
+        refusal = admit_for_queue(repo, pr, head)
+        outcome = refusal or enqueue_one(repo, pr, head)
+        results[pr] = outcome
+        if outcome["status"] == "QUEUED":
+            watching.append((pr, head))
+        elif outcome["status"] == "UNBOUND_QUEUE_ENTRY":
+            stopped = True
+    deadline = clock() + timeout
+    while watching:
+        for pr, head in list(watching):
+            outcome = watch_step(repo, pr, head)
+            if outcome is not None:
+                results[pr] = outcome
+                watching.remove((pr, head))
+        if not watching:
+            break
+        if clock() >= deadline:
+            # No entry outlives its watcher: withdraw it, or record it unbound.
+            for pr, head in watching:
+                results[pr] = withdraw(repo, pr, head, "still queued when the watcher timed out")
+            break
+        sleep(poll)
+    return [results[pr] for pr, _ in items]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", required=True, help="owner/name")
-    parser.add_argument("--pr", required=True, help="pull request number")
+    parser.add_argument("--pr", help="pull request number (not with --queue)")
     parser.add_argument(
         "--keep-branch",
         action="store_true",
@@ -500,12 +1001,33 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--print", action="store_true", dest="print_argv", help="print argv")
     mode.add_argument("--json", action="store_true", help="print selection JSON")
     mode.add_argument("--run", action="store_true", help="exec the selected gh pr merge")
+    mode.add_argument(
+        "--queue",
+        nargs="+",
+        metavar="PR@SHA",
+        help="enqueue these PRs in this order (merge_order, bottom-up) and watch them",
+    )
     parser.add_argument(
         "--head-sha",
         default="",
         help="exact head the human grant covers; required by --run",
     )
     args = parser.parse_args(argv)
+
+    if args.queue:
+        try:
+            items = parse_items(args.queue)
+        except ValueError as exc:
+            print(f"FAIL: {exc}", file=sys.stderr)
+            return 2
+        outcomes = run_queue(args.repo, items)
+        print(json.dumps({"repo": args.repo, "queue": outcomes}, indent=2, sort_keys=True))
+        statuses = {o["status"] for o in outcomes}
+        if "UNBOUND_QUEUE_ENTRY" in statuses:
+            return UNBOUND_QUEUE_EXIT
+        return 0 if statuses == {"MERGED"} else MERGE_PENDING_EXIT
+    if not args.pr:
+        parser.error("--pr is required unless --queue is given")
 
     try:
         selection = select_merge_method(args.repo, args.pr)
@@ -526,6 +1048,20 @@ def main(argv: list[str] | None = None) -> int:
             )
             return MERGE_PENDING_EXIT
         bound_sha = str(auth["head_sha"])
+        # A queue-protected base refuses a direct merge: hand the PR to the queue.
+        # An unreadable rule keeps today's direct merge, which GitHub itself
+        # refuses on a queue base, so nothing merges around the queue.
+        try:
+            on_queue = queue_rule(args.repo, pr_base(args.repo, args.pr), args.pr) is not None
+        except RuntimeError:
+            on_queue = False
+        if on_queue:
+            outcomes = run_queue(args.repo, [(str(args.pr), bound_sha)])
+            print(json.dumps({"repo": args.repo, "queue": outcomes}, indent=2, sort_keys=True))
+            status = outcomes[0]["status"]
+            if status == "UNBOUND_QUEUE_ENTRY":
+                return UNBOUND_QUEUE_EXIT
+            return 0 if status == "MERGED" else MERGE_PENDING_EXIT
 
     command = merge_argv(
         args.repo,

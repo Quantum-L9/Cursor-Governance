@@ -142,6 +142,25 @@ def resolve_session_id(*, explicit: str | None = None) -> str:
 SESSION_POINTER_SOURCE = "session_start_generated"
 
 
+def _exclude_session_paths(project_dir: str | Path) -> None:
+    """Exclude ``.l9/`` (and the rest of the session list) in this clone first.
+
+    Every root a memory hook writes into gets the excludes from the writer,
+    not only the workspace SessionStart excluded: the hooks fan out to every
+    repository in a container, and a repository attached mid-session was
+    never excluded at all. Local ``info/exclude`` only — never a tracked
+    ``.gitignore``. Best-effort: the bridge reports a failure on stderr and the
+    memory record is still written.
+    """
+    from ops.scripts.lib.session_git_excludes import apply_session_git_excludes
+
+    try:
+        workspace = Path(project_dir).expanduser()
+    except RuntimeError:
+        return
+    apply_session_git_excludes(workspace)
+
+
 def session_pointer_path(project_dir: str | Path) -> Path:
     """Where SessionStart records the lifecycle id it generated for this repo."""
     return Path(project_dir).expanduser().resolve() / ".l9" / "memory" / "session.json"
@@ -186,6 +205,7 @@ def create_session_id(
         payload["conversation_id"] = conversation
     try:
         pointer = session_pointer_path(project_dir)
+        _exclude_session_paths(project_dir)
         pointer.parent.mkdir(parents=True, exist_ok=True)
         pointer.write_text(json.dumps(payload) + "\n", encoding="utf-8")
     except (OSError, ValueError, RuntimeError) as exc:
@@ -346,6 +366,7 @@ def write_open_latch(
         "background": bool(background),
     }
     opens_r = opens_dir(project_dir)
+    _exclude_session_paths(project_dir)
     os.makedirs(opens_r, exist_ok=True)
     open_file = os.path.realpath(os.path.join(opens_r, f"{re_safe(session_id)}.json"))
     if os.path.commonpath([opens_r, open_file]) != opens_r:
@@ -441,6 +462,7 @@ def close_gap_reason(project_dir: Path, current_session_id: str) -> str:
 def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -> None:
     """Persist a close receipt with taint-safe scalars only."""
     path_r = receipt_path(project_dir, session_id)
+    _exclude_session_paths(project_dir)
     status = payload.get("status")
     status_out = status if status in RECEIPT_STATUSES else "close_failed"
     safe: dict[str, Any] = {
