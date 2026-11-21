@@ -32,7 +32,7 @@ while [ "$#" -gt 0 ]; do
     --check) CHECK=1; shift ;;
     --quiet) QUIET=1; shift ;;
     -h|--help)
-      sed -n '1,11p' "${BASH_SOURCE[0]}"
+      sed -n '1,18p' "${BASH_SOURCE[0]}"
       exit 0
       ;;
     *)
