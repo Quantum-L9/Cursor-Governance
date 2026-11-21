@@ -7,8 +7,9 @@ definition:
   host: Quantum-L9/Cursor-Governance
   path: environment/program-execution/campaigns/ib-odoo-dashboard-command-centers
   source: CAMPAIGN_SOURCE.yaml
-  source_version: "1.4.0"
+  source_version: "1.5.0"
   prompt_inventory: AI_PROMPT_INVENTORY.yaml
+  prompt_requirements: DOCUMENT_AI_PROMPT_REQUIREMENTS.md (v2.0, normative, DEC-019)
 
 execution:
   mode: cto_swarm
@@ -42,9 +43,9 @@ lanes:
   - id: LANE-E
     name: native_ai_auto_sort
     agent: "the cto-identity-bundle pool agent, by CTO ASSIGN once it reports idle"
-    tasks: [TASK-068, TASK-069, TASK-070, TASK-071, TASK-073, TASK-072]
+    tasks: [TASK-068, TASK-069, TASK-070, TASK-071, TASK-074, TASK-073, TASK-072]
     owns: ["plasticos_documents_ai/**", "plasticos_documents_native/** except models/document_sync.py until TASK-060 merges", "plasticos_documents/data/document_tags_data.xml and plasticos_documents/__manifest__.py (TASK-069 only)", "docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-072-*"]
-    order_note: "TASK-068 can start first (new addon, independent of other lanes). TASK-069 then TASK-070 after TASK-060 merges (shared DOC_TYPE_TAG_MAP in document_sync.py). TASK-071 after TASK-068, TASK-069, TASK-070, TASK-002 and the UNK-006 synthetic probe. TASK-073 after TASK-071. TASK-072 after TASK-071; its real-document part only after GATE-005."
+    order_note: "TASK-068 can start first (new addon, independent of other lanes). TASK-069 then TASK-070 after TASK-060 merges (shared DOC_TYPE_TAG_MAP in document_sync.py). TASK-071 after TASK-068, TASK-069, TASK-070, TASK-002 and the UNK-006 synthetic probe. TASK-074 (evaluation harness) after TASK-071. TASK-073 after TASK-074. TASK-072 after TASK-074; its real-document part only after GATE-005."
   - id: CTO
     name: integration_capability_and_acceptance
     tasks: [TASK-002, TASK-050, TASK-051]
@@ -56,7 +57,7 @@ shared_file_serialization:
   - {file: "plasticos_documents_native/models/document_sync.py", order: [TASK-060, TASK-069, TASK-070]}
   - {file: "plasticos_documents/models/document.py and security/**", order: [TASK-060, TASK-064, TASK-065]}
   - {file: "plasticos_logistics/views/linda_approval_views.xml", order: [TASK-061, TASK-032]}
-  - {file: "plasticos_documents_ai/**", order: [TASK-068, TASK-071, TASK-073]}
+  - {file: "plasticos_documents_ai/**", order: [TASK-068, TASK-071, TASK-074, TASK-073]}
 
 priority: "Operator 2026-11-20: after the W1 correctness and routing repairs, the Operations workbench (TASK-040) and the Logistics Control Tower (TASK-032), fed by Auto-Sort slice 1 (TASK-068 to TASK-071), come before Admin (TASK-031) and Sales (TASK-033) command-center work."
 
@@ -92,7 +93,7 @@ activation_boundaries:
     status: OPEN
     note: "Explicit external-data-processing approval naming database, document classes and DeepSeek retention settings."
   - id: ACT-5
-    boundary: "Inbox Auto-Sort activation (slice 1); destination prompts (slice 2, after GATE-006)"
+    boundary: "Inbox Auto-Sort activation (P1, slice 1); each destination specialist P2-P7 (slice 2, after GATE-006 loop safety and measured benefit)"
     authority: operator
     status: OPEN
     note: "Explicit administrator activation action per slice; installing plasticos_documents_ai activates nothing."

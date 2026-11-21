@@ -4,11 +4,11 @@ schema_version: 2.0.0
 metadata:
   campaign_id: "ib-odoo-dashboard-command-centers"
   title: "IB-Odoo_19 Dashboard Command Centers — correctness first, native-first UI"
-  version: "1.4.0"
+  version: "1.5.0"
   created_at: "2026-11-20T23:30:00Z"
   status: operator_intake
   execution_status: NOT_EXECUTED
-  decision_record: "Operator decisions 2026-11-21 (DEC-002, DEC-004, DEC-005, DEC-011, DEC-017, DEC-018): publish the definition to PR #1101 only; activation, lane launch, IB-Odoo_19 changes, merge, deploy and live DeepSeek calls are separate authorizations."
+  decision_record: "Operator decisions 2026-11-21 (DEC-002, DEC-004, DEC-005, DEC-011, DEC-017, DEC-018) and Document AI Prompt Requirements v2.0 (DEC-019): publish the definition to PR #1101 only; activation, lane launch, IB-Odoo_19 changes, merge, deploy and live DeepSeek calls are separate authorizations."
   owner: "Igor Beylin"
   intended_drop_path: >-
     environment/program-execution/campaigns/ib-odoo-dashboard-command-centers/CAMPAIGN_SOURCE.yaml
@@ -88,7 +88,7 @@ operator_directive:
 program:
   id: "ib-odoo-dashboard-command-centers"
   name: "IB-Odoo_19 Dashboard Command Centers"
-  version: "1.4.0"
+  version: "1.5.0"
   owner: "Igor Beylin"
   definition_status: ready
   snapshot_at: "2026-11-20"
@@ -340,22 +340,22 @@ decisions:
     options:
       - {id: OPT-A, description: "Superseded 2026-11-20: AI may classify, propose and route only; no AI auto-sort."}
       - {id: OPT-B, description: "Enable AI auto-sort with every available tool and digitization auto-post."}
-      - {id: OPT-C, description: "Operator second addendum 2026-11-20: configure native ai_documents Auto-Sort on the existing Plasticos folders with exactly two tools, move-in-folder and add-tags. Recognized shipping paperwork (PO, SO, packing list, BOL, scale ticket, receiving or loading evidence) is moved/tagged toward Logistics; uncertain, contradictory or wrong-type results get the Needs Review tag and stay in Inbox for Operations Manager. No vendor-bill/customer-invoice creation tool, no activity or code tool (activities stay with the DEC-012 router), no AI verification, no auto-post, no new external sender; Linda remains the sole logistics-document chase sender."}
+      - {id: OPT-C, description: "Operator second addendum 2026-11-20: configure native ai_documents Auto-Sort on the existing Plasticos folders with exactly two tools, move-in-folder and add-tags. Recognized shipping paperwork (PO, SO, packing list, BOL, scale ticket, receiving or loading evidence) is moved/tagged toward Logistics; documents with no defensible primary type or materially incompatible primary classifications get the Needs Review tag and stay in Inbox for Operations Manager (DEC-019: autonomy-first; incomplete or imperfect documents are still classified). No vendor-bill/customer-invoice creation tool, no activity or code tool (activities stay with the DEC-012 router), no AI verification, no auto-post, no new external sender; Linda remains the sole logistics-document chase sender."}
     selected_option_id: OPT-C
     blocking_task_ids: []
     required_evidence_ids: [EVID-007, EVID-009, EVID-010]
-    locked_consequence: "Enterprise facts (EVID-010): ai_documents runs synchronously on create/move into a prompted folder via base.automation, plus an alias cron; it writes only what its tools do (folder_id, tag_ids) and a chatter log; there is no confidence field and no fallback, so the prompt must end with 'otherwise add Needs Review'. add_tags matches any tag by name globally, so the Verified tag must be unwritable outside verification. ai_documents_account's wizard defaults add bill/invoice creation tools; setup must pass explicit ai_tool_ids. Custom code already refuses _autopost_bill for digitized bills."
+    locked_consequence: "Enterprise facts (EVID-010): ai_documents runs synchronously on create/move into a prompted folder via base.automation, plus an alias cron; it writes only what its tools do (folder_id, tag_ids) and a chatter log; there is no confidence field and no fallback, so the prompt must give an explicit last-resort instruction (Needs Review, staying in Inbox) for genuinely unclassifiable documents, per DEC-019 — never as the default outcome. add_tags matches any tag by name globally, so the Verified tag must be unwritable outside verification. ai_documents_account's wizard defaults add bill/invoice creation tools; setup must pass explicit ai_tool_ids. Custom code already refuses _autopost_bill for digitized bills."
   - id: DEC-014
-    question: "Seed the missing document types so Auto-Sort and routing can name every operator-listed document?"
+    question: "Seed the document types and review signals that the routing and the v2.0 prompt specialists must be able to name?"
     authority_id: AUTH-001
     status: accepted
     options:
-      - {id: OPT-A, description: "Operator 2026-11-21 'seed the missing tags necessary'. Native documents.tag (plasticos_documents_native/data/document_tags.xml): Purchase Order, Packing List, Receiving Report, Certified Scale Ticket (CST), Delivery Order Confirmation, Carrier Certification, Customer Invoice. doc_type values: purchase_order, packing_list, receiving_report, certified_scale_ticket, delivery_order, carrier_certification, customer_invoice. Legacy plasticos.document.tag (plasticos_documents/data/document_tags_data.xml): PO 'Purchase Order', CARRIER_CERT 'Carrier Certification'. DOC_TYPE_TAG_MAP: purchase_order->PO, packing_list->PACKING, receiving_report->RECEIVING, certified_scale_ticket->CST, delivery_order->DO, carrier_certification->CARRIER_CERT, customer_invoice->INV. Sales orders keep Customer Order (CO); the existing invoice value keeps meaning Vendor Bill for AP."}
+      - {id: OPT-A, description: "Operator 2026-11-21 'seed the missing tags necessary', extended for Document AI Prompt Requirements v2.0 (DEC-019). Native documents.tag types (plasticos_documents_native/data/document_tags.xml): Purchase Order, Packing List, Receiving Report, Certified Scale Ticket (CST), Delivery Order Confirmation, Carrier Certification, Customer Invoice, Financial Document, Carrier Invoice, Credit Note, Debit Note, Statement, Payment Confirmation, Delivery Receipt, Order Confirmation, Material Certification, Technical Specification, Unloading Pic, Delivery Photo, Damage Photo. Native review-signal tags: Evidence Gap, Duplicate Candidate, Includes Supporting Evidence (Needs Review and To Split exist). doc_type values for every new type. Legacy plasticos.document.tag: PO 'Purchase Order', CARRIER_CERT 'Carrier Certification'. DOC_TYPE_TAG_MAP: purchase_order->PO, packing_list->PACKING, receiving_report->RECEIVING, certified_scale_ticket->CST, delivery_order->DO, delivery_receipt->DO, carrier_certification->CARRIER_CERT, customer_invoice->INV, financial_document->INV, carrier_invoice->INV, credit_note->INV, debit_note->INV, statement->INV, payment_confirmation->INV, order_confirmation->CO, material_certification->CERT, technical_specification->OTHER, unloading_pic->PHOTO, delivery_photo->PHOTO, damage_photo->CLAIM_PHOTO. Review signals carry no doc_type."}
       - {id: OPT-B, description: "No new types; those documents fall back to Needs Review."}
     selected_option_id: OPT-A
     blocking_task_ids: []
     required_evidence_ids: [EVID-008, EVID-010]
-    locked_consequence: "Seeded by TASK-069 as additive data (noupdate=0, new xmlids only; no rename of existing records). Certification stays the generic material/compliance certificate; Carrier Certification routes to Logistics; Customer Invoice and Vendor Bill both route to Operations (AR/AP) and share legacy INV."
+    locked_consequence: "Seeded by TASK-069 as additive data (new xmlids only; no rename of existing records). Family, folder and owner per type are in AI_PROMPT_INVENTORY.yaml taxonomy. The v2.0-driven additions are derived by the CTO from the distinctions the specification requires (e.g. carrier invoice vs BOL, credit note, delivery receipt, material certification vs datasheet, damage photo) and are reported to the operator as such."
   - id: DEC-015
     question: "How does a native classification reach the business-evidence bridge, and how is a human correction kept?"
     authority_id: AUTH-003
@@ -398,12 +398,23 @@ decisions:
     authority_id: AUTH-001
     status: accepted
     options:
-      - {id: OPT-A, description: "Operator 2026-11-21: the seven-prompt target inventory in AI_PROMPT_INVENTORY.yaml — (1) Inbox master classification and routing, (2) Bills of Lading, (3) Scale Tickets, (4) Loading Pictures, (5) Orders and Shipping Paperwork on the existing Customer Orders folder (no rename), (6) Vendor Bills and financial documents, (7) Compliance and supporting evidence — each with role, allowed actions, exception conditions and tests. The Inbox classifier is activation slice 1; destination-folder prompts are slice 2 and are activated only after loop-safety and conflicting-classification proof (GATE-006)."}
+      - {id: OPT-A, description: "Operator 2026-11-21: the seven-prompt target inventory in AI_PROMPT_INVENTORY.yaml — (1) Inbox master classification and routing, (2) Bills of Lading, (3) Scale Tickets, (4) Loading Pictures, (5) Orders and Shipping Paperwork on the existing Customer Orders folder (no rename), (6) Vendor Bills and financial documents, (7) Compliance and supporting evidence — each with role, allowed actions, exception conditions and tests. The Inbox classifier is activation slice 1; destination-folder prompts are slice 2, carry the add-tags tool only, and are activated per prompt only after loop-safety proof and verified benefit on the TASK-074 evaluation set (GATE-006)."}
       - {id: OPT-B, description: "Activate all seven prompts at once."}
     selected_option_id: OPT-A
     blocking_task_ids: []
     required_evidence_ids: [EVID-010]
     locked_consequence: "This planning PR writes no final prompt text and activates nothing. AI is limited to classification, tagging and routing; business association, verification, accounting posting and Linda's external communication keep their existing owners."
+  - id: DEC-019
+    question: "Which requirements govern every Document AI prompt?"
+    authority_id: AUTH-001
+    status: accepted
+    options:
+      - {id: OPT-A, description: "Operator 2026-11-21: Document AI Prompt Requirements v2.0 (DOCUMENT_AI_PROMPT_REQUIREMENTS.md) is normative — universal invariants INV-01..INV-07, the shared six-step decision procedure, the P1-P7 specialist specifications, the routing and execution boundaries, and the evaluation targets, mandatory cases, optimization objective and prompt-improvement rule."}
+      - {id: OPT-B, description: "Keep the v1.4.0 conservative inventory (Needs Review for missing fields; multi-page To Split stops classification)."}
+    selected_option_id: OPT-A
+    blocking_task_ids: []
+    required_evidence_ids: [EVID-010, EVID-012]
+    locked_consequence: "Supersedes the v1.4.0 inventory rows that escalated incomplete, unsigned, expired or multi-page documents: classification escalation (Needs Review, Operations) is reserved for documents with no defensible primary type or materially incompatible primary classifications; evidence problems on an identified document use Evidence Gap and reach the type family's owner; To Split keeps the primary classification. Permissions, company isolation and human-correction precedence are enforced by application logic. Targets are provisional pilot targets: a high automation rate must not mask misrouting. No model-training database, feedback subsystem or learning module is created."
 unknowns:
   - id: UNK-001
     statement: >-
@@ -470,6 +481,16 @@ unknowns:
     blocking_task_ids: [TASK-071]
     resolution_method: "TASK-068 contract probe on Staging with the operator's key using synthetic documents only, recorded as redacted fixtures for offline tests; no live call is made in the definition phase"
     resolution_evidence_ids: [EVID-012]
+  - id: UNK-007
+    statement: >-
+      Whether a representative labeled set of real incoming documents (every
+      category and every mandatory evaluation case of v2.0) exists to measure
+      the provisional targets; synthetic documents prove mechanics only.
+    owner: AUTH-001
+    status: open
+    blocking_task_ids: []
+    resolution_method: "TASK-074 defines the labeled-set protocol; after GATE-005 the operator labels Staging documents through Correct Classification, and TASK-072 measures on that set"
+    resolution_evidence_ids: [EVID-011]
 evidence_requirements:
   - id: EVID-001
     claim: "Target revision and the re-verified findings F-001..F-010 plus three new defects are bound at admission."
@@ -563,7 +584,7 @@ evidence_requirements:
     supports: [GATE-002]
     contradicts: []
   - id: EVID-011
-    claim: "Invoice correction learning and shipping Auto-Sort accuracy results: runtime tests, Staging repeat-upload measurements, correction-ledger confusion counts and any prompt revision with before/after replay."
+    claim: "Document AI evaluation against the v2.0 provisional targets (TASK-074 harness), invoice correction learning and shipping Auto-Sort accuracy results: runtime tests, Staging repeat-upload measurements, correction-ledger confusion counts and any prompt revision with before/after replay."
     source_type: test_result
     source_location: "docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-072-ai-learning.md"
     collection_method: runtime_test_and_operator_measurement
@@ -643,7 +664,9 @@ dependency_edges:
   - {from: TASK-069, to: TASK-070, kind: depends_on}
   - {from: TASK-069, to: TASK-071, kind: depends_on}
   - {from: TASK-068, to: TASK-071, kind: depends_on}
-  - {from: TASK-071, to: TASK-073, kind: same_module_serialization}
+  - {from: TASK-071, to: TASK-074, kind: same_module_serialization}
+  - {from: TASK-074, to: TASK-073, kind: depends_on}
+  - {from: TASK-074, to: TASK-072, kind: depends_on}
   - {from: TASK-073, to: TASK-050, kind: depends_on}
   - {from: TASK-060, to: TASK-065, kind: same_module_serialization}
   - {from: TASK-065, to: TASK-040, kind: depends_on}
@@ -670,7 +693,7 @@ waves:
     exit_gate_ids: [GATE-001]
   - id: W2
     name: command_centers
-    task_ids: [TASK-071, TASK-073, TASK-040, TASK-032, TASK-031, TASK-033]
+    task_ids: [TASK-071, TASK-074, TASK-073, TASK-040, TASK-032, TASK-031, TASK-033]
     predecessor_wave_ids: [W0, W1]
     exit_gate_ids: [GATE-003]
   - id: W3
@@ -1248,11 +1271,13 @@ tasks:
     execution_kind: repo_local
     kernel_profile: BUILD
     objective: >-
-      Additive data and selection changes only: seven native documents.tag
-      records, seven doc_type selection values, two legacy plasticos.document.tag
-      records (PO, CARRIER_CERT) and the seven DOC_TYPE_TAG_MAP entries listed in
-      DEC-014; new xmlids only, existing records untouched; version bumps
-      (MINOR for the selection change) with any needed repeatable migration.
+      Additive data and selection changes only, exactly the DEC-014 OPT-A list:
+      twenty native type tags, three review-signal tags (Evidence Gap,
+      Duplicate Candidate, Includes Supporting Evidence), a doc_type value per
+      new type, two legacy plasticos.document.tag records (PO, CARRIER_CERT)
+      and the DOC_TYPE_TAG_MAP entries; new xmlids only, existing records
+      untouched; version bumps (MINOR for the selection change) with any
+      needed repeatable migration.
     authority_basis_ids: [AUTH-001]
     required_decision_ids: [DEC-014]
     blocking_unknown_ids: []
@@ -1272,7 +1297,7 @@ tasks:
       - tests_each_new_type_syncs_to_its_legacy_code
     acceptance:
       - id: AC-069
-        statement: "Each new doc_type creates a pending business-evidence shell with its mapped legacy tag code; existing tags, doc_type values and documents are unchanged after upgrade."
+        statement: "Each new doc_type creates a pending business-evidence shell with its mapped legacy tag code; review-signal tags map to no doc_type; existing tags, doc_type values and documents are unchanged after upgrade."
         required_evidence_types: [test_result]
     validation:
       - id: VAL-069
@@ -1349,9 +1374,14 @@ tasks:
       the original's business evidence and DEC-010 routing follow the correction,
       and the Verified tag refused on any write outside verification. Needs
       Review on an Inbox document creates the Operations activity through the
-      TASK-060 router.
+      TASK-060 router. Review signals route through the same router
+      (DEC-019): Needs Review -> Operations Manager; Evidence Gap -> owner of
+      the document's type family; Duplicate Candidate -> Operations Manager;
+      To Split -> owner of the primary type; Includes Supporting Evidence ->
+      informational, no activity; one activity per (document, signal), never
+      duplicated on reruns.
     authority_basis_ids: [AUTH-003]
-    required_decision_ids: [DEC-010, DEC-012, DEC-015]
+    required_decision_ids: [DEC-010, DEC-012, DEC-015, DEC-019]
     blocking_unknown_ids: []
     input_evidence_ids: [EVID-008, EVID-010]
     paths:
@@ -1380,14 +1410,14 @@ tasks:
         command_or_inspection: make check
         environment: repo_local
         expected_result: PASS
-    negative_cases: [ai_tag_never_reaches_bridge, human_correction_overwritten_by_tag, correction_without_reason, verified_tag_set_by_ai]
+    negative_cases: [ai_tag_never_reaches_bridge, human_correction_overwritten_by_tag, correction_without_reason, verified_tag_set_by_ai, evidence_gap_escalated_to_operations, review_signal_activity_duplicated]
     rollback: *rollback_local
     risk: {tier: T3, reversibility: reversible, blast_radius: plasticos_documents_native}
     authorization_ceiling: *ceiling_local
     completion_gate_ids: [GATE-001]
 
   - id: TASK-071
-    title: "Auto-Sort slice 1: Inbox master classifier (DEC-013 OPT-C, DEC-018)"
+    title: "Auto-Sort slice 1: P1 Inbox master classifier (DEC-018, DEC-019)"
     definition_status: ready
     workstream_id: WS-07
     wave_id: W2
@@ -1395,38 +1425,35 @@ tasks:
     execution_kind: repo_local
     kernel_profile: BUILD
     objective: >-
-      In plasticos_documents_ai, implement prompt 1 of AI_PROMPT_INVENTORY.yaml
-      (Inbox master classification and routing) as a versioned prompt builder
-      plus an explicit administrator activation action (and its deactivation)
-      that creates the ai_documents.sort rule on folder_plasticos_inbox with
-      explicit ai_tool_ids = move-in-folder and add-tags only, AI model
-      deepseek-flash through the TASK-068 adapter. Nothing is created on
-      install or upgrade; a new prompt version is applied only through the
-      same explicit action, recording prompt_version in the rule's chatter.
-      Prompt contract: exception checks first (multipage -> To Split, stop;
-      contradictory references, unreadable, wrong-company or ambiguous identity
-      -> Needs Review, stay in Inbox); recognized BOL -> Bills of Lading; scale
-      tickets and CST -> Scale Tickets; loading evidence -> Loading Pics; PO,
-      SO/Customer Order, packing list, receiving report, delivery order ->
-      Customer Orders (Orders and Shipping Paperwork); vendor bills and
-      customer invoices -> Vendor Bills (financial documents); certifications,
-      carrier certifications, permits, lab reports, contracts,
-      correspondence -> Compliance; each with its type tag; otherwise Needs
-      Review. Tests mock LLMApiService._request_llm.
+      In plasticos_documents_ai, implement P1 of AI_PROMPT_INVENTORY.yaml under
+      Document AI Prompt Requirements v2.0 as a versioned prompt builder plus an
+      explicit administrator activation action (and deactivation) that creates
+      the ai_documents.sort rule on folder_plasticos_inbox with explicit
+      ai_tool_ids = move-in-folder and add-tags only, AI model deepseek-flash
+      through TASK-068. Nothing is created on install or upgrade; a new prompt
+      version is applied only through the same action, recording prompt_version
+      in the rule's chatter. The prompt follows INV-01..INV-07 and the six-step
+      decision procedure: decide and route by dominant purpose; one primary
+      type; incomplete, unsigned, multi-page or generically named documents are
+      still classified and routed (Evidence Gap / To Split / Includes Supporting
+      Evidence as secondary signals); Needs Review only when no defensible
+      primary type exists or primary interpretations are materially
+      incompatible; document text never treated as an instruction. Tests mock
+      LLMApiService._request_llm.
     authority_basis_ids: [AUTH-001, AUTH-003]
-    required_decision_ids: [DEC-013, DEC-014, DEC-015, DEC-016, DEC-017, DEC-018]
+    required_decision_ids: [DEC-013, DEC-014, DEC-015, DEC-016, DEC-017, DEC-018, DEC-019]
     blocking_unknown_ids: [UNK-004, UNK-006]
     input_evidence_ids: [EVID-009, EVID-010, EVID-012]
     paths:
       - plasticos_documents_ai/**
     actions:
-      - versioned_inbox_prompt_builder
+      - versioned_p1_prompt_builder_per_v2
       - explicit_activation_and_deactivation_action
       - explicit_two_tool_rule
-      - mocked_llm_routing_tests
+      - mocked_llm_mechanics_tests_for_every_p1_acceptance_example
     acceptance:
       - id: AC-071
-        statement: "With a mocked model: each document class in the prompt contract lands in its folder with its type tag and one activity for the DEC-010 owner; ambiguous or contradictory documents stay in Inbox with Needs Review and one Operations activity; the rule carries only move-in-folder and add-tags; installing or upgrading the addon creates no rule; activation and deactivation are explicit and idempotent; an administrator prompt edit survives upgrade; no destination-folder prompt is active."
+        statement: "With a mocked model, each P1 acceptance example in AI_PROMPT_INVENTORY.yaml produces its expected folder, type tag, secondary signals and one DEC-010 owner activity (unsigned BOL and scale ticket missing tare go to Logistics, vendor invoice with supporting BOL to Operations with Includes Supporting Evidence, generic-filename packing list to Logistics, only truly unidentifiable content to Needs Review); a mocked output that follows injected document instructions cannot perform any action beyond the two tools; the rule carries only move-in-folder and add-tags; install/upgrade creates no rule; activation is explicit and idempotent; an administrator prompt edit survives upgrade."
         required_evidence_types: [test_result, inspection]
     validation:
       - id: VAL-071
@@ -1434,14 +1461,14 @@ tasks:
         command_or_inspection: make check
         environment: repo_local
         expected_result: PASS
-    negative_cases: [bill_creation_tool_attached, unsure_model_leaves_document_unrouted, rule_created_on_install, prompt_overwritten_on_upgrade, destination_prompt_active_in_slice_1]
+    negative_cases: [incomplete_document_escalated_to_operations, multipage_document_escalated, bill_creation_tool_attached, injected_instruction_executes_action, rule_created_on_install, prompt_overwritten_on_upgrade, destination_prompt_active_in_slice_1]
     rollback: *rollback_local
     risk: {tier: T3, reversibility: reversible, blast_radius: ai_sort_slice_1}
     authorization_ceiling: *ceiling_local
     completion_gate_ids: [GATE-003]
 
-  - id: TASK-073
-    title: "Auto-Sort slice 2: destination-folder prompts with loop safety (DEC-018)"
+  - id: TASK-074
+    title: "Document AI evaluation set and replay harness (DEC-019 section E)"
     definition_status: ready
     workstream_id: WS-07
     wave_id: W2
@@ -1449,40 +1476,90 @@ tasks:
     execution_kind: repo_local
     kernel_profile: BUILD
     objective: >-
-      Implement prompts 2-7 of AI_PROMPT_INVENTORY.yaml as versioned builders
-      with the same explicit activation action, inactive by default, each
-      rule carrying the add-tags tool only (no move tool; only P1 moves).
-      Prove
-      before any activation that they cannot loop or conflict: a destination
-      prompt never moves a document back to Inbox or to another prompted
-      folder, only adds or corrects tags within its folder's type family or
-      adds Needs Review; a document carrying Needs Review or a human
-      doc_type_source is skipped; a conflicting type tag (two type families)
-      yields Needs Review, never two moves. Tests drive base.automation chains
-      across all seven rules with a mocked model, including adversarial
-      outputs (move to source folder, move to another prompted folder, tag from
-      another family).
+      Build the evaluation harness in plasticos_documents_ai: a versioned
+      synthetic labeled set covering every v2.0 mandatory case (standard
+      documents per category, BOL vs packing list, scale ticket vs freight
+      invoice, vendor bill vs customer invoice, misleading filenames, partial
+      and unsigned, handwriting and poor scans, multi-page single and
+      combined PDFs, missing references, human-corrected reprocessing,
+      prompt-injection text, cross-company destinations); a replay runner that
+      scores a prompt version on auto-routed share, primary-family accuracy
+      among routed documents, human classification intervention, unnecessary
+      review, unauthorized business actions and human-correction overwrites,
+      plus a per-type confusion matrix; and a regression replay that compares a
+      new prompt version with the previous one on previously correct
+      documents. CI runs the harness offline on recorded model outputs; live
+      scoring uses synthetic documents until GATE-005, then the operator's
+      labeled Staging set (UNK-007). Synthetic documents only in the
+      repository; no real document content is committed.
     authority_basis_ids: [AUTH-001, AUTH-003]
-    required_decision_ids: [DEC-013, DEC-015, DEC-018]
+    required_decision_ids: [DEC-017, DEC-019]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-010, EVID-012]
+    paths:
+      - plasticos_documents_ai/eval/**
+      - plasticos_documents_ai/tests/test_eval*.py
+    actions:
+      - synthetic_labeled_set_for_every_mandatory_case
+      - replay_runner_with_v2_metrics
+      - confusion_matrix_and_regression_replay
+      - offline_ci_on_recorded_outputs
+    acceptance:
+      - id: AC-074
+        statement: "The harness scores a prompt version on all six v2.0 metrics plus a per-type confusion matrix from recorded outputs in CI; every mandatory case is present in the synthetic set; a regression replay flags any previously correct document that a new version misclassifies; the repository contains no real document content."
+        required_evidence_types: [test_result, inspection]
+    validation:
+      - id: VAL-074
+        method: command
+        command_or_inspection: make check
+        environment: repo_local
+        expected_result: PASS
+    negative_cases: [metric_missing_from_harness, mandatory_case_absent, real_document_committed, regression_not_detected]
+    rollback: *rollback_local
+    risk: {tier: T2, reversibility: reversible, blast_radius: evaluation_harness}
+    authorization_ceiling: *ceiling_local
+    completion_gate_ids: [GATE-006]
+
+  - id: TASK-073
+    title: "Auto-Sort slice 2: P2-P7 specialists, tag-only, loop-safe, benefit-verified (DEC-018, DEC-019)"
+    definition_status: ready
+    workstream_id: WS-07
+    wave_id: W2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Implement P2-P7 of AI_PROMPT_INVENTORY.yaml under v2.0 as versioned
+      builders behind the same explicit action, inactive by default, each rule
+      with the add-tags tool only. Each specialist refines type within its
+      family, adds Evidence Gap / Duplicate Candidate signals, and adds Needs
+      Review plus its observed type only when P1's placement is materially
+      incompatible; it never moves. Prove loop and conflict safety with
+      cross-rule base.automation chain tests across all seven rules with
+      adversarial mocked outputs, and verify each specialist's benefit over
+      P1-only on the TASK-074 evaluation set before it may be activated.
+    authority_basis_ids: [AUTH-001, AUTH-003]
+    required_decision_ids: [DEC-013, DEC-015, DEC-018, DEC-019]
     blocking_unknown_ids: []
     input_evidence_ids: [EVID-010]
     paths:
       - plasticos_documents_ai/**
     actions:
-      - destination_prompt_builders_inactive_by_default
-      - loop_and_conflict_guards
+      - p2_to_p7_builders_inactive_by_default
+      - tag_only_rules
       - cross_rule_chain_tests_with_adversarial_outputs
+      - per_specialist_benefit_report_on_eval_set
     acceptance:
       - id: AC-073
-        statement: "Across all seven rules with adversarial mocked outputs, no document is moved more than once by AI, never returns to Inbox, never ends with two type families, and human-classified or Needs Review documents are skipped; destination prompts stay inactive until the operator activates them after GATE-006."
-        required_evidence_types: [test_result]
+        statement: "Across all seven rules with adversarial mocked outputs no document is moved by a specialist, moved twice or returned to Inbox, and none ends with two primary type families; human-classified documents are skipped; each specialist's acceptance examples produce the expected tags with a mocked model; a per-specialist report shows its measured effect against P1-only on the evaluation set; specialists stay inactive until the operator activates them after GATE-006."
+        required_evidence_types: [test_result, inspection]
     validation:
       - id: VAL-073
         method: command
         command_or_inspection: make check
         environment: repo_local
         expected_result: PASS
-    negative_cases: [routing_loop, conflicting_classification, destination_prompt_active_by_default, ai_overrides_human_classification]
+    negative_cases: [routing_loop, specialist_moves_document, conflicting_classification, specialist_active_by_default, specialist_activated_without_benefit_evidence, ai_overrides_human_classification]
     rollback: *rollback_local
     risk: {tier: T3, reversibility: reversible, blast_radius: ai_sort_slice_2}
     authorization_ceiling: *ceiling_local
@@ -1497,9 +1574,17 @@ tasks:
     execution_kind: repo_local
     kernel_profile: BUILD
     objective: >-
-      Classification accuracy first: measure this workload's per-type
-      precision and recall of the Inbox classifier against human labels
-      (synthetic set in CI; real documents only after GATE-005), recording
+      Classification accuracy first, with the TASK-074 harness: measure P1
+      (and any activated specialist) against the v2.0 provisional targets —
+      auto-routed share >= 80 percent, primary-family accuracy among routed
+      >= 90 percent, human classification intervention <= 20 percent,
+      unnecessary review measured, zero unauthorized business actions, zero
+      human-correction overwrites — on synthetic documents, then on the
+      operator's labeled Staging set only after GATE-005; optimize jointly
+      for correct classification, coverage, correction cost and
+      consequential error cost; every prompt version change cites real
+      misclassified cases, shows the expected correction and passes the
+      regression replay; recording
       the operator-reported Flash-vs-GPT-4o observation as unverified and
       claiming no comparative result. Thinking mode is never switched on
       automatically; a measured shortfall becomes an operator decision.
@@ -1515,7 +1600,7 @@ tasks:
       new prompt version (TASK-071 mechanism) and replay the recorded originals,
       reporting before/after accuracy.
     authority_basis_ids: [AUTH-001]
-    required_decision_ids: [DEC-013, DEC-015, DEC-016, DEC-017]
+    required_decision_ids: [DEC-013, DEC-015, DEC-016, DEC-017, DEC-019]
     blocking_unknown_ids: []
     input_evidence_ids: [EVID-009, EVID-010]
     paths:
@@ -1537,7 +1622,7 @@ tasks:
         command_or_inspection: test -s docs/reports/gmp-reports/ib-odoo-dashboard-command-centers-TASK-072-ai-learning.md
         environment: repo_local
         expected_result: PASS
-    negative_cases: [learning_claimed_without_repeat_measurement, prompt_changed_without_replay, comparative_benchmark_claimed, thinking_mode_enabled_automatically, real_documents_sent_before_gate_005]
+    negative_cases: [targets_reported_as_met_without_labeled_set, automation_rate_masks_misrouting, prompt_version_without_misclassified_cases_or_regression_replay, learning_claimed_without_repeat_measurement, prompt_changed_without_replay, comparative_benchmark_claimed, thinking_mode_enabled_automatically, real_documents_sent_before_gate_005]
     rollback: *rollback_local
     risk: {tier: T2, reversibility: reversible, blast_radius: report_and_tests}
     authorization_ceiling: *ceiling_local
@@ -1855,6 +1940,7 @@ gates:
       - "Operator acceptance walk PASS on Staging, including the complete document-review and Linda-resolution paths."
       - "Production untouched by the campaign."
       - "GATE-005 recorded before any real-document AI measurement."
+      - "v2.0 provisional targets reported with measured values and the labeled-set size; the operator accepts them or records an improvement plan — targets are never reported as met without a representative labeled set."
     failure_effect: BLOCKED
 
   - id: GATE-005
@@ -1873,10 +1959,11 @@ gates:
     gate_type: completion
     blocking: true
     owner_authority_id: AUTH-002
-    task_ids: [TASK-073]
+    task_ids: [TASK-074, TASK-073]
     required_evidence_ids: [EVID-002]
     pass_criteria:
       - "Cross-rule chain tests with adversarial outputs prove no routing loop and no conflicting classification."
+      - "Each specialist's benefit over P1-only is measured on the TASK-074 evaluation set; a specialist without measured benefit stays inactive."
       - "Destination prompts remain inactive until the operator activates them after this gate."
     failure_effect: BLOCKED
 risks:

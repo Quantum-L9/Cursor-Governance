@@ -1,7 +1,7 @@
 schema: l9.program-execution.current-state-delta.v1
 schema_version: 1.0.0
 campaign_id: ib-odoo-dashboard-command-centers
-source_version: "1.4.0"
+source_version: "1.5.0"
 collected_at: "2026-11-20T23:20:00Z"
 collection_method: read_only_inspection
 producer: "CTO session (claude-code-web), three read-only research passes"
@@ -199,9 +199,11 @@ operator_decisions_2026_11_21:
   DEC-011: "APPROVED OPT-A with fail-closed refinement: Logistics decides routine operational classes, but an approval never overrides a safety gate; still-failing evidence_unverified/out_of_sequence and any consequential command needing an override are blocked and re-routed to Operations Manager."
   DEC-017: "APPROVED modified OPT-A: minimal plasticos_documents_ai addon, no auto_install, explicit AI activation; reasoning.effort none; extracted text only where sufficient, Files API text_recognition/rich_layout_recognition otherwise, with bounded expires_after and deletion; no unnecessary metadata, secrets or payloads in logs/fixtures; README on external processing and retention; synthetic data only until GATE-005."
   DEC-018: "APPROVED: seven-prompt target inventory (AI_PROMPT_INVENTORY.yaml); Inbox classifier is slice 1; destination prompts only after GATE-006."
+  DEC-019: "APPROVED: Document AI Prompt Requirements v2.0 normative (autonomy-first, INV-01..INV-07, P1-P7 specialists, provisional targets >=80 percent auto-routed, >=90 percent primary-family accuracy among routed, <=20 percent human intervention, zero unauthorized actions and zero human-correction overwrites); supersedes the v1.4.0 conservative escalation rows."
+  DEC-014_extension: "Taxonomy extended by the CTO to the types and review signals v2.0 requires (financial subtypes, delivery receipt, order confirmation, material certification, technical specification, unloading/delivery/damage photos; Evidence Gap, Duplicate Candidate, Includes Supporting Evidence) under the operator's seed-the-necessary-tags instruction."
   DEC-016_operator_evidence: "Operator-reported: deepseek-flash outperformed GPT-4o in the operator's usage — not an independent benchmark; TASK-072 measures this workload."
 open_operator_decisions: []
-ready_tasks: [TASK-001, TASK-002, TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064, TASK-065, TASK-068, TASK-069, TASK-070, TASK-071, TASK-073, TASK-040, TASK-032, TASK-031, TASK-033, TASK-072, TASK-050, TASK-051]
+ready_tasks: [TASK-001, TASK-002, TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064, TASK-065, TASK-068, TASK-069, TASK-070, TASK-071, TASK-074, TASK-073, TASK-040, TASK-032, TASK-031, TASK-033, TASK-072, TASK-050, TASK-051]
 blocked_tasks: {}
 residual_execution_prerequisites:
   - "Campaign activation and lane launch: separate operator authorization (this publication authorizes neither)."
@@ -210,7 +212,8 @@ residual_execution_prerequisites:
   - "TASK-002 inputs: operator settings exports for Documents, AI, digitization and auto-post on Staging and Production."
   - "UNK-006: DeepSeek contract probe on Staging with ai.deepseek_key set by the operator, synthetic documents only (TASK-068)."
   - "GATE-005: explicit operator external-data-processing approval before any real customer, supplier or financial document reaches DeepSeek."
-  - "GATE-006: loop and conflict proof before destination-folder prompts are activated; activation itself is an explicit operator action."
+  - "GATE-006: loop and conflict proof plus measured benefit per specialist before P2-P7 are activated; activation itself is an explicit operator action."
+  - "UNK-007: a representative labeled set of real documents for the v2.0 targets — operator labels Staging documents after GATE-005; until then only synthetic mechanics are proven."
   - "Operator merges of lane PRs into Staging and the Staging acceptance walk (S01-S16); Production promotion is outside the campaign."
 execution_status: NOT_EXECUTED
 do_not_execute_from_this_receipt: true
