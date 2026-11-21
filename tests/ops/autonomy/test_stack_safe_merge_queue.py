@@ -71,6 +71,8 @@ class FakeGitHub:
 
     def _disarm(self, repo: str, pr: str) -> None:
         self.calls.append(("disarm", pr))
+        if self.prs[pr].get("disarm_fails"):
+            raise RuntimeError("disarm refused")
         self.prs[pr]["armed"] = False
         if not self.prs[pr].get("sticky"):
             self.prs[pr]["queued"] = False
@@ -80,13 +82,14 @@ class FakeGitHub:
         if self.prs[pr].get("sticky"):
             raise RuntimeError("dequeue refused")
         self.prs[pr]["queued"] = False
+        self.prs[pr]["armed"] = False
 
     def _state(self, repo: str, pr: str) -> dict[str, Any]:
         pr_state = self.prs[pr]
         script = pr_state.get("script")
         if pr_state.pop("proving", False):
             pass
-        elif script and pr_state.get("queued") is True and self.calls[-1][0] != "dequeue":
+        elif script and pr_state.get("queued") is True and self.calls[-1][0] == "enqueue":
             pr_state.update(script.pop(0))
         return {
             "queued": pr_state.get("queued", False),
@@ -208,8 +211,8 @@ def test_a_pr_that_does_not_enter_the_queue_at_once_is_disarmed(
     fake.install(monkeypatch, tmp_path)
     [outcome] = _run(fake, [("5", A)])
     assert outcome["status"] == "MERGE_PENDING"
-    assert outcome["disarmed"] is True
-    assert fake.calls == [("enqueue", "5"), ("disarm", "5")]
+    assert outcome["withdrawn"] is True
+    assert fake.calls == [("enqueue", "5"), ("dequeue", "5"), ("disarm", "5")]
     assert fake.prs["5"]["armed"] is False
 
 
@@ -222,6 +225,7 @@ def test_unobservable_membership_is_disarmed_not_assumed(
     assert outcome["status"] == "MERGE_PENDING"
     assert "could not be observed" in outcome["reason"]
     assert ("disarm", "5") in fake.calls
+    assert outcome["withdrawn"] is True
 
 
 def test_no_auto_merge_on_a_base_without_a_queue(
@@ -285,6 +289,53 @@ def test_an_ejected_pr_is_re_enqueued_once_green_again(
     [merged] = _run(fake, [("5", B)])
     assert merged["status"] == "MERGED"
     assert [c for c in fake.calls if c[0] == "enqueue"] == [("enqueue", "5"), ("enqueue", "5")]
+
+
+def test_a_failed_disarm_is_unbound_and_stops_the_rest_of_the_set(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex P1: an entry that cannot be proven disarmed must fail closed."""
+    fake = FakeGitHub(
+        {"5": _green(A, enters_queue=False, disarm_fails=True, sticky=True), "6": _green(C)}
+    )
+    fake.install(monkeypatch, tmp_path)
+    first, second = _run(fake, [("5", A), ("6", C)])
+    assert first["status"] == "UNBOUND_QUEUE_ENTRY"
+    assert second["status"] == "MERGE_PENDING"
+    assert "earlier item is unbound" in second["reason"]
+    assert ("enqueue", "6") not in fake.calls
+    assert REPO in json.loads((tmp_path / ssm.UNBOUND_LEDGER_NAME).read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize(
+    ("sticky", "status"), [(False, "MERGE_PENDING"), (True, "UNBOUND_QUEUE_ENTRY")]
+)
+def test_a_watcher_timeout_withdraws_the_entry_or_records_it_unbound(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sticky: bool, status: str
+) -> None:
+    """Codex P1: no queue entry outlives its watcher."""
+    fake = FakeGitHub({"5": _green(A, sticky=sticky)})
+    fake.install(monkeypatch, tmp_path)
+    ticks = iter([0.0, 0.0, 120.0, 120.0])
+    [outcome] = ssm.run_queue(
+        REPO, [("5", A)], poll=0, timeout=60, sleep=lambda _: None, clock=lambda: next(ticks)
+    )
+    assert outcome["status"] == status
+    assert "timed out" in outcome["reason"]
+    assert ("dequeue", "5") in fake.calls
+
+
+def test_a_revoked_authorization_withdraws_a_queued_entry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex P1: the latest instruction wins, also after the enqueue."""
+    fake = FakeGitHub({"5": _green(A, script=[{"granted": None}])})
+    fake.install(monkeypatch, tmp_path)
+    [outcome] = _run(fake, [("5", A)])
+    assert outcome["status"] == "MERGE_PENDING"
+    assert "authorization withdrawn while queued" in outcome["reason"]
+    assert outcome["withdrawn"] is True
+    assert ("dequeue", "5") in fake.calls
 
 
 def test_queue_items_must_name_a_full_head() -> None:

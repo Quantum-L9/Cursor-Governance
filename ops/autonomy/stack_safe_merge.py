@@ -78,12 +78,16 @@ Head binding is enforced in this code, not assumed from GitHub:
   head right after the call. Anything else -- armed auto-merge waiting for
   requirements, an unobservable state -- is disarmed and reported
   MERGE_PENDING. Auto-merge is never left armed.
-* While queued, the watcher re-reads the head on every poll. A head other than
-  the granted SHA is dequeued (GraphQL ``dequeuePullRequest``; on the REST-only
-  gateway ``DELETE pulls/{n}/ccr/auto_merge``) and re-read. If it is still
-  queued, the watcher emits UNBOUND_QUEUE_ENTRY, records the repository in the
-  account's unbound-entry ledger, and no further enqueue runs for that
-  repository until the entry is gone from the queue.
+* While queued, the watcher re-reads the head and re-checks authorization on
+  every poll, so a moved head or a cancelled instruction withdraws the entry.
+* Every withdrawal -- an enqueue not proven at the granted head, a moved head, a
+  revoked authorization, a watcher timeout -- runs ``withdraw``: dequeue
+  (GraphQL ``dequeuePullRequest``; on the REST-only gateway
+  ``DELETE pulls/{n}/ccr/auto_merge``) and disarm, then re-read. Only an entry
+  observably neither queued nor armed is reported MERGE_PENDING. Anything else is
+  UNBOUND_QUEUE_ENTRY (exit 5): it is recorded in the account's unbound-entry
+  ledger, the rest of the set is not enqueued, and no further enqueue runs for
+  that repository until the entry has left the queue.
 
 UNKNOWN, settled empirically by the operator-run check in the X8 pull request:
 (i) whether GitHub removes a queued PR when its head is pushed -- the
@@ -601,7 +605,7 @@ def queue_state(repo: str, pr: str) -> dict[str, Any]:
         owner, name = repo.split("/", 1)
         data = _gh_graphql(
             "query($o:String!,$n:String!,$p:Int!){repository(owner:$o,name:$n){"
-            "pullRequest(number:$p){merged headRefOid isInMergeQueue "
+            "pullRequest(number:$p){merged headRefOid isInMergeQueue autoMergeRequest{enabledAt} "
             "mergeQueueEntry{state headCommit{oid}}}}}",
             o=owner,
             n=name,
@@ -614,7 +618,7 @@ def queue_state(repo: str, pr: str) -> dict[str, Any]:
             "head": str(node.get("headRefOid") or "").lower(),
             "entry_head": str(((entry.get("headCommit") or {}).get("oid")) or "").lower() or None,
             "merged": bool(node.get("merged")),
-            "armed": None,
+            "armed": node.get("autoMergeRequest") is not None,
         }
     view = _pull(repo, pr)
     queued: bool | None = None
@@ -800,18 +804,77 @@ def enqueue_one(repo: str, pr: str, head: str) -> dict[str, Any]:
     bound = state.get("head") == head and state.get("entry_head") in (None, head)
     if state.get("queued") is True and bound:
         return {"status": "QUEUED", "repo": repo, "pr": int(pr), "granted_head": head}
-    try:
-        disarm_call(repo, pr)
-        disarmed = True
-    except RuntimeError:
-        disarmed = False
     if state.get("queued") is True:
         reason = f"queued at {state.get('entry_head') or state.get('head')}, not the granted head"
     elif state.get("queued") is None:
         reason = "queue membership could not be observed after the enqueue call"
     else:
         reason = "the pull request did not enter the queue at once (auto-merge would wait armed)"
-    return _pending(repo, pr, head, f"{reason}; disarmed={disarmed}", disarmed=disarmed)
+    return withdraw(repo, pr, head, reason, observed_head=state.get("head") or "")
+
+
+def _withdrawn(state: dict[str, Any]) -> bool:
+    """True only when the PR is observably neither queued nor armed.
+
+    REST has no documented membership signal (UNKNOWN iii), so there a null
+    ``auto_merge`` with no queue event is the only evidence of removal.
+    """
+    queued = state.get("queued")
+    armed = state.get("armed")
+    if queued is False:
+        return armed is not True
+    return queued is None and armed is False
+
+
+def withdraw(
+    repo: str, pr: str, head: str, reason: str, *, observed_head: str = ""
+) -> dict[str, Any]:
+    """Dequeue and disarm ``repo#pr``, then prove it. MERGE_PENDING if proven, else UNBOUND.
+
+    Every path that stops trusting a queue entry -- an enqueue not proven at the
+    granted head, a head that moved, a revoked authorization, a watcher timeout --
+    ends here, so no entry is ever abandoned while it might still merge.
+    """
+    errors: list[str] = []
+    for call in (dequeue_call, disarm_call):
+        try:
+            call(repo, pr)
+        except RuntimeError as exc:
+            errors.append(f"{call.__name__}: {exc}")
+    try:
+        after = queue_state(repo, pr)
+    except RuntimeError as exc:
+        after = {"queued": None, "armed": None, "error": str(exc)}
+    if after.get("merged") and (after.get("head") or "") == head:
+        return {"status": "MERGED", "repo": repo, "pr": int(pr), "granted_head": head}
+    if after.get("merged"):
+        return _unbound(
+            repo,
+            pr,
+            head,
+            observed_head or after.get("head") or "unknown",
+            reason=f"{reason}; it merged before it could be withdrawn",
+            merged=True,
+        )
+    if _withdrawn(after):
+        return _pending(
+            repo,
+            pr,
+            head,
+            f"{reason}; withdrawn from the queue",
+            withdrawn=True,
+            moved_head=observed_head or None,
+        )
+    return _unbound(
+        repo,
+        pr,
+        head,
+        observed_head or after.get("head") or "unknown",
+        reason=reason,
+        observed_queued=after.get("queued"),
+        observed_armed=after.get("armed"),
+        errors=errors,
+    )
 
 
 def _unbound(repo: str, pr: str, head: str, moved: str, **extra: Any) -> dict[str, Any]:
@@ -825,8 +888,9 @@ def _unbound(repo: str, pr: str, head: str, moved: str, **extra: Any) -> dict[st
     }
     record_unbound(entry)
     print(
-        f"UNBOUND_QUEUE_ENTRY MERGE_PENDING: {repo}#{pr} is queued at {moved}, but the grant "
-        f"covers {head}. Dequeue failed; no further enqueue for {repo} until it is resolved.",
+        f"UNBOUND_QUEUE_ENTRY MERGE_PENDING: {repo}#{pr} (grant covers {head}, observed "
+        f"{moved}) could not be proven out of the queue: {extra.get('reason', '')}. "
+        f"No further enqueue for {repo} until it has left the queue.",
         file=sys.stderr,
     )
     return entry
@@ -842,19 +906,18 @@ def watch_step(repo: str, pr: str, head: str) -> dict[str, Any] | None:
         return {"status": "MERGED", "repo": repo, "pr": int(pr), "granted_head": head}
     moved = state.get("head") or ""
     if state.get("queued") is not False and moved and moved != head:
-        try:
-            dequeue_call(repo, pr)
-        except RuntimeError:
-            pass
-        try:
-            after = queue_state(repo, pr)
-        except RuntimeError:
-            after = {"queued": None}
-        if after.get("queued") is False:
-            return _pending(
-                repo, pr, head, f"head moved to {moved} while queued; dequeued", moved_head=moved
+        return withdraw(repo, pr, head, f"head moved to {moved} while queued", observed_head=moved)
+    if state.get("queued") is not False:
+        # The latest instruction wins: a cancellation after the enqueue withdraws it.
+        auth = authorization_status(repo, pr, head)
+        if auth.get("status") != "AUTHORIZED":
+            return withdraw(
+                repo,
+                pr,
+                head,
+                f"authorization withdrawn while queued ({auth.get('reason')})",
+                observed_head=moved,
             )
-        return _unbound(repo, pr, head, moved, observed=after.get("queued"))
     if state.get("queued") is False:
         return {
             "status": "EJECTED",
@@ -895,12 +958,18 @@ def run_queue(
         ]
     results: dict[str, dict[str, Any]] = {}
     watching: list[tuple[str, str]] = []
+    stopped = False
     for pr, head in items:
+        if stopped:
+            results[pr] = _pending(repo, pr, head, "not enqueued: an earlier item is unbound")
+            continue
         refusal = admit_for_queue(repo, pr, head)
         outcome = refusal or enqueue_one(repo, pr, head)
         results[pr] = outcome
         if outcome["status"] == "QUEUED":
             watching.append((pr, head))
+        elif outcome["status"] == "UNBOUND_QUEUE_ENTRY":
+            stopped = True
     deadline = clock() + timeout
     while watching:
         for pr, head in list(watching):
@@ -911,10 +980,9 @@ def run_queue(
         if not watching:
             break
         if clock() >= deadline:
+            # No entry outlives its watcher: withdraw it, or record it unbound.
             for pr, head in watching:
-                results[pr] = _pending(
-                    repo, pr, head, "still queued when the watcher timed out", queued=True
-                )
+                results[pr] = withdraw(repo, pr, head, "still queued when the watcher timed out")
             break
         sleep(poll)
     return [results[pr] for pr, _ in items]
