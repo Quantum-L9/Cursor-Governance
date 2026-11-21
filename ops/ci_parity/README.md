@@ -18,6 +18,8 @@ of this (the hooks and the `make pr` wave entry are Claude-surface only).
 | `validate_manifest.py` | Fails when a recorded CI pin moves without a re-pin |
 | `install.py` | sha256-verified, flock single-flight, idempotent install (`--check` to audit) |
 | `findings.py` | One finding shape; SARIF/JSON parsers; changed-line filter |
+| `fixtures.py` | Declared expect-fail fixtures: named rules must fire on fixture paths and do not block |
+| `expect_fail_fixtures.json` | Consumer-repository data for `fixtures.py`: fixture roots and per-file rule ids |
 | `run.py` | Lanes, CPU budget, snapshot clone, receipts; `--file` / `--commit` / `--gate` / `--status` |
 | `sonar_status.py` | Read-only SonarCloud PR quality gate + issues (never a scanner run) |
 | `lanes/yamllint.yaml` | yamllint config for the lane (relaxed; errors block) |
@@ -122,6 +124,31 @@ Semgrep's own `--baseline-commit`.
   not fail the gate.
 - **New tools** (actionlint, zizmor, shellcheck, yamllint) block on error level
   on changed lines only, so existing debt never blocks.
+
+## Expect-fail fixtures (canaries and parity witnesses)
+
+A canary deliberately carries code a central rule must flag. Without a
+declared class the gate either blocks it, so the witness can never be
+published, or is relaxed by hand, so nothing proves the rule still fires.
+`expect_fail_fixtures.json` declares the class as consumer-repository data:
+per repository, fixture `roots`, and per file under them the exact rule ids
+each lane must report (`semgrep-l9`, `bandit`, ...). `fixtures.py` applies it:
+
+| Finding | Outcome |
+|---|---|
+| A named rule on its declared file | `expect` line; does not block |
+| A named rule that did not fire on a file the lane scanned | FAIL, rule `ci-parity/expected-finding-missing`, so a witness cannot rot silently |
+| Any other finding on a fixture path, including a file under a root with no entry | classified exactly as before (blocks on the lane's `block` list) |
+| Any finding outside every root, or in a repository with no entry | unchanged |
+| A malformed manifest | FAIL, rule `ci-parity/fixture-manifest-invalid`; never read as "no fixtures" |
+
+The Bandit step of `ops/scripts/run_pr_security.sh` routes fixture files
+through the same manifest (`fixtures.py split`, then `fixtures.py bandit` on a
+JSON report), so a fixture needs no `# nosec`. The manifest bytes are part of
+the receipt digest. Evidence (2026-11-20): EIE `canary/ci-ul-eie` @ `411f9ef8`,
+`semgrep-l9` lane `blocking=0 expected=2` (both central rules on
+`central_rule_bad.py:8`); Bandit 1.9.4 on the same files: three declared
+B602, verdict pass.
 
 ## Parity proof (2026-09-24)
 
