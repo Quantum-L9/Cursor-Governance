@@ -128,3 +128,20 @@ registration, the Claude Code host default) does not block close-out.
 - Sonar "Mask detected secret values" is on for the organization. `observed`.
 - The Cursor-Governance Sonar project is public again, matching the public repository, so its lines do not count against the private allowance. `observed`.
 - EIE #366 is ready to merge; T05, T06 and the EIE half of T10 are dispositioned. `lane (F2)`.
+
+## Close-out status (2026-11-21 13:10Z)
+
+Evidence for each row is in `CLOSEOUT_RECEIPT.md`.
+
+| # | Status |
+|---|---|
+| X1 | DONE: org-ci pins SDK `4a887396` with CENTRAL-DIFF, the waiver ledger and B3 (Core #323, #324). |
+| X2 | DONE: security scans in org-ci (Core #312), full-lock pip-audit (#330, #328, #335). |
+| X3 | DONE (code). EIE #377 holds on the operator's nightly-App grant (click-path 7). |
+| X4 | DONE (code): nightly sink (Core #333) with full-lock pip-audit (#337). Proof waits on the same App grant. |
+| X5 | DONE: `CURSOR_CANARY_PASS` (Cursor-Governance #1112). |
+| X6 | DONE (EIE canary #378, runs 1 and 2). |
+| X7 | DONE (#1091, #1118). |
+| X8 | DONE (code, #1109). Waits on the operator enabling the merge queue (click-path 1). |
+| X9 | DONE: `CLOSEOUT_RECEIPT.md`. |
+| X10 | DONE (findings, rows 20-29). Applying them is operator settings (click-paths 2-6) and the rollout backlog. |
