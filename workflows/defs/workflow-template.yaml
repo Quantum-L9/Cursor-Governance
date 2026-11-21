@@ -14,14 +14,17 @@ variables:
 # =============================================================================
 #
 # Available step types:
-#   - shell: Run shell commands
+#   - shell: Run commands, each an argument list (no shell: no pipes, &&,
+#            redirects or globs); {argv: [...], allow_failure: true} tolerates
+#            a non-zero exit
 #   - extract: Extract lines from file using sed
 #   - copy: Copy files
 #   - inject: Insert content into existing file
 #   - replace: Replace lines in existing file
 #   - validate: Run validation checks
 #   - checkpoint: Pause for user confirmation
-#   - python: Execute Python code
+#   - python: Call a named function, callable: "package.module:function"
+#             (no inline code)
 #
 # Step options:
 #   - depends_on: List of step IDs that must complete first
@@ -39,8 +42,8 @@ steps:
     type: shell
     config:
       commands:
-        - "mkdir -p ${target_dir}"
-        - "echo 'Environment ready'"
+        - ["mkdir", "-p", "${target_dir}"]
+        - ["echo", "Environment ready"]
 
   # ---------------------------------------------------------------------------
   # Example: Extract code blocks
@@ -132,9 +135,9 @@ steps:
           pattern: "expected_pattern"
           files:
             - "core/existing_module.py"
-        # Custom shell check
-        - type: shell
-          command: "python3 -c 'from services.new_service import *'"
+        # Custom command check (an argument list, no shell)
+        - type: command
+          argv: ["python3", "-c", "import services.new_service"]
 
   # ---------------------------------------------------------------------------
   # Example: Checkpoint
@@ -154,23 +157,8 @@ steps:
     type: python
     depends_on: [confirm]
     config:
-      code: |
-        import os
-        from pathlib import Path
-
-        # Access variables and working_dir
-        wd = working_dir
-        vars = variables
-
-        # Do custom processing
-        print(f"Working in: {wd}")
-        print(f"Variables: {vars}")
-
-        # Set output for logging
-        output = "Custom processing complete"
-
-        # Set artifacts for downstream steps
-        artifacts = {"custom_result": "value"}
+      # def process(variables, working_dir) -> {"output": ..., "artifacts": {...}}
+      callable: "services.new_service:process"
 
   # ---------------------------------------------------------------------------
   # Example: Final report
@@ -181,7 +169,7 @@ steps:
     depends_on: [custom_logic]
     config:
       commands:
-        - "echo '=== WORKFLOW COMPLETE ==='"
-        - "echo 'Created files:'"
-        - "ls -la services/new_service.py core/new_module.py"
-        - "echo 'Done!'"
+        - ["echo", "=== WORKFLOW COMPLETE ==="]
+        - ["echo", "Created files:"]
+        - ["ls", "-la", "services/new_service.py", "core/new_module.py"]
+        - ["echo", "Done!"]

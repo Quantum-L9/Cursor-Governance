@@ -129,15 +129,13 @@ class UseHarvestExecutor:
             STATE_FILE.unlink()
         self.state = None
 
-    def _run_shell(self, cmd: str, capture: bool = True) -> tuple[int, str, str]:
-        """Run shell command."""
-        result = subprocess.run(  # noqa: S602 - shell=True required for DAG executor
-            cmd,
-            shell=True,
-            cwd=REPO_ROOT,
-            capture_output=capture,
-            text=True,
-        )
+    def _run(self, argv: list[str]) -> tuple[int, str, str]:
+        """Run one command as an argument list, never through a shell.
+
+        Paths, targets and messages here come from harvested documents and
+        state files, so none of them is ever parsed by a shell.
+        """
+        result = subprocess.run(argv, cwd=REPO_ROOT, capture_output=True, text=True, check=False)
         return result.returncode, result.stdout, result.stderr
 
     def _print_header(self, title: str):
@@ -284,8 +282,7 @@ class UseHarvestExecutor:
                 target_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Copy file using cp
-            cmd = f'cp "{source}" "{target_path}"'
-            code, _stdout, stderr = self._run_shell(cmd)
+            code, _stdout, stderr = self._run(["cp", "--", str(source), str(target_path)])
 
             if code == 0:
                 item["status"] = "deployed"
@@ -322,7 +319,7 @@ class UseHarvestExecutor:
         passed = 0
         for f in py_files:
             full_path = REPO_ROOT / f
-            code, _stdout, stderr = self._run_shell(f'python3 -m py_compile "{full_path}"')
+            code, _stdout, stderr = self._run([sys.executable, "-m", "py_compile", str(full_path)])
             if code == 0:
                 passed += 1
                 print(f"✅ {f}")
@@ -384,32 +381,38 @@ class UseHarvestExecutor:
         todo_args = []
         for item in self.state.items[:10]:
             if item["target_path"]:
-                todo_args.append(
-                    f'--todo "D{item["number"]}|{item["target_path"]}|*|'
-                    f'{item["action"]}|{item["status"]}"'
-                )
+                todo_args += [
+                    "--todo",
+                    f"D{item['number']}|{item['target_path']}|*|{item['action']}|{item['status']}",
+                ]
 
         # Build validation items
         val_args = []
         for v in self.state.validation_results:
-            val_args.append(f'--validation "{v["check"]}|{v["status"]}"')
+            val_args += ["--validation", f"{v['check']}|{v['status']}"]
 
         if not todo_args:
-            todo_args.append('--todo "D1|deployment|*|DEPLOY|complete"')
+            todo_args += ["--todo", "D1|deployment|*|DEPLOY|complete"]
         if not val_args:
-            val_args.append('--validation "deployment|✅"')
+            val_args += ["--validation", "deployment|✅"]
 
         harvest_name = Path(self.state.harvest_dir).name
-        cmd = f'''python3 {REPORT_GENERATOR} \
-            --task "Deploy: {harvest_name[:30]}" \
-            --tier RUNTIME_TIER \
-            {" ".join(todo_args)} \
-            {" ".join(val_args)} \
-            --summary "Harvested code deployment via /use-harvest DAG executor" \
-            --skip-verify 2>/dev/null || echo "Report generation skipped"'''
+        argv = [
+            sys.executable,
+            str(REPORT_GENERATOR),
+            "--task",
+            f"Deploy: {harvest_name[:30]}",
+            "--tier",
+            "RUNTIME_TIER",
+            *todo_args,
+            *val_args,
+            "--summary",
+            "Harvested code deployment via /use-harvest DAG executor",
+            "--skip-verify",
+        ]
 
         print("Generating report...")
-        _code, stdout, _stderr = self._run_shell(cmd)
+        _code, stdout, _stderr = self._run(argv)
 
         # Extract report path
         for line in stdout.split("\n"):
@@ -437,7 +440,7 @@ class UseHarvestExecutor:
 
         # Stage deployed files
         for f in self.state.files_deployed:
-            self._run_shell(f'git add "{REPO_ROOT / f}"')
+            self._run(["git", "add", "--", str(REPO_ROOT / f)])
 
         # Create commit message
         harvest_name = Path(self.state.harvest_dir).name
@@ -450,13 +453,13 @@ class UseHarvestExecutor:
         # finding to repair, not a flag to add (contract
         # l9-commit-verification-integrity); a hook failure lands in the
         # `else` below and is reported rather than silently committed.
-        cmd = f'git commit -m "{commit_msg}" 2>&1 || true'
-        code, stdout, _stderr = self._run_shell(cmd)
+        code, stdout, stderr = self._run(["git", "commit", "-m", commit_msg])
+        stdout += stderr
 
         if "nothing to commit" in stdout.lower():
             print("✅ Nothing to commit — working tree clean")
         elif code == 0 or "file changed" in stdout.lower():
-            _code, hash_out, _ = self._run_shell("git rev-parse --short HEAD")
+            _code, hash_out, _ = self._run(["git", "rev-parse", "--short", "HEAD"])
             self.state.commit_hash = hash_out.strip()
             print(f"✅ Committed: {self.state.commit_hash}")
             print(f"   Message: {commit_msg}")
