@@ -25,6 +25,33 @@
           "bandit": ["B602"]
         }
       }
+    },
+    "Quantum-L9/Cursor-Governance": {
+      "note": "CI canary for campaign L9-CI-UNIFIED-LEVERAGE-2026-11-20-v1.7.1, lane CG-CUTOVER item 4 (DO NOT MERGE branch). Since SDK 47ae3ac5 (Core #322) a consumer inline nosemgrep and a consumer .semgrepignore no longer lower central coverage, so the central rule must fire on override_nosemgrep.py and override_ignored_dir/ too; bandit honours neither.",
+      "roots": ["canary/ci_ul/"],
+      "files": {
+        "canary/ci_ul/central_rule_bad.py": {
+          "semgrep-l9": [
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true"
+          ],
+          "bandit": ["B602"]
+        },
+        "canary/ci_ul/override_nosemgrep.py": {
+          "bandit": ["B602"],
+          "semgrep-l9": [
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true"
+          ]
+        },
+        "canary/ci_ul/override_ignored_dir/central_rule_bad_ignored.py": {
+          "bandit": ["B602"],
+          "semgrep-l9": [
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true"
+          ]
+        },
+        "canary/ci_ul/biome_bad.json": {
+          "biome": ["format"]
+        }
+      }
     }
   }
 }

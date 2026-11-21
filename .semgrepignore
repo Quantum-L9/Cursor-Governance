@@ -42,3 +42,6 @@ archive/
 archived/
 ops/generated/
 environment/generated/
+
+# CG-CUTOVER canary (DO NOT MERGE): consumer attempt to drop a central finding
+canary/ci_ul/override_ignored_dir/
