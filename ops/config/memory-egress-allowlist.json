@@ -35,6 +35,12 @@
       "expires": "2099-01-01"
     },
     {
+      "path": "environment/agents/adapters/claude-code/web/setup.bootstrap_steps.sh",
+      "reason": "Session env file unsets the retired memory provider variables (negative check).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
       "path": "environment/agents/adapters/claude-code/verify_account_env.py",
       "reason": "Account-variable audit naming the retired memory bearer among prohibited names (negative check).",
       "retire_at_stage": "never",

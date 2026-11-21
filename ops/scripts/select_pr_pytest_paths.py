@@ -549,6 +549,14 @@ def classify_pr_scope(
     if scope_refusal(changed) is not None:
         return "UNKNOWN", []
     selected = select_pr_pytest_paths(changed, registry=registry)
+    # A deleted file is still a change: it selects the tests that name or import
+    # it, so a test still importing a deleted module runs and fails. A deleted
+    # test file itself is not a target pytest can collect. Suite directories
+    # come from the registry, which the drift validator owns.
+    gone = [item for item in selected if item.endswith(".py") and not (REPO_ROOT / item).exists()]
+    if gone:
+        selected = [item for item in selected if item not in gone]
+        print("NOTE: deleted, not a pytest target: " + ", ".join(gone), file=sys.stderr)
     if selected:
         return "SELECTED", selected
     if all(path.endswith(DOC_SUFFIXES) for path in changed):
