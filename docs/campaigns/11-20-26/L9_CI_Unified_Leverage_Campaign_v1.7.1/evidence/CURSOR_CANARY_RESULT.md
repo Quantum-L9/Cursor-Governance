@@ -1,9 +1,40 @@
-# CURSOR_CANARY result: `CURSOR_CANARY_BLOCKED`
+# CURSOR_CANARY result: `CURSOR_CANARY_BLOCKED` (1 item left: B3)
+
+## Re-run, 2026-11-21 (outranks the 2026-11-20 verdict below)
+
+Core `main` org-ci with SDK `47ae3ac5bc8c1a14cc33e4985ce392996cd27ccc` (Core #322), canary PR
+[#1096](https://github.com/Quantum-L9/Cursor-Governance/pull/1096) (DO NOT MERGE) merged with
+Cursor-Governance `main` `8a53c26c`. Core stops the job at a Biome failure before Semgrep runs, so the
+witnesses ran on two heads.
+
+| Item | 2026-11-20 | 2026-11-21 evidence | State |
+|---|---|---|---|
+| B1 inline `# nosemgrep` lowers central coverage | open | head `73ad9c04`, [run 44870986301](https://github.com/Quantum-L9/Cursor-Governance/actions/runs/44870986301/job/136745236286): both `subprocess-shell-true` rules fire on `override_nosemgrep.py:7` | **fixed** |
+| B2 consumer `.semgrepignore` lowers central coverage | open | same run: `override_ignored_dir/central_rule_bad_ignored.py` is scanned and both rules fire at line 7 | **fixed** |
+| B3 Cursor-owned `.semgrep/l9-pr.yml` rules run in no CI job | open | same run: the report's rule ids are SDK baseline and registry rules only; no `l9-pr.yml` rule ran | **open**, owner SDK/Core (scoped consumer-rulepack binding); local `make pr` enforcement stays |
+| B4 `semgrep:language:typescript` required instance incomplete | open | same run: "not planned semgrep:language:typescript: no typescript or javascript file this target analyzes is inside the declared scan scope: 2 file(s) excluded by directory_names"; `javascript` visible, unsupported, not planned | **fixed** (explicit not-applicable reason) |
+| B5 Semgrep timeouts counted as complete coverage | open | same run: 0 Semgrep errors, so there was nothing to miscount. This shows no gap on this head; it does not prove the normalization fix | **not reproduced**; L1 owns the proof |
+
+Other witnesses on the same SDK:
+
+| Witness | Head | Result |
+|---|---|---|
+| Central known-bad `central_rule_bad.py:7` | `73ad9c04` | both rules fire; python instance fail; `blocking_count: 6`, all six on the canary's known-bad files |
+| Central known-good `central_rule_good.py` | `73ad9c04` | scanned, no finding |
+| Biome known-bad `biome_bad.json` | `fa1ec0e9`, [Core run 44870756504](https://github.com/Quantum-L9/Cursor-Governance/actions/runs/44870756504/job/136744510501), [SDK Biome run 44870757046](https://github.com/Quantum-L9/Cursor-Governance/actions/runs/44870757046/job/136744512137) | Core `BIOME_STATUS: findings`, job failure; SDK Biome job failure |
+| `main` itself | `8869ccc5` and later | 0 blocking central findings since #1104 (issue #1106) |
+
+Runtime of `Analyze (central Core)` on `73ad9c04`: 2 min 58 s.
+
+Verdict: `CURSOR_CANARY_BLOCKED` on B3 alone. `CURSOR_CANARY_PASS` needs the Cursor-owned rules to run
+centrally in a scoped execution (Gate 2.4), or a recorded decision that local `make pr` enforcement is
+their accepted home. B5 needs L1's proof that a timeout is counted as incomplete coverage.
+
 
 Lane CG-CUTOVER item 5, 2026-11-20, against `CURSOR_CANARY.md` Gates 0 to 4. This is a campaign
 report label, not a canonical L9 state. Fleet rollout and consumer-check retirement stay closed.
 
-## Verdict
+## Verdict (2026-11-20, superseded by the re-run above)
 
 `CURSOR_CANARY_BLOCKED`. The real Cursor-Governance evaluation runs Core's required workflow on the
 exact head and fails closed on a central known-bad, a Biome known-bad and an incomplete required
