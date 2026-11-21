@@ -11,7 +11,7 @@ mandatory prerequisite to secondary rollout and removal of redundant
 consumer checks. `HARVEST.md` candidate dispositions must precede shared
 configuration/rule promotion at the correct upstream owner. CI Core/SDK unit tests, a published PR,
 and a simulated consumer are insufficient.
-> **Status: BLOCKED** — owner: operator — next action: accept as a recorded exception or revert CEG #522 (`fc4711a2`) — evidence: violated: "`CURSOR_CANARY_PASS` ... is a mandatory prerequisite to ... removal of redundant consumer checks". `CURSOR_CANARY_PASS` is recorded (`CURSOR_CANARY_RESULT.md:40`; CG #1112 merged 2026-11-21T07:37:12Z as `35f8d88d`, REST). CEG #522 "ci: one owner per lint and contract check; central Core covers PRs" removed ci.yml lint, ci-quality.yml lint-format, contracts.yml lint, compliance.yml ruff/mypy and contract scan, and refactoring-validation.yml; merged 2026-11-20T22:44:57Z (`fc4711a2`, REST), about 9 h before the PASS and while the 2026-11-20 verdict was `CURSOR_CANARY_BLOCKED` (`CURSOR_CANARY_RESULT.md:48-61`). Mitigation (#522 body): one local owner per check kept (`l9-lint-test.yml`, `contracts.yml`). Second clause (harvest dispositions before promotion) is not provable from merged artifacts: the ledger index merged in CG #1091 (2026-11-21 05:09Z) after Core #295 (`8667d537`) and #300 (`7e11e2b0`) promoted C2/C3.
+> **Status: PASS** — accepted exception: operator decision D1 (2026-11-21) accepts the CEG #522 (`fc4711a2`) check retirement before `CURSOR_CANARY_PASS` (central Core covers the retired checks; CEG kept green on every promotion canary #324-#339) as a recorded exception; the violated clause stays on record — evidence: violated: "`CURSOR_CANARY_PASS` ... is a mandatory prerequisite to ... removal of redundant consumer checks". `CURSOR_CANARY_PASS` is recorded (`CURSOR_CANARY_RESULT.md:40`; CG #1112 merged 2026-11-21T07:37:12Z as `35f8d88d`, REST). CEG #522 "ci: one owner per lint and contract check; central Core covers PRs" removed ci.yml lint, ci-quality.yml lint-format, contracts.yml lint, compliance.yml ruff/mypy and contract scan, and refactoring-validation.yml; merged 2026-11-20T22:44:57Z (`fc4711a2`, REST), about 9 h before the PASS and while the 2026-11-20 verdict was `CURSOR_CANARY_BLOCKED` (`CURSOR_CANARY_RESULT.md:48-61`). Mitigation (#522 body): one local owner per check kept (`l9-lint-test.yml`, `contracts.yml`). Second clause (harvest dispositions before promotion) is not provable from merged artifacts: the ledger index merged in CG #1091 (2026-11-21 05:09Z) after Core #295 (`8667d537`) and #300 (`7e11e2b0`) promoted C2/C3.
 
 P0: every observed required check is actually governed. Record correct
 organization ruleset target, correct working/source revision, enforced mode,
@@ -59,7 +59,7 @@ complete spend optimization.
 P6: no unauthorized changes. PRs published by target-verified `make pr`; no
 manual raw pushes, branch protection bypass, merge, deployment or payments.
 All open PR overlap reconciled by exact head and base SHA before writing.
-> **Status: BLOCKED** — owner: operator — next action: accept as a recorded exception or revert the direct pushes of canary witnesses to the #1096 branch (`agent/claude/cg-cutover-canary`) — evidence: violated: "no manual raw pushes". The witnesses for `CURSOR_CANARY_PASS` "were pushed to the canary branch directly on CTO instruction" because `run_pr_security.sh` cannot judge consumer-rule expect-fail fixtures (`CURSOR_CANARY_RESULT.md:46`; PR #1096, DO NOT MERGE). Merges were operator-authorized (`OPEN_ITEMS.md` recorded decisions, 2026-11-20 18:55Z and 19:10Z). Open-PR overlap reconciliation by exact head/base SHA: not evidenced.
+> **Status: PASS** — accepted exception: operator decision D2 (2026-11-21) accepts the direct pushes to the throwaway #1096 canary branch (never merged; #1096 closed unmerged) as a recorded exception; the violated clause stays on record — evidence: violated: "no manual raw pushes". The witnesses for `CURSOR_CANARY_PASS` "were pushed to the canary branch directly on CTO instruction" because `run_pr_security.sh` cannot judge consumer-rule expect-fail fixtures (`CURSOR_CANARY_RESULT.md:46`; PR #1096, DO NOT MERGE). Merges were operator-authorized (`OPEN_ITEMS.md` recorded decisions, 2026-11-20 18:55Z and 19:10Z). Open-PR overlap reconciliation by exact head/base SHA: not evidenced.
 
 P7: rollback. Preserve SHA of Core, SDK, org rulesets and native-provider
 config before promotion. Central canary failure halts next rollout wave;
@@ -101,11 +101,11 @@ negative witness or parity evidence remains missing.
 
 - CI performance: PR-fast elapsed runtime and total job-minute deltas; no
   reduction in required findings or native tests.
-  > **Status: BLOCKED** — owner: operator — next action: apply click-paths 2 and 3 (`CLOSEOUT_RECEIPT.md:86-87`), after which the CTO measures the per-PR delta — evidence: Baseline ~1001 runner-seconds per CG push on #1107; projected saving ~520 s; measured delta NOT MEASURED (`CLOSEOUT_RECEIPT.md:70-81`).
+  > **Status: BLOCKED** — owner: CTO — next action: measure the per-PR runner-seconds delta on the next Cursor-Governance PR head (operator applied click-path 2, GitHub Code Quality off, and click-path 3, Semgrep managed diff scans off, 2026-11-21) — evidence: Baseline ~1001 runner-seconds per CG push on #1107; projected saving ~520 s; measured delta NOT MEASURED (`CLOSEOUT_RECEIPT.md:70-81`).
 
 - Default-branch and release: clean PR, push, nightly and release/profile
   evidence; no green-on-skip; integrity of rulepack and tool locks.
-  > **Status: BLOCKED** — owner: operator — next action: apply click-path 7 (nightly App: code-scanning alerts and issues write, `CLOSEOUT_RECEIPT.md:91`) — evidence: Clean PR evidence: run 44876362790. Nightly: the sink ran the scans and failed at the App-token mint (runs 44891263316, 44896873853, REST conclusion failure; `CLOSEOUT_RECEIPT.md:15`). Toolchain-lock integrity: audit 105 audited, 0 open (`CLOSEOUT_RECEIPT.md:47`). Release/profile and push receipts not recorded.
+  > **Status: BLOCKED** — owner: L2 (Core) — next action: dispatch the nightly sink so the now-granted App mints its token and the Cursor-Governance leg uploads SARIF, writes the rolling issue and runs Sonar (operator applied click-path 7, 2026-11-21) — evidence: Clean PR evidence: run 44876362790. Nightly: the sink ran the scans and failed at the App-token mint (runs 44891263316, 44896873853, REST conclusion failure; `CLOSEOUT_RECEIPT.md:15`). Toolchain-lock integrity: audit 105 audited, 0 open (`CLOSEOUT_RECEIPT.md:47`). Release/profile and push receipts not recorded.
 
 ## P12: CodeRabbit activation and paid-utilization evidence
 
@@ -113,10 +113,10 @@ negative witness or parity evidence remains missing.
   > **Status: NOT_PROVEN** — evidence: Cannot be shown from GitHub content: seats, billing and `cryptoxdog` state live in the CodeRabbit account. Operator-reported only: Advanced 2-week trial, app on `.github`, CEG and EIE (`OPEN_ITEMS.md:31`, T27).
 
 - Verify central `coderabbit` repository installation and effective configuration source using official PR configuration command, plus local `inheritance: true` where genuinely necessary. Keep domain-specific instructions owned locally.
-  > **Status: BLOCKED** — owner: operator — next action: confirm whether `Quantum-L9/coderabbit` exists (launch precondition P5, `09_EXECUTION_BINDING.md` B19) — evidence: CEG #516 (`e1ccd1b2`) and EIE #368 (`4324e0df`, merged 2026-11-20T18:42Z, REST) add `inheritance: true`. No effective-configuration receipt from the official PR configuration command.
+  > **Status: NOT_PROVEN** — operator decision D7 (2026-11-21): `Quantum-L9/coderabbit` does not exist, so `inheritance: true` in CEG and EIE has no organization parent and no effective-configuration receipt can be produced; each repository configuration stands alone — evidence: CEG #516 (`e1ccd1b2`) and EIE #368 (`4324e0df`, merged 2026-11-20T18:42Z, REST) add `inheritance: true`. No effective-configuration receipt from the official PR configuration command.
 
 - Verify an actual substantive or explicit no-action review on a Cursor-Governance PR, and a separate specialized-consumer review. A CodeRabbit skip/status comment never counts as executed review. Preserve CodeQL and normal CI.
-  > **Status: BLOCKED** — owner: operator — next action: install the CodeRabbit app on Cursor-Governance — evidence: Not installed on Cursor-Governance (`OPEN_ITEMS.md:31`), so no CG review exists; no specialized-consumer review receipt was found.
+  > **Status: NOT_PROVEN** — declined by operator decision D8 (2026-11-21): CodeRabbit is not installed on Cursor-Governance; Codex reviews every Cursor-Governance PR (findings acted on in #1120 and #1124) — evidence: Not installed on Cursor-Governance (`OPEN_ITEMS.md:31`), so no CG review exists; no specialized-consumer review receipt was found.
 
 - Reconcile Odoo #556 sub-10-star skip with real paid entitlement. Provide manual trigger only as fallback; do not claim automatic review from a manually invoked result.
   > **Status: NOT_PROVEN** — out of scope: operator, 2026-11-20 21:50Z — the campaign cuts Cursor-Governance over to organization CI, debugged and proven; rolling out to other repositories is a separate campaign (`CLOSEOUT_RECEIPT.md:5-6`) — evidence: Odoo #556 is `cryptoxdog/IB-Odoo_19`.
@@ -134,18 +134,18 @@ negative witness or parity evidence remains missing.
   nightly outcomes separately, multi-language selection, fail-closed unknown
   language detection and non-duplicate default setup. An overlay cache miss
   is an optimization gap, not a false security PASS.
-  > **Status: BLOCKED** — owner: operator — next action: apply click-path 2: keep exactly one of GitHub Code Quality and `codeql.yml`'s quality suite (`CLOSEOUT_RECEIPT.md:86`) — evidence: PR default and nightly proven separately: `codeql.yml` PR run 44883333312 (#1119 head `cebc1590`, success) and `codeql-nightly.yml` schedule run 44899338541 (`c6b7d713`, success), REST. Fail-closed language lookup: CG #1081 (`fe8288c5`). Remaining duplicate: GitHub Code Quality (`dynamic/github-code-quality/codeql`) runs CodeQL on every PR beside `codeql.yml`, which already runs "CodeQL (security + code quality)" (T30; `CI_CONFIG_FINDINGS.md:31`; `CLOSEOUT_RECEIPT.md:86`). Separately unproven after that action: multi-language selection, since both runs analyze `python` only (owner of the CodeQL reusable: Cursor-Governance).
+  > **Status: BLOCKED** — owner: CTO — next action: confirm on the next Cursor-Governance `main` push that only `codeql.yml` runs CodeQL (operator disabled GitHub Code Quality, click-path 2, 2026-11-21) — evidence: PR default and nightly proven separately: `codeql.yml` PR run 44883333312 (#1119 head `cebc1590`, success) and `codeql-nightly.yml` schedule run 44899338541 (`c6b7d713`, success), REST. Fail-closed language lookup: CG #1081 (`fe8288c5`). Remaining duplicate: GitHub Code Quality (`dynamic/github-code-quality/codeql`) runs CodeQL on every PR beside `codeql.yml`, which already runs "CodeQL (security + code quality)" (T30; `CI_CONFIG_FINDINGS.md:31`; `CLOSEOUT_RECEIPT.md:86`). Separately unproven after that action: multi-language selection, since both runs analyze `python` only (owner of the CodeQL reusable: Cursor-Governance).
 
 - Record matched Sonar project, actual analyzed production file set,
   source/test exclusions, imported current-revision coverage, new-code
   quality-gate result and reviewed hotspots. Credential check alone is not a scan.
-  > **Status: BLOCKED** — owner: operator — next action: apply click-path 7 so Core's nightly apply can dispatch Cursor-Governance `sonarcloud.yml` — evidence: Cursor-Governance Sonar is `NOT_EXECUTED`: zero `workflow_dispatch` runs of `sonarcloud.yml`; last run 44772875111 on 2026-11-20 16:23Z (REST; `OPEN_ITEMS.md:28`, T15; `CLOSEOUT_RECEIPT.md:60`). No matched file set, coverage import, gate result or hotspot review for CG.
+  > **Status: BLOCKED** — owner: L2 (Core) — next action: dispatch the nightly sink so the now-granted App mints its token and the Cursor-Governance leg uploads SARIF, writes the rolling issue and runs Sonar (operator applied click-path 7, 2026-11-21) — evidence: Cursor-Governance Sonar is `NOT_EXECUTED`: zero `workflow_dispatch` runs of `sonarcloud.yml`; last run 44772875111 on 2026-11-20 16:23Z (REST; `OPEN_ITEMS.md:28`, T15; `CLOSEOUT_RECEIPT.md:60`). No matched file set, coverage import, gate result or hotspot review for CG.
 
 - Reconcile open Cursor #1062: `workflow_dispatch` mode=plan is not analysis;
   only a trusted Core-driven mode=apply on exact main SHA with a real Sonar
   result can replace the old native trigger. Stop native scanner retirement
   until that proof exists.
-  > **Status: BLOCKED** — owner: operator — next action: accept as a recorded exception or revert CG #1062 (`a95562c9`) — evidence: violated: "Stop native scanner retirement until that proof exists". #1062 merged 2026-11-20T16:23:56Z (REST) and made Sonar dispatch-only; no Core `mode=apply` run with a Sonar result exists since (REST: 0 dispatch runs). #1062 merged before this binding was written (`09_EXECUTION_BINDING.md` B02). Recovery without revert: click-path 7, then an apply dispatch with an `nd1-` key and a Sonar result on an exact `main` SHA (`HARVEST_LEDGER.md:162`).
+  > **Status: PASS** — accepted exception: operator decision D3 (2026-11-21) accepts CG #1062 (`a95562c9`) making Sonar dispatch-only, on condition that Sonar is restored through click-path 7 (applied by the operator; proof tracked in the Sonar rows below) as a recorded exception; the violated clause stays on record — evidence: violated: "Stop native scanner retirement until that proof exists". #1062 merged 2026-11-20T16:23:56Z (REST) and made Sonar dispatch-only; no Core `mode=apply` run with a Sonar result exists since (REST: 0 dispatch runs). #1062 merged before this binding was written (`09_EXECUTION_BINDING.md` B02). Recovery without revert: click-path 7, then an apply dispatch with an `nd1-` key and a Sonar result on an exact `main` SHA (`HARVEST_LEDGER.md:162`).
 
 - Reconcile Odoo #552 as a candidate scope correction. No Sonar runtime
   observation was recovered for Odoo at the inspected head, and the separate
@@ -155,7 +155,7 @@ negative witness or parity evidence remains missing.
 - No duplicate deep test execution merely to produce identical coverage;
   prove test artifact identity and native coverage import before reusing it.
   Live Cursor 8175-test scan and EIE 3927-test scan are baseline expense signals.
-  > **Status: BLOCKED** — owner: operator — next action: apply click-path 7 so a CG Sonar run can prove test-artifact identity and coverage import — evidence: CG #1062 refuses a PR full suite; CG #1100 (`756ba14a`) and Core #301 route Sonar through Core's step reusing consumer coverage. No CG Sonar run since 2026-11-20 16:23Z.
+  > **Status: BLOCKED** — owner: L2 (Core) — next action: dispatch the nightly sink so the now-granted App mints its token and the Cursor-Governance leg uploads SARIF, writes the rolling issue and runs Sonar (operator applied click-path 7, 2026-11-21) — evidence: CG #1062 refuses a PR full suite; CG #1100 (`756ba14a`) and Core #301 route Sonar through Core's step reusing consumer coverage. No CG Sonar run since 2026-11-20 16:23Z.
 
 - Confirm actual GitHub Code Security eligibility and Sonar subscription LOC,
   available AI CodeFix and optional Advanced Security add-on; no automatic
@@ -230,7 +230,7 @@ negative witness or parity evidence remains missing.
 - `CURSOR_CANARY_BLOCKED` halts **secondary rollout, fleet rollout, and
   consumer cleanup**, not all independent in-scope engineering or PR publication.
   No local bypass/waiver is a substitute for an upstream correction.
-  > **Status: BLOCKED** — owner: operator — next action: accept as a recorded exception or revert CEG #522 (`fc4711a2`) — evidence: violated: "`CURSOR_CANARY_BLOCKED` halts ... consumer cleanup". Core #294 made `Analyze (central Core)` red on every CG PR from 2026-11-20 21:52Z (B4; `CI_CONFIG_FINDINGS.md:27`); CEG #522 removed redundant lint/contract jobs at 22:44:57Z (REST). Same event as the first-consumer blocker. No local bypass or waiver was added for B1-B5 (`CURSOR_CANARY_RESULT.md:48-51`).
+  > **Status: PASS** — accepted exception: operator decision D1 (2026-11-21) accepts CEG #522 (`fc4711a2`) consumer cleanup while `CURSOR_CANARY_BLOCKED` as a recorded exception; the violated clause stays on record — evidence: violated: "`CURSOR_CANARY_BLOCKED` halts ... consumer cleanup". Core #294 made `Analyze (central Core)` red on every CG PR from 2026-11-20 21:52Z (B4; `CI_CONFIG_FINDINGS.md:27`); CEG #522 removed redundant lint/contract jobs at 22:44:57Z (REST). Same event as the first-consumer blocker. No local bypass or waiver was added for B1-B5 (`CURSOR_CANARY_RESULT.md:48-51`).
 
 Produce a single readable closeout with: accepted decisions, PR links and
 head SHAs, exact rulesets/revisions, canary and fleet coverage ledger,
@@ -289,7 +289,7 @@ fabricate completion because the tool name is in a workflow file.
   verifiable accepted-upload receipt); missing token/failed upload cannot be
   represented as accepted coverage. Prior same run job 136019663740 returned
   `Token required - not valid tokenless upload` with an overall success.
-  > **Status: BLOCKED** — owner: operator — next action: decide Codecov retirement (T42) so it is recorded as T02's terminal disposition — evidence: No accepted upload exists; the upload path was retired instead: CEG #518 (`5e7fd0f6`) and #520 (`e66fa5ef`, deletes `dev-layer-gmp.yml`); verdict `RETIRE_CANDIDATE` (`CODECOV_REVIEW.md:21`); T42 OPEN (`OPEN_ITEMS.md:55`).
+  > **Status: PASS** — terminal disposition: Codecov RETIRED by operator decision D4 (2026-11-21); T02 and T42 close on this disposition — evidence: No accepted upload exists; the upload path was retired instead: CEG #518 (`5e7fd0f6`) and #520 (`e66fa5ef`, deletes `dev-layer-gmp.yml`); verdict `RETIRE_CANDIDATE` (`CODECOV_REVIEW.md:21`); T42 OPEN (`OPEN_ITEMS.md:55`).
 
 - [ ] CEG G01: required product verifier is no longer falsely attributed to
   Semgrep/Core; prove the sibling Odoo mapper integration or mark actual
@@ -340,30 +340,28 @@ fabricate completion because the tool name is in a workflow file.
 
 | Section | PASS | BLOCKED | NOT_PROVEN | Total |
 |---|---|---|---|---|
-| Required evidence | 1 | 6 | 3 | 10 |
+| Required evidence | 3 | 4 | 3 | 10 |
 | Concrete tests | 0 | 5 | 1 | 6 |
-| P12 CodeRabbit | 0 | 3 | 2 | 5 |
-| P13 CodeQL and Sonar | 0 | 6 | 2 | 8 |
+| P12 CodeRabbit | 0 | 1 | 4 | 5 |
+| P13 CodeQL and Sonar | 1 | 5 | 2 | 8 |
 | P10 Harvest | 3 | 1 | 3 | 7 |
-| P11 Cursor canary | 2 | 2 | 1 | 5 |
+| P11 Cursor canary | 3 | 1 | 1 | 5 |
 | P9 ADRs | 4 | 2 | 0 | 6 |
-| P14 Native tool truth | 1 | 9 | 2 | 12 |
-| **Total** | **11** | **34** | **14** | **59** |
+| P14 Native tool truth | 2 | 8 | 2 | 12 |
+| **Total** | **16** | **27** | **16** | **59** |
 
 BLOCKED by owner:
 
-| Owner | BLOCKED rows |
+| Owner | Rows |
 |---|---|
-| operator | 12 |
-| CTO | 9 |
-| L1 (SDK) | 2 |
-| L2 (Core) | 2 |
-| N1e (Core canary/pins) | 1 |
-| CG-CUTOVER | 2 |
-| C-EIE | 2 |
+| CTO | 11 |
+| L2 (Core) | 5 |
 | C-CEG | 4 |
-| G2 | 0 |
-| **Total** | **34** |
+| CG-CUTOVER | 2 |
+| L1 (SDK) | 2 |
+| C-EIE | 2 |
+| N1e (Core canary/pins) | 1 |
+| **Total** | **27** |
 
 NOT_PROVEN includes 3 out-of-scope rows. Checklist ticks: 1 of 11 (`Core Bandit/npm audit`). X9 stays open until every BLOCKED and NOT_PROVEN row is resolved or accepted.
 

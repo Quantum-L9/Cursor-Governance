@@ -143,7 +143,7 @@ Evidence for each row is in `CLOSEOUT_RECEIPT.md`.
 | X6 | DONE (EIE canary #378, runs 1 and 2). |
 | X7 | DONE (#1091, #1118). |
 | X8 | OPEN. Skill support merged (#1109); the ruleset has no queue yet (click-path 1) and no PR has landed through it. |
-| X9 | IN PROGRESS. `PROOF.md` filled from real runs (11 PASS, 34 BLOCKED, 14 NOT_PROVEN); register not closed. |
+| X9 | IN PROGRESS. `PROOF.md` filled from real runs (16 PASS, 27 BLOCKED, 16 NOT_PROVEN; none blocked on the operator after decisions D1-D8); register not closed. |
 | X10 | OPEN. Findings done (rows 20-29); fixes not merged, operator settings not applied, measured delta not taken. |
 
 ### Corrections (REST, read 2026-11-21 13:10-13:20Z)
