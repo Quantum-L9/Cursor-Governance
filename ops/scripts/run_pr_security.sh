@@ -422,7 +422,8 @@ run_semgrep() {
     fi
   fi
   if [[ -z "$semgrep_bin" ]] && have semgrep; then
-    semgrep_bin="$(readlink -f "$(command -v semgrep)")"
+    # Portable realpath (BSD readlink has no -f); the path is passed as argv.
+    semgrep_bin="$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$(command -v semgrep)")"
   fi
   if [[ -n "$semgrep_bin" && -x "$semgrep_bin" ]]; then
     ver="$("$semgrep_bin" --version 2>/dev/null | head -1 || true)"

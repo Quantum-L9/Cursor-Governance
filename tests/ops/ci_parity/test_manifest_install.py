@@ -502,3 +502,29 @@ def test_resolve_prints_the_pinned_path_not_the_path_link(
     assert printed.is_relative_to(loaded.install_root / "fake" / "1.0.0")
     assert printed != loaded.bin_dir / "fake"
     assert install.main(["--resolve", "unknown"]) == 1
+
+
+def test_a_broken_same_version_install_is_repaired_inside_its_own_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+
+    uv_dir = tmp_path / "uvbin"
+    uv_dir.mkdir()
+    (uv_dir / "uv").write_text(FAKE_UV, encoding="utf-8")
+    (uv_dir / "uv").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{uv_dir}{os.pathsep}{os.environ['PATH']}")
+    old = _uv_tool_manifest(tmp_path, "1.0.0")
+    new = _uv_tool_manifest(tmp_path, "2.0.0")
+    assert install.install_tool(old, "fake") == "INSTALLED"
+    assert install.install_tool(new, "fake") == "INSTALLED"
+    # An interrupted install: the environment exists, the executable link and
+    # the state entry do not.
+    link = new.install_root / "fake" / "2.0.0" / "bin" / "fake"
+    link.unlink()
+    new.state_path.write_text("{}\n", encoding="utf-8")
+    assert install.install_tool(new, "fake") == "INSTALLED"
+    assert new.resolve("fake") == link
+    # The repair stayed inside 2.0.0's environment.
+    old_env = old.install_root / "fake" / "1.0.0" / "uv-tools" / "fake"
+    assert (old_env / "version").read_text().strip() == "1.0.0"

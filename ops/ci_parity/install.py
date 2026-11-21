@@ -153,11 +153,15 @@ def _install_uv_tool(tool: manifest.Tool, target: Path) -> Path:
     # target. A shared environment reinstalled with --force rewrote version N's
     # files while a parallel job was still running them (the make pr reader
     # wave runs `security` and `ci-parity` together), so installing N+1 never
-    # touches N's environment, and there is no --force.
+    # touches N's environment. --force now acts only inside this version's own
+    # environment: it repairs an interrupted or partly deleted install of the
+    # same version, which uv otherwise reports as "already installed" without
+    # restoring the executable link. It runs only when state.json does not
+    # record this version as installed (install_tool returns OK first).
     env["UV_TOOL_DIR"] = str(target / "uv-tools")
     env["UV_TOOL_BIN_DIR"] = str(bin_dir)
     proc = subprocess.run(
-        [uv, "tool", "install", uv_tool_spec(tool)],
+        [uv, "tool", "install", "--force", uv_tool_spec(tool)],
         env=env,
         capture_output=True,
         text=True,
