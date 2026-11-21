@@ -54,7 +54,8 @@ def core_analysis_callers(workflows: Path) -> list[str]:
         if (
             path.name == SANCTIONED_CORE_CALLER
             and _dispatch_only(text)
-            and all(SANCTIONED_CORE_EDGE.match(line) for line in edges)
+            and len(edges) == 1
+            and SANCTIONED_CORE_EDGE.match(edges[0])
         ):
             continue
         offenders.append(path.name)
@@ -94,7 +95,7 @@ class L9AnalysisGovernanceTests(unittest.TestCase):
         self.assertEqual(core_analysis_callers(WORKFLOWS), [], "repo-local Core analysis callers")
 
     def test_the_sanctioned_edge_is_exactly_one_file_and_one_action(self) -> None:
-        """Only sonarcloud.yml, only run-sonar, only a full SHA, only on dispatch."""
+        """Only sonarcloud.yml, one run-sonar step at a full SHA, only on dispatch."""
         edge = "      - uses: Quantum-L9/l9-ci-core/.github/actions/run-sonar@" + "a" * 40 + "\n"
         dispatch = "on:\n  workflow_dispatch: {}\njobs:\n  s:\n    steps:\n"
         cases = {
@@ -112,6 +113,11 @@ class L9AnalysisGovernanceTests(unittest.TestCase):
                 + ".github/workflows/org-ci.yml@"
                 + "a" * 40
                 + "\n",
+                ["sonarcloud.yml"],
+            ),
+            "a second pinned step": (
+                "sonarcloud.yml",
+                dispatch + edge + edge.replace("a" * 40, "b" * 40),
                 ["sonarcloud.yml"],
             ),
             "a moving ref": (
