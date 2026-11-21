@@ -53,9 +53,9 @@ dev = [
     # installs them through floating fallback pip commands outside uv.lock.
     "pytest-xdist==3.8.0",
     "pytest-timeout==2.4.0",
-    "bandit==1.9.4",
-    "pip-audit==2.10.1",
-    "pre-commit==4.6.2",
+    "bandit==1.8.6",
+    "pip-audit==2.9.0",
+    "pre-commit==4.4.0",
 ]
 # Portable UI Operator / AWS secrets resolve — NOT required for make pr.
 # Install: uv sync --extra ui-operator && playwright install

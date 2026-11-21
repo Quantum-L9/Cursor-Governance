@@ -203,7 +203,7 @@ jobs:
         if: steps.admit.outputs.apply == 'true'
         run: |
           set -euo pipefail
-          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.13.8
           bash ops/scripts/ensure_gov_python.sh "$PWD"
 
       - name: Tests with coverage (Cobertura XML)
