@@ -47,13 +47,19 @@ def test_shipped_onboarding_is_structural_and_unbound() -> None:
     verdict = oauth.validate_onboarding(document)
     assert verdict["status"] == "unbound"
     assert verdict["errors"] == []
-    assert "issuer.domain" in verdict["binding_gaps"]
+    # The issuer was read from the live protected-resource metadata, so it is
+    # bound even though the Cursor and Claude clients are not.
+    assert "issuer.domain" not in verdict["binding_gaps"]
     assert "clients.cursor-native.client_id" in verdict["binding_gaps"]
     assert "clients.claude-account-connector.client_id" in verdict["binding_gaps"]
+    assert "clients.manus-native.client_id" not in verdict["binding_gaps"]
     assert "resource.identifier" not in verdict["binding_gaps"]
-    assert document["issuer"]["domain"] is None
+    assert document["issuer"]["domain"] == "quantum-ai-partners.us.auth0.com"
+    assert document["issuer"]["issuer_url"] == "https://quantum-ai-partners.us.auth0.com/"
     assert document["resource"]["identifier"] == PUBLISHED_RESOURCE
     assert document["clients"]["cursor-native"]["client_id"] is None
+    assert document["clients"]["manus-native"]["client_id"]
+    assert document["clients"]["manus-native"]["redirect_uris"] == [oauth.MANUS_REDIRECT_URI]
     assert document["pkce"] == {"required": True, "method": "S256", "plain_forbidden": True}
     assert document["scopes"] == ["memory.read", "memory.write"]
     assert oauth.contains_secret(document) is False
@@ -109,6 +115,12 @@ def test_malformed_onboarding_and_package_entry_fail_closed() -> None:
     document = _bound()
     document["clients"]["cursor-native"]["redirect_uris"] = ["https://evil.example/callback"]
     assert "cursor-native.redirect_uris" in oauth.structural_errors(document)
+    document = _bound()
+    document["clients"]["manus-native"]["redirect_uris"] = ["https://manus.im.evil.example/cb"]
+    assert "manus-native.redirect_uris" in oauth.structural_errors(document)
+    document = _bound()
+    document["clients"]["manus-native"]["client_secret"] = "synthetic-secret"
+    assert "manus-native.client_secret" in oauth.structural_errors(document)
     document = _bound()
     entry = _entry(auth={"CLIENT_ID": CURSOR_CLIENT, "scopes": ["memory.read"]})
     assert oauth.authorize_cursor_package_entry(entry, document)["status"] == "malformed"
