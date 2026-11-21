@@ -1,9 +1,51 @@
-# CURSOR_CANARY result: `CURSOR_CANARY_BLOCKED`
+# CURSOR_CANARY result: `CURSOR_CANARY_PASS`
 
-Lane CG-CUTOVER item 5, 2026-11-20, against `CURSOR_CANARY.md` Gates 0 to 4. This is a campaign
-report label, not a canonical L9 state. Fleet rollout and consumer-check retirement stay closed.
+## Re-run on the PIN-ADVANCE-3 pins, 2026-11-21 (outranks every earlier verdict below)
 
-## Verdict
+Lane CG-CANARY-PASS (X5), against `CURSOR_CANARY.md` Gates 0 to 4. A gate is PASS only where its
+evidence holds on a promoted revision; otherwise the exact blocker is named.
+
+### Bound revisions
+
+| Item | Value |
+|---|---|
+| Core `main` | `4aa7f2b` (#325, instance bundles uploaded); org-ci activated SDK `4a887396` in #324 (`12befe6`). The runs below use Core actions `284a5eb6f55828ab37f992c783aa3ed2273f3213` (#323), an ancestor of Core `main` |
+| SDK provisioned by Core | `4a887396990a59ffb4a7108790b2fa1005c7865d` (SDK `main`: CENTRAL-DIFF #144, scoped consumer rulepack #136 / ADR 0021, waiver ledger #138) |
+| Organization ruleset 21895545 | required workflow `l9-ci-core/.github/workflows/org-ci.yml@refs/heads/main`; required check `Analyze (central Core)` |
+| Repository ruleset 20855699 | required: Lint and Type Check, Test Suite, Root-file append-only gate, governance-self-check, repo-hygiene |
+| Consumer rulepack declaration | `.l9/semgrep-consumer-rules.yaml` and `metadata.l9.canonical_rule_id` on the four `.semgrep/l9-pr.yml` rules (#1114, merged) |
+| Real consumer evaluation | this PR, #1112, head `6ef0ae3566fe00ba34541f7a1c1f34918a7e876f` (merged with `main` `d7e929f2`) |
+| Canary scratch head | PR [#1096](https://github.com/Quantum-L9/Cursor-Governance/pull/1096) (DO NOT MERGE): `ebd6255c797c8ea0dbc073e951c0b5d5ad057959` (Semgrep and consumer witnesses; Biome fixture held out for the run, restored at `81eb5f0e`), `8043a32e` (Biome witness) |
+
+### Verdict per gate
+
+| Gate | Verdict | Evidence |
+|---|---|---|
+| 0. Prerequisites and permission | **PASS** | Core and SDK revisions above are on their `main`. No merge, ruleset or permission change was made by this lane |
+| 1. Consumer baseline | **PASS** | [Run 44876362790](https://github.com/Quantum-L9/Cursor-Governance/actions/runs/44876362790/job/136761824478) on #1112 `6ef0ae35`: `Analyze (central Core)` success. All six required checks green on that head. CENTRAL-DIFF against baseline `d7e929f2`: 0 new, 79 pre-existing; every classification is `baseline_status: pre_existing, mode: advisory` (71 `hygiene.python.broad-except`, 4 `actions.env-sourced-argv`, 4 defaulted), "4 blocking reported as advisory"; gate `blocking_count: 0`. CodeQL: `codeql.yml` run 44870443753 (`089214e4`), `codeql-nightly.yml` run 44731752123 (`263216c1`), reused |
+| 2.1 Ruleset selected org-ci and evaluated the exact head | **PASS** | Run 44876362790 on #1112 `6ef0ae35`; [run 44879445868](https://github.com/Quantum-L9/Cursor-Governance/actions/runs/44879445868/job/136771282572) on #1096 `ebd6255c` |
+| 2.2 Every applicable language has an instance or a status | **PASS** | Both runs plan `semgrep:consumer:quantum-l9.cursor-governance`, `semgrep:language:python` and `semgrep:language:typescript`, each "required by central governance"; `shell` visible, unsupported, not planned. On #1112 all three pass; the aggregate passes |
+| 2.3 Central config resolved from Core/SDK, not copied | **PASS** | SDK `4a887396` provisioned by Core; Semgrep 1.171.0 from Core's lock; policy, identity maps and the waiver ledger under `.l9/runtime/` |
+| 2.4 Cursor-owned rules effective in a scoped execution | **PASS** | Run 44879445868, artifact `l9-instance-bundles-org-semgrep-1` (id 14697073422), `consumer-quantum-l9.cursor-governance/`: the `.consumer.json` record loads all four rule ids from `.semgrep/l9-pr.yml` (owner Quantum-L9/Cursor-Governance); the finding bundle has exactly 4 findings, one per rule, all on the planted lines: `CONSUMER-CURSOR-GOVERNANCE-NO-SEMGREP-APP-TOKEN-IN-CHILD-ENV` at `canary/ci_ul/consumer_token_bad.py:9`; `…-MEMORY-BOUNDARY-NO-NETWORK-OR-PROVIDER-TRANSPORT` at `environment/agents/adapters/claude-code/memory/canary_ci_ul/memory_boundary_bad.py:10`; `…-MEMORY-BOUNDARY-SPAWN-ONLY-THROUGH-THE-BINDING` and `…-MEMORY-BOUNDARY-NO-SHELL-STRING-SPAWN` at the same file, line 13. Coverage complete (884 files), gate `fail`, `blocking_count: 4`; instance `fail` in the aggregate, job failure. Scope holds: on #1112 the same required consumer instance passes (gate pass, no blocking finding), so no rule fires outside its scope on the real tree, and the central python instance raises nothing on the memory fixture |
+| 2.5 Native and repo-owned checks report correctly | **PASS** | Required checks green on #1112 `6ef0ae35`; CodeQL and Sonar keep their own owners and are not described as SDK-executed |
+| 3. Known-bad and known-good, central rule | **PASS** | Run 44879445868: python instance, 3 new blocking `L9-PYTHON-SUBPROCESS-SHELL-TRUE` at `central_rule_bad.py:7`, `override_nosemgrep.py:7`, `override_ignored_dir/central_rule_bad_ignored.py:7`; `central_rule_good.py` no finding |
+| 3. Cursor-specific memory/transport rule | **PASS** | Gate 2.4 row: the three memory-boundary rules fire centrally on the planted known-bad and nowhere else |
+| 3. Consumer override refused | **PASS** | The same run: inline `# nosemgrep` and a consumer `.semgrepignore` directory do not hide the central finding (`nosem: disabled`, `consumer_semgrepignore.honored: false` in `scan_scope`). Tool versions come from Core's locks |
+| 3. Missing or failing required provider is FAIL or INCOMPLETE | **PASS** | 2026-11-20 runs 44825395263 and 44826737909: a required instance that could not complete ended `incomplete`, exit 6, job failure; a failing consumer instance now fails the aggregate (run 44879445868) |
+| 3. Biome known-bad | **PASS** | `8043a32e`: [run 44877881561](https://github.com/Quantum-L9/Cursor-Governance/actions/runs/44877881561/job/136766507316) `BIOME_STATUS: findings` on `canary/ci_ul/biome_bad.json`, job failure; SDK Biome job 136766508354 failure on the same file |
+| 3. CodeQL PR default and nightly extended remain wired | **PASS** | Receipts reused, not forced (runs 44870443753 and 44731752123) |
+| 3. Before/after comparison | **PASS** | Findings on `main` went from 29 blocking (2026-11-20) to 0 new and 79 pre-existing advisory; the consumer rules moved from local-only to a required central instance; one Semgrep instance on 2026-11-20 against three planned instances now |
+| 4. Promotion and rollout decision | **PASS** | Central known-bad/known-good parity and a real required Cursor evaluation are both demonstrated above. Consumer checks are not retired by this file; retirement follows `REQUIRED_CHECK_CUTOVER.md` and its parity receipts |
+
+**Overall: `CURSOR_CANARY_PASS`.**
+
+Open, not gating, with owners:
+
+- SDK normalization: the central bundle on both runs reports coverage `complete` while carrying the limitation "Semgrep report error: Other syntax error at line tests/ops/secrets/test_gh_npm.py:1". The limitation is visible, but a file Semgrep could not parse is counted as covered (the class of the 2026-11-20 B5).
+- Core: the consumer execution receives no `--baseline-commit`, so a pre-existing consumer finding would block where a central one is advisory.
+- Cursor-Governance: local `make pr` cannot judge a consumer-rule expect-fail fixture (`run_pr_security.sh` `run_semgrep` ignores the fixture manifest); the witnesses above were pushed to the canary branch directly on CTO instruction.
+
+## Verdict (2026-11-20, superseded by the re-run above)
 
 `CURSOR_CANARY_BLOCKED`. The real Cursor-Governance evaluation runs Core's required workflow on the
 exact head and fails closed on a central known-bad, a Biome known-bad and an incomplete required
