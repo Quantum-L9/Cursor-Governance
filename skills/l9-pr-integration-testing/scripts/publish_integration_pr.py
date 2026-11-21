@@ -153,8 +153,41 @@ def assess_evidence(evidence: Path, candidate: Path, retest_dir: Path) -> dict:
     }
 
 
+# A governance tree is recognised by the same identity files as
+# ops/autonomy/resolve_execution_gate.py and ops/scripts/lib/workspace_kind.sh.
+GOVERNANCE_IDENTITY_FILES = (
+    "CANONICAL_LAW.md",
+    "skills/AUTONOMY_MANIFEST.yaml",
+    "rules/RULES-MANIFEST.yaml",
+    "ops/scripts/check_governance_wiring.sh",
+    "ops/autonomy/l4_local.py",
+)
+
+
+def governance_root(environment: dict[str, str] | None = None) -> Path:
+    """The governance tree whose make pr publishes, verified before anything runs.
+
+    L9_GOVERNANCE_DIR (else $HOME/.cursor-governance) names it. The named
+    directory runs code here (its venv interpreter, its L4 CLI, its Makefile),
+    so a value that is not a governance identity tree with a locked venv is
+    refused instead of executed.
+    """
+    env = os.environ if environment is None else environment
+    raw = env.get("L9_GOVERNANCE_DIR") or str(Path.home() / ".cursor-governance")
+    try:
+        gov = Path(raw).expanduser().resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise PublishRefusal(f"governance root {raw!r} does not exist") from exc
+    missing = [rel for rel in GOVERNANCE_IDENTITY_FILES if not (gov / rel).is_file()]
+    if missing:
+        raise PublishRefusal(f"{gov} is not a governance tree (missing {', '.join(missing)})")
+    if not (gov / ".venv" / "bin" / "python").is_file():
+        raise PublishRefusal(f"{gov} has no locked governance venv (.venv/bin/python)")
+    return gov
+
+
 def open_via_make_pr(candidate: Path, base_ref: str) -> int:
-    gov = Path(os.environ.get("L9_GOVERNANCE_DIR", Path.home() / ".cursor-governance"))
+    gov = governance_root()
     py = gov / ".venv" / "bin" / "python"
     l4 = gov / "ops" / "autonomy" / "l4_local.py"
     env = os.environ.copy()
