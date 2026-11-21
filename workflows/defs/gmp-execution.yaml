@@ -53,17 +53,19 @@ steps:
     name: "🧠 Memory Read (MANDATORY)"
     type: shell
     config:
+      # Each command is an argument list, run without a shell. A memory search
+      # that fails does not stop the workflow (allow_failure).
       commands:
+        - ["echo", "=== 🧠 MEMORY READ ==="]
         # Search for related work
-        - |
-          echo "=== 🧠 MEMORY READ ===" &&
-          python3 ${memory_client} search "${task_keywords}" 2>/dev/null || echo "⚠️ Memory unavailable - continuing without context"
+        - argv: ["python3", "${memory_client}", "search", "${task_keywords}"]
+          allow_failure: true
         # Search for lessons
-        - |
-          python3 ${memory_client} search "lessons errors ${component}" 2>/dev/null || true
+        - argv: ["python3", "${memory_client}", "search", "lessons errors ${component}"]
+          allow_failure: true
         # Search for patterns
-        - |
-          python3 ${memory_client} search "${domain} patterns" 2>/dev/null || true
+        - argv: ["python3", "${memory_client}", "search", "${domain} patterns"]
+          allow_failure: true
     checkpoint: false # Don't pause, but log results
 
   # ==========================================================================
@@ -93,8 +95,8 @@ steps:
     depends_on: [scope_lock]
     config:
       checks:
-        - type: shell
-          command: "echo 'Baseline: Verify files exist and line ranges are correct'"
+        - type: command
+          argv: ["echo", "Baseline: Verify files exist and line ranges are correct"]
 
   # ==========================================================================
   # PHASE 2-3: IMPLEMENT
@@ -126,7 +128,8 @@ steps:
     depends_on: [implement]
     config:
       commands:
-        - "echo '=== VALIDATION PHASE ===' && echo 'Run: python3 -m py_compile {modified_files}'"
+        - ["echo", "=== VALIDATION PHASE ==="]
+        - ["echo", "Run: python3 -m py_compile {modified_files}"]
 
   - id: validate_gate
     name: "Validation Gate"
@@ -154,10 +157,16 @@ steps:
     depends_on: [validate_gate]
     config:
       commands:
-        - |
-          echo "=== 🧠 MEMORY WRITE ===" &&
-          echo "Execute: python3 ${memory_client} write 'GMP summary' --kind lesson" &&
-          python3 ${memory_client} write "${gmp_id}: Completed ${task_keywords} changes. Tags: gmp, ${component}" --kind lesson 2>/dev/null || echo "⚠️ Memory write failed - continuing"
+        - ["echo", "=== 🧠 MEMORY WRITE ==="]
+        - ["echo", "Execute: python3 ${memory_client} write 'GMP summary' --kind lesson"]
+        - argv:
+            - "python3"
+            - "${memory_client}"
+            - "write"
+            - "${gmp_id}: Completed ${task_keywords} changes. Tags: gmp, ${component}"
+            - "--kind"
+            - "lesson"
+          allow_failure: true
 
   # ==========================================================================
   # PHASE 6: FINALIZE — GENERATE REPORT WITH SCRIPT
@@ -169,26 +178,30 @@ steps:
     config:
       commands:
         # MANDATORY: Generate report using the canonical script
-        - |
-          echo "=== GENERATING GMP REPORT ===" &&
-          python3 scripts/generate_gmp_report.py \
-            --task "${task_keywords}" \
-            --tier "${tier}_TIER" \
-            --summary "GMP execution via DAG enforcer" \
-            --update-workflow \
-            --skip-verify 2>/dev/null || echo "⚠️ Report generation failed - generate manually"
-        - |
-          echo "" &&
-          echo "=== GMP COMPLETE ===" &&
-          echo "GMP ID: ${gmp_id}" &&
-          echo "Tier: ${tier}" &&
-          echo "Status: ✅ PASS" &&
-          echo "" &&
-          echo "Memory Operations:" &&
-          echo "  - Read: ✅ Context injected" &&
-          echo "  - Write: ✅ Lessons saved" &&
-          echo "" &&
-          echo "Report: Check reports/GMP-Report-*.md for generated report"
+        - ["echo", "=== GENERATING GMP REPORT ==="]
+        - argv:
+            - "python3"
+            - "scripts/generate_gmp_report.py"
+            - "--task"
+            - "${task_keywords}"
+            - "--tier"
+            - "${tier}_TIER"
+            - "--summary"
+            - "GMP execution via DAG enforcer"
+            - "--update-workflow"
+            - "--skip-verify"
+          allow_failure: true
+        - ["echo", ""]
+        - ["echo", "=== GMP COMPLETE ==="]
+        - ["echo", "GMP ID: ${gmp_id}"]
+        - ["echo", "Tier: ${tier}"]
+        - ["echo", "Status: ✅ PASS"]
+        - ["echo", ""]
+        - ["echo", "Memory Operations:"]
+        - ["echo", "  - Read: ✅ Context injected"]
+        - ["echo", "  - Write: ✅ Lessons saved"]
+        - ["echo", ""]
+        - ["echo", "Report: Check reports/GMP-Report-*.md for generated report"]
 
   - id: commit_gate
     name: "Commit Gate"
@@ -210,7 +223,7 @@ steps:
     continue_on_fail: true
     config:
       commands:
-        - "echo '✅ GMP workflow complete'"
+        - ["echo", "✅ GMP workflow complete"]
 # tags: ["agent-config", "configuration", "operations", "tool-config", "utility", "workflow", "workflows"]
 # keywords: ["description", "execution", "gmp", "name", "steps", "variables"]
 # last_modified: "2026-01-31T20:47:23Z"

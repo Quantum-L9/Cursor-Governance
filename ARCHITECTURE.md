@@ -92,9 +92,7 @@ Index only. Job tables and pin versions live in the workflow files and `AGENTS.m
 
 **Not a PR merge gate** (schedule, dispatch, or post-merge janitor):
 
-- `lint-autofix.yml` — `push` to `main` + `workflow_dispatch` only
 - `branch-hygiene.yml` — schedule / dispatch
-- `on-org-update.yml` — `repository_dispatch` / dispatch
 - `codeql-reusable.yml` — `workflow_call` only (not a standalone trigger)
 - `codeql-nightly.yml` — schedule / dispatch on `main` only. Runs `security-extended`. Not a pull-request check and not a required check.
 

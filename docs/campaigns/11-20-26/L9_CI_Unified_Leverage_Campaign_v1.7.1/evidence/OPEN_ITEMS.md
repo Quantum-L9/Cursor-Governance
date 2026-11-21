@@ -74,7 +74,32 @@ is public, so rows about credentials carry counts and actions only, never locati
 | P5 | Turn off Copilot automatic pull-request review. | GitHub organization or repository Copilot settings | Any time. | It fails on quota on every pull request and has produced no review since 2026-11-05. |
 | P6 | Turn off "Automatically import new GitHub repositories" in the Sonar organization binding. | https://sonarcloud.io/organizations/quantum-l9/edit | Any time. | T19. |
 
+## Close-out checklist
+
+The campaign closes when every row is DONE with evidence. Side work (hosted hook memory, secret
+registration, the Claude Code host default) does not block close-out.
+
+| # | Item | Owner | Done when |
+|---|---|---|---|
+| X1 | Promotion is live: the required job runs current Core and SDK code | L2 (L2f step 1 merged as Core #292; step 2 open) | `Analyze (central Core)` on a consumer PR shows Core main and the advanced SDK pin |
+| X2 | Core consumer gaps closed: security scans in org-ci, blocking toolchain alignment, conflict-marker step, Cursor-Governance deep entrypoint, supply-chain lane (HARVEST_LEDGER C1 to C5) | L2 | Each merged and observed on a Cursor-Governance PR |
+| X3 | One source of tool versions reaches Cursor-Governance, Core, SDK, l9-graphiti-memory and IB-Odoo_19; Dependabot cannot bump a Core-owned tool | CG-CUTOVER, L1 (SDK #129), G2 (IB-Odoo_19 #560), L2 | Pins equal Core's lock and the blocking alignment check passes |
+| X4 | Expensive checks run nightly only where code changed | L2 (planner merged; apply needs the operator's GitHub App) | The planner dispatches only changed repositories, including Cursor-Governance's Sonar; and nightly findings land somewhere owned (row 24): code-scanning alerts plus one rolling `Nightly findings` issue per repository, proven by one nightly run on Cursor-Governance |
+| X5 | Cursor-Governance is cut over: dead and duplicate CI retired, required-check plan written, `CURSOR_CANARY_PASS` with evidence | CG-CUTOVER | `evidence/CURSOR_CANARY_RESULT.md` reports PASS against CURSOR_CANARY.md Gates 0-4 |
+| X6 | Secondary canaries recorded (CEG, EIE) | C-CEG, C-EIE | Gate 2-3 verdicts with run ids; findings in CI_CONFIG_FINDINGS |
+| X7 | Harvest ledgered with destinations | CTO, then each owner lane | Index in `evidence/HARVEST_LEDGER.md`; every row promoted during this campaign (at least C1 to C5) carries the full `HARVEST.md` fields and a delivery receipt. Rows not promoted stay as backlog for the rollout campaign |
+| X8 | Merge queue on Cursor-Governance main, driven by `/l9-pr-remediation` (operator 2026-11-21: no separate merge script) | CTO; skill enqueue support assigned (X8-QUEUE) | All six required checks already run on `merge_group` (verified 02:30Z). Today `stack_safe_merge.py` only merges directly, which a queue refuses, and `merge_gate.py` denies `ccr/auto_merge`, the REST enqueue route. Done when the skill enqueues a granted, green head, the ruleset carries the queue, and the operator's `/l9-pr-remediation Quantum-L9/Cursor-Governance` lands at least two PRs through it with merge_group run ids recorded |
+| X9 | Close-out evidence | CTO | PROOF.md filled from real runs; this register closed |
+| X10 | CTO CI-run audit: bugs, duplicate and overlapping checks, misalignment with Core, and expensive per-PR checks that belong in nightly | CTO (operator directive 2026-11-21 02:30Z) | Each check on a green Cursor-Governance PR head and its merge-queue run is classified keep, retire (duplicate), fix (bug or misalignment) or move to nightly, with seconds measured from check runs; each retire or move is merged, or handed to the operator as a settings change with a click path; the measured per-PR delta goes in the receipt |
+
 ## Recorded operator decisions
+
+- 2026-11-21, about 02:45Z: a pull request is judged only on the code it brings in; only the nightly run scans the whole repository. This applies to every tool. On a PR a check may read the whole tree when its analysis needs context (type checking, taint rules), but only findings the change introduces block. A finding already present at the merge-base is reported and does not block. Unknown (no base, failed or incomplete scan) still blocks. Exceptions: dependency and CVE audits run on a PR only when a manifest or lock file changes, and nightly for everything; affected-test selection falls back to the full suite when it cannot prove its scope. Pre-existing findings go to the nightly report with an owner, so debt stays visible. Local parity: lane PARITY-DIFF. Central org-ci: queued for the SDK and Core lanes. Recorded as CI_CONFIG_FINDINGS row 23.
+- 2026-11-20, about 22:20Z: only checks that protect working or secure code may block a pull-request merge. Housekeeping checks (CODEOWNERS and file presence, docs and link checks, PR size, header conventions, toolchain-version drift and similar debt) report and never block. Recorded as CI_CONFIG_FINDINGS row 19.
+- 2026-11-20, about 22:15Z: IB-Odoo_19 is proprietary to Quantum AI Partners, which clears its CI tooling for promotion into Quantum-L9 repositories (HARVEST_LEDGER S1a-S1f).
+
+- 2026-11-20, about 21:50Z: close-out scope. The campaign includes cutting **Cursor-Governance** over to organization CI, debugging it and proving it works, so that the organization is ready to roll out. Rolling out to the other repositories is not part of this campaign; the harvest ledger's rows for EIE, CEG and IB-Odoo_19 are that campaign's starting backlog.
+- 2026-11-20, about 21:40Z: harvest custom CI from Cursor-Governance, EIE, CEG and IB-Odoo_19 and move it upstream, so the organization benefits and consumers stop depending on their own copies. Ledger: `evidence/HARVEST_LEDGER.md`.
 
 - 2026-11-20, about 20:35Z: one source of tool versions. Core's toolchain lock must fully reach every repository before the campaign is DONE, and Dependabot may never create drift for a locked tool. The organization is locked to Python 3.12 (Core lock 3.12.14).
 - 2026-11-20, about 20:20Z: L2f authorized ("yes yes YES"): re-pin `org-ci.yml` to Core main, wire plan and aggregate into the required job, advance the SDK pin, add the ancestry guard. Rulesets and branch protection stay operator-only.

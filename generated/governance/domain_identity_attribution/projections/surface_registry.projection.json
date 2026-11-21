@@ -6,7 +6,7 @@
   "payload": {
     "alias_rules": {
       "alias_kinds": {
-        "historical_surface_alias": "A former or abbreviated SurfaceIdentity value that canonicalizes to one current surface when read as a surface value."
+        "historical_surface_alias": "A former or abbreviated SurfaceIdentity value that canonicalizes to exactly one canonical surface when read as a surface value. It canonicalizes to a current surface, or to the successor of a superseded one; an alias of a retired surface without a successor keeps that retired coordinate and admits no new use."
       },
       "alias_meaning_is_bounded_to_surface_identity": true,
       "alias_never_shadows_a_canonical_surface": true,
@@ -38,7 +38,7 @@
       {
         "alias": "claude-mobile",
         "alias_kind": "historical_surface_alias",
-        "canonical": "claude-code-mobile"
+        "canonical": "claude-code-web"
       }
     ],
     "surfaces": [
@@ -48,29 +48,32 @@
         "status": "current"
       },
       {
-        "description": "The Claude Code desktop application surface. The same string is a historical ActorIdentity alias in actor_registry.yaml; equal strings do not imply equal identity kinds.",
+        "description": "Registered in error as a Claude Code desktop application surface. Retired by owner decision on 2026-11-20 with no successor; Claude Code has exactly two surfaces, claude-code-cli and claude-code-web. The coordinate stays addressable for historical resolution and admits no new use. The same string is a historical ActorIdentity alias in actor_registry.yaml; equal strings do not imply equal identity kinds.",
         "id": "claude-code-desktop",
-        "status": "current"
+        "status": "retired"
       },
       {
-        "description": "The Claude Code terminal command-line surface.",
+        "description": "The Claude Code local command-line surface, including the command line run inside an IDE.",
         "id": "claude-code-cli",
         "status": "current"
       },
       {
-        "description": "The Claude Code IDE-extension surface.",
+        "description": "Registered in error as a Claude Code IDE-extension surface. Retired by owner decision on 2026-11-20 with no successor; the command line run inside an IDE is claude-code-cli. The coordinate stays addressable for historical resolution and admits no new use.",
         "id": "claude-code-ide",
-        "status": "current"
+        "status": "retired"
       },
       {
-        "description": "The Claude Code hosted web surface.",
+        "description": "The Claude Code hosted cloud-session surface, whichever client starts the session, a phone included.",
         "id": "claude-code-web",
         "status": "current"
       },
       {
-        "description": "The Claude Code mobile surface. The same string is a historical ActorIdentity alias in actor_registry.yaml; equal strings do not imply equal identity kinds.",
+        "description": "Registered as a separate Claude Code mobile surface. Superseded by owner decision on 2026-11-20 by claude-code-web; a cloud session started from a phone is a Claude Code web session. The same string is a historical ActorIdentity alias in actor_registry.yaml; equal strings do not imply equal identity kinds.",
         "id": "claude-code-mobile",
-        "status": "current"
+        "status": "superseded",
+        "successor_refs": [
+          "l9.surface-registry/global@1#claude-code-web"
+        ]
       },
       {
         "description": "The Codex hosted cloud surface.",
@@ -99,10 +102,10 @@
       }
     ]
   },
-  "projection_digest": "sha256:3dffd61a7d592050a5635e18e0b4ad7d5bf6b37451428f3241309544d5770d9e",
+  "projection_digest": "sha256:bd7982d1e3fb333e3baea6f51fdafc5cf5c4d46f2e22922ff42e2573b60d8b85",
   "projection_profile_digest": "sha256:062a28729209c9857cf70f3068ea6d565bb1ce54c765ace52b92afaa5d09e5b6",
   "projection_profile_ref": "l9.projection/identity-attribution@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:d7200409ff02141a274ff8c9221d31429f6a6fae27539e6d9c8d20f1a6eba988",
+  "source_digest": "sha256:761b6cb77396e98a4b1d0420d7e6cd24af21f5fdd7cd273ffae3903d85af2245",
   "source_ref": "l9.source/surface-registry@1"
 }

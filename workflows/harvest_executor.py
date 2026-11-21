@@ -190,15 +190,20 @@ class HarvestExecutor:
             STATE_FILE.unlink()
         self.state = None
 
-    def _run_shell(self, cmd: str, capture: bool = True) -> tuple[int, str, str]:
-        """Run shell command."""
-        result = subprocess.run(  # noqa: S602 - shell=True required for DAG executor
-            cmd,
-            shell=True,
-            cwd=REPO_ROOT,
-            capture_output=capture,
-            text=True,
-        )
+    def _run(self, argv: list[str], *, stdout_path: Path | None = None) -> tuple[int, str, str]:
+        """Run one command as an argument list, never through a shell.
+
+        Paths and messages here come from harvested documents and state files,
+        so none of them is ever parsed by a shell. ``stdout_path`` replaces a
+        shell redirect.
+        """
+        if stdout_path is not None:
+            with stdout_path.open("w", encoding="utf-8") as out:
+                result = subprocess.run(
+                    argv, cwd=REPO_ROOT, stdout=out, stderr=subprocess.PIPE, text=True, check=False
+                )
+            return result.returncode, "", result.stderr
+        result = subprocess.run(argv, cwd=REPO_ROOT, capture_output=True, text=True, check=False)
         return result.returncode, result.stdout, result.stderr
 
     def _print_header(self, title: str):
@@ -605,8 +610,10 @@ class HarvestExecutor:
                 end = item["source_end"] - 1  # Skip closing ```
 
             # Use sed to extract lines
-            cmd = f'sed -n "{start},{end}p" "{source_path}" > "{target_file}"'
-            code, _stdout, stderr = self._run_shell(cmd)
+            code, _stdout, stderr = self._run(
+                ["sed", "-n", f"{int(start)},{int(end)}p", str(source_path)],
+                stdout_path=target_file,
+            )
 
             if code == 0 and target_file.exists():
                 item["status"] = "extracted"
@@ -651,8 +658,7 @@ class HarvestExecutor:
             dest = REPO_ROOT / deploy_target
             dest.parent.mkdir(parents=True, exist_ok=True)
 
-            cmd = f'cp "{staging_file}" "{dest}"'
-            code, _stdout, stderr = self._run_shell(cmd)
+            code, _stdout, stderr = self._run(["cp", "--", str(staging_file), str(dest)])
 
             if code == 0:
                 deployed.append(str(dest))
@@ -703,7 +709,7 @@ class HarvestExecutor:
         if py_files:
             passed = 0
             for f in py_files:
-                code, _stdout, stderr = self._run_shell(f'python3 -m py_compile "{f}"')
+                code, _stdout, stderr = self._run([sys.executable, "-m", "py_compile", str(f)])
                 if code == 0:
                     passed += 1
                     print(f"✅ [py] {Path(f).name}")
@@ -722,7 +728,7 @@ class HarvestExecutor:
         if json_files:
             passed = 0
             for f in json_files:
-                code, _stdout, stderr = self._run_shell(f'python3 -m json.tool "{f}" > /dev/null')
+                code, _stdout, stderr = self._run([sys.executable, "-m", "json.tool", str(f)])
                 if code == 0:
                     passed += 1
                     print(f"✅ [json] {Path(f).name}")
@@ -741,8 +747,13 @@ class HarvestExecutor:
         if yaml_files:
             passed = 0
             for f in yaml_files:
-                code, _stdout, stderr = self._run_shell(
-                    f"python3 -c \"import yaml; yaml.safe_load(open('{f}'))\" 2>&1"
+                code, _stdout, stderr = self._run(
+                    [
+                        sys.executable,
+                        "-c",
+                        "import sys, yaml; yaml.safe_load(open(sys.argv[1]))",
+                        str(f),
+                    ]
                 )
                 if code == 0:
                     passed += 1
@@ -762,8 +773,13 @@ class HarvestExecutor:
         if toml_files:
             passed = 0
             for f in toml_files:
-                code, _stdout, stderr = self._run_shell(
-                    f"python3 -c \"import tomllib; tomllib.load(open('{f}', 'rb'))\" 2>&1"
+                code, _stdout, stderr = self._run(
+                    [
+                        sys.executable,
+                        "-c",
+                        "import sys, tomllib; tomllib.load(open(sys.argv[1], 'rb'))",
+                        str(f),
+                    ]
                 )
                 if code == 0:
                     passed += 1
@@ -815,32 +831,38 @@ class HarvestExecutor:
         todo_args = []
         for item in self.state.items[:10]:
             src_range = f"{item['source_start']}-{item['source_end']}"
-            todo_args.append(
-                f'--todo "H{item["number"]}|{item["target_file"]}|{src_range}|'
-                f'EXTRACT|{item["status"]}"'
-            )
+            todo_args += [
+                "--todo",
+                f"H{item['number']}|{item['target_file']}|{src_range}|EXTRACT|{item['status']}",
+            ]
 
         # Build validation items
         val_args = []
         for v in self.state.validation_results:
-            val_args.append(f'--validation "{v["check"]}|{v["status"]}"')
+            val_args += ["--validation", f"{v['check']}|{v['status']}"]
 
         if not todo_args:
-            todo_args.append('--todo "H1|harvest|*|EXTRACT|complete"')
+            todo_args += ["--todo", "H1|harvest|*|EXTRACT|complete"]
         if not val_args:
-            val_args.append('--validation "extraction|✅"')
+            val_args += ["--validation", "extraction|✅"]
 
         source_name = Path(self.state.source_document).stem
-        cmd = f'''python3 {REPORT_GENERATOR} \
-            --task "Harvest: {source_name[:30]}" \
-            --tier RUNTIME_TIER \
-            {" ".join(todo_args)} \
-            {" ".join(val_args)} \
-            --summary "Code harvesting via /harvest DAG executor" \
-            --skip-verify 2>/dev/null || echo "Report generation skipped"'''
+        argv = [
+            sys.executable,
+            str(REPORT_GENERATOR),
+            "--task",
+            f"Harvest: {source_name[:30]}",
+            "--tier",
+            "RUNTIME_TIER",
+            *todo_args,
+            *val_args,
+            "--summary",
+            "Code harvesting via /harvest DAG executor",
+            "--skip-verify",
+        ]
 
         print("Generating report...")
-        _code, stdout, _stderr = self._run_shell(cmd)
+        _code, stdout, _stderr = self._run(argv)
 
         # Extract report path
         for line in stdout.split("\n"):
@@ -868,9 +890,9 @@ class HarvestExecutor:
 
         # Stage deployed files (real repo paths) + staging dir
         for f in self.state.files_deployed:
-            self._run_shell(f'git add "{f}"')
+            self._run(["git", "add", "--", str(f)])
         if self.state.output_dir:
-            self._run_shell(f'git add "{self.state.output_dir}"')
+            self._run(["git", "add", "--", str(self.state.output_dir)])
 
         # Create commit message
         source_name = Path(self.state.source_document).stem
@@ -887,13 +909,13 @@ class HarvestExecutor:
         # finding to repair, not a flag to add (contract
         # l9-commit-verification-integrity); a hook failure lands in the
         # `else` below and is reported rather than silently committed.
-        cmd = f'git commit -m "{commit_msg}" 2>&1 || true'
-        code, stdout, _stderr = self._run_shell(cmd)
+        code, stdout, stderr = self._run(["git", "commit", "-m", commit_msg])
+        stdout += stderr
 
         if "nothing to commit" in stdout.lower():
             print("✅ Nothing to commit — working tree clean")
         elif code == 0 or "file changed" in stdout.lower():
-            _code, hash_out, _ = self._run_shell("git rev-parse --short HEAD")
+            _code, hash_out, _ = self._run(["git", "rev-parse", "--short", "HEAD"])
             self.state.commit_hash = hash_out.strip()
             print(f"✅ Committed: {self.state.commit_hash}")
             print(f"   Message: {commit_msg}")
