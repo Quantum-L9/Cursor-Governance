@@ -17,7 +17,7 @@ organization is ready to roll out. Rolling out to other repositories is a separa
 | X6 | Secondary canaries recorded | DONE (EIE) | EIE [#378](https://github.com/Quantum-L9/Enrichment.Inference.Engine/pull/378): run 1 (central run 44874376220) and run 2 (44878546690, job 136768547018) Gates 2-3 PASS; in run 2 only the 3 canary findings block and 33 pre-existing do not. CEG canary #517: earlier run recorded; not re-run on PIN-ADVANCE-3. |
 | X7 | Harvest ledgered with destinations | DONE | `HARVEST_LEDGER.md` index merged (#1091); full `HARVEST.md` fields for promoted rows C1-C5 merged ([#1118](https://github.com/Quantum-L9/Cursor-Governance/pull/1118)). |
 | X8 | Merge queue on Cursor-Governance main, driven by `/l9-pr-remediation` | OPEN: skill support merged; criterion not met (no queue on the ruleset; no PR landed through it with merge_group run ids; blocked on click-path 1) | Skill support merged ([#1109](https://github.com/Quantum-L9/Cursor-Governance/pull/1109)); throwaway proof PR #1113 ready (G2). `main` still has no `merge_queue` rule (checked 13:05Z). After click-path 1, G2 proves (iii) REST membership observable, (i) dequeue on push, (ii) REST DELETE dequeues; then `/l9-pr-remediation Quantum-L9/Cursor-Governance`. |
-| X9 | Close-out evidence | IN PROGRESS: `PROOF.md` filled from real runs (59 requirements: 10 PASS, 4 FAIL, 38 OPEN, 4 UNKNOWN, 3 out of scope); the register is not closed until each non-PASS row has a terminal disposition | This file, published through `make pr`. |
+| X9 | Close-out evidence | IN PROGRESS: `PROOF.md` filled from real runs (59 requirements: 11 PASS, 34 BLOCKED with owner and next action, 14 NOT_PROVEN incl. 3 out of scope; vocabulary per `00_LAUNCH_IN_CTO_MODE.md` step 7); the register is not closed until every BLOCKED and NOT_PROVEN row is resolved or accepted | This file, published through `make pr`. |
 | X10 | CTO CI-run audit | OPEN: findings and click-paths done; criterion not met (path-scoping and duplicate-trigger fixes not merged, operator settings not applied, measured per-PR delta NOT MEASURED) | See "CI-run audit" below; rows 20-29 in `CI_CONFIG_FINDINGS.md`. |
 
 ## What changed for every PR
@@ -59,9 +59,9 @@ Row 29 (new, governance): Core's `Control plane attestation` (`attest`) has fail
 
 Row 31 (new, coverage gap): Cursor-Governance has had **no Sonar analysis since 2026-11-20 16:23Z**. #1062 (`a95562c9`) made `sonarcloud.yml` dispatch-only, waiting on Core's nightly `mode=apply`; that workflow has 0 runs since (REST), because the nightly App cannot mint (click-path 7). Granting the App restores it; until then the gap is live.
 
-`PROOF.md` FAILs recorded (each needs an operator disposition, accept-as-exception or revert): CEG #522 retired local lint/contract jobs (`fc4711a2`, 2026-11-20 22:44Z) before `CURSOR_CANARY_PASS` existed (first-consumer blocker and P11); the #1096 canary witnesses were pushed directly on CTO instruction rather than through `make pr` (P6); #1062 removed the Sonar PR trigger before its replacement was proven (P13, row 31).
+`PROOF.md` rows BLOCKED on the operator for a disposition (accept as a recorded exception, or revert): CEG #522 retired local lint/contract jobs (`fc4711a2`, 2026-11-20 22:44Z) before `CURSOR_CANARY_PASS` existed (first-consumer blocker and P11); the #1096 canary witnesses were pushed directly on CTO instruction rather than through `make pr` (P6); #1062 removed the Sonar PR trigger before its replacement was proven (P13, row 31).
 
-Evidence corrections (REST, 2026-11-21 13:30Z): EIE #368 merged (`4324e0df`), not open as `OPEN_ITEMS.md` T-row 43 says; Core #312 (`63ff7da5`) and CEG #524 (`e1eb4f2d`) merged, not open as `HARVEST_LEDGER.md` says; T32's claim that CodeQL covers JavaScript in Cursor-Governance is wrong (PR and nightly CodeQL analyze `python` only).
+Evidence corrections (REST, read 2026-11-21 13:10-13:20Z): EIE #368 merged (`4324e0df`), not open as `OPEN_ITEMS.md` T-row 43 says; Core #312 (`63ff7da5`) and CEG #524 (`e1eb4f2d`) merged, not open as `HARVEST_LEDGER.md` says; T32's claim that CodeQL covers JavaScript in Cursor-Governance is wrong (PR and nightly CodeQL analyze `python` only).
 
 Row 22: a double-triggered canary posted a cancelled FAIL verdict on the same head (hit #328, #330); fixed by Core [#332](https://github.com/Quantum-L9/l9-ci-core/pull/332) (one verdict per pushed head; a text edit posts no verdict). Row 27 fix: Core [#326](https://github.com/Quantum-L9/l9-ci-core/pull/326) (action, merged 08:30Z) and #328 (org-ci activation). A follow-on conflict between push semantics and CG's `sonarcloud.yml` allowlist test was fixed in Cursor-Governance [#1119](https://github.com/Quantum-L9/Cursor-Governance/pull/1119).
 
@@ -71,7 +71,7 @@ Measured on a green Cursor-Governance PR (head of #1107): about **1001 runner-se
 
 | Check | s | Verdict | Action |
 |---|---|---|---|
-| Analyze (python) — CodeQL default setup | 234 | retire (duplicate) | operator: turn CodeQL default setup off, keep the `codeql` workflow (or the reverse) |
+| Analyze (python) — GitHub Code Quality (`dynamic/github-code-quality`) | 234 | retire (duplicate) | operator: disable Code Quality (click-path 2), or drop the quality suite from `codeql.yml`; keep exactly one |
 | semgrep-cloud-platform/scan | 163 | retire from PRs | operator: Semgrep app — stop PR scans; the central SDK Semgrep is the required one |
 | Exact-head memory lifecycle proof | 89 | path-scope | run only when memory code changes |
 | SBOM / License / Dependency Review | 32 | path-scope | only when manifests or locks change; nightly for all |
