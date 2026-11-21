@@ -124,6 +124,37 @@ there — `make pr` refuses `main`/`master`.
 
 Remediation publish is `git push` (in-scope) or `PR_STACK=auto PR_REMEDIATE=0 make pr` (scope expansion), never from `main`.
 
+## Merge queue (base rules carry `merge_queue`)
+
+A queue-protected base refuses a direct merge, so the authorized set goes to
+GitHub's merge queue in one step. `stack_safe_merge.py --run` detects the rule
+itself and enqueues that one PR; for a whole set use `--queue`:
+
+```bash
+# every merge_now PR at board=merge with a grant for its live head, in merge_order
+"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" \
+  --repo {owner}/{repo} --queue {n1}@{head1} {n2}@{head2} ...
+# exit 0 every PR MERGED; 3 one or more MERGE_PENDING / EJECTED; 5 UNBOUND_QUEUE_ENTRY
+```
+
+Per item it re-checks the queue rule, authorization for that exact head (switch
+disabled or strict alike), `board=merge` and the live head, then enqueues
+(GraphQL `enqueuePullRequest` with `expectedHeadOid`; on the REST-only gateway
+`PUT pulls/{n}/ccr/auto_merge`). The enqueue counts only when the PR is then
+observed in the queue at the granted head; otherwise it is disarmed and reported
+MERGE_PENDING, so auto-merge is never left armed. One watcher then polls the set:
+
+| Outcome | Next |
+|---|---|
+| `MERGED` | done |
+| `EJECTED` | remediate; once green the parent re-grants the new head from the same instruction and re-enqueues |
+| `MERGE_PENDING` (head moved, dequeued) | same as ejected |
+| `UNBOUND_QUEUE_ENTRY` | the dequeue failed: report it loudly; no further enqueue for the repository until that entry has left the queue |
+
+Whether GitHub itself drops a queued PR on a push, and whether `DELETE
+ccr/auto_merge` dequeues, are UNKNOWN; the watcher's head check is what binds
+the grant. A base without the rule keeps `--run`.
+
 ## Forbidden
 
 - `git apply` / hand-copy from `gh pr diff` to adopt the PR
@@ -131,7 +162,7 @@ Remediation publish is `git push` (in-scope) or `PR_STACK=auto PR_REMEDIATE=0 ma
 - `--admin` / bypass rules
 - Merge during Diagnose (including “after user confirm” from Diagnose)
 - Merge without human authorization for the PR's current head (CANONICAL_LAW §6.2.13)
-- An agent running the terminal mode of `authorize_merge.py`, writing `merge-authorization.json` or `operator-merge-instructions.json`, inventing an operator instruction, posting `authorize merge`, submitting an approving review, or enabling auto-merge
+- An agent running the terminal mode of `authorize_merge.py`, writing `merge-authorization.json` or `operator-merge-instructions.json`, inventing an operator instruction, posting `authorize merge`, submitting an approving review, or enabling auto-merge (the only enqueue is `stack_safe_merge.py --queue` / `--run` on a queue-protected base)
 - Reporting a merge before `stack_safe_merge.py` prints `MERGED` with GitHub's merge commit
 - Merge a red or conflicted PR
 - Merge before FIRST_MERGE_GATE

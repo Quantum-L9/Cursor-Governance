@@ -54,7 +54,10 @@ Shell ``git``/``gh`` commands are exempt from the *workflow* plane
 (``git_execution_exemption``), but a merge is an effect, so merge authority
 applies to them. Auto-merge enablement (`gh pr merge --auto`, MCP
 `enable_pr_auto_merge`, REST `ccr/auto_merge`) merges at a future head no grant
-can bind, and is denied without the human breakglass. Stack safety is applied
+can bind, and is denied without the human breakglass. The one sanctioned
+enqueue into a GitHub merge queue is ``stack_safe_merge.py --queue`` (and
+``--run`` on a queue-protected base), gated here on a grant for every named
+head exactly like ``--run``; see ``_stack_safe_run_reason``. Stack safety is applied
 after authority: ``gh pr merge --squash|--rebase`` (or an unspecified method)
 of a stack parent is denied on Shell and MCP alike. Agents must use
 ``stack_safe_merge.py`` so the method is selected in code, not guessed. The
@@ -1430,17 +1433,56 @@ def _is_merge_attempt(tool_name: str, tool_input: dict[str, Any]) -> bool:
     )
 
 
+def _queue_items(argv: list[str]) -> list[tuple[str, str]]:
+    """``<pr>@<sha>`` items following ``--queue`` (up to the next flag)."""
+    if "--queue" not in argv:
+        return []
+    items: list[tuple[str, str]] = []
+    for word in argv[argv.index("--queue") + 1 :]:
+        if word.startswith("-"):
+            break
+        pr, _, sha = word.strip("'\"").partition("@")
+        items.append((pr, sha.lower()))
+    return items
+
+
 def _stack_safe_run_reason(argv: list[str]) -> str | None:
-    """Deny a ``stack_safe_merge.py --run`` that no human grant covers.
+    """Deny a ``stack_safe_merge.py --run`` or ``--queue`` that no human grant covers.
 
     The helper's own entrypoint re-verifies the grant against the live head; this
     check exists because its inner ``gh`` calls are subprocesses no hook sees.
+
+    ``--queue`` is the only sanctioned enqueue. Ad-hoc auto-merge stays denied
+    (AUTO_MERGE_DENY_REASON) because an armed auto-merge waits for a future
+    head that no grant can bind. The queue path is allowed because the helper
+    binds the grant to the head itself: it enqueues only a granted ``board=merge``
+    head into a base whose rules carry ``merge_queue``, accepts the enqueue only
+    when the PR is observed queued at that head (otherwise it disarms), and its
+    watcher dequeues -- or reports UNBOUND_QUEUE_ENTRY and stops enqueuing for
+    the repository -- when the head moves. Whether GitHub itself drops a queued
+    PR on a push is UNKNOWN: its documented removal reasons do not name a push,
+    and a push by a writer leaves auto-merge enabled. So the binding does not
+    rest on GitHub; it rests on the watcher.
     """
-    if "--run" not in argv:
+    queued = _queue_items(argv)
+    if "--run" not in argv and not queued:
         return None
     if _human_breakglass():
         return None
     repo = _argv_value(argv, "--repo")
+    if queued:
+        for item_pr, item_sha in queued:
+            if not (
+                _file_authorizes(repo, item_pr, item_sha)
+                or _github_authorizes(repo, item_pr, item_sha)
+            ):
+                detail = _missing_detail(repo, item_pr, item_sha)
+                return (
+                    f"{MERGE_DENY_REASON} Missing prerequisite: {detail}. "
+                    f"(queue item {repo or '<repo?>'}#{item_pr or '<pr?>'}"
+                    f"@{item_sha or '<sha?>'})"
+                )
+        return None
     pr = _argv_value(argv, "--pr")
     head_sha = _argv_value(argv, "--head-sha")
     if _file_authorizes(repo, pr, head_sha) or _github_authorizes(repo, pr, head_sha):
