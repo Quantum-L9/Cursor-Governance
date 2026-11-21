@@ -228,7 +228,10 @@ def test_deletion_only_pull_request_is_a_scope_not_unknown() -> None:
 
 def test_a_deleted_test_file_is_not_a_pytest_target() -> None:
     gone = "tests/ops/scripts/test_this_file_was_deleted.py"
-    assert gone not in select_pr_pytest_paths([gone])
+    assert gone in select_pr_pytest_paths([gone])  # the selector's own mapping
+    status, paths = classify_pr_scope([gone])
+    assert status == "SELECTED"
+    assert gone not in paths
 
 
 def test_scope_classification_never_selects_the_full_suite() -> None:
