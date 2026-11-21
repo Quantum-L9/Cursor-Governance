@@ -1,0 +1,195 @@
+schema: l9.campaign.ai-prompt-inventory.v2
+campaign_id: ib-odoo-dashboard-command-centers
+source_version: "1.5.0"
+decisions: [DEC-013, DEC-014, DEC-018, DEC-019]
+requirements: DOCUMENT_AI_PROMPT_REQUIREMENTS.md (v2.0, normative)
+status: target_inventory_only
+note: >-
+  Target inventory for the seven folder-level Auto-Sort prompts under
+  Document AI Prompt Requirements v2.0. It maps each prompt to folders,
+  tags, owners, tools, abilities, prohibitions and tests. It contains no
+  production prompt text and activates nothing. Prompts are written by
+  TASK-071 (P1) and TASK-073 (P2-P7) in plasticos_documents_ai, evaluated by
+  TASK-074, and activated only by an explicit administrator action; real
+  documents reach DeepSeek only after GATE-005.
+
+common_contract:
+  model: deepseek-flash, non-thinking (reasoning.effort none), through the TASK-068 adapter
+  invariants: [INV-01 best supported judgment, INV-02 classification is not verification, INV-03 reversible action first, INV-04 infer meaning do not fabricate facts, INV-05 human decisions have precedence, INV-06 escalation is an exception, INV-07 operate within granted tools]
+  decision_procedure: [dominant purpose, best-fitting supported type, identity separate from field quality, useful next reversible action, actionable secondary concerns via review signals, abstain only as last resort]
+  tools:
+    P1: [move-in-folder, add-tags]
+    P2-P7: [add-tags]
+  forbidden_tools: [vendor bill or customer invoice creation, next_activity, code, webhook, object_write, object_create]
+  never_by_ai:
+    - business association to a load, transaction, order or partner
+    - evidence verification (plasticos.document.action_verify)
+    - accounting posting, bill creation, duplicate determination (native accounting checks decide)
+    - order or commercial-term changes
+    - Linda external communication
+  enforced_by_application_not_prompt:
+    - tool allowlist per rule (ai_tool_ids)
+    - Verified tag write guard (TASK-070)
+    - human-correction precedence (doc_type_source human is skipped and never overwritten; TASK-070)
+    - company isolation and permissions (record rules; DEC-005)
+  one_primary_type: true
+  confidence: no self-reported confidence is treated as a calibrated probability
+  owner_routing: the DEC-010 router assigns the accountable human from the resulting tags; the prompt never assigns people
+
+taxonomy:
+  ref: DEC-014 OPT-A (extended for v2.0)
+  folders:
+    inbox: plasticos_documents_native.folder_plasticos_inbox
+    bols: plasticos_documents_native.folder_plasticos_bols
+    scale_tickets: plasticos_documents_native.folder_plasticos_scale_tickets
+    loading_pics: plasticos_documents_native.folder_plasticos_loading_pics
+    orders_and_shipping: plasticos_documents_native.folder_plasticos_customer_orders
+    financial: plasticos_documents_native.folder_plasticos_vendor_bills
+    compliance: plasticos_documents_native.folder_plasticos_compliance
+  type_families:
+    transportation: {folder: bols, owner: Logistics, types: [BOL]}
+    measurement: {folder: scale_tickets, owner: Logistics, types: [Scale Ticket, Certified Scale Ticket (CST)]}
+    visual_evidence: {folder: loading_pics, owner: Logistics, types: [Loading Pic, Unloading Pic, Delivery Photo, Damage Photo, Photo]}
+    orders_and_shipping: {folder: orders_and_shipping, owner: Logistics, types: [Purchase Order, Customer Order, Order Confirmation, Packing List, Receiving Report, Delivery Order Confirmation, Delivery Receipt]}
+    financial: {folder: financial, owner: Operations Manager, types: [Financial Document, Vendor Bill, Customer Invoice, Carrier Invoice, Credit Note, Debit Note, Statement, Payment Confirmation]}
+    compliance: {folder: compliance, owner: "Logistics for Carrier Certification; Operations Manager for other compliance exceptions", types: [Certification, Material Certification, Carrier Certification, Permit, Lab Report, Technical Specification, Contract, Correspondence]}
+  review_signals:
+    Needs Review: {meaning: "no defensible primary type, or materially incompatible primary classifications", owner: Operations Manager}
+    To Split: {meaning: "several independently actionable documents in one file; primary classification still applied", owner: owner of the primary type}
+    Evidence Gap: {meaning: "identified document with missing, inconsistent or questionable operational evidence (unsigned, missing tare, expired, illegible field)", owner: owner of the document's type family}
+    Duplicate Candidate: {meaning: "plausible duplicate or financial discrepancy for native accounting validation; not a duplicate determination", owner: Operations Manager}
+    Includes Supporting Evidence: {meaning: "supporting attachments present; the primary type is unchanged", owner: none (informational)}
+  never_applied_by_ai: [Verified]
+
+activation_slices:
+  - slice: 1
+    prompts: [P1]
+    task: TASK-071
+    precondition: [TASK-068, TASK-069, TASK-070 done, UNK-006 synthetic probe recorded, explicit administrator activation]
+  - slice: 2
+    prompts: [P2, P3, P4, P5, P6, P7]
+    task: TASK-073
+    precondition: [slice 1 measured on the TASK-074 evaluation set, GATE-006 loop safety and verified benefit per prompt, explicit administrator activation per prompt]
+
+prompts:
+  - id: P1
+    name: Inbox master classification and routing
+    folder: inbox
+    specialist_invariant: Determine the document's primary business purpose and advance it to the most useful workflow.
+    tools: [move-in-folder, add-tags]
+    allowed_moves: [bols, scale_tickets, loading_pics, orders_and_shipping, financial, compliance]
+    allowed_tags: all type_families types plus Needs Review, To Split, Evidence Gap, Includes Supporting Evidence
+    abilities:
+      - layout, headings, party roles, recognizable form structures and context
+      - recognize types despite generic filenames, imperfect scans or missing identifiers
+      - distinguish a multi-page document from a PDF holding several independent documents
+      - select the primary document when supporting evidence is included
+      - map recognized types to existing folder and tag identifiers
+      - shipping paperwork to Logistics folders, financial paperwork to the financial folder
+      - Needs Review only for genuinely unclassifiable material (stays in Inbox)
+    must_not: [route every incomplete or multi-page document to Operations]
+    acceptance_examples:
+      - {input: unsigned BOL, expect: "BOL tag, Bills of Lading, Logistics; optional Evidence Gap"}
+      - {input: scale ticket missing tare, expect: "Scale Ticket, Scale Tickets, Logistics; optional Evidence Gap"}
+      - {input: vendor invoice with supporting BOL, expect: "Vendor Bill, financial folder, Operations; Includes Supporting Evidence"}
+      - {input: generic filename with readable packing list, expect: "Packing List, orders_and_shipping, Logistics"}
+      - {input: truly unidentifiable content, expect: "Needs Review, stays in Inbox, Operations"}
+    success_criterion: high automatic routing coverage without excessive unknowns or systematic cross-team errors
+  - id: P2
+    name: Bills of Lading
+    folder: bols
+    specialist_invariant: Identify transportation paperwork independently of shipment completeness or signature.
+    tools: [add-tags]
+    allowed_tags: [BOL, Delivery Receipt, Evidence Gap, Needs Review]
+    abilities: [truck, container and other BOL formats, distinguish BOL from delivery receipts / packing lists / freight invoices, interpret carrier shipper consignee equipment dates references, draft vs executed when evidence supports it, flag questionable shipping evidence without invalidating type]
+    must_not: [treat an unsigned BOL as unknown, infer shipment completion from a BOL's presence]
+    acceptance_examples:
+      - {input: unsigned BOL, expect: "BOL kept; Evidence Gap at most"}
+      - {input: BOL with handwritten load reference, expect: BOL}
+      - {input: freight invoice with shipment details, expect: "Carrier Invoice signal; Needs Review only if P1's placement is materially incompatible (re-routing is a human or P1 decision; P2 never moves)"}
+      - {input: signed delivery receipt, expect: Delivery Receipt}
+    success_criterion: few confusions with freight invoices, packing lists and receiving reports
+  - id: P3
+    name: Scale Tickets
+    folder: scale_tickets
+    specialist_invariant: Interpret weight evidence while keeping measurement identity distinct from business verification.
+    tools: [add-tags]
+    allowed_tags: [Scale Ticket, Certified Scale Ticket (CST), Evidence Gap, Needs Review]
+    abilities: [ordinary and certified tickets, gross tare net inbound outbound units, handwriting and unusual layouts and imperfect OCR, abbreviated labels, infer which number is which from structure, notice arithmetic discrepancies without blocking classification]
+    must_not: [turn missing tare or net into a classification failure, invent missing measurements]
+    acceptance_examples:
+      - {input: gross and tare present net absent, expect: "Scale Ticket; net derivation left to deterministic logic"}
+      - {input: certified weighing certificate, expect: Certified Scale Ticket (CST)}
+      - {input: poor scan with recognizable layout, expect: Scale Ticket}
+      - {input: freight invoice stating a weight, expect: "not a scale ticket: Needs Review only when materially incompatible"}
+    success_criterion: strong discrimination from invoices and shipping paperwork; low reclassification effort
+  - id: P4
+    name: Loading Pictures
+    folder: loading_pics
+    specialist_invariant: Recognize an image's probable purpose without overstating what it proves.
+    tools: [add-tags]
+    allowed_tags: [Loading Pic, Unloading Pic, Delivery Photo, Damage Photo, Photo, Evidence Gap, Needs Review]
+    abilities: [loading unloading material packaging damage delivery images, trailers containers pallets bales supersacks, imperfect quality, duplicates and obstructed views, no reliance on metadata or captions, flag material evidentiary limits only]
+    must_not: [treat an imperfect picture as unclassifiable, assert polymer weight purity or completion from appearance]
+    acceptance_examples:
+      - {input: loaded trailer, expect: Loading Pic}
+      - {input: blurry recognizable palletized load, expect: Loading Pic}
+      - {input: apparent damaged packaging, expect: "Damage Photo; Logistics when shipment-related"}
+      - {input: unrecognizable image, expect: Needs Review}
+    success_criterion: most usable operational photographs classified without human intervention
+  - id: P5
+    name: Orders and Shipping Paperwork
+    folder: orders_and_shipping
+    folder_rename: none (existing Customer Orders folder)
+    specialist_invariant: Identify the business function a document performs even when it shares information with other types.
+    tools: [add-tags]
+    allowed_tags: [Purchase Order, Customer Order, Order Confirmation, Packing List, Receiving Report, Delivery Order Confirmation, Delivery Receipt, Evidence Gap, Needs Review]
+    abilities: [supplier PO vs customer SO vs packing list vs delivery order vs receiving report vs order confirmation, issuer and recipient roles, ordered vs shipped vs received quantities, abbreviated titles and unconventional formats, mixed commercial and logistical content]
+    must_not: [require a matching Odoo PO or SO, treat classification as permission to edit an order]
+    acceptance_examples:
+      - {input: packing list without PO reference, expect: Packing List}
+      - {input: supplier-issued purchase order, expect: Purchase Order}
+      - {input: receiving report with handwritten remarks, expect: Receiving Report}
+      - {input: customer sales order, expect: Customer Order}
+      - {input: invoice with item quantities, expect: "not Packing List: Needs Review when materially incompatible"}
+    success_criterion: reliable differentiation of adjacent types without complete references
+  - id: P6
+    name: Vendor Bills and financial documents
+    folder: financial
+    specialist_invariant: Recognize financial obligations and corrections without confusing classification with posting authority.
+    tools: [add-tags]
+    allowed_tags: [Financial Document, Vendor Bill, Customer Invoice, Carrier Invoice, Credit Note, Debit Note, Statement, Payment Confirmation, Duplicate Candidate, Evidence Gap, Needs Review]
+    abilities: [AP vendor bills vs AR customer invoices vs carrier invoices vs credit notes vs debit notes vs statements vs payment confirmations, payable vs receivable direction from issuer and recipient, invoice numbers totals currencies tax lines dates, work with native digitization not replace it, flag plausible duplicates and discrepancies for native validation, keep Financial Document when AP/AR is uncertain]
+    must_not: [auto-post, reject classification for incomplete accounting fields, claim a duplicate without native accounting checks]
+    acceptance_examples:
+      - {input: invoice missing due date, expect: "Vendor Bill or Customer Invoice by direction"}
+      - {input: carrier freight bill, expect: "Carrier Invoice, not BOL"}
+      - {input: vendor credit note, expect: Credit Note}
+      - {input: invoice with uncertain issuer/recipient, expect: "Financial Document, Operations, not Needs Review"}
+    success_criterion: correct financial-family classification, strong AP/AR discrimination, minimal review outside native accounting checks
+  - id: P7
+    name: Compliance and supporting evidence
+    folder: compliance
+    specialist_invariant: Classify technical and compliance documents by stated purpose without certifying validity.
+    tools: [add-tags]
+    allowed_tags: [Certification, Material Certification, Carrier Certification, Permit, Lab Report, Technical Specification, Contract, Correspondence, Evidence Gap, Needs Review]
+    abilities: [material vs carrier certifications vs permits vs lab reports vs contracts vs technical specifications, issuers standards subjects and apparent validity dates, tables test results abbreviations uncommon layouts, test report vs sales specification and certification vs company statement, classify recognizable certificates despite missing signatures dates or verification]
+    must_not: [reject classification for expired evidence, assert genuineness compliance or legal sufficiency]
+    acceptance_examples:
+      - {input: carrier insurance or certification, expect: "Carrier Certification, Logistics"}
+      - {input: polymer laboratory results, expect: Lab Report}
+      - {input: expired permit, expect: "Permit; Evidence Gap for expiry"}
+      - {input: material datasheet, expect: "Technical Specification, not a verified certification"}
+    success_criterion: accurate differentiation of technical families with few unnecessary Operations escalations
+
+loop_safety:
+  rule: Only P1 may move documents; P2-P7 carry the add-tags tool only, so no AI action can trigger a second folder rule.
+  refinement_conflict: A destination specialist that judges P1's placement materially wrong adds Needs Review and the type it observed; it never moves. Re-routing is a human correction or a P1 rerun.
+  proof: TASK-073 cross-rule chain tests with adversarial mocked outputs before GATE-006.
+
+evaluation:
+  harness: TASK-074
+  targets_provisional: {auto_routed_share: ">= 0.80", primary_family_accuracy_among_routed: ">= 0.90", human_classification_intervention: "<= 0.20", unnecessary_review: measured_and_minimized, unauthorized_business_actions: 0, human_correction_overwrite: 0}
+  mandatory_cases: [standard documents per category, BOL vs packing list, scale ticket vs freight invoice, vendor bill vs customer invoice, generic or misleading filenames, partial unsigned incomplete, handwriting poor scans unusual layouts OCR errors, multi-page single documents, PDFs with several documents, missing references and conflicting secondary fields, human-corrected documents reprocessed, prompt-injection text, cross-company destination and permission tests]
+  optimization: correct classification + automation coverage + low human correction cost + low consequential error cost
+  prompt_change_rule: cite real misclassified cases, show the expected correction, replay previously successful documents for regression

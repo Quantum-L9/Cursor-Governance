@@ -1,0 +1,219 @@
+schema: l9.program-execution.current-state-delta.v1
+schema_version: 1.0.0
+campaign_id: ib-odoo-dashboard-command-centers
+source_version: "1.5.0"
+collected_at: "2026-11-20T23:20:00Z"
+collection_method: read_only_inspection
+producer: "CTO session (claude-code-web), three read-only research passes"
+assessment_input:
+  schema: evidence.assessment/v1
+  file: IB_Odoo19_Dashboard_Evidence_Assessment_2026-11-20.json
+  assessed_revision: 6e5029f2e4efe9ffca3f0de0e819c6d3754adcfe
+  findings: [F-001, F-002, F-003, F-004, F-005, F-006, F-007, F-008, F-009, F-010]
+
+targets:
+  - id: TARGET-001
+    repository_id: cryptoxdog/IB-Odoo_19
+    default_branch: Staging
+    inspected_revision: c422140c1d777a72b95cfc20995b80207d9bae6b
+    reachability: in_scope
+    history_note: "Shallow clone; line-level change since 6e5029f2 cannot be proven. Findings below are re-verified at c422140."
+
+findings_at_inspected_revision:
+  - id: F-001
+    verdict: STILL_OPEN
+    task: TASK-010
+    fact: >-
+      Six of eight Admin urgency drills (admin_dashboard.py:540-607) use fields
+      absent from plasticos.sales.dashboard: has_negative_margin, state,
+      supplier_followup_count, is_supplier_confirmed, invoice_state,
+      compliance_status, commission_locked. delivered_uninvoiced (:570-577) is
+      also broken (not in the assessment). action_open_sales_dashboard
+      (:521-529) sets search_default_filter_open, which the search view
+      (sales_dashboard_views.xml:226-255) does not define.
+  - id: F-002
+    verdict: CHANGED_STILL_OPEN
+    task: TASK-011
+    fact: >-
+      Rep view (admin_dashboard.py:695-783) joins closed_tx x open_tx x
+      intake-offer rows and SUMs money; deals_open = COUNT(DISTINCT
+      ot.user_id). Example 2 closed (10k,20k), 3 open (5k), 2x2 offers gives
+      revenue_closed 360k (true 30k), pipeline 120k (true 15k), deals_open 1
+      (true 3). Open pipeline has no period filter; closed_tx does not exclude
+      legacy_erp_history. Changed: tests/test_rep_performance_view.py:18
+      exists but checks columns only.
+  - id: F-003
+    verdict: STILL_OPEN
+    task: TASK-020
+    fact: >-
+      sales_dashboard.py:181-183 selects 0.0 AS commission_locked_amount and
+      'unpaid' AS commission_payout_state. Truth: transaction
+      commission_locked_amount (transaction_commission.py:30, set :107-114);
+      plasticos.commission.payout.state (commission_payout.py:83) via
+      commission_payout_tx_rel (:73-80). Nothing writes
+      plasticos.transaction.commission_payout_state except = False
+      (sale_inherit.py:227).
+  - id: F-004
+    verdict: STILL_OPEN
+    task: TASK-021
+    fact: "sales_dashboard.py:421-430 returns display_notification when load_count > 1; loads are plasticos.load.transaction_id (load.py:294-300)."
+  - id: F-005
+    verdict: STILL_OPEN
+    task: TASK-031
+    fact: "admin_dashboard_views.xml: 9 KPIs are buttons, about 49 are plain fields (sections B Intake/Offers/Transactions, C Financial, E Leads, F AI)."
+  - id: F-006
+    verdict: STILL_OPEN
+    task: TASK-013
+    fact: >-
+      No company predicate in _compute_kpis (:188-450); model has no
+      company_id though docstring :39 says one record per company;
+      _get_or_create uses search([], limit=1) (:476). plasticos.transaction,
+      intake, offer, web_lead have no company_id; transaction company derives
+      from sale_order_id.company_id (transaction.py:1480).
+  - id: F-007
+    verdict: STILL_OPEN
+    task: TASK-010
+    fact: "Menu (views :318-323) targets action_admin_kpi_form (form, no res_id); action_open_admin_dashboard (model :631-643) is referenced nowhere."
+  - id: F-008
+    verdict: STILL_OPEN
+    task: TASK-040
+    fact: >-
+      group_operations_manager (security_groups.xml:112-117) implies logistics
+      ops, qc manager, accounting ops, documents manager; no ops dashboard
+      exists. It implies no claims group, so it likely lacks plasticos.claim
+      ACL (inference). Admin menus are restricted to group_system_admin.
+  - id: F-009
+    verdict: STILL_OPEN
+    task: [TASK-010, TASK-011, TASK-032]
+    fact: "Admin test checks view columns only; plasticos_logistics has no load_dashboard test."
+  - id: F-010
+    verdict: STILL_OPEN
+    task: TASK-021
+    fact: "My Deals action res_model plasticos.sales.dashboard (views :263-272); no action_view_transaction on the model."
+
+new_findings:
+  - id: N-001
+    task: TASK-012
+    fact: "Closed-deal periods use write_date (admin_dashboard.py:296,325-336,736-744); editing an old deal moves it into the current period."
+  - id: N-002
+    task: TASK-010
+    fact: "action_open_delivered_uninvoiced (:570-577) domain fields state, invoice_state are absent on the target."
+  - id: N-003
+    task: none (RISK-003)
+    fact: "plasticos.transaction.commission_payout_state is never set by payout confirm/paid actions (commission_payout.py:168-201)."
+
+platform_facts:
+  edition: "Odoo 19 Enterprise on Odoo.sh (AGENTS.md:86,95,100)"
+  native_dashboards: "spreadsheet_dashboard is a dependency of plasticos_odoo_standard_apps (__manifest__.py:24); spreadsheet_edition present in Enterprise mirror; no custom spreadsheet.dashboard data exists"
+  publication: "IB-Odoo_19 make pr (scripts/make_push_pipeline.sh) admits base Staging or a stacked parent with an open PR into Staging; Production refused"
+  runtime_tests: "Owners are the make pr-check smoke stage and operator-invoked make runtime-test m=<modules>; agents do not run make test-module/test-odoo ad hoc (Makefile:1365-1381)"
+  version_bump: "Mandatory for Python/XML/security/migration changes (skills/plasticos-odoo-version-bump/SKILL.md)"
+  ask_first: "New modules, security groups and record rules, ir.cron, plasticos_base (AGENTS.md:543-547)"
+
+addendum_verification:
+  operator_input: "Role-Specific Exception Routing Addendum, 2026-11-20"
+  revision: c422140c1d777a72b95cfc20995b80207d9bae6b
+  items:
+    - id: N-004
+      claim: "plasticos.document.sync sends every association review to Operations Manager"
+      verdict: CONFIRMED
+      fact: "REVIEW_GROUP_XMLID = group_operations_manager (plasticos_documents_native/models/document_sync.py:23); review scheduled whenever association_state != accepted with no doc_type check (:85-87); assignee = lowest-id eligible member via _manager_reviewer (:147-162), which does not exclude the cron user; todo activity deduped on (res_model, res_id, summary) (:185-213). Same helper holds digitized bills (account_move.py:276)."
+      task: TASK-060
+    - id: N-005
+      claim: "Missing-document and scale-ticket escalations go to Operations Manager"
+      verdict: CONFIRMED
+      fact: "_escalation_manager_group and _scale_ticket_manager_group return group_operations_manager (plasticos_documents/models/transaction_docs.py:426-431); owner via plasticos_base _plasticos_escalation_manager_in_group (res_users.py:48-59); crons every 6 h with advisory lock; dedupe on pre-loaded (res_id, summary) (:186-195, :536-545)."
+      task: TASK-060
+    - id: N-006
+      claim: "Native classification lumps invoice and vendor bill; evidence tags are more specific"
+      verdict: PARTLY_CONFIRMED
+      fact: "doc_type 'invoice' = Invoice / Vendor Bill (document_native.py:87-106) and maps to tag INV (document_sync.py:46), also 'Invoice / Vendor Bill'. plasticos.document.tag has BOL, INV, SCALE, PHOTO, PACKING, CO, RECEIVING, CST, DO, CONTRACT, CERT, PERMIT, LAB, CORR, CLAIM_PHOTO, OTHER — no PO, SO, carrier-cert or separate vendor-bill tag (document_tags_data.xml). No AI classification hook in custom code; doc_type is manual."
+      task: [TASK-060, DEC-014]
+    - id: N-007
+      claim: "Linda approval decisions restricted to Operations Manager"
+      verdict: CONFIRMED
+      fact: "MANAGER_GROUP (linda_approval.py:50); _require_approver refuses Linda and non-managers (:374-378); buttons carry no groups (linda_approval_views.xml:50-53). Safeguards: replay as Linda under _APPROVED_TOKEN (:441-457), stale-conflict check (:513-538), FOR UPDATE (:380-386), pending unique index (:335-338), refusal ledger (:150-195), immutability (:357-371). A pending approval creates no activity. Menu under Logistics (linda_approval_views.xml:103-104). group_operations_manager implies group_logistics_ops (security_groups.xml:88-93,115)."
+      task: TASK-061
+    - id: N-008
+      claim: "AI/automation cannot verify documents"
+      verdict: GAP
+      fact: "No auto-verify caller exists, but action_verify (plasticos_documents/models/document.py:701-707,1077-1101) admits any group_documents_user; Linda holds group_logistics which implies it (record_rules.xml:225-227, security_groups.xml:68); the cron user holds group_documents_manager (hooks.py:183)."
+      task: TASK-064
+    - id: N-009
+      claim: "Linda is the sole logistics-document chase sender"
+      verdict: CONFIRMED
+      fact: "linda_request.py:14-21,206-214,1204-1227; documents reminders are internal notes (transaction_docs.py:241-247,456-468). Active non-document external sender: cron_supplier_confirmation (transaction.py:1532-1595) — RISK-006."
+    - id: N-010
+      claim: "Digitized vendor bill with mismatched amounts stays unposted"
+      verdict: CONFIRMED_WITH_SCOPE
+      fact: "action_post/_post/_autopost_bill overrides block on total mismatch, duplicates, conflicting references, missing fields (plasticos_documents_native/models/account_move.py:166-212,259-309) — only for emailed/digitized bills (:66-73); hand-entered bills unchecked (RISK-005)."
+    - id: N-011
+      claim: "Company scope of document evidence"
+      verdict: GAP
+      fact: "plasticos.document has only subject_company_id; rule_document_operation_scope_company leaves legacy and pending rows unscoped (plasticos_documents/security/security.xml:37-41). DEC-005(d)."
+    - id: N-012
+      claim: "Native AI classification reaches the business-evidence bridge"
+      verdict: GAP
+      fact: "doc_type is a plain stored Selection never derived from tag_ids or folder_id (plasticos_documents_native/models/document_native.py:88-109); sync fires only on SHELL_TRIGGER_FIELDS doc_type/attachment_id/datas/raw (:35,177-212). ai_documents Auto-Sort writes only folder_id and tag_ids, so an auto-sorted document never reaches plasticos.document.sync. plasticos_documents_native does not depend on ai_documents."
+      task: TASK-070
+    - id: N-013
+      claim: "Existing folders and tags can be reused"
+      verdict: CONFIRMED_WITH_GAPS
+      fact: "Folders (data/document_folders.xml, noupdate=0): Plasticos > Inbox, Bills of Lading, Vendor Bills, Scale Tickets, Loading Pics, Customer Orders, Compliance. Tags (data/document_tags.xml): BOL, Vendor Bill, Scale Ticket, Loading Pic, Customer Order, Contract, Certification, Permit, Lab Report, Photo, Correspondence, polymers, Needs Review, Verified, To Split. No Purchase Order, Packing List or Receiving Report tag or folder (DEC-014)."
+      task: [TASK-071, DEC-014]
+
+enterprise_ai_evidence:
+  ref: EVID-010
+  source: "Quantum-L9/odoo-enterprise main @ 3225e0e8 (single import commit; 19.x by API inference). Several enterprise test files there are generated stubs on unknown.model — do not copy them."
+  facts:
+    - "ai_documents (depends ai, documents, base_automation; auto_install) configures Auto-Sort through documents.document.ai_sort_prompt (Html, group_system, folders only); no enable flag — a prompt creates an ir.actions.server state=ai plus a base.automation on_create_or_write of folder_id (documents_document.py:35-50,267-330)."
+    - "Tools: move-in-folder (target must be a folder id embedded in the source prompt) and add-tags (global search by tag name); eligible extra tools include next_activity and documents_account record creation; ai_documents_account's wizard defaults add vendor-bill/customer-invoice creation tools unless ai_tool_ids is passed explicitly."
+    - "Triggers: synchronous on create/move into the folder; alias mail sets ai_to_sort and a cron sorts batches of 10; manual cog action. Writes only tool effects plus a chatter log by the AI agent partner; no confidence field; an unsure model calls no tool."
+    - "Odoo 19 ai supports only providers openai and google: PROVIDERS is a Python constant (ai/utils/llm_providers.py:16-52); base URLs and keys are hard-wired per provider (llm_api_service.py:88-98,211-229); _request_llm dispatches only openai/google (:524-534). The OpenAI path calls POST /responses with store false, tools marked strict, parallel_tool_calls true, temperature unless a reasoning model, PDFs inline as input_file file_data data-URI and images as input_image (:270-366)."
+    - "Invoice learning: posting a digitized bill queues _validate_ocr; a cron posts corrected totals, dates, partner, VAT, currency, bank and line values to the OCR validate endpoint; partner is predicted from previous extracts by layout; lines/accounts/taxes are predicted from the partner's last 100 posted bills. Auto-post counter needs 3 consecutive unmodified bills (partner.autopost_bills=ask); IB refuses _autopost_bill for digitized bills."
+    - "Shipping-document Auto-Sort is stateless: no feedback or history storage."
+
+deepseek_evidence:
+  ref: EVID-012
+  read: "2026-11-21, api-docs.deepseek.com"
+  facts:
+    - "Models: deepseek-flash (DeepSeek-V4.1-Flash-1017) and deepseek-v4-pro (DeepSeek-V4-Pro-0813), 1M context, 384K max output; deepseek-v4-flash ids route to Flash; deepseek-chat/reasoner were scheduled for discontinuation 2026-07-24."
+    - "OpenAI-format base https://api.deepseek.com with /chat/completions and a stateless Responses API (/responses; store always false, previous_response_id unsupported, parallel tool calls always on)."
+    - "Tool calls on both models; thinking mode is on by default and, with tools, requires reasoning content passed back each turn and rejects tool_choice required/named; strict tool schemas only on /beta."
+    - "Only deepseek-flash accepts images (base64 data URL, URL or file_id) and documents; documents must first be uploaded to /files (purpose text_recognition or rich_layout_recognition, billed per page) and referenced by file_id; uploads cannot be downloaded back. deepseek-v4-pro is text only. No separate document-analysis model."
+    - "Concurrency deepseek-flash 2500 per account (429 beyond); peak-hour prices double. Data region and retention are not stated in the API docs."
+
+official_platform_evidence:
+  ref: EVID-007
+  facts:
+    - "spreadsheet.dashboard is community (LGPL-3); module data shape per addons/spreadsheet_dashboard_account/data/dashboards.xml L4-13; per-dashboard group_ids and company_ids record rules (spreadsheet_dashboard/security/security.xml)."
+    - "Dashboard data obeys model ACLs and record rules; customizing requires Dashboards/Admin; standard dashboards are reinstalled on upgrade."
+    - "Documents AI auto-sort can create invoices/vendor bills and trigger activities; AI tools execute unconditionally unless their code refuses; digitization can auto-post per vendor; IAP credits apply. 19.0 docs contradict on whether AI auto-sort needs the AI app (UNK-004)."
+    - "mail.activity activity_schedule never deduplicates; activity_search + reschedule/feedback is the idempotent pattern; done activities are archived."
+    - "Owl is the documented approach only for ir.actions.client custom layouts."
+
+operator_decisions_2026_11_21:
+  DEC-002: "APPROVED OPT-A: commission_earned_date for closed-deal and earned-commission periods; never write_date; operational vs accounting/aging/cash KPIs kept distinct and labelled with their source dates."
+  DEC-004: "APPROVED OPT-A: plasticos_ops_dashboard, presentation/workflow integration only; no own queue, duplicate records, learning system or second AI engine."
+  DEC-005: "APPROVED OPT-A, all four: Ops read-only claims; role-restricted workbench menus; Admin KPI company isolation; pending document evidence company isolation (unresolved company fails closed); ACL, multi-company and negative-access tests required."
+  DEC-011: "APPROVED OPT-A with fail-closed refinement: Logistics decides routine operational classes, but an approval never overrides a safety gate; still-failing evidence_unverified/out_of_sequence and any consequential command needing an override are blocked and re-routed to Operations Manager."
+  DEC-017: "APPROVED modified OPT-A: minimal plasticos_documents_ai addon, no auto_install, explicit AI activation; reasoning.effort none; extracted text only where sufficient, Files API text_recognition/rich_layout_recognition otherwise, with bounded expires_after and deletion; no unnecessary metadata, secrets or payloads in logs/fixtures; README on external processing and retention; synthetic data only until GATE-005."
+  DEC-018: "APPROVED: seven-prompt target inventory (AI_PROMPT_INVENTORY.yaml); Inbox classifier is slice 1; destination prompts only after GATE-006."
+  DEC-019: "APPROVED: Document AI Prompt Requirements v2.0 normative (autonomy-first, INV-01..INV-07, P1-P7 specialists, provisional targets >=80 percent auto-routed, >=90 percent primary-family accuracy among routed, <=20 percent human intervention, zero unauthorized actions and zero human-correction overwrites); supersedes the v1.4.0 conservative escalation rows."
+  DEC-014_extension: "Taxonomy extended by the CTO to the types and review signals v2.0 requires (financial subtypes, delivery receipt, order confirmation, material certification, technical specification, unloading/delivery/damage photos; Evidence Gap, Duplicate Candidate, Includes Supporting Evidence) under the operator's seed-the-necessary-tags instruction."
+  DEC-016_operator_evidence: "Operator-reported: deepseek-flash outperformed GPT-4o in the operator's usage — not an independent benchmark; TASK-072 measures this workload."
+open_operator_decisions: []
+ready_tasks: [TASK-001, TASK-002, TASK-010, TASK-011, TASK-012, TASK-013, TASK-020, TASK-021, TASK-060, TASK-061, TASK-064, TASK-065, TASK-068, TASK-069, TASK-070, TASK-071, TASK-074, TASK-073, TASK-040, TASK-032, TASK-031, TASK-033, TASK-072, TASK-050, TASK-051]
+blocked_tasks: {}
+residual_execution_prerequisites:
+  - "Campaign activation and lane launch: separate operator authorization (this publication authorizes neither)."
+  - "CTO mode ACTIVE for swarm coordination: Cursor-Governance PR #1102 (identity bundle) merged by the operator, or an explicit operator instruction to coordinate without it."
+  - "Runtime test stack for IB-Odoo_19 make pr (install-smoke): Docker plus an Odoo Enterprise source matching Odoo.sh Staging; Quantum-L9/odoo-enterprise is a single import commit whose parity with Staging is unproven (UNK-004 / TASK-002 record the Staging versions)."
+  - "TASK-002 inputs: operator settings exports for Documents, AI, digitization and auto-post on Staging and Production."
+  - "UNK-006: DeepSeek contract probe on Staging with ai.deepseek_key set by the operator, synthetic documents only (TASK-068)."
+  - "GATE-005: explicit operator external-data-processing approval before any real customer, supplier or financial document reaches DeepSeek."
+  - "GATE-006: loop and conflict proof plus measured benefit per specialist before P2-P7 are activated; activation itself is an explicit operator action."
+  - "UNK-007: a representative labeled set of real documents for the v2.0 targets — operator labels Staging documents after GATE-005; until then only synthetic mechanics are proven."
+  - "Operator merges of lane PRs into Staging and the Staging acceptance walk (S01-S16); Production promotion is outside the campaign."
+execution_status: NOT_EXECUTED
+do_not_execute_from_this_receipt: true
