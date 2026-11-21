@@ -50,6 +50,7 @@ for _path in (HERE, HERE.parent / "secrets"):
         sys.path.insert(0, str(_path))
 
 import findings as fnd  # noqa: E402
+import fixtures as fixture_contract  # noqa: E402
 import manifest  # noqa: E402
 
 RUNNER_VERSION = "1"
@@ -838,10 +839,14 @@ def _runner_digest() -> str:
     for path in (
         Path(__file__).resolve(),
         HERE / "findings.py",
+        HERE / "fixtures.py",
         HERE / "manifest.py",
         YAMLLINT_CONFIG,
     ):
         digest.update(path.read_bytes())
+    # The expect-fail fixture manifest decides what blocks on fixture paths.
+    if fixture_contract.MANIFEST.is_file():
+        digest.update(fixture_contract.MANIFEST.read_bytes())
     return digest.hexdigest()
 
 
@@ -867,6 +872,58 @@ def _lane_digest(loaded: manifest.Manifest, lane: manifest.Lane) -> str:
     return lane_digest(lane, loaded.tools[lane.tool], provider)
 
 
+def apply_fixtures(
+    ctx: Context,
+    lane: manifest.Lane,
+    files: Sequence[str],
+    found: Sequence[fnd.Finding],
+    fresh: Sequence[fnd.Finding],
+) -> tuple[list[fnd.Finding], list[fnd.Finding], list[fnd.Finding]]:
+    """Apply the declared expect-fail fixture contract (``fixtures.py``).
+
+    Returns (findings to classify as before, expected fixture findings, missing
+    expectations as blocking findings). A malformed manifest blocks the lane:
+    it is never read as "no fixtures".
+    """
+    try:
+        repo = fixture_contract.load().for_repo(ctx.slug)
+    except fixture_contract.FixtureManifestError as exc:
+        broken = fnd.Finding(
+            lane.name,
+            "ci-parity/fixture-manifest-invalid",
+            "error",
+            "ops/ci_parity/expect_fail_fixtures.json",
+            1,
+            str(exc)[:300],
+        )
+        return [*fresh, broken], [], []
+    if repo is None:
+        return list(fresh), [], []
+    # The paths this lane actually covered: the whole snapshot for a
+    # whole-tree lane, otherwise the changed files it matched.
+    if lane.extra.get("scope") == "whole-tree":
+        scanned = [
+            path
+            for path in repo.expected_paths(lane.name)
+            if lane.matches(path) and (ctx.scan_dir / path).is_file()
+        ]
+    else:
+        scanned = list(files)
+    verdict = fixture_contract.evaluate(repo, lane.name, fresh, scanned, observed=found)
+    missing = [
+        fnd.Finding(
+            lane.name,
+            fixture_contract.MISSING_RULE,
+            "error",
+            path,
+            1,
+            f"declared expect-fail rule {rule} did not fire on this fixture",
+        )
+        for path, rule in verdict.missing
+    ]
+    return list(verdict.kept), list(verdict.expected), missing
+
+
 def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[str, Any]:
     tool = ctx.loaded.tools[lane.tool]
     files = [f for f in ctx.changed if lane.matches(f)]
@@ -880,6 +937,7 @@ def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[
         "status": "pass",
         "blocking": [],
         "advisory": [],
+        "expected": [],
         "notice": "",
     }
     binary = ctx.loaded.resolve(lane.tool)
@@ -926,9 +984,12 @@ def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[
     else:
         fresh = fnd.new_findings(found, ctx.ranges)
     mapped = _mapped_rules(ctx, lane)
+    fresh, expected, missing = apply_fixtures(ctx, lane, files, found, fresh)
     for finding in fresh:
         bucket = "blocking" if fnd.blocks(finding, lane.block, mapped) else "advisory"
         record[bucket].append(finding.as_dict())
+    record["expected"] = [finding.as_dict() for finding in expected]
+    record["blocking"].extend(finding.as_dict() for finding in missing)
     record.update(ctx.facts)
     lane_notices = ctx.notices
     if lane_notices:
@@ -1169,11 +1230,17 @@ def scan_commit(
 def summarize(ctx: Context, records: Sequence[dict[str, Any]], *, label: str) -> tuple[str, int]:
     blocking = [f for r in records for f in r.get("blocking", [])]
     advisory = [f for r in records for f in r.get("advisory", [])]
+    expected = [f for r in records for f in r.get("expected", [])]
     skipped = [r for r in records if r.get("status") in ("skip", "error")]
     lines = [
         f"ci-parity {label} {ctx.sha[:8]} base {ctx.base[:8]}: lanes={len(records)} "
         f"blocking={len(blocking)} advisory={len(advisory)} skipped={len(skipped)}"
+        + (f" expected={len(expected)}" if expected else "")
     ]
+    # Declared expect-fail fixture findings (fixtures.py): proof the witness
+    # still fires; they do not block.
+    for item in expected:
+        lines.append("  expect " + fnd.Finding.from_dict(item).render())
     # Every BLOCK line is printed (#950): a truncated list hid 53 of 93
     # findings with no sign they existed. Advisory notes stay capped, but the
     # hidden count is named.
