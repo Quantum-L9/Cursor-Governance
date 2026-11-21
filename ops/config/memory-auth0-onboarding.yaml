@@ -2,9 +2,11 @@ schema: l9.memory-auth0-onboarding/v1
 issuer:
   vendor: auth0
   sole: true
-  # Operator-supplied Auth0 tenant domain. Unbound on purpose.
-  domain: null
-  issuer_url: null
+  # Read live from the Memory protected-resource metadata
+  # (/.well-known/oauth-protected-resource/mcp, 2026-11-21). The trailing
+  # slash is part of the issuer string Auth0 puts in `iss`.
+  domain: quantum-ai-partners.us.auth0.com
+  issuer_url: https://quantum-ai-partners.us.auth0.com/
   forbidden:
     - second_authorization_server
     - oauth_proxy
@@ -53,6 +55,22 @@ clients:
     hosted_credential_injection: false
     redirect_uris:
       - https://claude.ai/api/mcp/auth_callback
+  manus-native:
+    # Manus MCP connector. Registered 2026-11-21 with no dynamic client
+    # registration: public PKCE client, no secret, no project entry.
+    # The callback is Manus's own MCP OAuth endpoint, not a loopback URI.
+    client_type: public
+    token_endpoint_auth_method: none
+    grant_types:
+      - authorization_code
+      - refresh_token
+    pkce: S256
+    client_secret: forbidden
+    client_id: lIY0hERvmh34BZK0veLKtEtZm4qf9Beb
+    project_mcp_entry: false
+    hosted_credential_injection: false
+    redirect_uris:
+      - https://manus.im/api/webhook/mcp/callback
   l9-memory-hooks:
     # Hosted hook principal (ADR-0055; l9-graphiti-memory REMOTE_MCP_CONTRACT §2b).
     # client_id is public, not a secret; it is bound once the Auth0 app exists.

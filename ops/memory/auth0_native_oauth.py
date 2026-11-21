@@ -33,7 +33,10 @@ CURSOR_REDIRECT_URIS = (
     "cursor://anysphere.cursor-mcp/oauth/callback",
 )
 CLAUDE_ACCOUNT_REDIRECT_URI = "https://claude.ai/api/mcp/auth_callback"
-REGISTRATIONS = ("cursor-native", "claude-account-connector")
+# Manus runs the OAuth flow on its own servers, so its callback is a hosted
+# endpoint rather than a loopback or custom-scheme URI.
+MANUS_REDIRECT_URI = "https://manus.im/api/webhook/mcp/callback"
+REGISTRATIONS = ("cursor-native", "claude-account-connector", "manus-native")
 SECRET_FIELDS = frozenset(
     {
         "CLIENT_SECRET",
@@ -138,11 +141,13 @@ def structural_errors(document: Mapping[str, Any]) -> list[str]:
         return errors
     cursor = clients.get("cursor-native")
     claude = clients.get("claude-account-connector")
-    if not isinstance(cursor, dict) or not isinstance(claude, dict):
+    manus = clients.get("manus-native")
+    if not isinstance(cursor, dict) or not isinstance(claude, dict) or not isinstance(manus, dict):
         errors.append("clients.registrations")
         return errors
     errors.extend(_client_shape("cursor-native", cursor, CURSOR_REDIRECT_URIS))
     errors.extend(_client_shape("claude-account-connector", claude, (CLAUDE_ACCOUNT_REDIRECT_URI,)))
+    errors.extend(_client_shape("manus-native", manus, (MANUS_REDIRECT_URI,)))
     if claude.get("project_mcp_entry") is not False:
         errors.append("claude.project_mcp_entry")
     if claude.get("hosted_credential_injection") is not False:
