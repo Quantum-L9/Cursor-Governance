@@ -6,7 +6,9 @@ serializes the setup script and the SessionStart self-heal, and a tool already
 recorded in state.json at its pinned version is skipped. Release binaries are
 sha256-verified before they are made executable; a mismatch refuses and leaves
 any previous install untouched. PyPI tools go through `uv tool install
-<pkg>==<version>` into a private tool dir. Prints literal per-tool status only.
+<pkg>==<version>` into that version's own tool environment
+(<install_root>/<tool>/<version>/uv-tools), so a new version never rewrites an
+older one in use. Prints literal per-tool status only.
 
 A tool with `track: ci_ref` installs the revision its CI file names right now
 (l9-ci: the SDK revision l9-ci-core org-ci.yml provisions), read through
@@ -18,6 +20,7 @@ reviewed hand pin in tools.yaml installs instead and a WARN line says so.
     install.py --tool codeql   install one
     install.py --check         report; exit 1 unless every tool is OK
     install.py --from-dir DIR  use already-downloaded release assets (sha-verified)
+    install.py --resolve NAME  print the pinned binary's absolute path; exit 1 if absent
 """
 
 from __future__ import annotations
@@ -146,7 +149,16 @@ def _install_uv_tool(tool: manifest.Tool, target: Path) -> Path:
         raise InstallError(f"{tool.name}: uv not found")
     bin_dir = target / "bin"
     env = dict(os.environ)
-    env["UV_TOOL_DIR"] = str(target.parent.parent / "uv-tools")
+    # One uv tool environment per <tool>/<version>, inside that version's own
+    # target. A shared environment reinstalled with --force rewrote version N's
+    # files while a parallel job was still running them (the make pr reader
+    # wave runs `security` and `ci-parity` together), so installing N+1 never
+    # touches N's environment. --force now acts only inside this version's own
+    # environment: it repairs an interrupted or partly deleted install of the
+    # same version, which uv otherwise reports as "already installed" without
+    # restoring the executable link. It runs only when state.json does not
+    # record this version as installed (install_tool returns OK first).
+    env["UV_TOOL_DIR"] = str(target / "uv-tools")
     env["UV_TOOL_BIN_DIR"] = str(bin_dir)
     proc = subprocess.run(
         [uv, "tool", "install", "--force", uv_tool_spec(tool)],
@@ -251,8 +263,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--tool", action="append", default=[])
     parser.add_argument("--from-dir", type=Path)
+    parser.add_argument("--resolve", metavar="NAME")
     args = parser.parse_args(argv)
     loaded = manifest.load()
+    if args.resolve:
+        # The explicit, version-pinned path from state.json, never the mutable
+        # PATH link (`<bin_dir>/<name>`) a concurrent install can re-point.
+        resolved = loaded.resolve(args.resolve) if args.resolve in loaded.tools else None
+        if resolved is None:
+            return 1
+        print(resolved)
+        return 0
     if args.check:
         status = check(loaded)
         for name, verdict in status.items():
