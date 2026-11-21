@@ -13,10 +13,12 @@
 # Inputs are the frozen dispatch contract: expected_sha, utc_slot,
 # deep_contract, dispatch_key, and mode. Heavy pytest and coverage run only
 # for mode=apply after the SHA check, once. Sonar consumes that same run's
-# coverage.xml and does not invoke pytest. mode=plan admits the contract and
+# coverage.xml and does not invoke pytest: the scan is Core's reusable Sonar
+# step (Quantum-L9/l9-ci-core .github/actions/run-sonar), not a local copy of
+# the scanner wiring. mode=plan admits the contract and
 # stops. A second apply with the same dispatch key is refused before pytest.
 # That proof paginates every matching run; a truncated list refuses apply.
-# A missing SONAR_TOKEN does not skip pytest. The scan reports it.
+# A missing SONAR_TOKEN does not skip pytest. The Core step reports it.
 
 name: SonarCloud
 
@@ -203,7 +205,7 @@ jobs:
         if: steps.admit.outputs.apply == 'true'
         run: |
           set -euo pipefail
-          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.13.8
           bash ops/scripts/ensure_gov_python.sh "$PWD"
 
       - name: Tests with coverage (Cobertura XML)
@@ -233,26 +235,17 @@ jobs:
             nightly-suite-receipt.txt
           if-no-files-found: ignore
 
-      - name: Require SonarCloud analysis token
-        id: sonar_token
-        if: steps.admit.outputs.apply == 'true' && steps.coverage.outcome == 'success'
-        shell: bash
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [[ ! "${SONAR_TOKEN:-}" =~ [^[:space:]] ]]; then
-            echo "::error::SONAR_TOKEN is required for native SonarCloud analysis; no analysis or quality-gate proof was produced."
-            exit 1
-          fi
-
+      # The one reusable Core Sonar step (Quantum-L9/l9-ci-core #301,
+      # CI_CONFIG_FINDINGS row 6): it imports the coverage.xml the suite above
+      # wrote and runs no test. It fails closed, before scanning, on a blank
+      # SONAR_TOKEN or a missing, empty or non-Cobertura report, so a missing
+      # token is reported here and never skips the suite. Core pins the scanner
+      # action and CLI; quality-gate blocking waits up to 300 s on the gate.
       - name: SonarCloud Scan
-        if: steps.admit.outputs.apply == 'true' && steps.coverage.outcome == 'success' && steps.sonar_token.outcome == 'success'
-        uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4  # v8.5.0
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        id: sonar
+        if: steps.admit.outputs.apply == 'true' && steps.coverage.outcome == 'success'
+        uses: Quantum-L9/l9-ci-core/.github/actions/run-sonar@4185d917cfd932d5c2a94f681afe4f78eaa73155  # l9-ci-core #301
         with:
-          args: >
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.qualitygate.timeout=300
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
+          coverage-reports: coverage.xml
+          quality-gate: blocking

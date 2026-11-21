@@ -22,9 +22,14 @@ cached in this process only; neither it nor the credential pair is printed,
 logged, returned, or written anywhere.
 
 Per record: one MCP ``initialize``, the ``notifications/initialized`` the
-lifecycle requires before any request, and one ``tools/call`` naming the same
-connector tool the relay outbox names (``ops/memory/relay.py``
-``CONNECTOR_TOOLS``). The result is exactly one of three things:
+lifecycle requires before any request, and one ``tools/call`` naming the tool
+the hosted service binds for a *hook principal* (:data:`HOSTED_TOOLS`,
+l9-graphiti-memory ``docs/REMOTE_MCP_CONTRACT.md`` §2b): ``write`` goes to
+``memory.ingest``, never ``memory.write_agent``. The relay outbox
+(``ops/memory/relay.py`` ``CONNECTOR_TOOLS``) keeps ``memory.write_agent``
+because an agent carries those entries and writes as itself; this module
+writes as ``l9-memory-hooks``, whose envelope admits the hook tools only. The
+result is exactly one of three things:
 
 ``ok``
     The service answered with a receipt whose id is a UUID. Only this may be
@@ -68,6 +73,44 @@ TOKEN_SKEW = 60.0
 REFUSED_STATUSES = frozenset({"rejected", "quarantined", "failed"})
 #: At most this many owed entries per drain: a Stop hook has a time budget.
 DRAIN_LIMIT = 25
+
+#: Hook-lane operation -> the tool the hosted service binds for a hook
+#: principal (REMOTE_MCP_CONTRACT §2b). Deliberately not the relay's
+#: ``CONNECTOR_TOOLS``: ``memory.write_agent`` is the agent lane and is never
+#: called as the hook principal.
+HOSTED_TOOLS: Mapping[str, str] = {
+    "write": "memory.ingest",
+    "ingest_candidate": "memory.ingest_governed_candidate",
+    "close": "memory.close",
+}
+#: ``memory.ingest`` input properties (the shared ``MemoryWriteRequest`` shape
+#: of the bound ``l9_graphite_memory`` release, ``mcp_tools._write_properties``)
+#: and the two it requires. An argument outside this set is refused here rather
+#: than dropped: a record is sent whole or not at all.
+INGEST_FIELDS = frozenset(
+    {
+        "namespace",
+        "content",
+        "memory_class",
+        "subject",
+        "predicate",
+        "object",
+        "source_id",
+        "idempotency_key",
+        "valid_from",
+        "valid_to",
+        "confidence",
+        "source_trust",
+        "consent",
+        "evidence",
+        "numeric_declarations",
+        "tags",
+        "supersedes",
+        "references",
+        "dry_run",
+    }
+)
+INGEST_REQUIRED = ("namespace", "content")
 
 VERDICT_OK = "ok"
 VERDICT_REFUSED = "refused"
@@ -245,6 +288,28 @@ def _tool_error_text(result: Mapping[str, Any]) -> str:
         if isinstance(item, dict) and item.get("type") == "text"
     ]
     return _clip(" ".join(part for part in parts if part) or "tool reported isError")
+
+
+def hosted_arguments(operation: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """The ``tools/call`` arguments for ``operation`` in its hosted tool's shape.
+
+    ``write`` must fit ``memory.ingest``: both required fields present and no
+    field the tool does not declare. The other operations pass through, since
+    their relay arguments are already their hosted tool's arguments. A record
+    that does not fit is refused, not parked: the check is deterministic, so a
+    retry would fail identically and stall the drain behind it.
+    """
+
+    shaped = dict(arguments)
+    if operation != "write":
+        return shaped
+    unknown = sorted(set(shaped) - INGEST_FIELDS)
+    if unknown:
+        raise HostedRefused(f"write arguments not declared by memory.ingest: {unknown}")
+    missing = [name for name in INGEST_REQUIRED if not shaped.get(name)]
+    if missing:
+        raise HostedRefused(f"write arguments missing memory.ingest fields: {missing}")
+    return shaped
 
 
 def receipt_id_of(payload: Mapping[str, Any]) -> str | None:
@@ -483,14 +548,12 @@ class HostedHookTransport:
     def call(self, operation: str, arguments: Mapping[str, Any]) -> HostedResult:
         """Carry one hook-lane record; never raises for a transport problem."""
 
-        from ops.memory.relay import CONNECTOR_TOOLS  # noqa: PLC0415
-
         started = self._clock()
-        tool = CONNECTOR_TOOLS.get(operation, "")
+        tool = HOSTED_TOOLS.get(operation, "")
         try:
             if not tool:
                 raise HostedUnavailable(f"operation {operation!r} has no hosted tool")
-            payload = self._call(tool, arguments)
+            payload = self._call(tool, hosted_arguments(operation, arguments))
         except HostedRefused as exc:
             return HostedResult(
                 VERDICT_REFUSED, tool, reason=_clip(exc), latency_ms=self._ms(started)

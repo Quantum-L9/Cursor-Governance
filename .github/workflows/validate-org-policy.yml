@@ -60,7 +60,7 @@ jobs:
           # The uv bootstrap is version-pinned and wheels-only; `uv sync` uses --no-build
           # and every `uv run` uses --frozen --no-build (SonarCloud S8541/S8544).
           # `python -m pip` targets the setup-python interpreter this job runs on.
-          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.13.8
           uv sync --locked --no-build
       - name: Validate normative policy artifacts
         run: uv run --frozen --no-build python ops/scripts/validate_org_policy.py
