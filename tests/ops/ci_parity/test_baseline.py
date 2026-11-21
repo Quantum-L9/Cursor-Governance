@@ -215,3 +215,36 @@ def test_a_core_refusal_is_never_pre_existing(tmp_path: Path) -> None:
 def test_parse_renames_reads_name_status_rows() -> None:
     rows = "R100\told/a.py\tnew/a.py\nM\tkeep.py\nR087\tx.ts\ty.ts\n"
     assert fnd.parse_renames(rows) == {"new/a.py": "old/a.py", "y.ts": "x.ts"}
+
+
+def test_an_expect_fail_fixture_on_a_new_line_is_still_handled_by_the_fixture_logic(
+    world: dict, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """#1090 + PARITY-DIFF: fixtures judge the merge-base-classified NEW findings."""
+    import fixtures  # noqa: PLC0415
+
+    slug = "Quantum-L9/fixture-demo"
+    repo = world["repo"]
+    _git(repo, "remote", "add", "origin", f"https://github.com/{slug}.git")
+    data = {
+        "schema": fixtures.SCHEMA,
+        "repositories": {slug: {"roots": ["fx/"], "files": {"fx/witness.txt": {"biome": ["bad"]}}}},
+    }
+    path = tmp_path / "expect_fail_fixtures.json"
+    path.write_text(json.dumps(data))
+    monkeypatch.setattr(fixtures, "MANIFEST", path)
+    (repo / "fx").mkdir()
+    (repo / "fx" / "witness.txt").write_text("ok\nBAD witness\n")  # new file, new line
+    _git(repo, "add", "fx/witness.txt")
+    _git(repo, "commit", "-q", "-m", "add witness")
+    assert _gate(world, "biome") == 0
+    out = capsys.readouterr().out
+    assert "expect fx/witness.txt:2" in out and "BLOCK" not in out
+    record = _receipt(world, "biome")
+    assert record["baseline"] == "merge-base" and record["new"] == 0
+    assert [f["path"] for f in record["expected"]] == ["fx/witness.txt"]
+    # The same declared witness that no longer fires is a FAIL, not a pass.
+    (repo / "fx" / "witness.txt").write_text("ok\nfixed\n")
+    _git(repo, "commit", "-q", "-am", "witness stops firing")
+    assert _gate(world, "biome") == run.EXIT_BLOCK
+    assert fixtures.MISSING_RULE in capsys.readouterr().out
