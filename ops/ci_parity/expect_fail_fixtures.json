@@ -45,6 +45,9 @@
             "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true",
             "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
           ]
+        },
+        "canary/ci_ul/biome_bad.json": {
+          "biome": ["format"]
         }
       }
     }
