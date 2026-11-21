@@ -6,7 +6,14 @@ rules:
     languages: [python]
     severity: ERROR
     metadata:
+      l9:
+        canonical_rule_id: CONSUMER-CURSOR-GOVERNANCE-NO-SEMGREP-APP-TOKEN-IN-CHILD-ENV
       l9.surface: pr-security-velocity
+    # Every Python file: the scope this rule always had, now declared so the
+    # central consumer execution (l9-ci-sdk ADR 0021) admits it.
+    paths:
+      include:
+        - "*.py"
     pattern-either:
       - pattern: os.environ["SEMGREP_APP_TOKEN"]
       - pattern: os.environ.get("SEMGREP_APP_TOKEN")
@@ -29,6 +36,8 @@ rules:
     languages: [python]
     severity: ERROR
     metadata:
+      l9:
+        canonical_rule_id: CONSUMER-CURSOR-GOVERNANCE-MEMORY-BOUNDARY-NO-NETWORK-OR-PROVIDER-TRANSPORT
       l9.surface: memory-boundary
       l9.invariant: INV-03
     paths:
@@ -89,6 +98,8 @@ rules:
     languages: [python]
     severity: ERROR
     metadata:
+      l9:
+        canonical_rule_id: CONSUMER-CURSOR-GOVERNANCE-MEMORY-BOUNDARY-SPAWN-ONLY-THROUGH-THE-BINDING
       l9.surface: memory-boundary
       l9.invariant: INV-03
     paths:
@@ -130,6 +141,8 @@ rules:
     languages: [python]
     severity: ERROR
     metadata:
+      l9:
+        canonical_rule_id: CONSUMER-CURSOR-GOVERNANCE-MEMORY-BOUNDARY-NO-SHELL-STRING-SPAWN
       l9.surface: memory-boundary
       l9.invariant: INV-03
     paths:
