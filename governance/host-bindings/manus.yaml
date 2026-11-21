@@ -1,0 +1,72 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/host-bindings/manus.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-11-21
+# The Manus host's default projection binding: what a Manus session reads without
+# opting in. The adapter bootstrap binds it; no skill or command is involved.
+# It selects meaning; it grants no permission and admits nothing.
+schema: l9.cursor-governance.host-binding/v1
+artifact_id: l9.cursor-governance/host-binding-manus@1
+canonical: true
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: manus_host_default_binding
+  authority_class: local_canonical_binding
+host:
+  identity: manus
+  actor_ref: l9.actor-registry/global@1#manus
+  # Manus has exactly one canonical surface. The hosted cloud session is it;
+  # the shell a Manus session runs commands in is not a separately registered
+  # interaction surface, so there is no manus-cli to name here.
+  surface_refs:
+    - l9.surface-registry/global@1#manus-cloud
+# Quantum-L9/.github declares no l9.domain-consumer-binding for manus, so this
+# contract does not mirror one. It binds the admitted operating plane plus the
+# coding-agent execution projection, by the owner's decision below. The other
+# domains are reachable through the manual bindings, never by default.
+canonical_binding_ref: null
+decided: >-
+  2026-11-21: the repository owner directed that the Manus adapter reach parity
+  with the Claude Code host default — the admitted operating plane
+  (l9.projection/cursor-governance-operating-plane@2) plus
+  l9.projection/coding-agent-execution@1, bound without a skill. The binding is
+  made by the adapter's bootstrap, because Manus exposes no SessionStart hook:
+  `session_start.autobind` here means "no skill gates it", not "the host fires a
+  hook". A session that cannot run the bootstrap cites no operating-plane
+  semantics, exactly as on every other host.
+# Bound by environment/agents/adapters/manus/install.sh through the control
+# below. The agent-side entry is `make manus-start`; the project instruction
+# (session_bootstrap.md) tells the session to trust that report and nothing else.
+session_start:
+  autobind: true
+  depends_on_skill: false
+  manual_bindings: [/coding-agent, /lcto, /architect, /planner]
+base:
+  ref: l9.projection/cursor-governance-operating-plane@2
+  binding: governance/authority-bindings/operating-plane-v2.yaml
+  adapter: ops/scripts/operating_plane_v2_projection.py
+  required: true
+activations:
+  always: loaded in every Manus session once verified
+domains:
+  - ref: l9.projection/coding-agent-execution@1
+    binding: governance/authority-bindings/coding-agent-execution.yaml
+    activation: always
+    purpose: Coding-agent execution invariants, contracts and authority model
+control: ops/autonomy/host_binding.py
+constraints:
+  - Binding changes what a session reads, never what it may do. Publication, merge, push and
+    deploy authority stay with CANONICAL_LAW.md and ops/autonomy/surface_profile.yaml.
+  - The base is read only after its adapter reports CURRENT; otherwise the session is not
+    bound and cites no operating-plane semantics.
+  - The coding-agent execution projection is read only after its status reader reports it
+    ADMITTED_AND_CURRENT, and never without the base. Binding it by default is not
+    coding-agent mode, and it does not satisfy ops/autonomy/coding_agent_binding_gate.py for a
+    swarm child.
+  - Manus has no host hook. A session whose bootstrap did not run is unbound, and this
+    contract is not evidence that it did.

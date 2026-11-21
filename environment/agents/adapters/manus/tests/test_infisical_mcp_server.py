@@ -90,6 +90,26 @@ class ManusInfisicalMcpTests(unittest.TestCase):
         self.assertFalse(payload["secret_values_exposed"])
         self.assertEqual(fake.calls, [])
 
+    def test_machine_identity_id_in_the_wrong_field_names_the_mistake(self) -> None:
+        # Infisical shows the machine-identity UUID one screen away from the
+        # project UUID; a bare "project_id" gap reads like a missing secret.
+        env = {
+            "L9_MANUS_INFISICAL_CLIENT_ID": "machine-client-id",
+            "L9_MANUS_INFISICAL_CLIENT_SECRET": "machine-client-secret",
+            "L9_MANUS_INFISICAL_AGENT_ID": "7ef81864-0daf-4107-be7d-a9e61caec5c5",
+        }
+        fake = FakeInfisical()
+        server = server_module.ManusInfisicalMcp(env=env, request_json=fake)
+        status = server.client.status(server.capabilities)
+        self.assertEqual(status["status"], "missing_configuration")
+        self.assertEqual(status["missing_configuration"], ["project_id"])
+        self.assertIn("L9_MANUS_INFISICAL_PROJECT_ID", status["configuration_hint"])
+        self.assertIn("machine-identity", status["configuration_hint"])
+        with self.assertRaises(server_module.SafeMcpError) as raised:
+            server.client._token()
+        self.assertIn("project UUID", str(raised.exception))
+        self.assertEqual(fake.calls, [])
+
     def test_metadata_request_explicitly_excludes_values_and_output(self) -> None:
         fake = FakeInfisical()
         server = server_module.ManusInfisicalMcp(env=self.env, request_json=fake)
