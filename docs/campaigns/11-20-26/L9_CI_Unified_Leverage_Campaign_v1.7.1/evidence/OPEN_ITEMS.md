@@ -39,8 +39,8 @@ is public, so rows about credentials carry counts and actions only, never locati
 | T30 | GitHub Code Quality runs CodeQL a second time on every pull request and push, about 6 minutes each, beside the repository's own CodeQL workflow. It overlaps with Sonar's purpose. | observed, lane (N1) | CTO | Compare unique findings from Code Quality, CodeQL and Sonar in the tool matrix; then keep or drop. | OPEN |
 | T31 | GitHub Secret Protection and Code Security are both enabled on private repositories and billed per active committer. The licence count and bill are unknown. | operator-reported | operator | Read the organization licensing page once. Public repositories are free. | UNKNOWN |
 
-| T32 | The SDK inventory reports JavaScript as `unsupported` in Cursor-Governance, so the central Semgrep path plans no JavaScript instance there. Visible, not hidden; CodeQL covers JavaScript separately. | observed (I1) | lane L1d | Decide whether the TypeScript pack is extended to JavaScript after fixture proof. | OPEN |
-| T33 | CEG's and EIE's repository `.coderabbit.yaml` lack `inheritance: true`, so they override the organization policy. EIE's sets assertive, request changes, and a summary written into the PR description that `make pr` owns, and excludes docs. | observed | lanes C1 (CEG), C2 (EIE) | CEG: #516 merged by the operator. EIE: #368 open; CodeRabbit is reviewing it. | OPEN, EIE in progress |
+| T32 | The SDK inventory reports JavaScript as `unsupported` in Cursor-Governance, so the central Semgrep path plans no JavaScript instance there. Visible, not hidden; CodeQL covers JavaScript separately. (Corrected: CodeQL on Cursor-Governance analyzes `python` only; JavaScript is not covered.) | observed (I1) | lane L1d | Decide whether the TypeScript pack is extended to JavaScript after fixture proof. | OPEN |
+| T33 | CEG's and EIE's repository `.coderabbit.yaml` lack `inheritance: true`, so they override the organization policy. EIE's sets assertive, request changes, and a summary written into the PR description that `make pr` owns, and excludes docs. | observed | lanes C1 (CEG), C2 (EIE) | CEG: #516 merged by the operator. EIE: #368 open; CodeRabbit is reviewing it. (Corrected: #368 merged 2026-11-20T18:42:01Z, `4324e0df`.) | OPEN, EIE in progress |
 | T34 | Stage 1 integration, 2026-11-20: Core #283's new `tests/governance/test_ci_runtime_invariants.py` failed to import under Core's full-suite discovery (`tests/tools` shadows top-level `tools`). | observed (I1) | lane L2 | Repaired on #283; re-verified: full suite 1165 OK. See `STAGE1_INTEGRATION.md`. | FIXED_PROVEN |
 
 | T35 | Core uploads no coverage to Sonar, so every Core pull request that adds code fails SonarCloud with 0% coverage on new code (seen on #283, #286, #287). | observed | lane L2b | Feed coverage from an existing test run to the Sonar scan; no second test run. | OPEN, assigned |
@@ -143,5 +143,10 @@ Evidence for each row is in `CLOSEOUT_RECEIPT.md`.
 | X6 | DONE (EIE canary #378, runs 1 and 2). |
 | X7 | DONE (#1091, #1118). |
 | X8 | OPEN. Skill support merged (#1109); the ruleset has no queue yet (click-path 1) and no PR has landed through it. |
-| X9 | IN PROGRESS. `CLOSEOUT_RECEIPT.md` published; `PROOF.md` not yet filled from real runs. |
+| X9 | IN PROGRESS. `PROOF.md` filled from real runs (11 PASS, 34 BLOCKED, 14 NOT_PROVEN); register not closed. |
 | X10 | OPEN. Findings done (rows 20-29); fixes not merged, operator settings not applied, measured delta not taken. |
+
+### Corrections (REST, read 2026-11-21 13:10-13:20Z)
+
+- EIE #368 is merged (`4324e0df`), not open.
+- T32: CodeQL on Cursor-Governance analyzes `python` only, not JavaScript.
