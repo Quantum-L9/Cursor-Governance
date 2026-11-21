@@ -34,6 +34,30 @@ import infisical_cli_login as login  # noqa: E402
 
 BIND_NAMES = ("SEMGREP_APP_TOKEN", "SONAR_TOKEN", "GITHUB_TOKEN", "CONTEXT7_API_KEY")
 
+#: The memory path's Cursor-Governance credentials (lane MEM-HOOK-2): the hosted
+#: hook carrier's client-credentials pair (``ops/memory/hook_carrier.py``
+#: ``HOOK_CREDENTIALS``) and the signed agent door ``ops/memory/run_memory_mcp.sh``
+#: mints at MCP spawn. Each is reported by name and source with the hook carrier
+#: it resolves; an unbound name is a named WARN, never a plane failure.
+MEMORY_BIND_NAMES = (
+    "L9_MEMORY_HOOK_CLIENT_ID",
+    "L9_MEMORY_HOOK_CLIENT_SECRET",
+    "L9_MEMORY_AGENT_AUTHORITY_JSON",
+)
+#: What an unbound memory name costs, keyed by name (module literals only).
+MEMORY_IMPACT = {
+    "L9_MEMORY_HOOK_CLIENT_ID": "hosted hook carrier needs both hook credentials",
+    "L9_MEMORY_HOOK_CLIENT_SECRET": "hosted hook carrier needs both hook credentials",
+    "L9_MEMORY_AGENT_AUTHORITY_JSON": (
+        "run_memory_mcp.sh cannot mint the signed agent door, so memory.write_agent "
+        "cannot run as this agent"
+    ),
+}
+#: Hook carriers the report may name (``ops/memory/hook_carrier.py``), as literals.
+CARRIER_NAMES = ("hosted", "relay", "local")
+CARRIER_REFUSED = "refused"
+CARRIER_UNKNOWN = "unknown"
+
 #: Surface classes, reported for context only: no class is exempt from binding.
 MODEL_CONTROLLED = "model_controlled"
 SELF_HOSTED = "self_hosted"
@@ -112,6 +136,66 @@ def _bind_line(binds: list[dict[str, Any]]) -> str:
 IDENTITY_SOURCES = ("env", "profile")
 
 
+def _bind_entry(name: str, context: Mapping[str, str]) -> dict[str, Any]:
+    status = cb.bind_status(name, env=context)
+    return {
+        "name": name,  # the module's own literal, not the bind result's echo
+        "bound": bool(status.get("bound")),
+        "source": cb.literal_source(status.get("source")),
+    }
+
+
+def hook_carrier_for(binds: list[dict[str, Any]], context: Mapping[str, str]) -> str:
+    """The carrier ``ops/memory/hook_carrier.py`` resolves from these binds.
+
+    Uses the owner's own decision with the statuses already bound here, so the
+    report cannot drift from what the hook lane will do. A module literal.
+    """
+    repo = Path(__file__).resolve().parents[2]
+    if str(repo) not in sys.path:
+        sys.path.insert(0, str(repo))
+    bound = {str(b.get("name")): bool(b.get("bound")) for b in binds}
+    try:
+        from ops.memory import hook_carrier  # noqa: PLC0415
+
+        carrier = hook_carrier.resolve_carrier(
+            context, binder=lambda name, _env: bound.get(name, False)
+        )
+    except ValueError:  # CarrierError: the override names no carrier
+        return CARRIER_REFUSED
+    except Exception:  # noqa: BLE001 - the report never fails on the carrier probe
+        return CARRIER_UNKNOWN
+    return next((known for known in CARRIER_NAMES if known == carrier), CARRIER_UNKNOWN)
+
+
+def memory_plane(context: Mapping[str, str]) -> dict[str, Any]:
+    """Memory credentials by name and source, the hook carrier, and named WARNs."""
+    binds = [_bind_entry(name, context) for name in MEMORY_BIND_NAMES]
+    carrier = hook_carrier_for(binds, context)
+    warnings = [
+        f"WARN: {name} unbound ({source}) — {MEMORY_IMPACT[name]}; hook carrier: {carrier}"
+        for name, source in (
+            (
+                next(known for known in MEMORY_BIND_NAMES if known == b["name"]),
+                cb.literal_source(b.get("source")),
+            )
+            for b in binds
+            if not b["bound"]
+        )
+    ]
+    return {"binds": binds, "carrier": carrier, "warnings": warnings}
+
+
+def _memory_line(memory: dict[str, Any]) -> str:
+    by_name = {str(b.get("name")): b.get("source") for b in memory.get("binds") or []}
+    names = " ".join(f"{name}={cb.literal_source(by_name.get(name))}" for name in MEMORY_BIND_NAMES)
+    carrier = next(
+        (known for known in (*CARRIER_NAMES, CARRIER_REFUSED) if known == memory.get("carrier")),
+        CARRIER_UNKNOWN,
+    )
+    return f"memory: {names} hook_carrier={carrier}"
+
+
 def identity_status(login_state: str, source: str) -> dict[str, Any]:
     """The machine identity's state as module literals only (names, codes, messages)."""
     if login_state == "skipped":
@@ -164,21 +248,14 @@ def run_plane(env: Mapping[str, str] | None = None) -> dict[str, Any]:
         )
         source = login.machine_identity(context)[0] or source
     identity = identity_status(login_state, source)
-    binds: list[dict[str, Any]] = []
-    for name in BIND_NAMES:
-        status = cb.bind_status(name, env=context)
-        binds.append(
-            {
-                "name": name,  # the module's own literal, not the bind result's echo
-                "bound": bool(status.get("bound")),
-                "source": cb.literal_source(status.get("source")),
-            }
-        )
+    binds = [_bind_entry(name, context) for name in BIND_NAMES]
+    memory = memory_plane(context)
     plane_ok = bool(identity["ok"]) and (aws is None or bool(aws.get("ok")))
     result: dict[str, Any] = {
         "identity": identity,
         "login": login_state,
         "binds": binds,
+        "memory": memory,
         "authorized_names": catalog_names(),
         "plane_ok": plane_ok,
         "surface_class": klass,
@@ -208,12 +285,38 @@ def receipt_payload(result: dict[str, Any]) -> dict[str, Any]:
             "summary": str(identity.get("summary") or ""),
         },
         "binds": binds,
+        "memory": _memory_receipt(result.get("memory")),
         "authorized_names": [
             name
             for name in result.get("authorized_names") or []
             if isinstance(name, str) and name in cb.allowed_names() and name not in cb.REFUSED_NAMES
         ],
         **({"aws": result["aws"]} if isinstance(result.get("aws"), dict) else {}),
+    }
+
+
+def _memory_receipt(raw: object) -> dict[str, Any]:
+    memory = raw if isinstance(raw, dict) else {}
+    binds = memory.get("binds") if isinstance(memory.get("binds"), list) else []
+    return {
+        "binds": [
+            {
+                "name": next((k for k in MEMORY_BIND_NAMES if k == b.get("name")), "?"),
+                "bound": bool(b.get("bound")),
+                "source": cb.literal_source(b.get("source")),
+            }
+            for b in binds
+            if isinstance(b, dict)
+        ],
+        "carrier": next(
+            (
+                known
+                for known in (*CARRIER_NAMES, CARRIER_REFUSED)
+                if known == memory.get("carrier")
+            ),
+            CARRIER_UNKNOWN,
+        ),
+        "warnings": len(memory.get("warnings") or []),
     }
 
 
@@ -241,6 +344,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         print(json.dumps(payload))
     binds = _bind_line(result["binds"])
+    memory = result.get("memory") or {}
+    print(f"session_start_secrets: {_memory_line(memory)}", file=sys.stderr)
+    for line in memory.get("warnings") or []:
+        print(f"session_start_secrets: {line}", file=sys.stderr)
     if not result["plane_ok"]:
         code = next(
             (

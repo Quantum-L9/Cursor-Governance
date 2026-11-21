@@ -46,6 +46,10 @@ capability_client = _load("capability_client")
 BINDS_OK = [
     {"name": name, "bound": True, "source": "infisical"}
     for name in ("SEMGREP_APP_TOKEN", "SONAR_TOKEN", "GITHUB_TOKEN", "CONTEXT7_API_KEY")
+] + [
+    # Every name the plane binds has a row: the memory credentials too (MEM-HOOK-2).
+    {"name": name, "bound": True, "source": "infisical"}
+    for name in plane.MEMORY_BIND_NAMES
 ]
 BINDS_NONE = [{**row, "bound": False, "source": "infisical-machine-absent"} for row in BINDS_OK]
 
@@ -102,6 +106,18 @@ class SessionStartSecretsTests(unittest.TestCase):
         self.assertEqual(result["identity"]["source"], "env")
         self.assertEqual(rc, 0)
         self.assertIn("CONTEXT7_API_KEY=infisical", err)
+
+    def test_memory_credentials_are_reported_with_the_hook_carrier(self) -> None:
+        result, rc, _, err = _run("env", "env", BINDS_OK, [], HOSTED)
+        self.assertEqual(rc, 0)
+        self.assertEqual(result["memory"]["carrier"], "hosted")
+        for name in plane.MEMORY_BIND_NAMES:
+            self.assertIn(f"{name}=infisical", err)
+        self.assertIn("hook_carrier=hosted", err)
+        self.assertNotIn("WARN: L9_MEMORY_", err)
+        _, rc, _, err = _run("env", "env", BINDS_NONE, [], HOSTED)
+        self.assertEqual(rc, 0)  # an unbound memory name warns; it never fails the plane
+        self.assertEqual(err.count("WARN: L9_MEMORY_"), len(plane.MEMORY_BIND_NAMES))
 
     def test_context7_is_among_the_names_the_plane_binds(self) -> None:
         self.assertIn("CONTEXT7_API_KEY", plane.BIND_NAMES)
@@ -222,8 +238,27 @@ class OperatorPathTests(unittest.TestCase):
         self.assertEqual(payload["identity"]["ok"], True)
         self.assertNotIn("aws", payload)
         blob = json.dumps(payload)
-        self.assertNotIn("client_secret", blob.lower())
         self.assertNotIn("AKIA", blob)
+
+        # No field carries a client secret. The memory report names the
+        # inventory key L9_MEMORY_HOOK_CLIENT_SECRET (a name, never its value);
+        # that declared name is the only string allowed to contain the phrase.
+        def walk(node: Any) -> Any:
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    yield "key", str(key)
+                    yield from walk(value)
+            elif isinstance(node, list):
+                for item in node:
+                    yield from walk(item)
+            elif isinstance(node, str):
+                yield "value", node
+
+        for kind, text in walk(payload):
+            if "client_secret" not in text.lower():
+                continue
+            self.assertEqual(kind, "value", f"a field named {text!r}")
+            self.assertIn(text, plane.MEMORY_BIND_NAMES)
 
     def test_receipt_out_writes_same_object(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
