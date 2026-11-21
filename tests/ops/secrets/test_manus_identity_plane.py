@@ -304,7 +304,10 @@ def test_explicit_operator_context_does_not_inherit_an_ambient_manus_marker(monk
     monkeypatch.setattr(plane, "_aws_probe", lambda: {"ok": True})
     env = {
         "L9_GOVERNANCE_SURFACE": "cursor",
-        **{name: "CANARY_EXPLICIT_OPERATOR_VALUE" for name in plane.BIND_NAMES},
+        **{
+            name: "CANARY_EXPLICIT_OPERATOR_VALUE"
+            for name in (*plane.BIND_NAMES, *plane.MEMORY_BIND_NAMES)
+        },
         "AUTH0_CLIENT_SECRET": "CANARY_EXPLICIT_OPERATOR_VALUE",
     }
     with mock.patch.dict(os.environ, MANUS, clear=True):
