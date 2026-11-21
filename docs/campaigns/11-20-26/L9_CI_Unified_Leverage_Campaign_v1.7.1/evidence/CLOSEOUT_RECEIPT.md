@@ -86,7 +86,7 @@ Projected saving if all applied: about **520 s per push (~52%)**. Measured delta
 |---|---|---|
 | Click-path 1, merge queue on Cursor-Governance `main` | Applied | `merge_queue` rule active: SQUASH, build 5, group 1-5, wait 5 min, ALLGREEN, timeout 60 min. G2 runs the queue proof next (X8). |
 | Click-path 2, GitHub Code Quality off | Applied | Confirm on the next `main` push that only `codeql.yml` runs CodeQL. |
-| Click-path 3, Semgrep managed diff scans off | Being corrected (the first change was made on the organization Code page, not the project) | Confirm on the next Cursor-Governance PR that `semgrep-cloud-platform/scan` no longer runs. |
+| Click-path 3, Semgrep managed diff scans off | Applied on the Cursor-Governance project (project 6376323 settings; the organization-wide Code settings are unchanged) | Confirm on the next Cursor-Governance PR that `semgrep-cloud-platform/scan` no longer runs. |
 | Click-path 4, Core `main` pull-request rule | Applied | Core ruleset 27801869 `main-protection` active: pull_request (0 approvals, no code-owner review), deletion, non_fast_forward. Row 29's first gap is closed. |
 | Click-path 7, nightly App permissions | Applied | Proof is the next nightly-sink dispatch (L2): token mint, SARIF upload, one rolling issue. |
 | Memory hook principal | `--apply` run | Auth0 app, grant and three Infisical secrets created; the verification token request returned HTTP 403 (MEM-HOOK lane diagnosing). |
