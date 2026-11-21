@@ -12,7 +12,7 @@
         "status": "current"
       },
       {
-        "description": "The one logical Claude Code actor. Desktop, CLI, IDE, web, and mobile are SurfaceIdentity distinctions recorded in surface_registry.yaml, never separate actors.",
+        "description": "The one logical Claude Code actor. Its surfaces, claude-code-cli and claude-code-web, are SurfaceIdentity distinctions recorded in surface_registry.yaml, never separate actors.",
         "id": "claude-code",
         "kind": "agent",
         "status": "current"
@@ -67,10 +67,10 @@
       }
     ]
   },
-  "projection_digest": "sha256:1a57bbcfcf74e2644553cecf5a90d0dbae41f357493021450116cf301a03fd5c",
+  "projection_digest": "sha256:562ec5b81e67aa850330e5f80492eb29c3820873e5593bdb7cc691d28762a666",
   "projection_profile_digest": "sha256:062a28729209c9857cf70f3068ea6d565bb1ce54c765ace52b92afaa5d09e5b6",
   "projection_profile_ref": "l9.projection/identity-attribution@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:34fbe4abc246e21c28401941025317be52c109c88335577616a2648cc93c6f6f",
+  "source_digest": "sha256:942f9274770c44a28083645782715b5dd5b81cd2b4dfd0c4abc8cf0421ec5ddf",
   "source_ref": "l9.source/actor-registry@1"
 }

@@ -140,7 +140,7 @@ jobs:
           # installation never resolves an unlocked version or builds from source
           # (SonarCloud githubactions S8541/S8544). `python -m pip` targets the
           # setup-python interpreter this job runs on.
-          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.13.8
           uv sync --locked --no-build --extra dev
       - name: Controller manifest guard
         # Cheap call of the existing controller validator. The template tree is
@@ -234,7 +234,7 @@ jobs:
           # bootstrap is version-pinned and wheels-only; the sync uses --no-build and every
           # `uv run` uses --frozen --no-build (SonarCloud S8541/S8544). `python -m pip`
           # targets the setup-python interpreter this job runs on.
-          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.13.8
           # One owner of the Test Suite environment: ensure_gov_python.sh ->
           # ensure_uv_environment.sh runs the locked sync AND writes the readiness
           # state the repository's own gates read (.venv/.l9-uv-fingerprint, the

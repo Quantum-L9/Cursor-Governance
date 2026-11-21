@@ -94,7 +94,7 @@ jobs:
       - name: Install locked governance toolchain
         run: |
           set -euo pipefail
-          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.13.8
           uv sync --locked --no-build --extra dev
 
       - name: Read the binding manifest
