@@ -18,6 +18,8 @@ of this (the hooks and the `make pr` wave entry are Claude-surface only).
 | `validate_manifest.py` | Fails when a recorded CI pin moves without a re-pin |
 | `install.py` | sha256-verified, flock single-flight, idempotent install (`--check` to audit) |
 | `findings.py` | One finding shape; SARIF/JSON parsers; changed-line filter |
+| `fixtures.py` | Declared expect-fail fixtures: named rules must fire on fixture paths and do not block |
+| `expect_fail_fixtures.json` | Consumer-repository data for `fixtures.py`: fixture roots and per-file rule ids |
 | `run.py` | Lanes, CPU budget, snapshot clone, receipts; `--file` / `--commit` / `--gate` / `--status` |
 | `sonar_status.py` | Read-only SonarCloud PR quality gate + issues (never a scanner run) |
 | `lanes/yamllint.yaml` | yamllint config for the lane (relaxed; errors block) |
@@ -31,7 +33,7 @@ Paid-tier Semgrep runs through `ops/secrets/capability_exec.py` (entry
 |---|---|---|---|---|
 | Edit | PostToolUse Edit/Write (`ci_parity_posttool.py`) | fast: ruff, shellcheck, actionlint, zizmor, yamllint, biome | the edited file, in the workspace | no — findings on the edited lines go back to the agent |
 | Commit | PostToolUse Bash when HEAD moved | every applicable lane | background, `~/.cache/l9-ci-parity/<repo>/clone` at the commit | no — writes receipts |
-| Publish | `make pr` reader wave (non-Cursor surfaces) | `biome`, `semgrep-l9` only: Analyze (central Core)'s two blocking checks | snapshot clone at HEAD | yes — exit 2 fails the gate |
+| Publish | `make pr` reader wave (non-Cursor surfaces) | `biome`, `semgrep-l9` only: Analyze (central Core)'s two blocking checks | snapshot clones at HEAD and at the merge-base | yes — exit 2 (a new finding) or 3 (incomplete) fails the gate |
 | CI | GitHub | CodeQL and every other check | GitHub | CI |
 | After push | PostToolUse on `git push` | SonarCloud read | API | no |
 
@@ -39,6 +41,41 @@ A lane applies only when the change touches a file it globs. `osv-scanner`
 compares the changed lockfile against the base and reports vulnerabilities the
 change introduced. pip-audit is installed but has no lane: the `make pr`
 security wave already runs that exact pin when dependency files change.
+
+## Only what the change introduces blocks (2026-11-21)
+
+Operator decision: on a PR a check blocks only on what the incoming change
+introduces; the nightly run is the one that scans the whole repository. Every
+lane therefore classifies each finding as **new** or **pre-existing**:
+
+| Lane kind | Baseline | How |
+|---|---|---|
+| default (changed lines) | `changed-lines` | the merge-base line diff: a finding off every changed line is pre-existing |
+| `semgrep-pro`, `osv-scanner` | `native` | the tool subtracts the base itself (`--baseline-commit`; base lockfile diff) |
+| `scope: changed-files` / `whole-tree` (`biome`, `semgrep-l9`) | `merge-base` | the lane re-runs on a snapshot of the merge-base and findings are matched by fingerprint |
+
+The fingerprint follows Semgrep's `match_based_id`: tool, rule, path (through
+`git diff -M` renames) and the matched code, approximated by the finding's
+whitespace-normalized source line, counted per repeat. A finding whose line
+moved within its file, or whose file was renamed, stays pre-existing. Known
+limits, both erring toward blocking: code moved into another file, or a
+finding whose own line was edited, counts as new. A Core refusal
+(`core/...`) is never pre-existing. `semgrep-l9` runs through the SDK
+wrapper, which has no baseline flag, so it uses the re-scan rather than
+Semgrep's own `--baseline-commit`.
+
+- A **new** finding blocks exactly as before (exit 2).
+- A **pre-existing** finding never blocks and is never dropped silently: the
+  gate prints `WARN  <lane>: N pre-existing finding(s)` and one
+  `WARN  pre-existing <path:line>` per finding that would have blocked.
+- **Unknown never passes** (exit 3, `BLOCK cannot-evaluate` / `INCOMPLETE`):
+  an unresolvable merge-base, a merge-base scan that fails, a lane whose scan
+  did not finish (a non-`SKIP` notice, such as Core's gate exiting 6), or a
+  scan still running at `L9_CI_PARITY_WAIT`. When the baseline is unavailable
+  every finding stays new. `skip` (tool absent, lane not applicable, Core
+  disabled) is unchanged.
+- Each lane's receipt records `new`, `preexisting`, `preexisting_blocking`,
+  `baseline` and `incomplete`; an incomplete receipt is never reused.
 
 ## What blocks, and why it matches CI
 
@@ -70,7 +107,8 @@ security wave already runs that exact pin when dependency files change.
   non-zero; the lane then blocks with Core's own message (rule
   `core/resolve-consumer-metadata` or `core/resolve-governance`) without running
   Semgrep. The rule list and the scoping live only in Core. Core judges
-  the whole tree, so the lane blocks on every finding Core's gate blocks. The
+  the whole tree, so the lane scans the whole tree, and blocks on a finding
+  Core's gate blocks only when it is not already at the merge-base. The
   verdict is `gate evaluate`'s exit (0 pass, 1 fail, 6 incomplete): `semgrep
   run` exits 0 even when semgrep wrote no report. Behind an HTTPS proxy the SDK
   hands semgrep only PATH/HOME/TMP*, so a mode-0700 shim first on PATH restores
@@ -86,6 +124,31 @@ security wave already runs that exact pin when dependency files change.
   not fail the gate.
 - **New tools** (actionlint, zizmor, shellcheck, yamllint) block on error level
   on changed lines only, so existing debt never blocks.
+
+## Expect-fail fixtures (canaries and parity witnesses)
+
+A canary deliberately carries code a central rule must flag. Without a
+declared class the gate either blocks it, so the witness can never be
+published, or is relaxed by hand, so nothing proves the rule still fires.
+`expect_fail_fixtures.json` declares the class as consumer-repository data:
+per repository, fixture `roots`, and per file under them the exact rule ids
+each lane must report (`semgrep-l9`, `bandit`, ...). `fixtures.py` applies it:
+
+| Finding | Outcome |
+|---|---|
+| A named rule on its declared file | `expect` line; does not block |
+| A named rule that did not fire on a file the lane scanned | FAIL, rule `ci-parity/expected-finding-missing`, so a witness cannot rot silently |
+| Any other finding on a fixture path, including a file under a root with no entry | classified exactly as before (blocks on the lane's `block` list) |
+| Any finding outside every root, or in a repository with no entry | unchanged |
+| A malformed manifest | FAIL, rule `ci-parity/fixture-manifest-invalid`; never read as "no fixtures" |
+
+The Bandit step of `ops/scripts/run_pr_security.sh` routes fixture files
+through the same manifest (`fixtures.py split`, then `fixtures.py bandit` on a
+JSON report), so a fixture needs no `# nosec`. The manifest bytes are part of
+the receipt digest. Evidence (2026-11-20): EIE `canary/ci-ul-eie` @ `411f9ef8`,
+`semgrep-l9` lane `blocking=0 expected=2` (both central rules on
+`central_rule_bad.py:8`); Bandit 1.9.4 on the same files: three declared
+B602, verdict pass.
 
 ## Parity proof (2026-09-24)
 

@@ -11,7 +11,9 @@ Modes (see README.md for the timing table):
                                detaches and cancels an older commit's run
     run.py --gate SHA          pre-push: reuse receipts for SHA (waiting on an
                                in-flight run), run missing lanes, exit 2 when a
-                               NEW finding on a changed line blocks
+                               NEW finding blocks, exit 3 when the verdict is
+                               incomplete (unresolved base, failed base scan,
+                               a lane that did not finish): unknown never passes
     run.py --status            receipts and in-flight state for this repository
 
 Scans never touch the working tree: commit and gate runs check SHA out into a
@@ -50,6 +52,7 @@ for _path in (HERE, HERE.parent / "secrets"):
         sys.path.insert(0, str(_path))
 
 import findings as fnd  # noqa: E402
+import fixtures as fixture_contract  # noqa: E402
 import manifest  # noqa: E402
 
 RUNNER_VERSION = "1"
@@ -59,6 +62,9 @@ LANE_TIMEOUT = 1800
 KEEP_RECEIPTS = 5
 ADVISORY_PRINT_CAP = 15
 DEFAULT_WAIT = 600
+#: --gate exits: 2 a new finding blocks; 3 incomplete (fails closed).
+EXIT_BLOCK = 2
+EXIT_INCOMPLETE = 3
 
 
 # --- repository context ------------------------------------------------------
@@ -159,6 +165,10 @@ class Context:
     #: Inputs a lane resolved at run time (e.g. the Core commit whose governance
     #: it applied); recorded in the receipt so reuse can check them.
     facts: dict[str, str] = field(default_factory=dict)
+    #: Snapshot of the merge-base, for lanes classified by a base re-scan.
+    base_dir: Path | None = None
+    #: Renamed files, head path -> merge-base path (``git diff -M``).
+    renames: dict[str, str] = field(default_factory=dict)
 
 
 def cache_dir(loaded: manifest.Manifest, slug: str) -> Path:
@@ -838,10 +848,14 @@ def _runner_digest() -> str:
     for path in (
         Path(__file__).resolve(),
         HERE / "findings.py",
+        HERE / "fixtures.py",
         HERE / "manifest.py",
         YAMLLINT_CONFIG,
     ):
         digest.update(path.read_bytes())
+    # The expect-fail fixture manifest decides what blocks on fixture paths.
+    if fixture_contract.MANIFEST.is_file():
+        digest.update(fixture_contract.MANIFEST.read_bytes())
     return digest.hexdigest()
 
 
@@ -867,6 +881,128 @@ def _lane_digest(loaded: manifest.Manifest, lane: manifest.Lane) -> str:
     return lane_digest(lane, loaded.tools[lane.tool], provider)
 
 
+#: Lanes whose tool subtracts the merge-base itself: semgrep-pro passes
+#: ``--baseline-commit`` (capability-exec.json), osv-scanner diffs the base lockfile.
+NATIVE_BASELINE = frozenset({"semgrep-pro", "osv-scanner"})
+#: Scopes whose CI check judges beyond the changed lines; the merge-base re-scan
+#: decides which of their findings the change introduced.
+BASE_SCAN_SCOPES = frozenset({"changed-files", "whole-tree"})
+
+
+class BaselineUnavailable(Exception):
+    """The merge-base could not be scanned; the lane's verdict is incomplete."""
+
+
+def needs_base_scan(lane: manifest.Lane) -> bool:
+    return lane.name not in NATIVE_BASELINE and lane.extra.get("scope") in BASE_SCAN_SCOPES
+
+
+def scan_base(
+    ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]
+) -> list[fnd.Finding]:
+    """The same lane on the merge-base snapshot; raises when it did not finish."""
+    if ctx.base_dir is None:
+        raise BaselineUnavailable("no merge-base snapshot")
+    base_dir = ctx.base_dir
+    if lane.extra.get("scope") == "whole-tree":
+        base_files = list(files)  # whole tree: the files only pick the languages
+    else:
+        mapped = (ctx.renames.get(rel, rel) for rel in files)
+        base_files = [rel for rel in mapped if (base_dir / rel).is_file()]
+        if not base_files:
+            return []  # every changed file is new at the base: nothing pre-exists
+    base_ctx = replace(ctx, scan_dir=base_dir, sha=ctx.base, notices=[], facts={})
+    try:
+        found = LANES[lane.name](base_ctx, lane, binary, base_files)
+    except subprocess.TimeoutExpired as exc:
+        raise BaselineUnavailable(f"{lane.name}: merge-base scan timed out") from exc
+    except (OSError, ValueError) as exc:
+        raise BaselineUnavailable(f"{lane.name}: merge-base scan {type(exc).__name__}") from exc
+    if base_ctx.notices:
+        raise BaselineUnavailable("merge-base scan: " + "; ".join(base_ctx.notices))
+    return found
+
+
+def classify(
+    ctx: Context,
+    lane: manifest.Lane,
+    binary: Path,
+    files: list[str],
+    found: list[fnd.Finding],
+    scoped: list[fnd.Finding],
+) -> tuple[str, list[fnd.Finding], list[fnd.Finding]]:
+    """``(baseline, new, pre_existing)`` for one lane's head findings.
+
+    ``changed-lines`` lanes: the merge-base line diff is the baseline (a finding
+    off every changed line is pre-existing). ``native``: the tool already
+    subtracted the merge-base. ``merge-base``: the lane re-ran on the base
+    snapshot and findings were matched by fingerprint. Raises
+    :class:`BaselineUnavailable` when that re-scan could not finish.
+    """
+    if lane.name in NATIVE_BASELINE:
+        return "native", scoped, []
+    if not needs_base_scan(lane):
+        return "changed-lines", scoped, [f for f in found if f not in scoped]
+    if not scoped:
+        return "merge-base", [], []
+    base = scan_base(ctx, lane, binary, files)
+    assert ctx.base_dir is not None  # scan_base raised otherwise
+    new, pre = fnd.split_new(scoped, ctx.scan_dir, base, ctx.base_dir, ctx.renames)
+    return "merge-base", new, pre
+
+
+def apply_fixtures(
+    ctx: Context,
+    lane: manifest.Lane,
+    files: Sequence[str],
+    found: Sequence[fnd.Finding],
+    fresh: Sequence[fnd.Finding],
+) -> tuple[list[fnd.Finding], list[fnd.Finding], list[fnd.Finding]]:
+    """Apply the declared expect-fail fixture contract (``fixtures.py``).
+
+    Returns (findings to classify as before, expected fixture findings, missing
+    expectations as blocking findings). A malformed manifest blocks the lane:
+    it is never read as "no fixtures".
+    """
+    try:
+        repo = fixture_contract.load().for_repo(ctx.slug)
+    except fixture_contract.FixtureManifestError as exc:
+        broken = fnd.Finding(
+            lane.name,
+            "ci-parity/fixture-manifest-invalid",
+            "error",
+            "ops/ci_parity/expect_fail_fixtures.json",
+            1,
+            str(exc)[:300],
+        )
+        return [*fresh, broken], [], []
+    if repo is None:
+        return list(fresh), [], []
+    # The paths this lane actually covered: the whole snapshot for a
+    # whole-tree lane, otherwise the changed files it matched.
+    if lane.extra.get("scope") == "whole-tree":
+        scanned = [
+            path
+            for path in repo.expected_paths(lane.name)
+            if lane.matches(path) and (ctx.scan_dir / path).is_file()
+        ]
+    else:
+        scanned = list(files)
+    verdict = fixture_contract.evaluate(repo, lane.name, fresh, scanned, observed=found)
+    missing = [
+        fnd.Finding(
+            lane.name,
+            fixture_contract.MISSING_RULE,
+            "error",
+            path,
+            1,
+            f"declared expect-fail rule {rule} did not fire on this fixture",
+        )
+        for path, rule in verdict.missing
+    ]
+    return list(verdict.kept), list(verdict.expected), missing
+
+
 def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[str, Any]:
     tool = ctx.loaded.tools[lane.tool]
     files = [f for f in ctx.changed if lane.matches(f)]
@@ -880,6 +1016,12 @@ def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[
         "status": "pass",
         "blocking": [],
         "advisory": [],
+        "expected": [],
+        "new": 0,
+        "preexisting": 0,
+        "preexisting_blocking": [],
+        "baseline": "",
+        "incomplete": False,
         "notice": "",
     }
     binary = ctx.loaded.resolve(lane.tool)
@@ -913,33 +1055,54 @@ def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[
     except (OSError, ValueError) as exc:
         found = []
         ctx.notices.append(f"{lane.name}: {type(exc).__name__}")
+    head_notices = list(ctx.notices)
+    try:
+        scoped = _scope(ctx, lane, files, found)
+        try:
+            baseline, new, pre = classify(ctx, lane, binary, files, found, scoped)
+        except BaselineUnavailable as exc:
+            # Unknown never passes: every scoped finding stays new, and the
+            # lane is incomplete even when none of them blocks.
+            baseline, new, pre = "unavailable", scoped, []
+            ctx.notices.append(f"{lane.name}: baseline unavailable — {exc}")
     finally:
         sem.release(weight)
     record["elapsed_ms"] = int((time.monotonic() - started) * 1000)
-    # Lanes whose CI check judges a whole file or the whole tree keep every
-    # finding; the rest keep only those on a line the change touched.
-    scope = lane.extra.get("scope")
-    if lane.name == "osv-scanner" or scope == "whole-tree":
-        fresh = found
-    elif scope == "changed-files":
-        fresh = [f for f in found if f.path in files]
-    else:
-        fresh = fnd.new_findings(found, ctx.ranges)
     mapped = _mapped_rules(ctx, lane)
-    for finding in fresh:
+    # The expect-fail fixture contract judges what the change introduced:
+    # fixtures run on the merge-base-classified new findings (#1090 + PARITY-DIFF).
+    new, expected, missing = apply_fixtures(ctx, lane, files, found, new)
+    for finding in new:
         bucket = "blocking" if fnd.blocks(finding, lane.block, mapped) else "advisory"
         record[bucket].append(finding.as_dict())
+    record["expected"] = [finding.as_dict() for finding in expected]
+    record["blocking"].extend(finding.as_dict() for finding in missing)
+    record["preexisting_blocking"] = [f.as_dict() for f in pre if fnd.blocks(f, lane.block, mapped)]
+    record.update(new=len(new), preexisting=len(pre), baseline=baseline)
     record.update(ctx.facts)
     lane_notices = ctx.notices
     if lane_notices:
         record["notice"] = "; ".join(lane_notices)
-        if any("SKIP" in n for n in lane_notices):
+        if any("SKIP" in n for n in head_notices):
             record["status"] = "skip"
-        elif not fresh:
+        else:
             record["status"] = "error"
+            record["incomplete"] = True
     if record["blocking"]:
         record["status"] = "fail"
     return record
+
+
+def _scope(
+    ctx: Context, lane: manifest.Lane, files: list[str], found: list[fnd.Finding]
+) -> list[fnd.Finding]:
+    """The findings a lane's CI check judges: whole tree, changed files, or changed lines."""
+    scope = lane.extra.get("scope")
+    if lane.name == "osv-scanner" or scope == "whole-tree":
+        return list(found)
+    if scope == "changed-files":
+        return [f for f in found if f.path in files]
+    return fnd.new_findings(found, ctx.ranges)
 
 
 def applicable(
@@ -974,8 +1137,8 @@ def _has_commit(clone: Path, sha: str) -> bool:
     return probe.returncode == 0
 
 
-def ensure_snapshot(workspace: Path, cache: Path, sha: str) -> Path:
-    clone = cache / "clone"
+def ensure_snapshot(workspace: Path, cache: Path, sha: str, name: str = "clone") -> Path:
+    clone = cache / name
     if not (clone / ".git").exists():
         if clone.exists():
             shutil.rmtree(clone)
@@ -1023,6 +1186,8 @@ def receipt_reusable(loaded: manifest.Manifest, lane: manifest.Lane, data: dict[
     that applies Core's live governance also needs the same Core commit.
     """
     if data.get("digest") != _lane_digest(loaded, lane) or data.get("status") in ("skip", "error"):
+        return False
+    if data.get("incomplete"):
         return False
     core_ref = lane.extra.get("core_ref")
     if core_ref:
@@ -1147,6 +1312,9 @@ def build_context(
         ranges=fnd.changed_ranges(workspace, merge_base, sha),
         nice=nice,
         timeout=LANE_TIMEOUT,
+        renames=fnd.parse_renames(
+            _git(workspace, "diff", "--name-status", "-M", "--diff-filter=R", merge_base, sha)
+        ),
     )
 
 
@@ -1160,6 +1328,12 @@ def scan_commit(
         missing = [lane for lane in lanes if lane.name not in have]
         if missing:
             ensure_snapshot(ctx.workspace, ctx.cache, ctx.sha)
+            if any(needs_base_scan(lane) for lane in missing):
+                try:
+                    base_dir = ensure_snapshot(ctx.workspace, ctx.cache, ctx.base, "clone-base")
+                    ctx = replace(ctx, base_dir=base_dir)
+                except (subprocess.CalledProcessError, OSError):
+                    pass  # base_dir stays None: those lanes report baseline unavailable
             records = run_lanes(ctx, missing)
             write_receipts(ctx.cache, ctx, records)
             have.update({r["lane"]: r for r in records})
@@ -1169,11 +1343,21 @@ def scan_commit(
 def summarize(ctx: Context, records: Sequence[dict[str, Any]], *, label: str) -> tuple[str, int]:
     blocking = [f for r in records for f in r.get("blocking", [])]
     advisory = [f for r in records for f in r.get("advisory", [])]
-    skipped = [r for r in records if r.get("status") in ("skip", "error")]
+    expected = [f for r in records for f in r.get("expected", [])]
+    skipped = [r for r in records if r.get("status") == "skip"]
+    incomplete = [r for r in records if is_incomplete(r)]
+    new = sum(int(r.get("new") or 0) for r in records)
+    pre = sum(int(r.get("preexisting") or 0) for r in records)
     lines = [
         f"ci-parity {label} {ctx.sha[:8]} base {ctx.base[:8]}: lanes={len(records)} "
-        f"blocking={len(blocking)} advisory={len(advisory)} skipped={len(skipped)}"
+        f"blocking={len(blocking)} advisory={len(advisory)} skipped={len(skipped)} "
+        f"incomplete={len(incomplete)} new={new} preexisting={pre}"
+        + (f" expected={len(expected)}" if expected else "")
     ]
+    # Declared expect-fail fixture findings (fixtures.py): proof the witness
+    # still fires; they do not block.
+    for item in expected:
+        lines.append("  expect " + fnd.Finding.from_dict(item).render())
     # Every BLOCK line is printed (#950): a truncated list hid 53 of 93
     # findings with no sign they existed. Advisory notes stay capped, but the
     # hidden count is named.
@@ -1185,11 +1369,30 @@ def summarize(ctx: Context, records: Sequence[dict[str, Any]], *, label: str) ->
         lines.append(
             f"  ...   {len(advisory) - ADVISORY_PRINT_CAP} more advisory note(s) not shown"
         )
+    # Pre-existing findings never block, and are never silently dropped either:
+    # each lane names its count, and every one that would block is listed.
+    for record in records:
+        held = record.get("preexisting_blocking") or []
+        if record.get("preexisting"):
+            lines.append(
+                f"  WARN  {record['lane']}: {record['preexisting']} pre-existing finding(s) "
+                f"(present at merge-base {ctx.base[:8]}; baseline {record.get('baseline')}), "
+                f"{len(held)} of them would block if new — not blocking"
+            )
+        for item in held:
+            lines.append("  WARN  pre-existing " + fnd.Finding.from_dict(item).render())
     for record in skipped:
         lines.append(
             f"  skip  {record.get('notice') or record['lane'] + ': ' + str(record.get('status'))}"
         )
+    for record in incomplete:
+        lines.append(f"  INCOMPLETE {record.get('notice') or record['lane'] + ': did not finish'}")
     return "\n".join(lines), len(blocking)
+
+
+def is_incomplete(record: dict[str, Any]) -> bool:
+    """A lane that did not reach a verdict (``error``, or an unavailable baseline)."""
+    return bool(record.get("incomplete")) or record.get("status") == "error"
 
 
 def mode_file(loaded: manifest.Manifest, paths: Sequence[str]) -> int:
@@ -1289,10 +1492,11 @@ def mode_gate(
     ctx = build_context(loaded, workspace, sha_ref, base, nice=True)
     if ctx is None:
         print(
-            f"ci-parity gate {sha_ref}: cannot-evaluate — merge-base unresolved "
-            "(shallow history or missing base; no parent-commit fallback)"
+            f"ci-parity gate {sha_ref}: BLOCK cannot-evaluate — merge-base unresolved "
+            "(shallow history or missing base; no parent-commit fallback); "
+            "unknown never passes"
         )
-        return 0
+        return EXIT_INCOMPLETE
     if not applicable(ctx, ("fast", "heavy"), only):
         print(f"ci-parity gate {ctx.sha[:8]}: no lane applies to this change")
         return 0
@@ -1301,13 +1505,15 @@ def mode_gate(
         records = scan_commit(ctx, wait=wait, only=only)
     except TimeoutError:
         print(
-            f"ci-parity gate {ctx.sha[:8]}: SKIP — scan still running after "
-            f"{int(wait)}s (L9_CI_PARITY_WAIT)"
+            f"ci-parity gate {ctx.sha[:8]}: BLOCK incomplete — scan still running after "
+            f"{int(wait)}s (L9_CI_PARITY_WAIT); unknown never passes"
         )
-        return 0
+        return EXIT_INCOMPLETE
     text, blocking = summarize(ctx, records, label="gate")
     print(text)
-    return 2 if blocking else 0
+    if blocking:
+        return EXIT_BLOCK
+    return EXIT_INCOMPLETE if any(is_incomplete(r) for r in records) else 0
 
 
 def mode_status(loaded: manifest.Manifest, workspace: Path) -> int:
