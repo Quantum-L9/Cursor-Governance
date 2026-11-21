@@ -285,3 +285,82 @@ def blocks(
     if "unmapped-rule" in block and finding.rule not in mapped_rules:
         return True
     return "new-vulnerability" in block and finding.tool == "osv-scanner"
+
+
+# --- new vs pre-existing (merge-base baseline) -------------------------------
+#
+# A lane whose CI check judges more than the changed lines (`changed-files`,
+# `whole-tree`) is re-run on the merge-base snapshot, and each head finding is
+# matched against the base findings. The fingerprint follows Semgrep's own
+# `match_based_id` (path, rule, matched code; an index per repeat), with the
+# matched code approximated by the finding's source line, whitespace-normalized:
+#
+# - a finding whose line moved inside its file keeps its fingerprint;
+# - a renamed file is matched through `git diff -M` (head path -> base path);
+# - a finding moved to ANOTHER file, or whose own line was edited, does not
+#   match and counts as new. That errs toward blocking, never toward passing.
+
+
+def parse_renames(text: str) -> dict[str, str]:
+    """``git diff --name-status -M`` rows ``R<score>\\told\\tnew`` -> {new: old}."""
+    renames: dict[str, str] = {}
+    for row in text.splitlines():
+        parts = row.split("\t")
+        if len(parts) == 3 and parts[0].startswith("R"):
+            renames[parts[2]] = parts[1]
+    return renames
+
+
+def line_text(root: Path, rel: str, line: int) -> str | None:
+    """The whitespace-normalized source line, or None when it cannot be read."""
+    if line <= 0:
+        return None
+    try:
+        with (root / rel).open(encoding="utf-8", errors="replace") as handle:
+            for number, text in enumerate(handle, 1):
+                if number == line:
+                    return " ".join(text.split())
+    except OSError:
+        return None
+    return None
+
+
+def fingerprint(finding: Finding, root: Path, path: str | None = None) -> tuple[str, ...]:
+    """Location-independent identity of a finding (see the block comment above).
+
+    Without a readable source line the message stands in for the matched code;
+    a message that embeds a line number then fails to match and counts as new.
+    """
+    text = line_text(root, finding.path, finding.line)
+    code = f"line:{text}" if text is not None else f"message:{finding.message}"
+    return (finding.tool, finding.rule, path or finding.path, code)
+
+
+def baselinable(finding: Finding) -> bool:
+    """A Core refusal (`core/...`) means the gate could not run: never pre-existing."""
+    return not finding.rule.startswith("core/")
+
+
+def split_new(
+    head: Sequence[Finding],
+    head_root: Path,
+    base: Sequence[Finding],
+    base_root: Path,
+    renames: dict[str, str],
+) -> tuple[list[Finding], list[Finding]]:
+    """``(new, pre_existing)``: a head finding is pre-existing when an unclaimed
+    base finding has the same fingerprint (multiset, so a repeat is new)."""
+    pool: dict[tuple[str, ...], int] = {}
+    for found in base:
+        key = fingerprint(found, base_root)
+        pool[key] = pool.get(key, 0) + 1
+    new: list[Finding] = []
+    pre: list[Finding] = []
+    for found in head:
+        key = fingerprint(found, head_root, renames.get(found.path, found.path))
+        if baselinable(found) and pool.get(key, 0) > 0:
+            pool[key] -= 1
+            pre.append(found)
+        else:
+            new.append(found)
+    return new, pre
