@@ -1,7 +1,7 @@
 schema: l9.program-execution.current-state-delta.v1
 schema_version: 1.0.0
 campaign_id: ib-odoo-dashboard-command-centers
-source_version: "1.2.0"
+source_version: "1.3.0"
 collected_at: "2026-11-20T23:20:00Z"
 collection_method: read_only_inspection
 producer: "CTO session (claude-code-web), three read-only research passes"
@@ -169,9 +169,19 @@ enterprise_ai_evidence:
     - "ai_documents (depends ai, documents, base_automation; auto_install) configures Auto-Sort through documents.document.ai_sort_prompt (Html, group_system, folders only); no enable flag — a prompt creates an ir.actions.server state=ai plus a base.automation on_create_or_write of folder_id (documents_document.py:35-50,267-330)."
     - "Tools: move-in-folder (target must be a folder id embedded in the source prompt) and add-tags (global search by tag name); eligible extra tools include next_activity and documents_account record creation; ai_documents_account's wizard defaults add vendor-bill/customer-invoice creation tools unless ai_tool_ids is passed explicitly."
     - "Triggers: synchronous on create/move into the folder; alias mail sets ai_to_sort and a cron sorts batches of 10; manual cog action. Writes only tool effects plus a chatter log by the AI agent partner; no confidence field; an unsure model calls no tool."
-    - "LLM is OpenAI gpt-4.1 via ICP ai.openai_key or env ODOO_AI_CHATGPT_TOKEN, not IAP."
+    - "Odoo 19 ai supports only providers openai and google: PROVIDERS is a Python constant (ai/utils/llm_providers.py:16-52); base URLs and keys are hard-wired per provider (llm_api_service.py:88-98,211-229); _request_llm dispatches only openai/google (:524-534). The OpenAI path calls POST /responses with store false, tools marked strict, parallel_tool_calls true, temperature unless a reasoning model, PDFs inline as input_file file_data data-URI and images as input_image (:270-366)."
     - "Invoice learning: posting a digitized bill queues _validate_ocr; a cron posts corrected totals, dates, partner, VAT, currency, bank and line values to the OCR validate endpoint; partner is predicted from previous extracts by layout; lines/accounts/taxes are predicted from the partner's last 100 posted bills. Auto-post counter needs 3 consecutive unmodified bills (partner.autopost_bills=ask); IB refuses _autopost_bill for digitized bills."
     - "Shipping-document Auto-Sort is stateless: no feedback or history storage."
+
+deepseek_evidence:
+  ref: EVID-012
+  read: "2026-11-21, api-docs.deepseek.com"
+  facts:
+    - "Models: deepseek-flash (DeepSeek-V4.1-Flash-1017) and deepseek-v4-pro (DeepSeek-V4-Pro-0813), 1M context, 384K max output; deepseek-v4-flash ids route to Flash; deepseek-chat/reasoner were scheduled for discontinuation 2026-07-24."
+    - "OpenAI-format base https://api.deepseek.com with /chat/completions and a stateless Responses API (/responses; store always false, previous_response_id unsupported, parallel tool calls always on)."
+    - "Tool calls on both models; thinking mode is on by default and, with tools, requires reasoning content passed back each turn and rejects tool_choice required/named; strict tool schemas only on /beta."
+    - "Only deepseek-flash accepts images (base64 data URL, URL or file_id) and documents; documents must first be uploaded to /files (purpose text_recognition or rich_layout_recognition, billed per page) and referenced by file_id; uploads cannot be downloaded back. deepseek-v4-pro is text only. No separate document-analysis model."
+    - "Concurrency deepseek-flash 2500 per account (429 beyond); peak-hour prices double. Data region and retention are not stated in the API docs."
 
 official_platform_evidence:
   ref: EVID-007
@@ -182,12 +192,13 @@ official_platform_evidence:
     - "mail.activity activity_schedule never deduplicates; activity_search + reschedule/feedback is the idempotent pattern; done activities are archived."
     - "Owl is the documented approach only for ir.actions.client custom layouts."
 
-open_operator_decisions: [DEC-002, DEC-004, DEC-005, DEC-011, DEC-014, DEC-016]
-ready_tasks: [TASK-001, TASK-002, TASK-010, TASK-011, TASK-013, TASK-020, TASK-021, TASK-060, TASK-064, TASK-070]
+open_operator_decisions: [DEC-002, DEC-004, DEC-005, DEC-011, DEC-017]
+ready_tasks: [TASK-001, TASK-002, TASK-010, TASK-011, TASK-013, TASK-020, TASK-021, TASK-060, TASK-064, TASK-069, TASK-070]
 blocked_tasks:
   TASK-012: DEC-002
   TASK-040: [DEC-004, DEC-005, UNK-004]
   TASK-061: DEC-011
-  TASK-071: [DEC-016, UNK-004]
-  TASK-072: DEC-016
+  TASK-068: DEC-017
+  TASK-071: [DEC-017, UNK-004, UNK-006]
+  TASK-072: DEC-017
 do_not_execute_from_this_receipt: true

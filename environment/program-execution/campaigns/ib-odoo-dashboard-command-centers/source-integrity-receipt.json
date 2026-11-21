@@ -2,11 +2,11 @@
   "schema": "source-integrity-receipt.v1",
   "campaign_id": "ib-odoo-dashboard-command-centers",
   "source_file": "CAMPAIGN_SOURCE.yaml",
-  "source_version": "1.2.0",
+  "source_version": "1.3.0",
   "digest_algorithm": "sha256",
-  "digest": "618e8c5b5baeaa27b528ef1612853801efd8a9ad28e6d8a798d61b6870eedbc6",
-  "bytes": 85574,
+  "digest": "4a18f3ad633199a87a9131bcaccde6497f111b8688eaa8816fad498e8479bd3a",
+  "bytes": 95194,
   "collected_at": "2026-11-20",
-  "collection_method": "cto_compiled_campaign_source_check_input_supported; operator addenda 2026-11-20 (routing; native AI Auto-Sort) incorporated",
+  "collection_method": "cto_compiled_campaign_source_check_input_supported; operator instructions 2026-11-20/21 (routing, native AI Auto-Sort, DeepSeek Flash, missing document types) incorporated",
   "producer": "CTO session (claude-code-web)"
 }

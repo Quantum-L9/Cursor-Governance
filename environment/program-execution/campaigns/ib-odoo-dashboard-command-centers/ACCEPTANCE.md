@@ -1,6 +1,6 @@
 # Acceptance — ib-odoo-dashboard-command-centers
 
-Each row needs PASS with evidence, or a named defect. Rows A01–A26 are runtime/test evidence (GATE-001/003/004). Rows S01–S15 are the operator's Staging walk (TASK-051, GATE-004). Code review alone never passes a row.
+Each row needs PASS with evidence, or a named defect. Rows A01–A28 are runtime/test evidence (GATE-001/003/004). Rows S01–S16 are the operator's Staging walk (TASK-051, GATE-004). Code review alone never passes a row.
 
 | ID | Criterion | Evidence | Gate |
 |---|---|---|---|
@@ -30,6 +30,8 @@ Each row needs PASS with evidence, or a named defect. Rows A01–A26 are runtime
 | A24 | A human correction keeps the original file, records classification, decision and required reason, is never overwritten by a later tag, re-syncs evidence and re-routes the activity | TASK-070 tests | 001 |
 | A25 | Verified cannot be added by Auto-Sort or any write outside verification | TASK-070 test | 001 |
 | A26 | Invoice learning measured (edits per bill across repeats) and shipping confusion counts reported; any prompt revision shows before/after replay accuracy | TASK-072 report | 004 |
+| A27 | DeepSeek adapter: recorded-fixture tool round-trip; thinking disabled, no strict, temperature 0; text PDF as text, scanned PDF by file_id; 429 retried; missing key logged without failing the upload | TASK-068 tests | 001 |
+| A28 | Seven new document types each sync to their legacy code; existing types and documents unchanged after upgrade | TASK-069 tests | 001 |
 | S01 | Logistics: each counter click lands on the matching filtered load list; breadcrumb returns to the dashboard | operator walk | 004 |
 | S02 | Sales (as a rep): each counter click; Track Load on a multi-load deal; Open Deal | operator walk | 004 |
 | S03 | Admin: every KPI clickable; numbers match a manual count of the drill list for 5 sampled KPIs | operator walk | 004 |
@@ -44,4 +46,5 @@ Each row needs PASS with evidence, or a named defect. Rows A01–A26 are runtime
 | S12 | Linda-resolution path end to end for one Logistics-authorized class and one Operations-only class | operator walk | 004 |
 | S13 | Auto-Sort runs only with move/tag tools; no bill auto-post or new external sender was activated (compare TASK-002 inventory) | operator walk | 004 |
 | S14 | Staging: upload one real BOL, one scale ticket, one packing list and one ambiguous document into Inbox; each lands with the right owner; correct one with a reason and see it persist on the original | operator walk | 004 |
+| S16 | Staging live DeepSeek probe recorded (UNK-006) and Auto-Sort latency on upload measured | operator walk | 004 |
 | S15 | Staging repeat-upload protocol for invoice learning (3 vendors × 3 bills) recorded | operator walk | 004 |
