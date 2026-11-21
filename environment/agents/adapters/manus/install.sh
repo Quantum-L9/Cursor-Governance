@@ -83,6 +83,34 @@ assert sys.prefix != sys.base_prefix, "not a virtual environment"
 import yaml
 ' "$GOVERNANCE/.venv" 2>/dev/null || fail "locked validator interpreter prefix/yaml verification failed"
 "$PYTHON_BIN" -B "$VALIDATOR" --repo-root "$GOVERNANCE" >&2 || fail "native adapter validation failed"
+
+# The Manus host has no SessionStart hook, so this installer IS the session
+# start path: bind the default projections here, exactly as the Cursor hook and
+# the Claude Code hook do for their surfaces. `autobind` in the contract means
+# "no skill gates it", not "the host fires a hook".
+BINDING="$GOVERNANCE/ops/autonomy/host_binding.py"
+if [ -f "$BINDING" ]; then
+  BIND_STATUS="$(
+    "$PYTHON_BIN" -B "$BINDING" --host manus --workspace "$WORKSPACE" --format json 2>/dev/null \
+      | "$PYTHON_BIN" -c 'import json,sys; print(json.load(sys.stdin).get("status","UNKNOWN"))' 2>/dev/null \
+      || echo UNKNOWN
+  )"
+  say "manus-install: default projection binding (manus) — $BIND_STATUS"
+  "$PYTHON_BIN" -B "$BINDING" --host manus --workspace "$WORKSPACE" --format line >&2 || true
+  if [ "$BIND_STATUS" != "BOUND" ]; then
+    # Fail-open like every other host: the session continues, unbound, and may
+    # cite no operating-plane semantics. It is reported, never invented.
+    #
+    # The exit code is deliberately NOT escalated. This script's status is the
+    # shared bootstrap's posture; `make manus-start` is the enforcement point
+    # for the projection binding. Two meanings in one code would leave a
+    # consumer unable to tell "bootstrap degraded" from "binding rejected".
+    say "manus-install: binding $BIND_STATUS (reported; 'make manus-start' enforces)"
+  fi
+else
+  say "manus-install: binding control absent (reported; cite no operating-plane semantics)"
+fi
+
 case "$status" in
   0) say "manus-install: READY (shared bootstrap)" ;;
   6) say "manus-install: DEGRADED (shared bootstrap; session remains usable)" ;;

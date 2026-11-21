@@ -116,6 +116,33 @@ Metadata listing sends `viewSecretValue=false`; responses containing resolved
 values are withheld. No generic HTTP, secret-return, environment dump or shell
 capability is exposed.
 
+### The capability manifest is derived, never written
+
+`infisical_capabilities.json` is generated from `ops/secrets/capabilities.yaml`
+by `render_infisical_capabilities.py` (mapping logic in `capability_source.py`).
+Do not edit it: `make manus-adapter-check` runs the renderer with `--check` and
+fails the build when the committed file is stale, and the validator independently
+compares the recorded `generated.source_sha256` against the registry bytes. A
+registry edit therefore forces a reviewed re-render instead of silent drift.
+
+The registry models one capability as *many* methods over *many* paths; this
+adapter models one method over one path, pinned to `api.github.com`, `GET`, and
+`GITHUB_TOKEN`, behind a named bounded response filter. Widening the adapter to
+the registry's cardinality was rejected — rendering `github.mcp` faithfully
+would expose 21 endpoints (including `/search/code`, `/user/repos` and `/gists`)
+behind a `passthrough` sanitizer, turning a bounded single-object read into a
+general GitHub proxy with a live credential behind it.
+
+So each adapter capability is an explicit projection of exactly one registry
+endpoint, and everything else is reported rather than dropped. The manifest's
+`exclusions` array names every registry entry that is not exposed, with a
+machine-derived reason and the exact methods and paths withheld; `narrowings`
+records where the adapter is deliberately stricter than the registry (verb,
+path count, sanitizer, parameter patterns). A projection that no longer matches
+the registry raises instead of shrinking the surface. `infisical_status` reports
+the same exclusion list, so an operator can tell "not sanctioned for this
+surface" apart from "does not exist".
+
 `infisical_status` distinguishes configuration from observations:
 
 - `status`: `configured` / `missing_configuration` / `invalid_configuration`.
@@ -132,6 +159,7 @@ actual positive finite lifetime, not an invented fallback.
 
 ```bash
 .venv/bin/python -B environment/agents/adapters/manus/validate_manus_adapter.py --repo-root . --json
+.venv/bin/python -B environment/agents/adapters/manus/render_infisical_capabilities.py --check
 .venv/bin/python -B -m pytest -q environment/agents/adapters/manus/tests
 .venv/bin/python -B tools/assurance/check_canonical_identity_projection.py
 ```

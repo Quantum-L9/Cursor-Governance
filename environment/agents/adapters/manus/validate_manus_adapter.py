@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import sys
@@ -185,6 +186,7 @@ def _structural_errors(repo_root: Path) -> list[str]:
     adapter = repo_root / ADAPTER_RELATIVE
     required_files = {
         "README.md",
+        "capability_source.py",
         "environment.env.example",
         "infisical-mcp-connector.json",
         "infisical_capabilities.json",
@@ -195,6 +197,7 @@ def _structural_errors(repo_root: Path) -> list[str]:
         "memory-mcp-connector.json",
         "memory_lifecycle.py",
         "materialize_memory_authority.py",
+        "render_infisical_capabilities.py",
         "render_infisical_mcp_connector.py",
         "render_mcp_connector.py",
         "render_memory_mcp_connector.py",
@@ -358,6 +361,32 @@ def _structural_errors(repo_root: Path) -> list[str]:
         capabilities = {}
     if capabilities.get("schema") != "l9.manus.infisical-capabilities.v1":
         errors.append("Infisical capability manifest has the wrong schema")
+    # The manifest is a derived artefact. Digest equality with the canonical
+    # registry is checked here as well as in the renderer's --check mode, so a
+    # stale file fails even when the validator is run on its own.
+    generated = capabilities.get("generated")
+    if not isinstance(generated, dict) or generated.get("do_not_edit") is not True:
+        errors.append(
+            "Infisical capability manifest must declare generated.do_not_edit: true — "
+            "it is derived from ops/secrets/capabilities.yaml, never hand-edited"
+        )
+    else:
+        if generated.get("source") != "ops/secrets/capabilities.yaml":
+            errors.append(
+                "Infisical capability manifest must name ops/secrets/capabilities.yaml "
+                "as its source"
+            )
+        registry_path = repo_root / "ops/secrets/capabilities.yaml"
+        if not registry_path.is_file():
+            errors.append("canonical capability registry ops/secrets/capabilities.yaml is missing")
+        elif (
+            generated.get("source_sha256") != hashlib.sha256(registry_path.read_bytes()).hexdigest()
+        ):
+            errors.append(
+                "Infisical capability manifest is stale: generated.source_sha256 does not "
+                "match ops/secrets/capabilities.yaml — re-run "
+                "render_infisical_capabilities.py"
+            )
     github = (capabilities.get("capabilities") or {}).get("github.get_repository")
     if not isinstance(github, dict):
         errors.append("Infisical capability manifest must declare github.get_repository")

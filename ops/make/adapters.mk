@@ -26,6 +26,7 @@ L9_TARGETS += \
 	manus-adapter-check \
 	manus-install \
 	manus-install-check \
+	manus-start \
 	cursor-projection-check \
 	skill-plane-test \
 	claude-preservation-check \
@@ -161,6 +162,13 @@ manus-adapter-check:
 	$(PYTHON) \
 		environment/agents/adapters/manus/validate_manus_adapter.py \
 		--repo-root "$(CURDIR)"
+# The capability manifest is derived from ops/secrets/capabilities.yaml. A stale
+# file is a build failure, not a review comment: this is the check that makes
+# "one source, no drift" true rather than aspirational.
+	$(PYTHON) \
+		environment/agents/adapters/manus/render_infisical_capabilities.py \
+		--repo-root "$(CURDIR)" \
+		--check
 manus-install:
 	bash "$(CURDIR)/environment/agents/adapters/manus/install.sh" \
 		--governance "$(CURDIR)" \
@@ -170,6 +178,15 @@ manus-install-check:
 		--governance "$(CURDIR)" \
 		--workspace "$(if $(WS),$(WS),$(CURDIR))" \
 		--check
+# The Manus host fires no hook, so this is the session's binding report — the
+# same one Cursor renders from its SessionStart. Read-only: it verifies and
+# prints, and binds nothing by itself.
+manus-start:
+	@cd "$(if $(WS),$(WS),$(CURDIR))" && \
+		$(PYTHON) "$(CURDIR)/ops/autonomy/host_binding.py" \
+			--host manus \
+			--workspace "$(if $(WS),$(WS),$(CURDIR))" \
+			--format line
 # ---------------------------------------------------------------------------
 # Virtual skill plane
 # ---------------------------------------------------------------------------

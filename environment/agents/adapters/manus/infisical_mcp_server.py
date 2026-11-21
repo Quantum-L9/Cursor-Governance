@@ -22,7 +22,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from string import Formatter
@@ -76,6 +76,11 @@ class InfisicalSettings:
     environment: str = "prod"
     secret_path: str = "/"
     site_url: str = "https://app.infisical.com"
+    #: A machine-identity ID pasted into the wrong field. Infisical exposes two
+    #: UUIDs on adjacent screens and operators conflate them; keeping the stray
+    #: value lets the connector name the mistake instead of reporting a bare
+    #: "project_id" gap that reads like a missing secret.
+    misplaced_agent_id: str = ""
 
     @classmethod
     def from_env(cls, env: Mapping[str, str]) -> InfisicalSettings:
@@ -88,6 +93,7 @@ class InfisicalSettings:
             site_url=(env.get("L9_MANUS_INFISICAL_SITE_URL") or "https://app.infisical.com")
             .strip()
             .rstrip("/"),
+            misplaced_agent_id=(env.get("L9_MANUS_INFISICAL_AGENT_ID") or "").strip(),
         )
 
     @property
@@ -98,6 +104,18 @@ class InfisicalSettings:
             "project_id": self.project_id,
         }
         return tuple(name for name, value in fields.items() if not value)
+
+    @property
+    def configuration_hint(self) -> str:
+        """Explain a misconfiguration the operator can actually act on."""
+        if self.project_id or not self.misplaced_agent_id:
+            return ""
+        return (
+            "L9_MANUS_INFISICAL_AGENT_ID holds a machine-identity ID, but "
+            "/api/v4/secrets requires the project UUID in "
+            "L9_MANUS_INFISICAL_PROJECT_ID (Infisical -> project -> Settings -> "
+            "General -> Project ID)"
+        )
 
     @property
     def configured(self) -> bool:
@@ -226,6 +244,36 @@ def load_capabilities(path: Path = DEFAULT_CAPABILITIES_PATH) -> dict[str, Capab
     return capabilities
 
 
+def load_capability_exclusions(
+    path: Path = DEFAULT_CAPABILITIES_PATH,
+) -> tuple[dict[str, str], ...]:
+    """Load the manifest's derived exclusion list, reduced to what is safe to show.
+
+    The rendered manifest records every registry capability the adapter does not
+    expose, with the reason. Surfacing the identifiers and reason codes lets an
+    operator tell "not sanctioned for this surface" apart from "does not exist"
+    without reading the registry. Paths, hosts and secret names are deliberately
+    not copied into the status payload; this is a bounded list of two strings per
+    entry, never upstream data.
+    """
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ()
+    entries = raw.get("exclusions") if isinstance(raw, dict) else None
+    if not isinstance(entries, list):
+        return ()
+    reduced: list[dict[str, str]] = []
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        registry_id = item.get("registry_id")
+        reason_code = item.get("reason_code")
+        if isinstance(registry_id, str) and isinstance(reason_code, str):
+            reduced.append({"registry_id": registry_id, "reason_code": reason_code})
+    return tuple(reduced)
+
+
 def _request_json(
     method: str,
     url: str,
@@ -320,7 +368,11 @@ class InfisicalClient:
             raise SafeMcpError("response was withheld because it contained credential material")
         return payload
 
-    def status(self, capabilities: Mapping[str, Capability]) -> dict[str, Any]:
+    def status(
+        self,
+        capabilities: Mapping[str, Capability],
+        exclusions: Sequence[Mapping[str, str]] = (),
+    ) -> dict[str, Any]:
         """Return only configuration posture and declared capability identifiers."""
 
         self._expire_token()
@@ -330,19 +382,28 @@ class InfisicalClient:
                 self.settings.validate()
             except (SafeMcpError, ValueError):
                 configuration = "invalid_configuration"
-        return {
+        payload = {
             "status": configuration,
             "authentication": self._authentication,
             "scope_access": self._scope_access,
             "missing_configuration": list(self.settings.missing_fields),
             "capabilities": sorted(capabilities),
+            "capability_exclusions": [dict(item) for item in exclusions],
+            "capability_exclusion_count": len(exclusions),
             "secret_values_exposed": False,
         }
+        hint = self.settings.configuration_hint
+        if hint:
+            payload["configuration_hint"] = hint
+        return payload
 
     def _token(self) -> str:
         if not self.settings.configured:
             missing = ", ".join(self.settings.missing_fields)
-            raise SafeMcpError(f"Infisical connector is not configured: {missing}")
+            hint = self.settings.configuration_hint
+            raise SafeMcpError(
+                f"Infisical connector is not configured: {missing}" + (f" ({hint})" if hint else "")
+            )
         self.settings.validate()
         self._expire_token()
         if self._access_token and time.monotonic() < self._access_token_expires_at:
@@ -500,6 +561,7 @@ class ManusInfisicalMcp:
         capabilities_path: Path = DEFAULT_CAPABILITIES_PATH,
     ) -> None:
         self.capabilities = load_capabilities(capabilities_path)
+        self.exclusions = load_capability_exclusions(capabilities_path)
         source = os.environ if env is None else env
         self.client = InfisicalClient(InfisicalSettings.from_env(source), request_json)
 
@@ -581,7 +643,7 @@ class ManusInfisicalMcp:
             if name == "infisical_status":
                 if arguments:
                     raise SafeMcpError("infisical_status accepts no arguments")
-                response = _tool_result(self.client.status(self.capabilities))
+                response = _tool_result(self.client.status(self.capabilities, self.exclusions))
             elif name == "infisical_list_secret_metadata":
                 if set(arguments) - {"limit"}:
                     raise SafeMcpError("infisical_list_secret_metadata accepts only limit")
