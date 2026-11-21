@@ -94,8 +94,8 @@ def merged(tmp_path: Path) -> Path:
 def test_pull_request_merge_commit_lists_changed_paths_on_head(merged: Path) -> None:
     result = _run(merged, **PR)
     assert result.returncode == 0, result.stderr
-    assert result.stdout.splitlines() == ["a.txt", "c.txt"]
-    assert "[ci-scope] pull_request: 2 changed path(s)" in result.stderr
+    assert result.stdout.splitlines() == ["a.txt", "b.txt", "c.txt"]
+    assert "[ci-scope] pull_request: 3 changed path(s)" in result.stderr
 
 
 def test_depth_one_checkout_fetches_the_parents(merged: Path, tmp_path: Path) -> None:
@@ -104,7 +104,7 @@ def test_depth_one_checkout_fetches_the_parents(merged: Path, tmp_path: Path) ->
     assert _git(shallow, "rev-parse", "--is-shallow-repository") == "true"
     result = _run(shallow, **PR)
     assert result.returncode == 0, result.stderr
-    assert result.stdout.splitlines() == ["a.txt", "c.txt"]
+    assert result.stdout.splitlines() == ["a.txt", "b.txt", "c.txt"]
 
 
 def test_unfetchable_parents_are_unknown_scope(merged: Path, tmp_path: Path) -> None:
@@ -189,8 +189,8 @@ def test_merge_that_changes_nothing_is_unknown_scope(tmp_path: Path) -> None:
     assert "full suite" not in result.stderr
 
 
-def test_deletion_only_pr_scopes_to_nothing(tmp_path: Path) -> None:
-    """Matches the Test Suite: missing-on-HEAD paths drop, an empty set is not full."""
+def test_deletion_only_pr_keeps_the_deleted_path(tmp_path: Path) -> None:
+    """Matches the Test Suite: a deleted path stays in the list, so the scope is not empty."""
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init", "-q", "-b", "main")
@@ -205,8 +205,8 @@ def test_deletion_only_pr_scopes_to_nothing(tmp_path: Path) -> None:
     _git(repo, "merge", "-q", "--no-ff", "-m", "merge", "feature")
     result = _run(repo, **PR)
     assert result.returncode == 0, result.stderr
-    assert result.stdout == ""
-    assert "0 changed path(s)" in result.stderr
+    assert result.stdout.splitlines() == ["b.txt"]
+    assert "1 changed path(s)" in result.stderr
 
 
 def test_pr_full_still_exports_full_suite_but_a_pull_request_refuses_it() -> None:
