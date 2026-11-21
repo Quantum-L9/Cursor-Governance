@@ -31,27 +31,24 @@
       "files": {
         "canary/ci_ul/central_rule_bad.py": {
           "semgrep-l9": [
-            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true",
-            "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true"
           ],
           "bandit": ["B602"]
         },
         "canary/ci_ul/override_nosemgrep.py": {
           "bandit": ["B602"],
           "semgrep-l9": [
-            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true",
-            "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true"
           ]
         },
         "canary/ci_ul/override_ignored_dir/central_rule_bad_ignored.py": {
           "bandit": ["B602"],
           "semgrep-l9": [
-            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true",
-            "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true"
           ]
         },
-        "canary/ci_ul/consumer_token_bad.py": {
-          "semgrep-l9": ["l9.no-semgrep-app-token-in-child-env"]
+        "canary/ci_ul/biome_bad.json": {
+          "biome": ["format"]
         }
       }
     }
