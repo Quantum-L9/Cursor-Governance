@@ -8,6 +8,6 @@ the canary branch. Each file is a deliberate known-good or known-bad input:
 |---|---|
 | `central_rule_bad.py` | SDK baseline `subprocess-shell-true` fires (known-bad) |
 | `central_rule_good.py` | no finding (known-good) |
-| `override_nosemgrep.py` | same defect with an inline `# nosemgrep`: a consumer suppression must not lower central coverage |
+| `override_nosemgrep.py` | same defect with an inline `# nosemgrep`: a consumer suppression must not lower central coverage, so the central rule fires here |
 | `biome_bad.json` | Biome format violation: central Biome (blocking) and the SDK Biome job must both fail |
-| `override_ignored_dir/central_rule_bad_ignored.py` | same defect under a path the consumer's `.semgrepignore` excludes |
+| `override_ignored_dir/central_rule_bad_ignored.py` | same defect under a path the consumer's `.semgrepignore` excludes; the central rule still fires |
