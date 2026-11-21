@@ -51,7 +51,8 @@ from git_guardrails import command_requires_human  # noqa: E402
 
 # Broad add forms that scoop the whole dirty tree.
 _BROAD_ADD_SHORT = re.compile(
-    r"\bgit\s+add\s+(?:(?:-[A-Za-z]+|--[a-z-]+)\s+)*-(?:A|u)\b",
+    # A combined short flag (-uv, -vA) stages everything just as -u / -A does.
+    r"\bgit\s+add\s+(?:(?:-[A-Za-z]+|--[a-z-]+)\s+)*-[A-Za-z]*[Au][A-Za-z]*\b",
     re.I,
 )
 _BROAD_ADD_LONG = re.compile(
@@ -62,6 +63,73 @@ _BROAD_ADD_DOT = re.compile(
     r"\bgit\s+add\s+(?:(?:-[A-Za-z]+|--[a-z-]+)\s+)*\.(?:\s|$)",
     re.I,
 )
+
+#: Pathspecs that name the whole tree; they never narrow a broad add.
+_WIDE_PATHSPECS = frozenset({".", "./", ":", ":/", ":/.", "*", "**", "/"})
+#: git global options that consume the following word.
+_GIT_OPTIONS_WITH_VALUE = frozenset({"-C", "-c", "--git-dir", "--work-tree", "--namespace"})
+_STAGE_ALL_LONG = frozenset({"--all", "--update", "--no-ignore-removal"})
+
+
+def _git_add_args(segment: str) -> list[str] | None:
+    """Arguments after ``git [global options] add`` in *segment*, else ``None``."""
+    words = segment_words(segment)
+    if "git" not in words:
+        return None
+    index = words.index("git") + 1
+    while index < len(words) and words[index].startswith("-"):
+        index += 2 if words[index] in _GIT_OPTIONS_WITH_VALUE else 1
+    if index >= len(words) or words[index] != "add":
+        return None
+    return words[index + 1 :]
+
+
+def _add_segment_is_broad(args: list[str]) -> bool:
+    """True when this ``git add`` stages beyond explicitly named paths."""
+    stage_all = False
+    paths: list[str] = []
+    after_separator = False
+    for arg in args:
+        if after_separator:
+            paths.append(arg)
+        elif arg == "--":
+            after_separator = True
+        elif arg.startswith("--"):
+            stage_all = stage_all or arg in _STAGE_ALL_LONG
+        elif arg.startswith("-") and arg != "-":
+            stage_all = stage_all or "A" in arg[1:] or "u" in arg[1:]
+        else:
+            paths.append(arg)
+    if any(path in _WIDE_PATHSPECS for path in paths):
+        return True
+    return stage_all and not paths
+
+
+def _broad_add_is_pathspec_scoped(command: str) -> bool:
+    """A broad-add flag is harmless when every add names only explicit paths.
+
+    ``git add -u -- a.py b.py`` stages modifications to exactly those tracked
+    paths, which is what the denial message itself asks for. Fail closed: when
+    a broad pattern matched but no plain ``git add`` segment can be parsed
+    (a ``bash -c`` wrapper, say), the command is not treated as scoped.
+    """
+    scoped = False
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        args = _git_add_args(segment)
+        if args is None:
+            continue
+        if _add_segment_is_broad(args):
+            return False
+        scoped = True
+    if not scoped:
+        return False
+    # Every broad-pattern hit must sit inside a parsed, scoped add segment.
+    return not any(
+        pattern.search(segment) and _git_add_args(segment) is None
+        for segment in split_segments(strip_heredoc_bodies(command))
+        for pattern in (_BROAD_ADD_SHORT, _BROAD_ADD_LONG, _BROAD_ADD_DOT)
+    )
+
 
 # Branch moves (not path checkout `git checkout -- file`, not create -b).
 _SWITCH = re.compile(r"\bgit\s+switch\b", re.I)
@@ -243,10 +311,14 @@ def _deny_shared_git(command: str, *, dirty: bool) -> str | None:
             "allowlist of paths you authored, or set L9_GIT_BROAD_ADD_AUTHORIZED=<reason>."
         )
     if (
-        _BROAD_ADD_SHORT.search(command)
-        or _BROAD_ADD_LONG.search(command)
-        or _BROAD_ADD_DOT.search(command)
-    ) and not _authorized("L9_GIT_BROAD_ADD_AUTHORIZED"):
+        (
+            _BROAD_ADD_SHORT.search(command)
+            or _BROAD_ADD_LONG.search(command)
+            or _BROAD_ADD_DOT.search(command)
+        )
+        and not _authorized("L9_GIT_BROAD_ADD_AUTHORIZED")
+        and not _broad_add_is_pathspec_scoped(command)
+    ):
         return (
             "shared-worktree isolation: broad staging (-A/--all/./-u without "
             "pathspecs) denied — scoops foreign dirty work on shared clones. "
