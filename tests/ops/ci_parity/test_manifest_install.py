@@ -147,7 +147,7 @@ def test_core_blocking_checks_block_at_exact_core_pins() -> None:
 
 def test_uv_tool_spec_pins_pypi_by_version_and_git_by_commit() -> None:
     loaded = manifest.load()
-    assert install.uv_tool_spec(loaded.tools["semgrep"]) == "semgrep==1.171.0"
+    assert install.uv_tool_spec(loaded.tools["semgrep"]) == "semgrep==1.186.0"
     sdk = loaded.tools["l9-ci"]
     assert install.uv_tool_spec(sdk) == f"{sdk.package}@{sdk.version}"
 
@@ -390,3 +390,141 @@ def test_repository_l9_ci_tracks_core_and_its_extract_agrees_with_its_fallback()
     pin = sdk.ci_ref["contains"].strip("'")
     line = CORE_LINE.format(sha=pin)
     assert manifest.tracked_version(sdk, line) == pin == sdk.fallback_version
+
+
+# --- uv tool installs: one environment per <tool>/<version> -----------------
+
+# A stand-in for `uv tool install [--force] <pkg>==<ver>` with uv's layout: the
+# environment is $UV_TOOL_DIR/<pkg>, the executable is linked into
+# $UV_TOOL_BIN_DIR, an existing environment is left alone unless --force, and
+# --force recreates it from scratch. The installed tool reports its version
+# and, when run without --version, waits on $HOLD_FILE before reading its own
+# environment, so a test can hold it mid-run.
+FAKE_UV = r"""#!/bin/sh
+set -eu
+[ "$1 $2" = "tool install" ] || exit 64
+shift 2
+force=0
+if [ "$1" = "--force" ]; then force=1; shift; fi
+pkg="${1%%==*}"; ver="${1##*==}"
+env_dir="$UV_TOOL_DIR/$pkg"
+if [ -d "$env_dir" ]; then
+  if [ "$force" -eq 0 ]; then echo "$pkg is already installed"; exit 0; fi
+  rm -rf "$env_dir"
+fi
+mkdir -p "$env_dir/bin" "$UV_TOOL_BIN_DIR"
+printf '%s\n' "$ver" >"$env_dir/version"
+cat >"$env_dir/bin/$pkg" <<EOS
+#!/bin/sh
+if [ "\$1" = "--version" ]; then echo "$pkg \$(cat '$env_dir/version')"; exit 0; fi
+while [ ! -e "\$HOLD_FILE" ]; do sleep 0.05; done
+echo "$pkg \$(cat '$env_dir/version')"
+EOS
+chmod +x "$env_dir/bin/$pkg"
+ln -sf "$env_dir/bin/$pkg" "$UV_TOOL_BIN_DIR/$pkg"
+"""
+
+
+def _uv_tool_manifest(tmp_path: Path, version: str) -> manifest.Manifest:
+    tool = manifest.Tool(
+        name="fake",
+        version=version,
+        method="uv_tool",
+        binary="fake",
+        version_cmd=("--version",),
+        expect=f"fake {version}",
+        package="fake",
+    )
+    return manifest.Manifest(
+        install_root=tmp_path / "root",
+        bin_dir=tmp_path / "bin",
+        cache_root=tmp_path / "cache",
+        tools={"fake": tool},
+        lanes={},
+    )
+
+
+def test_installing_a_new_version_leaves_a_running_old_version_intact(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+    import subprocess
+
+    uv_dir = tmp_path / "uvbin"
+    uv_dir.mkdir()
+    (uv_dir / "uv").write_text(FAKE_UV, encoding="utf-8")
+    (uv_dir / "uv").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{uv_dir}{os.pathsep}{os.environ['PATH']}")
+    hold = tmp_path / "release"
+    monkeypatch.setenv("HOLD_FILE", str(hold))
+
+    old = _uv_tool_manifest(tmp_path, "1.0.0")
+    assert install.install_tool(old, "fake") == "INSTALLED"
+    old_binary = old.resolve("fake")
+    assert old_binary is not None
+    running = subprocess.Popen([str(old_binary)], stdout=subprocess.PIPE, text=True)
+    try:
+        new = _uv_tool_manifest(tmp_path, "2.0.0")
+        assert install.install_tool(new, "fake") == "INSTALLED"
+    finally:
+        hold.touch()
+        out, _ = running.communicate(timeout=30)
+    assert running.returncode == 0
+    assert out.strip() == "fake 1.0.0", "the running old version lost its environment"
+    # Each version owns its environment; the new install did not touch the old one.
+    old_env = old.install_root / "fake" / "1.0.0" / "uv-tools" / "fake"
+    new_env = new.install_root / "fake" / "2.0.0" / "uv-tools" / "fake"
+    assert (old_env / "version").read_text().strip() == "1.0.0"
+    assert (new_env / "version").read_text().strip() == "2.0.0"
+    assert (
+        subprocess.run(
+            [str(old_binary), "--version"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+        == "fake 1.0.0"
+    )
+    # The PATH link follows the newest install; state names the explicit path.
+    assert new.resolve("fake") == new.install_root / "fake" / "2.0.0" / "bin" / "fake"
+    assert (new.bin_dir / "fake").resolve() == (new_env / "bin" / "fake").resolve()
+
+
+def test_resolve_prints_the_pinned_path_not_the_path_link(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    loaded = _fake_tool_manifest(tmp_path, PAYLOAD, hashlib.sha256(PAYLOAD).hexdigest())
+    monkeypatch.setattr(manifest, "load", lambda *a, **k: loaded)
+    assert install.main(["--resolve", "fake"]) == 1
+    assert capsys.readouterr().out == ""
+    loaded.install_root.mkdir()
+    assert install.install_tool(loaded, "fake", tmp_path / "dl") == "INSTALLED"
+    assert install.main(["--resolve", "fake"]) == 0
+    printed = Path(capsys.readouterr().out.strip())
+    assert printed == Path(loaded.read_state()["fake"]["path"])
+    assert printed.is_relative_to(loaded.install_root / "fake" / "1.0.0")
+    assert printed != loaded.bin_dir / "fake"
+    assert install.main(["--resolve", "unknown"]) == 1
+
+
+def test_a_broken_same_version_install_is_repaired_inside_its_own_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+
+    uv_dir = tmp_path / "uvbin"
+    uv_dir.mkdir()
+    (uv_dir / "uv").write_text(FAKE_UV, encoding="utf-8")
+    (uv_dir / "uv").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{uv_dir}{os.pathsep}{os.environ['PATH']}")
+    old = _uv_tool_manifest(tmp_path, "1.0.0")
+    new = _uv_tool_manifest(tmp_path, "2.0.0")
+    assert install.install_tool(old, "fake") == "INSTALLED"
+    assert install.install_tool(new, "fake") == "INSTALLED"
+    # An interrupted install: the environment exists, the executable link and
+    # the state entry do not.
+    link = new.install_root / "fake" / "2.0.0" / "bin" / "fake"
+    link.unlink()
+    new.state_path.write_text("{}\n", encoding="utf-8")
+    assert install.install_tool(new, "fake") == "INSTALLED"
+    assert new.resolve("fake") == link
+    # The repair stayed inside 2.0.0's environment.
+    old_env = old.install_root / "fake" / "1.0.0" / "uv-tools" / "fake"
+    assert (old_env / "version").read_text().strip() == "1.0.0"
