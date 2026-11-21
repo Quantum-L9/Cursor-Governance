@@ -1636,6 +1636,16 @@ def _classify_gh(ctx: GuardContext, words: Sequence[str]) -> Finding:
         return _allow(Effect.OBSERVE_ONLY, "gh", "no subcommand")
     if group == "api":
         method = _gh_api_method(args)
+        if method == "DELETE" and _gh_api_is_queue_disarm(args):
+            return _guard(
+                Effect.REMOTE_REF_UPDATE,
+                "gh api DELETE ccr/auto_merge",
+                "dequeues or disarms one pull request; no ref, commit or branch is "
+                "deleted, and re-enqueueing the same head restores it",
+                sensitivity=Sensitivity.SHARED_BRANCH,
+                recoverability=Recoverability.DETERMINISTIC_REGENERATION,
+                blast_radius=BlastRadius.UNKNOWN,
+            )
         if method == "DELETE":
             return _deny(
                 Effect.REMOTE_REF_DELETE,
@@ -1692,6 +1702,26 @@ def _classify_gh(ctx: GuardContext, words: Sequence[str]) -> Finding:
         recoverability=Recoverability.UNCERTAIN,
         blast_radius=BlastRadius.UNKNOWN,
     )
+
+
+#: The one authenticated DELETE that is recoverable: the session gateway's route
+#: that disarms auto-merge / removes a pull request from the merge queue
+#: (docs/DEGRADED_MODE_CONTRACT.md). It deletes no ref, commit or branch; the PR
+#: and its head are untouched, and re-enqueueing restores the prior state.
+#: stack_safe_merge.py's withdraw path (UNBOUND_QUEUE_ENTRY fail-closed) uses it.
+_GH_QUEUE_DISARM_PATH = re.compile(
+    r"(?:https://api\.github\.com)?/?repos/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pulls/[0-9]+/ccr/auto_merge/?"
+)
+
+
+def _gh_api_is_queue_disarm(args: Sequence[str]) -> bool:
+    """True only when the sole API path named is a pull request's ``ccr/auto_merge``.
+
+    Any other path, a second path, or no recognisable path stays the
+    irreversible-DELETE deny (I015: uncertainty never upgrades to ALLOW).
+    """
+    paths = [arg.strip("'\"") for arg in args if not arg.startswith("-") and "/" in arg]
+    return len(paths) == 1 and _GH_QUEUE_DISARM_PATH.fullmatch(paths[0]) is not None
 
 
 def _gh_api_method(args: Sequence[str]) -> str:
