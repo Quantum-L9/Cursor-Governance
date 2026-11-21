@@ -2144,6 +2144,27 @@ def _segments(command: str) -> list[str]:
     return found
 
 
+#: ``git stash`` actions that do not move worktree state into a stash entry.
+_STASH_NON_PARKING = frozenset(
+    {"list", "show", "pop", "apply", "drop", "clear", "create", "store", "branch"}
+)
+
+
+def _parks_worktree(segment: str) -> bool:
+    """True for a ``git stash`` segment that moves worktree state into a stash.
+
+    A bare ``git stash`` (or one carrying only flags or redirections) is
+    ``push``; any word not known to be non-parking counts as parking, so the
+    probe-shape check fails toward detection.
+    """
+    words = _strip_env_prefix(segment_words(segment))
+    if not words or words[0] != "git" or "stash" not in words:
+        return False
+    rest = words[words.index("stash") + 1 :]
+    action = next((word for word in rest if not word.startswith("-")), "push")
+    return action not in _STASH_NON_PARKING
+
+
 def _infer_purpose(command: str, segments: Sequence[str], ctx: GuardContext) -> Purpose:
     """Detect the ``stash … <read-only> … stash pop`` safety-probe shape.
 
@@ -2158,6 +2179,11 @@ def _infer_purpose(command: str, segments: Sequence[str], ctx: GuardContext) -> 
     if ctx.purpose is Purpose.DIAGNOSTIC_PROBE:
         return Purpose.DIAGNOSTIC_PROBE
     if not _PROBE_RESTORE_RE.search(command):
+        return ctx.purpose
+    # A restore alone (`git stash list; git stash pop`) parks nothing: it is the
+    # recovery move, and denying it as a probe strands the parked work. The
+    # probe shape needs a stash that parks the worktree in the same command.
+    if not any(_parks_worktree(segment) for segment in segments):
         return ctx.purpose
     # stash + restore in one command, with nothing but observation between them.
     others = [
