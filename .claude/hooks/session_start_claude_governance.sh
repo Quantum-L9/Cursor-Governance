@@ -1006,32 +1006,17 @@ emit_account_drift() {
   fi
 }
 
-# --- Coding projection (report-only) ---------------------------------------
-# One line from the shared classifier (ops/scripts/coding_projection_status.py;
-# Cursor renders the same verdict as markdown). Cursor-Governance verifies
-# l9-semantic-compiler pairs published to Quantum-L9/.github and never produces
-# them. It never fetches or writes, and with no independent record of main its
-# best verdict is BOUND; no verified checkout or no published pair is UNVERIFIED.
+# --- Coding projection (bound by default on Claude Code) --------------------
+# Operator decision 2026-11-20 (governance/host-bindings/claude-code.yaml): the Claude Code
+# host default binding is the operating plane plus l9.projection/coding-agent-execution@1.
+# The default binding below verifies it with the shared classifier
+# (ops/scripts/coding_projection_status.py, through ops/autonomy/projection_mode.py) and binds
+# it only when it is ADMITTED_AND_CURRENT; otherwise the session degrades to the operating
+# plane alone with one WARN line. This line no longer runs the classifier a second time, so
+# the hook spends no more of its budget than before. It is a host binding, not coding-agent
+# mode: a registered /lcto swarm child still runs coding_agent_mode.py on.
 emit_coding_projection() {
-  local py="$1"
-  local reader="$GOV/ops/scripts/coding_projection_status.py"
-  [ -f "$reader" ] || return 0
-  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
-
-  local out rc
-  out="$(_l9_bounded 2 "$py" "$reader" --workspace "$WORKSPACE" --format line 2>/dev/null)"
-  rc=$?
-  case "$rc" in
-    125) say "coding projection: UNVERIFIED — DEFERRED: hook budget exhausted (verification only; not bound in this session — /coding-agent binds it)" ;;
-    124) say "coding projection: UNVERIFIED — TIMED OUT (verification only; not bound in this session — /coding-agent binds it)" ;;
-    *)
-      if [ -n "$out" ]; then
-        say "$out"
-      else
-        say "coding projection: UNVERIFIED — classifier printed nothing (verification only; not bound in this session — /coding-agent binds it)"
-      fi
-      ;;
-  esac
+  say "coding projection: l9.projection/coding-agent-execution@1 is part of the Claude Code default binding — whether it is bound in this session is the verified result in the default projection binding below, nothing else (a host binding, not coding-agent mode; /coding-agent binds the mode)"
 }
 
 # --- Authority checkout (shared by every workspace) --------------------------
@@ -1054,10 +1039,10 @@ emit_authority_checkout() {
 
 # --- Default projection binding (automatic) ---------------------------------
 # Every Claude Code session is bound automatically to the admitted operating plane
-# (l9.projection/cursor-governance-operating-plane@2) through ops/autonomy/host_binding.py
-# and governance/host-bindings/claude-code.yaml; Cursor renders the same binding as
-# markdown. No skill or command is involved; /coding-agent, /lcto and /architect are the
-# manual bindings. BOUND only when the consumer adapter reports CURRENT in admitted mode;
+# (l9.projection/cursor-governance-operating-plane@2) plus the coding-agent execution
+# projection through ops/autonomy/host_binding.py and governance/host-bindings/claude-code.yaml;
+# Cursor renders its own binding as markdown. No skill or command is involved; the contract's
+# session_start.manual_bindings are the manual bindings. BOUND only when the consumer adapter reports CURRENT in admitted mode;
 # the session then reads a source class through that adapter. DEGRADED keeps what verified.
 # Fail-open: a failed, degraded, deferred or timed-out binding never stops the session and is
 # reported as exactly that, never as bound. Never fetches or writes.

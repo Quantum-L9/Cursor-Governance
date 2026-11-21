@@ -25,8 +25,28 @@ def flatten(groups: dict) -> set[str]:
     return out
 
 
+# The pack this validator ships in, and nothing else. It runs two of the pack's
+# own scripts, so the pack is fixed by this file's location rather than chosen by
+# an argument: no caller passed one, and a caller-chosen root would choose which
+# code runs.
+SKILL_ROOT = Path(__file__).resolve().parents[1]
+SKILL_PACK_FILES = (
+    "SKILL.md",
+    "runtime/MANIFEST.yaml",
+    "scripts/verify_canonical_binding.py",
+    "scripts/validate_lazy_bootstrap.py",
+)
+
+
 def main() -> int:
-    root = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).resolve().parents[1]).resolve()
+    if len(sys.argv) > 1:
+        print("FAIL: validate_runtime_alignment.py takes no arguments; it validates its own pack")
+        return 2
+    root = SKILL_ROOT
+    missing = [rel for rel in SKILL_PACK_FILES if not (root / rel).is_file()]
+    if missing:
+        print(f"FAIL: {root} is not an l9-coding-agent skill pack (missing {missing})")
+        return 1
     manifest_path = root / "runtime" / "MANIFEST.yaml"
     data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
     manifest = data["manifest"]

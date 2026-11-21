@@ -19,6 +19,7 @@ REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "autonomy"))
 
 import coding_agent_binding_gate as gate  # noqa: E402
+import host_binding  # noqa: E402
 import session_role  # noqa: E402
 
 SID = "sess-child"
@@ -199,3 +200,39 @@ def test_wrapper_passes_a_brain_decision_through(
     code = wrap.main()  # type: ignore[attr-defined]
     assert code == 0
     assert capsys.readouterr().out == ""
+
+
+def test_claude_code_host_default_binding_does_not_satisfy_the_child_gate(
+    tmp_path: Path,
+) -> None:
+    """The Claude Code host binds the coding projection by default (2026-11-20, option B).
+
+    That is a host binding, not coding-agent mode: a registered child whose host default
+    bound the projection is still denied until it turns the mode ACTIVE itself.
+    """
+    # Imported at module top: a wrapper test above puts the governance clone first on sys.path.
+    assert Path(host_binding.__file__).resolve().parent == REPO / "ops" / "autonomy"
+
+    def admitted(_binding: Path, _root: Path | None) -> dict:
+        return {"status": host_binding.ADMITTED, "reason": "test"}
+
+    def current(_base, _ws, _root) -> dict:
+        return {"status": host_binding.BASE_CURRENT, "authority_main": "f" * 40}
+
+    report = host_binding.evaluate(
+        "claude-code", workspace=tmp_path, verify=admitted, verify_base=current
+    )
+    assert report["status"] == "BOUND"
+    assert [item["ref"] for item in report["load"]] == ["l9.projection/coding-agent-execution@1"]
+
+    denied = write(tmp_path, is_child=child)
+    assert not denied.allow
+    assert "coding-agent mode is not on" in denied.reason
+    # Nothing the host binding reads or prints is a mode state the gate accepts.
+    assert not (tmp_path / gate.MODE_STATE_DIR).exists()
+    source = Path(gate.__file__).read_text(encoding="utf-8")
+    assert "host_binding" not in source and "host-bindings" not in source
+
+    mode_state(tmp_path)
+    allowed = write(tmp_path, is_child=child)
+    assert allowed.allow
