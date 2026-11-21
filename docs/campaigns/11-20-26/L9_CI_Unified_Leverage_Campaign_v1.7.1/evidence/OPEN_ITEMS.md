@@ -94,6 +94,7 @@ registration, the Claude Code host default) does not block close-out.
 
 ## Recorded operator decisions
 
+- 2026-11-21, about 02:45Z: a pull request is judged only on the code it brings in; only the nightly run scans the whole repository. This applies to every tool. On a PR a check may read the whole tree when its analysis needs context (type checking, taint rules), but only findings the change introduces block. A finding already present at the merge-base is reported and does not block. Unknown (no base, failed or incomplete scan) still blocks. Exceptions: dependency and CVE audits run on a PR only when a manifest or lock file changes, and nightly for everything; affected-test selection falls back to the full suite when it cannot prove its scope. Pre-existing findings go to the nightly report with an owner, so debt stays visible. Local parity: lane PARITY-DIFF. Central org-ci: queued for the SDK and Core lanes. Recorded as CI_CONFIG_FINDINGS row 23.
 - 2026-11-20, about 22:20Z: only checks that protect working or secure code may block a pull-request merge. Housekeeping checks (CODEOWNERS and file presence, docs and link checks, PR size, header conventions, toolchain-version drift and similar debt) report and never block. Recorded as CI_CONFIG_FINDINGS row 19.
 - 2026-11-20, about 22:15Z: IB-Odoo_19 is proprietary to Quantum AI Partners, which clears its CI tooling for promotion into Quantum-L9 repositories (HARVEST_LEDGER S1a-S1f).
 
