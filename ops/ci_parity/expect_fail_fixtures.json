@@ -3,24 +3,25 @@
   "description": "Consumer-repository data for ops/ci_parity/fixtures.py. Each repository names its fixture roots and, per file, the exact rule ids each lane ('semgrep-l9', 'bandit', ...) must report there. A named rule that fires is expected and does not block; a named rule that does not fire is a FAIL; any other finding on a fixture path, and every finding outside the roots, is classified as before. A file under a root with no entry expects nothing, so any finding on it blocks.",
   "repositories": {
     "Quantum-L9/Enrichment.Inference.Engine": {
-      "note": "CI canary for campaign L9-CI-UNIFIED-LEVERAGE-2026-11-20-v1.7.1 (branch canary/ci-ul-eie). override_attempt.py carries an inline nosemgrep on the line above the call. Since l9-ci-sdk #128 required central runs pass --disable-nosem, so the central rules fire there: a consumer suppression does not reduce central coverage, and this entry names both rules.",
+      "note": "CI canary for campaign L9-CI-UNIFIED-LEVERAGE-2026-11-20-v1.7.1 (branch canary/ci-ul-eie). Central semgrep since l9-ci-sdk #134/#139/#143 (pinned by Core #324): tests/ is in required scope, nosemgrep is inert, and a shell=True site is reported once by the L9 rule (the registry duplicate is superseded). So the L9 rule is expected on every shell=True fixture, including the tests/ scope witness and the nosemgrep override attempt.",
       "roots": ["contracts/feature_evidence/fixtures/ci_canary/", "tests/canary/"],
       "files": {
         "contracts/feature_evidence/fixtures/ci_canary/central_rule_bad.py": {
           "semgrep-l9": [
-            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true",
-            "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true"
           ],
           "bandit": ["B602"]
         },
         "contracts/feature_evidence/fixtures/ci_canary/override_attempt.py": {
           "semgrep-l9": [
-            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true",
-            "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true"
           ],
           "bandit": ["B602"]
         },
         "tests/canary/central_rule_bad_in_tests.py": {
+          "semgrep-l9": [
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true"
+          ],
           "bandit": ["B602"]
         }
       }
