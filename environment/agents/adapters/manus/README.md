@@ -71,7 +71,7 @@ client, but is deliberately non-installable:
 | Layer | Current posture |
 |---|---|
 | Owner package/native API | `UPSTREAM_BLOCKED`; examined consumer pin 2.6.0 supports Cursor stdio only |
-| Requested Manus native client | `UNBOUND`; no verified owner API or client registration |
+| Requested Manus native client | Registered in Auth0 as `manus-native` (public PKCE, `https://manus.im/api/webhook/mcp/callback`); the carrier stays `UNBOUND` until a live PKCE receipt |
 | OAuth canonical actor admission | `UNBOUND` |
 | Live authentication and scope proof | `UNKNOWN` |
 

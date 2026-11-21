@@ -39,6 +39,38 @@ string. The host alone is not the audience. The Graphiti route
 and no client was registered by this change. ADR-100 does not contain a live
 PKCE receipt. The installed package entry is still the stdio command.
 
+## Amendment — 2026-11-21: the Manus client is registered
+
+The issuer and the Manus registration are bound. The Cursor and Claude client
+ids are not.
+
+| Fact | Value |
+|---|---|
+| Issuer | `https://quantum-ai-partners.us.auth0.com/` |
+| Registration | `manus-native`, public, `token_endpoint_auth_method: none`, PKCE `S256`, `authorization_code` + `refresh_token` |
+| Callback | `https://manus.im/api/webhook/mcp/callback` |
+| Client id | `lIY0hERvmh34BZK0veLKtEtZm4qf9Beb` |
+| Registration mode | Pre-registered. The tenant publishes no `registration_endpoint`, so dynamic registration is unavailable. |
+
+The issuer was read from the live protected-resource document, not typed from
+memory: `https://memory.quantumaipartners.com/.well-known/oauth-protected-resource/mcp`
+names that authorization server and this resource identifier.
+
+`resource_parameter_profile` is `compatibility` on the tenant. That setting is
+load-bearing: MCP clients send the RFC 8707 `resource` parameter rather than
+`audience`, and on the default profile Auth0 ignores it, so the access token
+carries no Memory audience and every call is refused as `invalid_token` after a
+successful login.
+
+Two gates remain, and neither is a registration:
+
+1. **A subject grant.** Memory authorizes a verified subject through
+   `L9_MEMORY_OAUTH_GRANTS_JSON`, not through the token's `scope` claim. The
+   operator's Auth0 `sub` must hold the read and write namespaces there, or the
+   first authenticated call succeeds and resolves to no namespace.
+2. **A live PKCE receipt.** No client has one. The Manus carrier therefore stays
+   `UNBOUND` and non-installable in `memory-mcp-connector.json`.
+
 ## Memory-owned work that unblocks installation
 
 1. Serve MCP Streamable HTTP on `https://memory.quantumaipartners.com/mcp`
