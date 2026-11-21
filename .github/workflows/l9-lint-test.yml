@@ -296,9 +296,10 @@ jobs:
                   exit 1
                   ;;
               esac
-              if [ -e "${path}" ]; then
-                printf '%s\n' "${path}" >> "${keep}"
-              fi
+              # Deleted paths stay in the list: they select the tests that still
+              # name or import them, and a deletion-only PR is not an empty scope.
+              # The selector drops any target that no longer exists.
+              printf '%s\n' "${path}" >> "${keep}"
             done
             profile=local
             changed_args=(--changed-file "${keep}")
