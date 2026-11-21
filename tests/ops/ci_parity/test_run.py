@@ -106,7 +106,9 @@ def test_gate_blocks_only_a_new_finding_on_a_changed_line(
     _git(repo, "commit", "-q", "-am", "add bad")
     assert run.mode_gate(world["loaded"], repo, "HEAD", world["base"]) == 2
     out = capsys.readouterr().out
-    assert "BLOCK a.sh:3" in out and "a.sh:1" not in out
+    assert "BLOCK a.sh:3" in out and "BLOCK a.sh:1" not in out
+    # Pre-existing debt never blocks, and is named rather than silently dropped.
+    assert "WARN  pre-existing a.sh:1" in out
 
 
 def test_pre_existing_debt_never_blocks(world: dict) -> None:
@@ -281,8 +283,9 @@ def test_missing_base_is_cannot_evaluate_not_the_parent(
     shallow_head = _git(shallow, "rev-parse", "HEAD")
     assert run.resolve_base(shallow, shallow_head, "does-not-exist") is None
     loaded = manifest.load()
-    assert run.mode_gate(loaded, repo, head, "does-not-exist") == 0
-    assert "cannot-evaluate" in capsys.readouterr().out
+    # Unknown never passes: an unresolvable base fails the gate closed.
+    assert run.mode_gate(loaded, repo, head, "does-not-exist") == run.EXIT_INCOMPLETE
+    assert "BLOCK cannot-evaluate" in capsys.readouterr().out
 
 
 def _tar_bytes(members: list[tuple[str, bytes]]) -> bytes:
