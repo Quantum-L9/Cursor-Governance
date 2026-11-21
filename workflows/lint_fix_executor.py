@@ -138,15 +138,13 @@ class LintFixExecutor:
             STATE_FILE.unlink()
         self.state = None
 
-    def _run_shell(self, cmd: str, capture: bool = True) -> tuple[int, str, str]:
-        """Run shell command."""
-        result = subprocess.run(  # noqa: S602 - shell=True required for DAG executor
-            cmd,
-            shell=True,
-            cwd=REPO_ROOT,
-            capture_output=capture,
-            text=True,
-        )
+    def _run(self, argv: list[str]) -> tuple[int, str, str]:
+        """Run one command as an argument list, never through a shell.
+
+        Paths and messages here come from lint output and state files, so none
+        of them is ever parsed by a shell.
+        """
+        result = subprocess.run(argv, cwd=REPO_ROOT, capture_output=True, text=True, check=False)
         return result.returncode, result.stdout, result.stderr
 
     def _print_header(self, title: str):
@@ -181,8 +179,8 @@ class LintFixExecutor:
         self._print_header("SCAN LINT ERRORS")
 
         # Run ruff to get all errors
-        cmd = "ruff check . --output-format=text 2>&1 || true"
-        _code, stdout, _stderr = self._run_shell(cmd)
+        _code, stdout, stderr = self._run(["ruff", "check", ".", "--output-format=text"])
+        stdout += stderr
 
         errors = self._parse_ruff_output(stdout)
 
@@ -255,8 +253,8 @@ class LintFixExecutor:
         print(f"Applying ruff --fix for {len(auto_errors)} errors...")
 
         # Run ruff with --fix
-        cmd = "ruff check . --fix 2>&1 || true"
-        _code, stdout, _stderr = self._run_shell(cmd)
+        _code, stdout, stderr = self._run(["ruff", "check", ".", "--fix"])
+        stdout += stderr
 
         # Check what was fixed
         if "Fixed" in stdout:
@@ -379,7 +377,9 @@ class LintFixExecutor:
             passed = 0
             for f in py_files:
                 full_path = REPO_ROOT / f
-                code, _stdout, stderr = self._run_shell(f'python3 -m py_compile "{full_path}"')
+                code, _stdout, stderr = self._run(
+                    [sys.executable, "-m", "py_compile", str(full_path)]
+                )
                 if code == 0:
                     passed += 1
                 else:
@@ -403,8 +403,8 @@ class LintFixExecutor:
         self._print_header("RESCAN FOR REMAINING ERRORS")
 
         # Run ruff again
-        cmd = "ruff check . --output-format=text 2>&1 || true"
-        _code, stdout, _stderr = self._run_shell(cmd)
+        _code, stdout, stderr = self._run(["ruff", "check", ".", "--output-format=text"])
+        stdout += stderr
 
         errors = self._parse_ruff_output(stdout)
 
@@ -446,27 +446,36 @@ class LintFixExecutor:
 
         # Build TODO items
         todo_args = [
-            f'--todo "L1|scan|*|SCAN|{before} errors found"',
-            f'--todo "L2|fix|*|FIX|{fixed} errors fixed"',
-            f'--todo "L3|validate|*|VALIDATE|{len(self.state.files_modified)} files"',
+            "--todo",
+            f"L1|scan|*|SCAN|{before} errors found",
+            "--todo",
+            f"L2|fix|*|FIX|{fixed} errors fixed",
+            "--todo",
+            f"L3|validate|*|VALIDATE|{len(self.state.files_modified)} files",
         ]
 
         # Build validation items
         val_args = []
         for v in self.state.validation_results:
-            val_args.append(f'--validation "{v["check"]}|{v["status"]}"')
-        val_args.append(f'--validation "errors_remaining|{after}"')
+            val_args += ["--validation", f"{v['check']}|{v['status']}"]
+        val_args += ["--validation", f"errors_remaining|{after}"]
 
-        cmd = f'''python3 {REPORT_GENERATOR} \
-            --task "Lint fix: {fixed}/{before} errors" \
-            --tier RUNTIME_TIER \
-            {" ".join(todo_args)} \
-            {" ".join(val_args)} \
-            --summary "Lint error fixing via /lint-fix DAG executor" \
-            --skip-verify 2>/dev/null || echo "Report generation skipped"'''
+        argv = [
+            sys.executable,
+            str(REPORT_GENERATOR),
+            "--task",
+            f"Lint fix: {fixed}/{before} errors",
+            "--tier",
+            "RUNTIME_TIER",
+            *todo_args,
+            *val_args,
+            "--summary",
+            "Lint error fixing via /lint-fix DAG executor",
+            "--skip-verify",
+        ]
 
         print("Generating report...")
-        _code, stdout, _stderr = self._run_shell(cmd)
+        _code, stdout, _stderr = self._run(argv)
 
         # Extract report path
         for line in stdout.split("\n"):
@@ -494,7 +503,7 @@ class LintFixExecutor:
 
         # Stage modified files
         for f in self.state.files_modified:
-            self._run_shell(f'git add "{REPO_ROOT / f}"')
+            self._run(["git", "add", "--", str(REPO_ROOT / f)])
 
         # Create commit message
         before = len(self.state.errors_before)
@@ -513,13 +522,13 @@ class LintFixExecutor:
         # finding to repair, not a flag to add (contract
         # l9-commit-verification-integrity); a hook failure lands in the
         # `else` below and is reported rather than silently committed.
-        cmd = f'git commit -m "{commit_msg}" 2>&1 || true'
-        code, stdout, _stderr = self._run_shell(cmd)
+        code, stdout, stderr = self._run(["git", "commit", "-m", commit_msg])
+        stdout += stderr
 
         if "nothing to commit" in stdout.lower():
             print("✅ Nothing to commit — working tree clean")
         elif code == 0 or "file changed" in stdout.lower():
-            _code, hash_out, _ = self._run_shell("git rev-parse --short HEAD")
+            _code, hash_out, _ = self._run(["git", "rev-parse", "--short", "HEAD"])
             self.state.commit_hash = hash_out.strip()
             print(f"✅ Committed: {self.state.commit_hash}")
             print(f"   Message: {commit_msg}")

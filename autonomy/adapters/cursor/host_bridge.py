@@ -107,27 +107,32 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_cursor_host_admissions_tool_use
 """
 
 # Columns added after the table first shipped. ``CREATE TABLE IF NOT EXISTS``
-# never widens an existing table, so they are reconciled per connection.
+# never widens an existing table, so they are reconciled per connection. SQLite
+# cannot bind identifiers or type declarations as parameters, so each column's
+# migration is a complete literal statement: nothing is composed at run time.
 _ADMISSION_COLUMNS = (
-    ("action_allowed_paths_json", "TEXT NOT NULL DEFAULT '[]'"),
-    ("subject_agent_id", "TEXT"),
-    ("expected_subagent_type", "TEXT"),
+    (
+        "action_allowed_paths_json",
+        "ALTER TABLE cursor_host_admissions "
+        "ADD COLUMN action_allowed_paths_json TEXT NOT NULL DEFAULT '[]'",
+    ),
+    (
+        "subject_agent_id",
+        "ALTER TABLE cursor_host_admissions ADD COLUMN subject_agent_id TEXT",
+    ),
+    (
+        "expected_subagent_type",
+        "ALTER TABLE cursor_host_admissions ADD COLUMN expected_subagent_type TEXT",
+    ),
 )
 
 
 def _ensure_admission_schema(connection: sqlite3.Connection) -> None:
     connection.executescript(_ADMISSION_DDL)
     present = {row[1] for row in connection.execute("PRAGMA table_info(cursor_host_admissions)")}
-    for name, declaration in _ADMISSION_COLUMNS:
+    for name, statement in _ADMISSION_COLUMNS:
         if name not in present:
-            # SQLite cannot bind identifiers or type declarations as
-            # parameters, so an ALTER TABLE ... ADD COLUMN has to be composed.
-            # Both halves come from _ADMISSION_COLUMNS, a module-level literal
-            # tuple; no caller value reaches this string.
-            # nosemgrep: l9.baseline.python.sql-string-format
-            connection.execute(
-                f"ALTER TABLE cursor_host_admissions ADD COLUMN {name} {declaration}"
-            )
+            connection.execute(statement)
     connection.commit()
 
 
