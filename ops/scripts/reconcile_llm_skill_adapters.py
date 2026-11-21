@@ -33,6 +33,7 @@ _GOV_LIB = Path(__file__).resolve().parent / "lib"
 if str(_GOV_LIB) not in sys.path:
     sys.path.insert(0, str(_GOV_LIB))
 
+from session_git_excludes import apply_session_git_excludes  # noqa: E402
 from workspace_roots import adopted_projection_roots, projection_roots  # noqa: E402
 
 
@@ -142,6 +143,11 @@ def reconcile_adapters(
                 if ancestor not in mount_roots
             ]
         for mount_root in mount_roots:
+            if scope == "project" and not check:
+                # Writer and exclude are one step: every mount root this loop
+                # writes a mirror into gets that clone's session excludes first,
+                # including a clone SessionStart never excluded.
+                apply_session_git_excludes(mount_root)
             target = expand_path(str(raw_path), mount_root)
             result = reconcile_scope(
                 root,
