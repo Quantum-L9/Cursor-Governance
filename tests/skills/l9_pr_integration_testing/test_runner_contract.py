@@ -937,3 +937,35 @@ def test_runner_and_publisher_have_no_direct_publication_command() -> None:
         text = (SCRIPTS / name).read_text(encoding="utf-8")
         assert "git push" not in text
         assert "gh pr create" not in text
+
+
+def _governance_tree(root: Path) -> Path:
+    for rel in publish.GOVERNANCE_IDENTITY_FILES:
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text("x\n", encoding="utf-8")
+    (root / ".venv" / "bin").mkdir(parents=True)
+    (root / ".venv" / "bin" / "python").write_text("", encoding="utf-8")
+    return root
+
+
+def test_governance_root_accepts_a_governance_tree(tmp_path: Path) -> None:
+    gov = _governance_tree(tmp_path / "gov")
+    assert publish.governance_root({"L9_GOVERNANCE_DIR": str(gov)}) == gov.resolve()
+
+
+def test_governance_root_refuses_a_tree_that_is_not_governance(tmp_path: Path) -> None:
+    other = tmp_path / "other"
+    (other / ".venv" / "bin").mkdir(parents=True)
+    (other / ".venv" / "bin" / "python").write_text("", encoding="utf-8")
+    (other / "Makefile").write_text("pr:\n\ttrue\n", encoding="utf-8")
+    with pytest.raises(publish.PublishRefusal, match="not a governance tree"):
+        publish.governance_root({"L9_GOVERNANCE_DIR": str(other)})
+
+
+def test_governance_root_refuses_a_missing_dir_or_venv(tmp_path: Path) -> None:
+    with pytest.raises(publish.PublishRefusal, match="does not exist"):
+        publish.governance_root({"L9_GOVERNANCE_DIR": str(tmp_path / "absent")})
+    gov = _governance_tree(tmp_path / "gov")
+    (gov / ".venv" / "bin" / "python").unlink()
+    with pytest.raises(publish.PublishRefusal, match="locked governance venv"):
+        publish.governance_root({"L9_GOVERNANCE_DIR": str(gov)})

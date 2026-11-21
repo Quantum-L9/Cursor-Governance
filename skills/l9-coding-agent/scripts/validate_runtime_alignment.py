@@ -25,8 +25,31 @@ def flatten(groups: dict) -> set[str]:
     return out
 
 
+# Files that make a directory this skill pack. The validator runs two scripts
+# from the pack it validates, so a root without them is refused, not executed.
+SKILL_PACK_FILES = (
+    "SKILL.md",
+    "runtime/MANIFEST.yaml",
+    "scripts/verify_canonical_binding.py",
+    "scripts/validate_lazy_bootstrap.py",
+)
+
+
+def skill_root(argv: list[str]) -> Path:
+    """The skill pack to validate: argv[1], else this script's own pack."""
+    raw = argv[1] if len(argv) > 1 else str(Path(__file__).resolve().parents[1])
+    try:
+        root = Path(raw).resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise SystemExit(f"FAIL: skill root {raw!r} does not exist") from exc
+    missing = [rel for rel in SKILL_PACK_FILES if not (root / rel).is_file()]
+    if missing:
+        raise SystemExit(f"FAIL: {root} is not an l9-coding-agent skill pack (missing {missing})")
+    return root
+
+
 def main() -> int:
-    root = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).resolve().parents[1]).resolve()
+    root = skill_root(sys.argv)
     manifest_path = root / "runtime" / "MANIFEST.yaml"
     data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
     manifest = data["manifest"]
