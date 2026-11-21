@@ -50,9 +50,6 @@
             "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
           ]
         },
-        "canary/ci_ul/biome_bad.json": {
-          "biome": ["format"]
-        },
         "canary/ci_ul/consumer_token_bad.py": {
           "semgrep-l9": ["l9.no-semgrep-app-token-in-child-env"]
         }
