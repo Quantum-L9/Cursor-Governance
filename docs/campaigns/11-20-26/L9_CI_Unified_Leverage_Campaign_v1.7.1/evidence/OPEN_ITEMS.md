@@ -143,5 +143,10 @@ Evidence for each row is in `CLOSEOUT_RECEIPT.md`.
 | X6 | DONE (EIE canary #378, runs 1 and 2). |
 | X7 | DONE (#1091, #1118). |
 | X8 | OPEN. Skill support merged (#1109); the ruleset has no queue yet (click-path 1) and no PR has landed through it. |
-| X9 | IN PROGRESS. `CLOSEOUT_RECEIPT.md` published; `PROOF.md` not yet filled from real runs. |
+| X9 | IN PROGRESS. `PROOF.md` filled from real runs (10 PASS, 4 FAIL, 38 OPEN, 4 UNKNOWN, 3 out of scope); register not closed. |
 | X10 | OPEN. Findings done (rows 20-29); fixes not merged, operator settings not applied, measured delta not taken. |
+
+### Corrections (2026-11-21 13:30Z, REST)
+
+- EIE #368 is merged (`4324e0df`), not open.
+- T32: CodeQL on Cursor-Governance analyzes `python` only, not JavaScript.

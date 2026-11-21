@@ -17,7 +17,7 @@ organization is ready to roll out. Rolling out to other repositories is a separa
 | X6 | Secondary canaries recorded | DONE (EIE) | EIE [#378](https://github.com/Quantum-L9/Enrichment.Inference.Engine/pull/378): run 1 (central run 44874376220) and run 2 (44878546690, job 136768547018) Gates 2-3 PASS; in run 2 only the 3 canary findings block and 33 pre-existing do not. CEG canary #517: earlier run recorded; not re-run on PIN-ADVANCE-3. |
 | X7 | Harvest ledgered with destinations | DONE | `HARVEST_LEDGER.md` index merged (#1091); full `HARVEST.md` fields for promoted rows C1-C5 merged ([#1118](https://github.com/Quantum-L9/Cursor-Governance/pull/1118)). |
 | X8 | Merge queue on Cursor-Governance main, driven by `/l9-pr-remediation` | OPEN: skill support merged; criterion not met (no queue on the ruleset; no PR landed through it with merge_group run ids; blocked on click-path 1) | Skill support merged ([#1109](https://github.com/Quantum-L9/Cursor-Governance/pull/1109)); throwaway proof PR #1113 ready (G2). `main` still has no `merge_queue` rule (checked 13:05Z). After click-path 1, G2 proves (iii) REST membership observable, (i) dequeue on push, (ii) REST DELETE dequeues; then `/l9-pr-remediation Quantum-L9/Cursor-Governance`. |
-| X9 | Close-out evidence | IN PROGRESS: this receipt is published; the criterion is `PROOF.md` filled from real runs, which has not been done | This file, published through `make pr`. |
+| X9 | Close-out evidence | IN PROGRESS: `PROOF.md` filled from real runs (59 requirements: 10 PASS, 4 FAIL, 38 OPEN, 4 UNKNOWN, 3 out of scope); the register is not closed until each non-PASS row has a terminal disposition | This file, published through `make pr`. |
 | X10 | CTO CI-run audit | OPEN: findings and click-paths done; criterion not met (path-scoping and duplicate-trigger fixes not merged, operator settings not applied, measured per-PR delta NOT MEASURED) | See "CI-run audit" below; rows 20-29 in `CI_CONFIG_FINDINGS.md`. |
 
 ## What changed for every PR
@@ -33,8 +33,8 @@ organization is ready to roll out. Rolling out to other repositories is a separa
 | #311 | canary introduced | pass | differential |
 | #319 | activate SDK 1d632037 | **FAIL** (run 44864948490) | caught tests/ scope widening: SDK 104, CEG 91, EIE 19, Core 1 new blockers; not merged (row 26) |
 | #322 | activate SDK 47ae3ac5 | pass | l9-ci-sdk improved |
-| #324 | activate SDK 4a887396 + CENTRAL-DIFF | pass (run 44875640013) | CG: 79 findings, all advisory |
-| #328 | consumer legs verify as a push; full-lock pip-audit active | pass (run 44891625020) | CG pass: improved (row 27 fixed); 4 kept green |
+| #324 | activate SDK 4a887396 + CENTRAL-DIFF | pass (verdict job 136761385630; the run itself concludes `failure` because both Cursor-Governance legs failed, the row-27 masking fixed by #328) | CG: 79 findings, all advisory |
+| #328 | consumer legs verify as a push; full-lock pip-audit active | pass (verdict job 136814835426; the run concludes `failure` only from the expected base-pin CG leg) | CG pass: improved (row 27 fixed); 4 kept green |
 | #335 | org-ci on #334's pip-audit (prints export + count) | pass | all 5 kept green |
 | #336 | Core toolchain audit | pass | all 5 kept green; audit 104 audited, 26 excepted, 0 open |
 | #338 | admit Semgrep 1.186.0 | pass | all 5 kept green |
@@ -57,6 +57,12 @@ Remaining toolchain exceptions (`.github/actions/install-semgrep/audit-exception
 
 Row 29 (new, governance): Core's `Control plane attestation` (`attest`) has failed on every main push, 99 failures and 0 passes. It reports three operator settings, correctly: Core `main` has no `pull_request` rule (active: required_status_checks, workflows); immutable releases cannot be read because `L9_CONTROL_PLANE_TOKEN` is not provisioned; and ruleset 21895545 has `strict_required_status_checks_policy=false` with no merge queue. Click-paths 4-6.
 
+Row 31 (new, coverage gap): Cursor-Governance has had **no Sonar analysis since 2026-11-20 16:23Z**. #1062 (`a95562c9`) made `sonarcloud.yml` dispatch-only, waiting on Core's nightly `mode=apply`; that workflow has 0 runs since (REST), because the nightly App cannot mint (click-path 7). Granting the App restores it; until then the gap is live.
+
+`PROOF.md` FAILs recorded (each needs an operator disposition, accept-as-exception or revert): CEG #522 retired local lint/contract jobs (`fc4711a2`, 2026-11-20 22:44Z) before `CURSOR_CANARY_PASS` existed (first-consumer blocker and P11); the #1096 canary witnesses were pushed directly on CTO instruction rather than through `make pr` (P6); #1062 removed the Sonar PR trigger before its replacement was proven (P13, row 31).
+
+Evidence corrections (REST, 2026-11-21 13:30Z): EIE #368 merged (`4324e0df`), not open as `OPEN_ITEMS.md` T-row 43 says; Core #312 (`63ff7da5`) and CEG #524 (`e1eb4f2d`) merged, not open as `HARVEST_LEDGER.md` says; T32's claim that CodeQL covers JavaScript in Cursor-Governance is wrong (PR and nightly CodeQL analyze `python` only).
+
 Row 22: a double-triggered canary posted a cancelled FAIL verdict on the same head (hit #328, #330); fixed by Core [#332](https://github.com/Quantum-L9/l9-ci-core/pull/332) (one verdict per pushed head; a text edit posts no verdict). Row 27 fix: Core [#326](https://github.com/Quantum-L9/l9-ci-core/pull/326) (action, merged 08:30Z) and #328 (org-ci activation). A follow-on conflict between push semantics and CG's `sonarcloud.yml` allowlist test was fixed in Cursor-Governance [#1119](https://github.com/Quantum-L9/Cursor-Governance/pull/1119).
 
 ## CI-run audit (X10)
@@ -77,7 +83,7 @@ Projected saving if all applied: about **520 s per push (~52%)**. Measured delta
 ## Operator click-paths
 
 1. **Merge queue (X8):** https://github.com/Quantum-L9/Cursor-Governance/settings/rules/20855699 → tick *Require merge queue* → Squash, build concurrency 5, group size 1-5, wait 5 min, only merge non-failing, timeout 60 min → *Save changes*. Then `/l9-pr-remediation Quantum-L9/Cursor-Governance`.
-2. **CodeQL duplicate:** Settings → Code security → Code scanning → CodeQL analysis → switch *Default setup* off (the `codeql` workflow stays).
+2. **Duplicate "Analyze (python)":** CodeQL *Default setup* is already `not-configured`; the second run comes from GitHub **Code Quality** (`dynamic/github-code-quality/codeql`). Cursor-Governance → Settings → Code security → Code quality → disable it, since `codeql.yml` already runs security + code quality (or keep Code Quality and drop the quality suite from `codeql.yml`; keep exactly one).
 3. **Semgrep app PR scan:** Semgrep AppSec Platform → Projects → Cursor-Governance → turn off diff-aware PR scans (keep scheduled full scans if wanted).
 4. **Core main protection (row 29):** https://github.com/Quantum-L9/l9-ci-core/settings/rules → the `main` ruleset → add *Require a pull request before merging* (0 approvals, code-owner review off) → *Save changes*.
 5. **Attestation token (row 29):** Core → Settings → Environments → `control-plane-attestation` → add secret `L9_CONTROL_PLANE_TOKEN` (a fine-grained token or App with repository Administration: read only).

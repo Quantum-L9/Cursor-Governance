@@ -203,3 +203,8 @@ Campaign scope (operator decision, 2026-11-20): cut over **Cursor-Governance** o
 `CURSOR_CANARY_PASS`, and leave the organization ready to roll out. Rolling out to other repositories is
 not part of this campaign. Cutover items for Cursor-Governance are owned by lane CG-CUTOVER and depend on
 C1 to C5. The other donors' rows above are the starting backlog for the rollout campaign.
+
+## Corrections (2026-11-21 13:30Z, REST)
+
+- Core #312 is merged (`63ff7da5`, 2026-11-21T08:16:54Z); C1 (security scans in org-ci) is effective.
+- CEG #524 is merged (`e1eb4f2d`, 2026-11-21T08:04:20Z).
