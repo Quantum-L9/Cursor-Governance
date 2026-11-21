@@ -5,8 +5,8 @@ path: environment/agents/adapters/manus/session_bootstrap.md
 layer: adapter-bootstrap
 owner: governance-control-plane
 status: active
-version: 5.0.0
-updated: 2026-11-05
+version: 5.1.0
+updated: 2026-11-21
 /L9_META -->
 
 # L9 Session Bootstrap — Manus
@@ -36,6 +36,14 @@ Locate the authorized governance checkout and use its thin adapter check.
 Git mutation. Exit `0` is satisfied, `6` usable degraded, and `1` blocked.
 Missing/wrong/import-failing locked Python blocks before governance consumers;
 never switch to system Python or heal the environment during a check.
+
+Because Manus fires no SessionStart hook, the installer is the session start:
+apply mode provisions `$HOME/.cursor-governance` through `governance_sync.sh`,
+writes the non-secret session environment from `environment.env.example`
+(including `L9_GOVERNANCE_SURFACE=manus`), and provisions the
+governance-managed authority checkout the default projection binding verifies.
+`--check` reports those without mutating them; a session that skipped apply
+cites no operating-plane semantics.
 
 Infisical project `cursor-governance` is the secret authority (§14.1).
 Shared hosted Manus secret bootstrap accepts only the operator-provisioned
