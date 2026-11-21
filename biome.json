@@ -28,6 +28,7 @@
       "!**/generated",
       "!**/environment/program-execution",
       "!**/docs/plans/**/*.json",
+      "!**/environment/agents/adapters/manus/infisical_capabilities.json",
       "!schemas/org-invariants.schema.json",
       "!governance-health-report.json",
       "!.claude/settings.json",

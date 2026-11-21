@@ -162,6 +162,13 @@ manus-adapter-check:
 	$(PYTHON) \
 		environment/agents/adapters/manus/validate_manus_adapter.py \
 		--repo-root "$(CURDIR)"
+# The capability manifest is derived from ops/secrets/capabilities.yaml. A stale
+# file is a build failure, not a review comment: this is the check that makes
+# "one source, no drift" true rather than aspirational.
+	$(PYTHON) \
+		environment/agents/adapters/manus/render_infisical_capabilities.py \
+		--repo-root "$(CURDIR)" \
+		--check
 manus-install:
 	bash "$(CURDIR)/environment/agents/adapters/manus/install.sh" \
 		--governance "$(CURDIR)" \
