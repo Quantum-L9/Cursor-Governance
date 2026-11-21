@@ -57,7 +57,6 @@ import os
 import sys
 from collections.abc import Mapping
 from typing import Any, Final
-from urllib.parse import urlsplit
 
 CURSOR: Final = "cursor"
 CLAUDE_ACTOR: Final = "claude-code"
@@ -147,6 +146,29 @@ def _is_claude(env: Mapping[str, str]) -> bool:
     )
 
 
+def _authority_host(raw: str) -> str:
+    """Lowercase hostname of an authority string, without a URL parser.
+
+    ``ops/memory`` is boundary-pinned to the bound memory console's stdio
+    (INV-03): no urllib, requests, socket, or HTTP client may be imported
+    here, even for parsing. A host marker needs only the authority
+    component, so a literal scan is sufficient and keeps the boundary
+    intact. Returns "" when no host can be read.
+    """
+
+    text = raw.strip()
+    if "://" in text:
+        text = text.split("://", 1)[1]
+    for separator in ("/", "?", "#"):
+        text = text.split(separator, 1)[0]
+    if "@" in text:
+        text = text.rsplit("@", 1)[1]
+    if text.startswith("["):
+        closing = text.find("]")
+        return text[1:closing].lower() if closing > 0 else ""
+    return text.split(":", 1)[0].lower()
+
+
 def _manus_api_host(env: Mapping[str, str]) -> str:
     """The hostname of ``RUNTIME_API_HOST`` when it is a manus.im host, else "".
 
@@ -157,10 +179,7 @@ def _manus_api_host(env: Mapping[str, str]) -> str:
     raw = _flag(env, MANUS_RUNTIME_HOST)
     if not raw:
         return ""
-    try:
-        hostname = (urlsplit(raw if "//" in raw else f"//{raw}").hostname or "").lower()
-    except ValueError:
-        return ""
+    hostname = _authority_host(raw)
     if hostname == MANUS_APEX_DOMAIN or hostname.endswith(f".{MANUS_APEX_DOMAIN}"):
         return hostname
     return ""

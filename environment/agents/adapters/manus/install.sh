@@ -100,12 +100,15 @@ if [ -f "$BINDING" ]; then
   if [ "$BIND_STATUS" != "BOUND" ]; then
     # Fail-open like every other host: the session continues, unbound, and may
     # cite no operating-plane semantics. It is reported, never invented.
-    say "manus-install: DEGRADED (binding $BIND_STATUS; cite no operating-plane semantics)"
-    [ "$status" = "0" ] && status=6
+    #
+    # The exit code is deliberately NOT escalated. This script's status is the
+    # shared bootstrap's posture; `make manus-start` is the enforcement point
+    # for the projection binding. Two meanings in one code would leave a
+    # consumer unable to tell "bootstrap degraded" from "binding rejected".
+    say "manus-install: binding $BIND_STATUS (reported; 'make manus-start' enforces)"
   fi
 else
-  say "manus-install: DEGRADED (host binding control absent; cite no operating-plane semantics)"
-  [ "$status" = "0" ] && status=6
+  say "manus-install: binding control absent (reported; cite no operating-plane semantics)"
 fi
 
 case "$status" in

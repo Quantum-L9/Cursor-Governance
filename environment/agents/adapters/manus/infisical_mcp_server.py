@@ -366,8 +366,7 @@ class InfisicalClient:
             missing = ", ".join(self.settings.missing_fields)
             hint = self.settings.configuration_hint
             raise SafeMcpError(
-                f"Infisical connector is not configured: {missing}"
-                + (f" ({hint})" if hint else "")
+                f"Infisical connector is not configured: {missing}" + (f" ({hint})" if hint else "")
             )
         self.settings.validate()
         self._expire_token()

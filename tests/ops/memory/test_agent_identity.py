@@ -165,7 +165,9 @@ def test_manus_host_markers_derive_the_actor_and_its_one_surface() -> None:
     )
     assert ai.static_drift({"MANUS_GROUP_ENABLED": "0", "L9_MEMORY_AGENT_ID": "codex"}) == "codex"
 
-    evidence = ai.normalized_runtime_evidence({"MANUS_GROUP_ENABLED": "0", "L9_MEMORY_AGENT_ID": "manus"})
+    evidence = ai.normalized_runtime_evidence(
+        {"MANUS_GROUP_ENABLED": "0", "L9_MEMORY_AGENT_ID": "manus"}
+    )
     assert evidence["manus_markers_present"] is True
     assert evidence["L9_MEMORY_AGENT_ID"] == ""
 

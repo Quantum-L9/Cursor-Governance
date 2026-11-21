@@ -400,9 +400,7 @@ def failed_report(host: str, exc: BaseException) -> dict[str, Any]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument(
-        "--host", default="cursor", choices=("cursor", "claude-code", "manus")
-    )
+    parser.add_argument("--host", default="cursor", choices=("cursor", "claude-code", "manus"))
     parser.add_argument(
         "--activate",
         action="append",
