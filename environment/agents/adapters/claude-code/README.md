@@ -56,24 +56,34 @@ context**, **reach shared memory** — without a human wiring step.
 ### Default projection binding (how it works)
 
 - `governance/host-bindings/claude-code.yaml` holds the binding: the operating plane
-  (`l9.projection/cursor-governance-operating-plane@2`) alone. The domain set of the
-  canonical `l9.domain-consumer-binding/claude-code@1` is not bound by default.
-- `ops/autonomy/host_binding.py` checks it using the verifier that already exists — the
+  (`l9.projection/cursor-governance-operating-plane@2`) plus the coding-agent execution
+  projection (`l9.projection/coding-agent-execution@1`), by operator decision 2026-11-20,
+  on both surfaces (cli and web). That is a host binding, not a default-on mode: modes
+  stay opt-in, and a registered `/lcto` swarm child still runs `coding_agent_mode.py on`
+  (the host default never satisfies `ops/autonomy/coding_agent_binding_gate.py`). The
+  other domains of the canonical `l9.domain-consumer-binding/claude-code@1` are not bound
+  by default.
+- `ops/autonomy/host_binding.py` checks it using the verifiers that already exist — the
   operating plane's consumer adapter, `ops/scripts/operating_plane_v2_projection.py`, in
-  admitted mode. It adds no checking of its own, and reports `BOUND` only when that
-  adapter reports `CURRENT`.
+  admitted mode, and the coding projection's status reader,
+  `ops/scripts/coding_projection_status.py`. It adds no checking of its own, reports the
+  operating plane `BOUND` only when that adapter reports `CURRENT`, and the coding
+  projection only when it is `ADMITTED_AND_CURRENT`; otherwise the session is `DEGRADED`
+  to the operating plane alone with one `WARN:` line.
 - `hooks/session_start_claude_governance.sh` (mirrored to `.claude/hooks/`) binds it
   automatically in every session — `emit_operating_plane_projection` runs it with
-  `--format line`, inside the hook's own time budget; about 6 s in testing. When bound,
+  `--format line`, inside the hook's own time budget; about 6 s in testing with the coding
+  projection. When bound,
   the context names the eight source classes and the exact command that releases one; the
   adapter re-verifies before releasing anything.
 - Fail-open: a failed, deferred or timed-out binding never stops the session, and is
   reported as `default projection binding (claude-code): NOT BOUND — ... (fail-open: the
   session continues; cite no operating-plane semantics)`. Nothing that did not verify is
   shown as bound.
-- The `coding projection:` line is verification only and says so; `/coding-agent` binds
-  that projection. No skill is involved anywhere: the manual bindings are `/coding-agent`,
-  `/lcto` and `/architect`.
+- The `coding projection:` line no longer runs the classifier; it says the projection is
+  part of the default binding and defers its bound status to the verified result in the
+  default projection binding. No skill is involved anywhere: the manual bindings are
+  `/coding-agent`, `/lcto`, `/architect` and `/planner`.
 
 Full detail: `governance/host-bindings/README.md`.
 
