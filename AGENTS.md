@@ -2606,3 +2606,40 @@ SessionStart prints the authorized name catalog and still probes only
 Stdio MCP servers whose env name is a vault name spawn through
 `run_vault_mcp_bridge.sh spawn`. The child environment receives the bind.
 `master.mcp.json` and a rendered config keep placeholders.
+
+## Core's toolchain lock owns CI tool versions (2026-11-20) — supersedes the bandit, pip-audit, pre-commit and uv rows of the § toolchain table
+
+`Quantum-L9/l9-ci-core` `.github/actions/install-consumer-ci/toolchain-lock.json`
+is the one source of CI tool versions (operator decision 2026-11-20; Python is
+3.12). Every pin this repository carries for a tool that lock names equals the
+lock: bandit `1.8.6`, pip-audit `2.9.0`, pre-commit `4.4.0`, pip `26.2.1`
+(resolved in `uv.lock`; pip arrives only transitively, and Dependabot now
+ignores it), and uv `0.13.8` wherever a workflow installs uv. `Repo.mk`
+`repo-setup` still names uv `0.12.1`: that line is append-only protected and
+its rewrite waits for a human root-file authorization.
+ruff, mypy, pytest, biome and semgrep already matched. "l9-ci-sdk wins over
+l9-ci-core" in `ops/scripts/run_pr_security.sh` is withdrawn. A bump lands in
+Core's lock first; this repository follows it and never leads it. Core's
+`check-toolchain-alignment` action reports any declaration that drifts.
+## Two dead CI workflows retired (2026-11-20) — supersedes "lint-autofix is the only generated janitor" and the `lint-autofix.yml` post-merge-janitor sentence
+
+Campaign L9-CI-UNIFIED-LEVERAGE v1.7.1, lane CG-CUTOVER item 2.
+
+- `lint-autofix.yml` opened its cleanup pull requests with `GITHUB_TOKEN`, so
+  they never got required checks (campaign finding T46). Retired rather than
+  given an App token: ruff check and format are required pre-merge
+  ("Lint and Type Check", and Core repo-check) and also run on `merge_group`,
+  and `governance-self-check` on `push` to `main` runs
+  `sync_generated_artifacts.py --force --check --json` and fails on any diff,
+  so drift on `main` is a red check, not a silent state a janitor must sweep.
+  Local repair stays `make precommit-repo`.
+- `on-org-update.yml` ran `scripts/sync_ci_from_pack.py`, which does not exist
+  here, and `Quantum-L9/.github` retired the `on-org-update` seed category and
+  forbids the file in every repository class (`policies/repo-classes.yml`).
+- `l9-lint-test-node.yml` (SDK `l9-biome-scan.yml@f546f122`, deleted on SDK
+  main) is **kept** for now. Core "Analyze (central Core)" runs the same Biome
+  2.5.8 blocking on the same `biome.json` (run 44819081765, job 136574965996,
+  PR #1088 head `4accb109`, `BIOME_STATUS: pass`), but that is a known-good
+  witness only, and `L9-CI-CORE-004` keeps a consumer check until
+  `CURSOR_CANARY_PASS`. It retires once a known-bad Biome witness fails both
+  jobs and the canary passes.

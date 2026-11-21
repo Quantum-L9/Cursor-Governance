@@ -53,3 +53,15 @@ clients:
     hosted_credential_injection: false
     redirect_uris:
       - https://claude.ai/api/mcp/auth_callback
+  l9-memory-hooks:
+    # Hosted hook principal (ADR-0055; l9-graphiti-memory REMOTE_MCP_CONTRACT §2b).
+    # client_id is public, not a secret; it is bound once the Auth0 app exists.
+    # Its secret is never named here; it lives only in Infisical
+    # (L9_MEMORY_HOOK_CLIENT_ID / _SECRET, project cursor-governance, prod /).
+    client_type: confidential
+    app_type: non_interactive
+    token_endpoint_auth_method: client_secret_post
+    grant_types:
+      - client_credentials
+    audience_grant_scopes: []
+    client_id: null

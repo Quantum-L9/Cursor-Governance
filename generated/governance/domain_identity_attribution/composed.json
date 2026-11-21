@@ -8,17 +8,17 @@
       "source_ref": "l9.source/identity-model@1"
     },
     {
-      "projection_digest": "sha256:1a57bbcfcf74e2644553cecf5a90d0dbae41f357493021450116cf301a03fd5c",
+      "projection_digest": "sha256:562ec5b81e67aa850330e5f80492eb29c3820873e5593bdb7cc691d28762a666",
       "projection_ref": "l9.projection/identity-attribution@1#l9.source/actor-registry@1",
       "source_class": "actor_registry",
-      "source_digest": "sha256:34fbe4abc246e21c28401941025317be52c109c88335577616a2648cc93c6f6f",
+      "source_digest": "sha256:942f9274770c44a28083645782715b5dd5b81cd2b4dfd0c4abc8cf0421ec5ddf",
       "source_ref": "l9.source/actor-registry@1"
     },
     {
-      "projection_digest": "sha256:3dffd61a7d592050a5635e18e0b4ad7d5bf6b37451428f3241309544d5770d9e",
+      "projection_digest": "sha256:bd7982d1e3fb333e3baea6f51fdafc5cf5c4d46f2e22922ff42e2573b60d8b85",
       "projection_ref": "l9.projection/identity-attribution@1#l9.source/surface-registry@1",
       "source_class": "surface_registry",
-      "source_digest": "sha256:d7200409ff02141a274ff8c9221d31429f6a6fae27539e6d9c8d20f1a6eba988",
+      "source_digest": "sha256:761b6cb77396e98a4b1d0420d7e6cd24af21f5fdd7cd273ffae3903d85af2245",
       "source_ref": "l9.source/surface-registry@1"
     },
     {
@@ -36,7 +36,7 @@
       "source_ref": "l9.source/contracts@1"
     }
   ],
-  "composition_digest": "sha256:665c6d8e38d4246842d52042286fc9e53ab3773023a174b88b63f80e567e18f5",
+  "composition_digest": "sha256:d9ed26960bcdeda07a01581219e2777af3bf295b946cc40e8008445ffa171aae",
   "composition_profile": {
     "digest": "sha256:5ddee860ed80fb26b6f75d4a5453bdbbec27855f5e2df0d9280ef459baebca17",
     "ref": "l9.compose/identity-attribution@1"
@@ -51,7 +51,7 @@
           "status": "current"
         },
         {
-          "description": "The one logical Claude Code actor. Desktop, CLI, IDE, web, and mobile are SurfaceIdentity distinctions recorded in surface_registry.yaml, never separate actors.",
+          "description": "The one logical Claude Code actor. Its surfaces, claude-code-cli and claude-code-web, are SurfaceIdentity distinctions recorded in surface_registry.yaml, never separate actors.",
           "id": "claude-code",
           "kind": "agent",
           "status": "current"
@@ -435,7 +435,7 @@
     "surface_registry": {
       "alias_rules": {
         "alias_kinds": {
-          "historical_surface_alias": "A former or abbreviated SurfaceIdentity value that canonicalizes to one current surface when read as a surface value."
+          "historical_surface_alias": "A former or abbreviated SurfaceIdentity value that canonicalizes to exactly one canonical surface when read as a surface value. It canonicalizes to a current surface, or to the successor of a superseded one; an alias of a retired surface without a successor keeps that retired coordinate and admits no new use."
         },
         "alias_meaning_is_bounded_to_surface_identity": true,
         "alias_never_shadows_a_canonical_surface": true,
@@ -467,7 +467,7 @@
         {
           "alias": "claude-mobile",
           "alias_kind": "historical_surface_alias",
-          "canonical": "claude-code-mobile"
+          "canonical": "claude-code-web"
         }
       ],
       "surfaces": [
@@ -477,29 +477,32 @@
           "status": "current"
         },
         {
-          "description": "The Claude Code desktop application surface. The same string is a historical ActorIdentity alias in actor_registry.yaml; equal strings do not imply equal identity kinds.",
+          "description": "Registered in error as a Claude Code desktop application surface. Retired by owner decision on 2026-11-20 with no successor; Claude Code has exactly two surfaces, claude-code-cli and claude-code-web. The coordinate stays addressable for historical resolution and admits no new use. The same string is a historical ActorIdentity alias in actor_registry.yaml; equal strings do not imply equal identity kinds.",
           "id": "claude-code-desktop",
-          "status": "current"
+          "status": "retired"
         },
         {
-          "description": "The Claude Code terminal command-line surface.",
+          "description": "The Claude Code local command-line surface, including the command line run inside an IDE.",
           "id": "claude-code-cli",
           "status": "current"
         },
         {
-          "description": "The Claude Code IDE-extension surface.",
+          "description": "Registered in error as a Claude Code IDE-extension surface. Retired by owner decision on 2026-11-20 with no successor; the command line run inside an IDE is claude-code-cli. The coordinate stays addressable for historical resolution and admits no new use.",
           "id": "claude-code-ide",
-          "status": "current"
+          "status": "retired"
         },
         {
-          "description": "The Claude Code hosted web surface.",
+          "description": "The Claude Code hosted cloud-session surface, whichever client starts the session, a phone included.",
           "id": "claude-code-web",
           "status": "current"
         },
         {
-          "description": "The Claude Code mobile surface. The same string is a historical ActorIdentity alias in actor_registry.yaml; equal strings do not imply equal identity kinds.",
+          "description": "Registered as a separate Claude Code mobile surface. Superseded by owner decision on 2026-11-20 by claude-code-web; a cloud session started from a phone is a Claude Code web session. The same string is a historical ActorIdentity alias in actor_registry.yaml; equal strings do not imply equal identity kinds.",
           "id": "claude-code-mobile",
-          "status": "current"
+          "status": "superseded",
+          "successor_refs": [
+            "l9.surface-registry/global@1#claude-code-web"
+          ]
         },
         {
           "description": "The Codex hosted cloud surface.",
