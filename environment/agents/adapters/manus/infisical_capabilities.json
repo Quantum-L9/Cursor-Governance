@@ -1,5 +1,15 @@
 {
   "schema": "l9.manus.infisical-capabilities.v1",
+  "generated": {
+    "do_not_edit": true,
+    "generator": "render_infisical_capabilities.py",
+    "source": "ops/secrets/capabilities.yaml",
+    "source_schema_version": "1.0.0",
+    "source_sha256": "40522cd6a0c3fd80e5fe631a80ac977c2e0ee809d72731470a2a0989d29e9b30",
+    "surface": "manus",
+    "trust_class": "model-controlled",
+    "renderer_module": "capability_source.py"
+  },
   "capabilities": {
     "github.get_repository": {
       "description": "Read repository metadata from the GitHub REST API using the configured GITHUB_TOKEN. This capability cannot modify GitHub resources.",
@@ -28,7 +38,239 @@
         "updated_at",
         "pushed_at",
         "license"
+      ],
+      "provenance": {
+        "registry_id": "github.mcp",
+        "registry_method": "GET",
+        "registry_path": "/repos/{owner}/{repo}",
+        "registry_secret_ref": "GITHUB_TOKEN",
+        "registry_sanitizer": "passthrough",
+        "adapter_sanitizer": "github_repository_metadata"
+      }
+    }
+  },
+  "exclusions": [
+    {
+      "registry_id": "context7.mcp",
+      "disposition": "excluded",
+      "rendered_capability_ids": [],
+      "reason_code": "unsupported_upstream_host",
+      "reason": "upstream_host 'context7.com' is not the adapter's fixed allowlisted host 'api.github.com'",
+      "unrendered_methods": [
+        "GET",
+        "POST"
+      ],
+      "unrendered_paths": [
+        "/libraries",
+        "/libraries/{libraryId}",
+        "/libraries/{libraryId}/docs",
+        "/search"
+      ],
+      "blocking_reason_codes": [
+        "unsupported_upstream_host",
+        "unsupported_secret_ref",
+        "multiple_methods",
+        "multiple_paths",
+        "no_sanitizer_implementation"
+      ]
+    },
+    {
+      "registry_id": "gitguardian.mcp",
+      "disposition": "excluded",
+      "rendered_capability_ids": [],
+      "reason_code": "unsupported_upstream_host",
+      "reason": "upstream_host 'api.gitguardian.com' is not the adapter's fixed allowlisted host 'api.github.com'",
+      "unrendered_methods": [
+        "POST"
+      ],
+      "unrendered_paths": [
+        "/multiscan",
+        "/scan"
+      ],
+      "blocking_reason_codes": [
+        "unsupported_upstream_host",
+        "unsupported_secret_ref",
+        "non_read_method",
+        "multiple_paths",
+        "no_sanitizer_implementation"
+      ]
+    },
+    {
+      "registry_id": "github.mcp",
+      "disposition": "partially_rendered",
+      "rendered_capability_ids": [
+        "github.get_repository"
+      ],
+      "reason_code": "endpoint_not_projected",
+      "reason": "renders 1 of 21 registry paths as github.get_repository; the remaining 20 path(s) and 1 method(s) are not representable in a one-method/one-path capability",
+      "unrendered_methods": [
+        "POST"
+      ],
+      "unrendered_paths": [
+        "/gists",
+        "/gists/{id}",
+        "/orgs/{org}/repos",
+        "/repos/{owner}/{repo}/branches",
+        "/repos/{owner}/{repo}/commits",
+        "/repos/{owner}/{repo}/commits/{sha}",
+        "/repos/{owner}/{repo}/commits/{sha}/check-runs",
+        "/repos/{owner}/{repo}/contents/{path}",
+        "/repos/{owner}/{repo}/issues",
+        "/repos/{owner}/{repo}/issues/{number}",
+        "/repos/{owner}/{repo}/issues/{number}/comments",
+        "/repos/{owner}/{repo}/pulls",
+        "/repos/{owner}/{repo}/pulls/{number}",
+        "/repos/{owner}/{repo}/pulls/{number}/comments",
+        "/repos/{owner}/{repo}/pulls/{number}/files",
+        "/search/code",
+        "/search/issues",
+        "/search/repositories",
+        "/user/repos",
+        "/users/{username}/gists"
+      ]
+    },
+    {
+      "registry_id": "github.packages_read",
+      "disposition": "excluded",
+      "rendered_capability_ids": [],
+      "reason_code": "unsupported_upstream_host",
+      "reason": "upstream_host 'npm.pkg.github.com' is not the adapter's fixed allowlisted host 'api.github.com'",
+      "unrendered_methods": [
+        "GET"
+      ],
+      "unrendered_paths": [
+        "/{package}"
+      ],
+      "blocking_reason_codes": [
+        "unsupported_upstream_host",
+        "no_sanitizer_implementation"
+      ]
+    },
+    {
+      "registry_id": "github.pr_read",
+      "disposition": "excluded",
+      "rendered_capability_ids": [],
+      "reason_code": "unsupported_secret_ref",
+      "reason": "secret_refs ['GH_TOKEN'] are not exactly the adapter's allowlisted secret reference ['GITHUB_TOKEN']",
+      "unrendered_methods": [
+        "GET"
+      ],
+      "unrendered_paths": [
+        "/repos/{owner}/{repo}/commits/{sha}/check-runs",
+        "/repos/{owner}/{repo}/pulls/{number}",
+        "/repos/{owner}/{repo}/pulls/{number}/comments"
+      ],
+      "blocking_reason_codes": [
+        "unsupported_secret_ref",
+        "multiple_paths",
+        "no_sanitizer_implementation"
+      ]
+    },
+    {
+      "registry_id": "semgrep.appsec_scan",
+      "disposition": "excluded",
+      "rendered_capability_ids": [],
+      "reason_code": "unsupported_upstream_host",
+      "reason": "upstream_host 'semgrep.dev' is not the adapter's fixed allowlisted host 'api.github.com'",
+      "unrendered_methods": [
+        "GET",
+        "POST"
+      ],
+      "unrendered_paths": [
+        "/deployments",
+        "/deployments/{deployment_slug}/findings",
+        "/deployments/{deployment_slug}/scans"
+      ],
+      "blocking_reason_codes": [
+        "unsupported_upstream_host",
+        "unsupported_secret_ref",
+        "multiple_methods",
+        "multiple_paths",
+        "no_sanitizer_implementation"
+      ]
+    },
+    {
+      "registry_id": "semgrep.mcp",
+      "disposition": "excluded",
+      "rendered_capability_ids": [],
+      "reason_code": "unsupported_upstream_host",
+      "reason": "upstream_host 'semgrep.dev' is not the adapter's fixed allowlisted host 'api.github.com'",
+      "unrendered_methods": [
+        "GET",
+        "POST"
+      ],
+      "unrendered_paths": [
+        "/deployments",
+        "/deployments/{deployment_slug}/findings",
+        "/deployments/{deployment_slug}/rules",
+        "/deployments/{deployment_slug}/scans"
+      ],
+      "blocking_reason_codes": [
+        "unsupported_upstream_host",
+        "unsupported_secret_ref",
+        "multiple_methods",
+        "multiple_paths",
+        "no_sanitizer_implementation"
+      ]
+    },
+    {
+      "registry_id": "sonar.read_issues",
+      "disposition": "excluded",
+      "rendered_capability_ids": [],
+      "reason_code": "unsupported_upstream_host",
+      "reason": "upstream_host 'sonarcloud.io' is not the adapter's fixed allowlisted host 'api.github.com'",
+      "unrendered_methods": [
+        "GET"
+      ],
+      "unrendered_paths": [
+        "/issues/search",
+        "/measures/component",
+        "/qualitygates/project_status",
+        "/rules/show"
+      ],
+      "blocking_reason_codes": [
+        "unsupported_upstream_host",
+        "unsupported_secret_ref",
+        "multiple_paths",
+        "no_sanitizer_implementation"
       ]
     }
-  }
+  ],
+  "narrowings": [
+    {
+      "registry_id": "github.mcp",
+      "capability_id": "github.get_repository",
+      "field": "method",
+      "registry": "GET, POST",
+      "adapter": "GET"
+    },
+    {
+      "registry_id": "github.mcp",
+      "capability_id": "github.get_repository",
+      "field": "paths",
+      "registry": "21 allow-listed paths",
+      "adapter": "/repos/{owner}/{repo}"
+    },
+    {
+      "registry_id": "github.mcp",
+      "capability_id": "github.get_repository",
+      "field": "sanitizer",
+      "registry": "passthrough",
+      "adapter": "github_repository_metadata"
+    },
+    {
+      "registry_id": "github.mcp",
+      "capability_id": "github.get_repository",
+      "field": "param.owner",
+      "registry": "text (max_bytes=100)",
+      "adapter": "regex [A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?"
+    },
+    {
+      "registry_id": "github.mcp",
+      "capability_id": "github.get_repository",
+      "field": "param.repo",
+      "registry": "text (max_bytes=100)",
+      "adapter": "regex [A-Za-z0-9._-]{1,100}"
+    }
+  ]
 }

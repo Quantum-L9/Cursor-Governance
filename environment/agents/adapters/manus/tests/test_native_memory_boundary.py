@@ -38,6 +38,12 @@ def fixture_root(tmp_path: Path) -> Path:
         destination = tmp_path / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPOSITORY / relative, destination)
+    # The capability manifest is derived from the canonical registry, and the
+    # validator checks that digest. A synthetic repo root must therefore carry
+    # the registry it claims to have been rendered from.
+    registry = tmp_path / "ops/secrets/capabilities.yaml"
+    registry.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(REPOSITORY / "ops/secrets/capabilities.yaml", registry)
     target = tmp_path / "environment/agents/adapters/manus"
     target.mkdir(parents=True)
     for path in ADAPTER.iterdir():
