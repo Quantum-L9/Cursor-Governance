@@ -17,7 +17,7 @@ organization is ready to roll out. Rolling out to other repositories is a separa
 | X6 | Secondary canaries recorded | DONE (EIE) | EIE [#378](https://github.com/Quantum-L9/Enrichment.Inference.Engine/pull/378): run 1 (central run 44874376220) and run 2 (44878546690, job 136768547018) Gates 2-3 PASS; in run 2 only the 3 canary findings block and 33 pre-existing do not. CEG canary #517: earlier run recorded; not re-run on PIN-ADVANCE-3. |
 | X7 | Harvest ledgered with destinations | DONE | `HARVEST_LEDGER.md` index merged (#1091); full `HARVEST.md` fields for promoted rows C1-C5 merged ([#1118](https://github.com/Quantum-L9/Cursor-Governance/pull/1118)). |
 | X8 | Merge queue on Cursor-Governance main, driven by `/l9-pr-remediation` | OPEN: skill support merged; criterion not met (no queue on the ruleset; no PR landed through it with merge_group run ids; blocked on click-path 1) | Skill support merged ([#1109](https://github.com/Quantum-L9/Cursor-Governance/pull/1109)); throwaway proof PR #1113 ready (G2). `main` still has no `merge_queue` rule (checked 13:05Z). After click-path 1, G2 proves (iii) REST membership observable, (i) dequeue on push, (ii) REST DELETE dequeues; then `/l9-pr-remediation Quantum-L9/Cursor-Governance`. |
-| X9 | Close-out evidence | IN PROGRESS: `PROOF.md` filled from real runs (59 requirements: 11 PASS, 34 BLOCKED with owner and next action, 14 NOT_PROVEN incl. 3 out of scope; vocabulary per `00_LAUNCH_IN_CTO_MODE.md` step 7); the register is not closed until every BLOCKED and NOT_PROVEN row is resolved or accepted | This file, published through `make pr`. |
+| X9 | Close-out evidence | IN PROGRESS: `PROOF.md` filled from real runs (59 requirements: 16 PASS, 27 BLOCKED with owner and next action, 16 NOT_PROVEN incl. 3 out of scope; no row is blocked on the operator; vocabulary per `00_LAUNCH_IN_CTO_MODE.md` step 7); the register is not closed until every BLOCKED and NOT_PROVEN row is resolved or accepted | This file, published through `make pr`. |
 | X10 | CTO CI-run audit | OPEN: findings and click-paths done; criterion not met (path-scoping and duplicate-trigger fixes not merged, operator settings not applied, measured per-PR delta NOT MEASURED) | See "CI-run audit" below; rows 20-29 in `CI_CONFIG_FINDINGS.md`. |
 
 ## What changed for every PR
@@ -79,6 +79,19 @@ Measured on a green Cursor-Governance PR (head of #1107): about **1001 runner-se
 | merge_group | — | fix | Cursor-Governance runs its full suite on merge_group; scope it to the group's base |
 
 Projected saving if all applied: about **520 s per push (~52%)**. Measured delta after applying: NOT MEASURED (not yet applied).
+
+## Operator actions and decisions (2026-11-21, verified by REST where readable)
+
+| Item | Operator action | Verified |
+|---|---|---|
+| Click-path 1, merge queue on Cursor-Governance `main` | Applied | `merge_queue` rule active: SQUASH, build 5, group 1-5, wait 5 min, ALLGREEN, timeout 60 min. G2 runs the queue proof next (X8). |
+| Click-path 2, GitHub Code Quality off | Applied | Confirm on the next `main` push that only `codeql.yml` runs CodeQL. |
+| Click-path 3, Semgrep managed diff scans off | Applied on the Cursor-Governance project (project 6376323 settings; the organization-wide Code settings are unchanged) | Confirm on the next Cursor-Governance PR that `semgrep-cloud-platform/scan` no longer runs. |
+| Click-path 4, Core `main` pull-request rule | Applied | Core ruleset 27801869 `main-protection` active: pull_request (0 approvals, no code-owner review), deletion, non_fast_forward. Row 29's first gap is closed. |
+| Click-path 7, nightly App permissions | Applied | Proof is the next nightly-sink dispatch (L2): token mint, SARIF upload, one rolling issue. |
+| Memory hook principal | `--apply` run | Auth0 app, grant and three Infisical secrets created; the verification token request returned HTTP 403 (MEM-HOOK lane diagnosing). |
+
+Decisions: D1 accept CEG #522 as a recorded exception; D2 accept the #1096 direct pushes (#1096 and EIE #378 closed unmerged); D3 accept #1062, conditional on Sonar returning through click-path 7; D4 retire Codecov; D5 skip `L9_CONTROL_PLANE_TOKEN` for now, since governance forbids a second PAT and a GitHub App is the right design (row 29 immutable releases stays UNKNOWN); D6 do not turn on strict status checks organization-wide, and add a merge queue to Core once X8 is proven instead; D7 `Quantum-L9/coderabbit` does not exist; D8 do not install CodeRabbit on Cursor-Governance.
 
 ## Operator click-paths
 
