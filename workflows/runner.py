@@ -32,6 +32,7 @@ Version: 1.0.0
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import os
 import re
@@ -45,6 +46,9 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+_IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_DOTTED = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
 
 # =============================================================================
 # Data Models
@@ -173,29 +177,47 @@ class StepExecutor:
 
         return re.sub(r"\$\{(\w+)\}", replacer, text)
 
-    def _run_shell(self, cmd: str, capture: bool = True) -> tuple[int, str, str]:
-        """Run a shell command."""
-        cmd = self._resolve_vars(cmd)
-        result = subprocess.run(  # noqa: S602 - shell=True is intentional for DAG runner
-            cmd,
-            shell=True,
-            cwd=self.working_dir,
-            capture_output=capture,
-            text=True,
+    def _argv(self, command: Any) -> list[str]:
+        """One command as an argument list, with ${var} resolved per argument.
+
+        A workflow command is never parsed by a shell: a string is refused, so
+        a variable value can never become shell syntax.
+        """
+        if (
+            not isinstance(command, list)
+            or not command
+            or not all(isinstance(part, (str, int, float)) for part in command)
+        ):
+            raise ValueError(
+                f"a command must be a non-empty argument list, not {command!r} "
+                "(workflow commands run without a shell)"
+            )
+        return [self._resolve_vars(str(part)) for part in command]
+
+    def _run(self, argv: list[str]) -> tuple[int, str, str]:
+        """Run one argument list in the working directory, never through a shell."""
+        result = subprocess.run(
+            argv, cwd=self.working_dir, capture_output=True, text=True, check=False
         )
         return result.returncode, result.stdout, result.stderr
 
-    def _execute_shell(self, config: dict) -> StepResult:
-        """Execute shell command(s)."""
-        commands = config.get("commands", [])
-        if isinstance(commands, str):
-            commands = [commands]
+    def _path(self, relative: str) -> Path:
+        return Path(self.working_dir) / self._resolve_vars(relative)
 
+    def _execute_shell(self, config: dict) -> StepResult:
+        """Run each command (an argument list, or {argv, allow_failure}) without a shell."""
+        commands = config.get("commands", [])
         outputs = []
-        for cmd in commands:
-            code, stdout, stderr = self._run_shell(cmd)
-            outputs.append(f"$ {cmd}\n{stdout}")
-            if code != 0:
+        for entry in commands:
+            allow_failure = False
+            command = entry
+            if isinstance(entry, dict):
+                command = entry.get("argv")
+                allow_failure = bool(entry.get("allow_failure", False))
+            argv = self._argv(command)
+            code, stdout, stderr = self._run(argv)
+            outputs.append(f"$ {' '.join(argv)}\n{stdout}")
+            if code != 0 and not allow_failure:
                 return StepResult(
                     success=False,
                     output="\n".join(outputs),
@@ -205,7 +227,7 @@ class StepExecutor:
         return StepResult(success=True, output="\n".join(outputs))
 
     def _execute_extract(self, config: dict) -> StepResult:
-        """Extract code blocks from document using sed."""
+        """Extract a line range of a document with sed (argument list, no shell)."""
         source = self._resolve_vars(config["source"])
         target_dir = self._resolve_vars(config["target_dir"])
         patterns = config.get("patterns", [])
@@ -215,34 +237,25 @@ class StepExecutor:
 
         outputs = []
         for pattern in patterns:
-            start_line = pattern["start_line"]
-            end_line = pattern["end_line"]
+            start_line = int(pattern["start_line"])
+            end_line = int(pattern["end_line"])
             output_file = pattern["output"]
             strip_backticks = pattern.get("strip_backticks", True)
 
-            target_path = f"{target_dir}/{output_file}"
+            target_path = Path(self.working_dir) / target_dir / output_file
 
-            # Build sed command
-            if strip_backticks:
-                cmd = (
-                    f"sed -n '{start_line},{end_line}p' \"{source}\" | "
-                    f"sed '1d' | sed '$d' > \"{target_path}\""
-                )
-            else:
-                cmd = f'sed -n \'{start_line},{end_line}p\' "{source}" > "{target_path}"'
-
-            code, stdout, stderr = self._run_shell(cmd)
+            code, stdout, stderr = self._run(["sed", "-n", f"{start_line},{end_line}p", source])
             if code != 0:
                 return StepResult(
                     success=False,
                     output="\n".join(outputs),
                     error=f"Extract failed for {output_file}: {stderr}",
                 )
-
-            # Verify file created
-            verify_cmd = f'wc -l "{target_path}"'
-            code, stdout, _ = self._run_shell(verify_cmd)
-            outputs.append(f"✓ Extracted {output_file} ({stdout.strip()})")
+            lines = stdout.splitlines(keepends=True)
+            if strip_backticks:
+                lines = lines[1:-1]
+            target_path.write_text("".join(lines), encoding="utf-8")
+            outputs.append(f"✓ Extracted {output_file} ({len(lines)} {target_path})")
 
         return StepResult(
             success=True,
@@ -263,8 +276,7 @@ class StepExecutor:
             dst_path = Path(self.working_dir) / dst
             dst_path.parent.mkdir(parents=True, exist_ok=True)
 
-            cmd = f'cp "{src}" "{dst}"'
-            code, _stdout, stderr = self._run_shell(cmd)
+            code, _stdout, stderr = self._run(["cp", "--", src, dst])
             if code != 0:
                 return StepResult(
                     success=False,
@@ -281,7 +293,7 @@ class StepExecutor:
         )
 
     def _execute_inject(self, config: dict) -> StepResult:
-        """Inject content into existing file after specified line."""
+        """Insert a file's content after a line number, or after each line matching a pattern."""
         mappings = config.get("mappings", [])
 
         outputs = []
@@ -290,23 +302,29 @@ class StepExecutor:
             dst = self._resolve_vars(mapping["to"])
             after_line = mapping.get("after_line")
             after_pattern = mapping.get("after_pattern")
-
-            if after_line:
-                cmd = f"sed -i '' '{after_line}r '{src}' \"{dst}\""
-            elif after_pattern:
-                cmd = f"sed -i '' '/{after_pattern}/r '{src}' \"{dst}\""
-            else:
+            if not after_line and not after_pattern:
                 return StepResult(
                     success=False,
                     error=f"Inject requires 'after_line' or 'after_pattern': {dst}",
                 )
-
-            code, _stdout, stderr = self._run_shell(cmd)
-            if code != 0:
+            try:
+                insert = self._path(src).read_text(encoding="utf-8").splitlines(keepends=True)
+                target = self._path(dst)
+                lines = target.read_text(encoding="utf-8").splitlines(keepends=True)
+                out: list[str] = []
+                matcher = re.compile(self._resolve_vars(after_pattern)) if after_pattern else None
+                for number, line in enumerate(lines, 1):
+                    out.append(line)
+                    if (after_line and number == int(after_line)) or (
+                        matcher and matcher.search(line)
+                    ):
+                        out.extend(insert)
+                target.write_text("".join(out), encoding="utf-8")
+            except (OSError, ValueError, re.error) as exc:
                 return StepResult(
                     success=False,
                     output="\n".join(outputs),
-                    error=f"Inject failed: {src} -> {dst}: {stderr}",
+                    error=f"Inject failed: {src} -> {dst}: {exc}",
                 )
 
             outputs.append(f"✓ Injected {src} -> {dst}:{after_line or after_pattern}")
@@ -318,34 +336,26 @@ class StepExecutor:
         )
 
     def _execute_replace(self, config: dict) -> StepResult:
-        """Replace lines in file with content from source."""
+        """Replace a line range of a file with the content of another file."""
         mappings = config.get("mappings", [])
 
         outputs = []
         for mapping in mappings:
             src = self._resolve_vars(mapping["from"])
             dst = self._resolve_vars(mapping["to"])
-            start_line = mapping["start_line"]
-            end_line = mapping["end_line"]
-
-            # Delete lines, then insert
-            delete_cmd = f"sed -i '' '{start_line},{end_line}d' \"{dst}\""
-            insert_cmd = f"sed -i '' '{start_line - 1}r '{src}' \"{dst}\""
-
-            code, _, stderr = self._run_shell(delete_cmd)
-            if code != 0:
+            start_line = int(mapping["start_line"])
+            end_line = int(mapping["end_line"])
+            try:
+                insert = self._path(src).read_text(encoding="utf-8").splitlines(keepends=True)
+                target = self._path(dst)
+                lines = target.read_text(encoding="utf-8").splitlines(keepends=True)
+                lines[start_line - 1 : end_line] = insert
+                target.write_text("".join(lines), encoding="utf-8")
+            except (OSError, ValueError) as exc:
                 return StepResult(
                     success=False,
                     output="\n".join(outputs),
-                    error=f"Delete failed in {dst}: {stderr}",
-                )
-
-            code, _, stderr = self._run_shell(insert_cmd)
-            if code != 0:
-                return StepResult(
-                    success=False,
-                    output="\n".join(outputs),
-                    error=f"Insert failed in {dst}: {stderr}",
+                    error=f"Replace failed in {dst}: {exc}",
                 )
 
             outputs.append(f"✓ Replaced {dst}:{start_line}-{end_line} with {src}")
@@ -367,8 +377,7 @@ class StepExecutor:
             files = [self._resolve_vars(f) for f in files]
 
             if check_type == "py_compile":
-                cmd = f"python3 -m py_compile {' '.join(files)}"
-                code, _, stderr = self._run_shell(cmd)
+                code, _, stderr = self._run([sys.executable, "-m", "py_compile", *files])
                 if code != 0:
                     return StepResult(
                         success=False,
@@ -389,10 +398,9 @@ class StepExecutor:
                 outputs.append(f"✓ All {len(files)} files exist")
 
             elif check_type == "grep":
-                pattern = check.get("pattern", "")
+                pattern = self._resolve_vars(check.get("pattern", ""))
                 for f in files:
-                    cmd = f'grep -q "{pattern}" "{f}"'
-                    code, _, _ = self._run_shell(cmd)
+                    code, _, _ = self._run(["grep", "-q", "-e", pattern, "--", f])
                     if code != 0:
                         return StepResult(
                             success=False,
@@ -401,16 +409,16 @@ class StepExecutor:
                         )
                 outputs.append(f"✓ Pattern '{pattern}' found in all files")
 
-            elif check_type == "shell":
-                cmd = check.get("command", "")
-                code, _stdout, stderr = self._run_shell(cmd)
+            elif check_type in ("command", "shell"):
+                argv = self._argv(check.get("argv", check.get("command")))
+                code, _stdout, stderr = self._run(argv)
                 if code != 0:
                     return StepResult(
                         success=False,
                         output="\n".join(outputs),
-                        error=f"Shell check failed: {stderr}",
+                        error=f"Command check failed: {stderr}",
                     )
-                outputs.append(f"✓ Shell check passed: {cmd[:50]}...")
+                outputs.append(f"✓ Command check passed: {' '.join(argv)[:50]}...")
 
         return StepResult(success=True, output="\n".join(outputs))
 
@@ -430,21 +438,35 @@ class StepExecutor:
         )
 
     def _execute_python(self, config: dict) -> StepResult:
-        """Execute Python code or function."""
-        code_str = config.get("code", "")
+        """Call a named, importable function: ``callable: "package.module:function"``.
 
-        # Create execution context with variables
-        context = {"variables": self.variables, "working_dir": self.working_dir}
-
-        try:
-            exec(code_str, context)  # noqa: S102 - exec is intentional for Python step type
+        A workflow never carries code. The function receives ``variables`` and
+        ``working_dir`` and may return a mapping with ``output`` and ``artifacts``.
+        """
+        if "code" in config:
             return StepResult(
-                success=True,
-                output=context.get("output", "Python executed successfully"),
-                artifacts=context.get("artifacts", {}),
+                success=False,
+                error=(
+                    "python steps name a callable ('package.module:function'); "
+                    "inline code is not run"
+                ),
             )
+        target = str(config.get("callable", ""))
+        module_name, _, function_name = target.partition(":")
+        if not _DOTTED.fullmatch(module_name) or not _IDENTIFIER.fullmatch(function_name):
+            return StepResult(success=False, error=f"not a callable reference: {target!r}")
+        try:
+            function = getattr(importlib.import_module(module_name), function_name)
+            result = function(variables=self.variables, working_dir=self.working_dir) or {}
         except Exception as e:
             return StepResult(success=False, error=f"Python error: {e}")
+        if not isinstance(result, dict):
+            result = {}
+        return StepResult(
+            success=True,
+            output=str(result.get("output", "Python step completed")),
+            artifacts=dict(result.get("artifacts", {})),
+        )
 
 
 # =============================================================================
