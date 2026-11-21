@@ -87,8 +87,8 @@ steps:
             - "${harvest_dir}/1_tool_feedback_learning.sql"
             - "${harvest_dir}/2_tool_feedback_service.py"
             - "${harvest_dir}/3_tool_learning_engine.py"
-        - type: shell
-          command: "ls -la ${harvest_dir}/ && wc -l ${harvest_dir}/*"
+        - type: command
+          argv: ["ls", "-la", "${harvest_dir}/"]
 
   # ---------------------------------------------------------------------------
   # Phase 2: Deploy full files (copy)
@@ -199,13 +199,17 @@ steps:
     depends_on: [validate_wiring]
     config:
       commands:
-        - "echo '=== DEPLOYMENT COMPLETE ==='"
-        - "echo 'Files created:'"
-        - "ls -la migrations/20260125_tool_feedback_learning.sql services/tool_feedback_service.py services/tool_learning_engine.py"
-        - "echo ''"
-        - "echo 'Settings injected:'"
-        - "grep -n 'l9_tool_feedback' config/settings.py | head -5"
-        - "echo ''"
-        - "echo 'Telemetry metrics added:'"
-        - "grep -n 'tool_feedback_recorded\\|tool_success_rate' telemetry/memory_metrics.py | head -3"
+        - ["echo", "=== DEPLOYMENT COMPLETE ==="]
+        - ["echo", "Files created:"]
+        - - "ls"
+          - "-la"
+          - "migrations/20260125_tool_feedback_learning.sql"
+          - "services/tool_feedback_service.py"
+          - "services/tool_learning_engine.py"
+        - ["echo", ""]
+        - ["echo", "Settings injected:"]
+        - ["grep", "-n", "-m", "5", "l9_tool_feedback", "config/settings.py"]
+        - ["echo", ""]
+        - ["echo", "Telemetry metrics added:"]
+        - ["grep", "-n", "-m", "3", "-e", "tool_feedback_recorded", "-e", "tool_success_rate", "telemetry/memory_metrics.py"]
     checkpoint: true
