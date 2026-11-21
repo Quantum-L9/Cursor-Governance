@@ -108,6 +108,15 @@ if the fingerprint is unchanged the receipt is reused; if a head moved the
 plan is recomputed and stale assignments are discarded. Watchers persist
 across waves until their PR reaches `board=merge` or a red required check.
 
+## Merge-queue bases
+
+When `merge_now` PRs target a base whose rules carry `merge_queue`, the merge
+wave is one parent-run `stack_safe_merge.py --queue` over the authorized
+`merge_now` set in `merge_order`, not one `--kind merge` lane per PR. Its single
+watcher replaces per-PR merge lanes; an `EJECTED` PR returns to the remediate
+wave and rejoins the next `--queue` call once green. See
+[merge-advise.md](merge-advise.md#merge-queue-base-rules-carry-merge_queue).
+
 ## Never
 
 - a watch/recon lane that merges, force-pushes, edits CI surfaces, or asks the human

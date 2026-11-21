@@ -1,0 +1,8 @@
+# Scoped consumer rulepack declaration (l9-ci-sdk ADR 0021, canary B3).
+# Central CI runs the rule files listed here as a separate consumer execution;
+# the central required Semgrep run is unchanged. Local make pr keeps running
+# them too (run_pr_security.sh) until the canary records them firing in CI.
+schema: l9.semgrep-consumer-rulepack/v1
+owner: Quantum-L9/Cursor-Governance
+rule_files:
+  - .semgrep/l9-pr.yml

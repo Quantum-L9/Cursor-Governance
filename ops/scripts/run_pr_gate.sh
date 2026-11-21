@@ -1019,8 +1019,16 @@ _gate_run_ci_parity() {
     || echo "WARN: ci-parity install incomplete; a lane without its tool is skipped"
   local rc=0
   "$py" "$pkg/run.py" --gate HEAD --workspace "$WS" --lanes biome,semgrep-l9 || rc=$?
+  # Only what the change introduces blocks; findings already at the merge-base
+  # print as WARN (operator decision 2026-11-21). Exit 3 is an incomplete
+  # verdict (base unresolved, base scan failed, a lane did not finish): unknown
+  # never passes.
   if [[ "$rc" -eq 2 ]]; then
-    echo "FAIL: ci-parity — Analyze (central Core) would block these findings (see BLOCK above)"
+    echo "FAIL: ci-parity — Analyze (central Core) would block these NEW findings (see BLOCK above)"
+    return 1
+  fi
+  if [[ "$rc" -eq 3 ]]; then
+    echo "FAIL: ci-parity — incomplete verdict (see BLOCK/INCOMPLETE above); unknown never passes"
     return 1
   fi
   if [[ "$rc" -ne 0 ]]; then

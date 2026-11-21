@@ -208,6 +208,32 @@ def test_empty_pull_request_scope_exits_nonzero(monkeypatch, tmp_path: Path) -> 
     assert suite_runner.main(["--profile", "local", "--changed-file", str(changed)]) == 2
 
 
+def test_deletion_only_pull_request_is_a_scope_not_unknown() -> None:
+    """A PR that only deletes files still has a scope (#1108).
+
+    The workflow used to drop every path that no longer exists, so a
+    deletion-only PR reached the runner as an empty list and failed closed as
+    PR_SCOPE_UNKNOWN. Deleted paths now reach the selector, and the selector
+    never emits a target that is gone.
+    """
+    text = WORKFLOW.read_text(encoding="utf-8")
+    test_block = text.split("name: Test Suite", 1)[1]
+    assert 'if [ -e "${path}" ]' not in test_block
+    deleted = ["commands/_archived/workflow-executors/gone_executor.py"]
+    status, paths = classify_pr_scope(deleted)
+    assert status == "SELECTED"
+    assert "." not in paths
+    assert all((ROOT / item).exists() for item in paths)
+
+
+def test_a_deleted_test_file_is_not_a_pytest_target() -> None:
+    gone = "tests/ops/scripts/test_this_file_was_deleted.py"
+    assert gone in select_pr_pytest_paths([gone])  # the selector's own mapping
+    status, paths = classify_pr_scope([gone])
+    assert status == "SELECTED"
+    assert gone not in paths
+
+
 def test_scope_classification_never_selects_the_full_suite() -> None:
     status, paths = classify_pr_scope(["README.md"])
     assert status == "CRITICAL_ONLY"
