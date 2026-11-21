@@ -75,24 +75,24 @@ tools:
         (l9-ci-core main, 2026-11-06). Core's toolchain alignment reports
         biome.json drifting from that lock.
   semgrep:
-    version: 1.171.0
+    version: 1.186.0
     method: uv_tool
     package: semgrep
     binary: semgrep
     version_cmd: [--version]
-    expect: 1.171.0
+    expect: 1.186.0
     ci_ref:
       repo: Quantum-L9/l9-ci-core
       ref: main
       path: .github/actions/install-consumer-ci/toolchain-lock.json
-      contains: '"semgrep": "1.171.0"'
+      contains: '"semgrep": "1.186.0"'
       observed: >-
         Analyze (central Core) installs exactly this version from Core's
-        hash-locked install-semgrep/locks/semgrep-1.171.0.txt (org-ci.yml
-        INPUT_SEMGREP_VERSION default, 2026-11-06).
+        hash-locked install-semgrep/locks/semgrep-1.186.0.txt, activated
+        org-wide by l9-ci-core #339 (acb73463, 2026-11-21).
   l9-ci:
     # The CI SDK Core runs for its Semgrep gate. Kept in its own tool
-    # environment: l9-ci pins jsonschema==4.26.0 and semgrep 1.171.0 needs
+    # environment: l9-ci pins jsonschema==4.26.0 and semgrep 1.186.0 needs
     # <4.26, so the two cannot share one (Core installs them separately too).
     # The version is the SDK commit; uv installs exactly that revision. It
     # tracks the revision org-ci.yml provisions (track: ci_ref), so Core's SDK

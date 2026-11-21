@@ -2643,3 +2643,13 @@ Campaign L9-CI-UNIFIED-LEVERAGE v1.7.1, lane CG-CUTOVER item 2.
   witness only, and `L9-CI-CORE-004` keeps a consumer check until
   `CURSOR_CANARY_PASS`. It retires once a known-bad Biome witness fails both
   jobs and the canary passes.
+
+## Semgrep 1.186.0 (2026-11-21) — supersedes "Semgrep 1.171.0" in § `make pr` runs Analyze (central Core)'s Biome and SDK Semgrep gate
+
+- l9-ci-core #339 (`acb73463`) activated Semgrep 1.186.0 organization-wide:
+  `install-consumer-ci/toolchain-lock.json` and the hash-locked
+  `install-semgrep/locks/semgrep-1.186.0.txt`.
+- `ops/ci_parity/tools.yaml` follows it (`version`, `expect` and the `ci_ref`
+  `contains` line), so `validate_manifest.py --remote` and the `make pr` drift
+  check pass again. The tools.yaml pin rule is unchanged: it follows Core's
+  lock, never leads it.

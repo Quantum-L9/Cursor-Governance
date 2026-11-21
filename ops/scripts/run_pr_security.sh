@@ -409,10 +409,26 @@ run_semgrep() {
     configs+=(--config "$c")
   done
   note "semgrep configs: $SEMGREP_CONFIGS"
-  if have semgrep; then
-    ver="$(semgrep --version 2>/dev/null | head -1 || true)"
-    note "semgrep: $ver (SDK supported range >=1.100.0,<2.0.0)"
-    if semgrep --error --quiet --metrics=off "${configs[@]}" "${targets[@]}"; then
+  # Resolve one explicit binary path before running, never the mutable PATH
+  # link: the make pr reader wave runs the ci-parity job beside this one, and
+  # it re-points ~/.local/bin/semgrep when the pin moves. First the ci-parity
+  # pinned binary (state.json path, its own per-version environment); else the
+  # PATH semgrep, resolved to its real path once.
+  local semgrep_bin="" gov_py="$GOV_ROOT/.venv/bin/python"
+  if [[ -x "$gov_py" && -f "$GOV_ROOT/ops/ci_parity/install.py" ]]; then
+    # Exit 1 means no pinned binary is installed: an answer, so fall through.
+    if ! semgrep_bin="$("$gov_py" "$GOV_ROOT/ops/ci_parity/install.py" --resolve semgrep 2>/dev/null)"; then
+      semgrep_bin=""
+    fi
+  fi
+  if [[ -z "$semgrep_bin" ]] && have semgrep; then
+    # Portable realpath (BSD readlink has no -f); the path is passed as argv.
+    semgrep_bin="$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$(command -v semgrep)")"
+  fi
+  if [[ -n "$semgrep_bin" && -x "$semgrep_bin" ]]; then
+    ver="$("$semgrep_bin" --version 2>/dev/null | head -1 || true)"
+    note "semgrep: $ver at $semgrep_bin (SDK supported range >=1.100.0,<2.0.0)"
+    if "$semgrep_bin" --error --quiet --metrics=off "${configs[@]}" "${targets[@]}"; then
       ok "semgrep (${#targets[@]} file(s))"
     else
       fail "semgrep found issues in changed files"
