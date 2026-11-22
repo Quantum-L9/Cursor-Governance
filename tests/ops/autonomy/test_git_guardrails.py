@@ -551,6 +551,37 @@ class TestGhPolicy:
             Outcome.DENY_REQUIRES_HUMAN
         )
 
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "gh api -X DELETE repos/Quantum-L9/Cursor-Governance/pulls/1113/ccr/auto_merge",
+            "gh api --method DELETE repos/o/r/pulls/7/ccr/auto_merge",
+            "gh api --method=DELETE /repos/o/r/pulls/7/ccr/auto_merge/",
+            "gh api -X DELETE https://api.github.com/repos/o/r/pulls/7/ccr/auto_merge",
+        ],
+    )
+    def test_queue_disarm_delete_is_recoverable_not_a_deletion(self, command: str) -> None:
+        """Dequeue / disarm deletes no ref; re-enqueueing the same head restores it."""
+        decision = evaluate_command(command, ctx())
+        assert decision.outcome is Outcome.GUARD_THEN_ALLOW
+        assert decision.findings[0].recoverability is Recoverability.DETERMINISTIC_REGENERATION
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "gh api -X DELETE repos/o/r/git/refs/heads/feature",
+            "gh api -X DELETE repos/o/r/branches/main/protection",
+            "gh api -X DELETE repos/o/r/releases/42",
+            "gh api -X DELETE repos/o/r/pulls/7/ccr/review_threads",
+            "gh api -X DELETE repos/o/r/pulls/7/ccr/auto_merge/extra",
+            "gh api -X DELETE repos/o/r/pulls/7/ccr/auto_merge repos/o/r/git/refs/heads/x",
+            "gh api -X DELETE repos/o/r/pulls/abc/ccr/auto_merge",
+            "gh api -X DELETE repos/o/r",
+        ],
+    )
+    def test_every_other_authenticated_delete_stays_denied(self, command: str) -> None:
+        assert outcome(command) is Outcome.DENY_REQUIRES_HUMAN
+
     def test_admin_merge_denied_and_ordinary_merge_guarded(self) -> None:
         assert outcome("gh pr merge 12 --admin") is Outcome.DENY_REQUIRES_HUMAN
         assert outcome("gh pr merge 12 --squash") is Outcome.GUARD_THEN_ALLOW

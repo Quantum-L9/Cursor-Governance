@@ -3,8 +3,12 @@
   "description": "Consumer-repository data for ops/ci_parity/fixtures.py. Each repository names its fixture roots and, per file, the exact rule ids each lane ('semgrep-l9', 'bandit', ...) must report there. A named rule that fires is expected and does not block; a named rule that does not fire is a FAIL; any other finding on a fixture path, and every finding outside the roots, is classified as before. A file under a root with no entry expects nothing, so any finding on it blocks.",
   "repositories": {
     "Quantum-L9/Enrichment.Inference.Engine": {
-      "note": "CI canary for campaign L9-CI-UNIFIED-LEVERAGE-2026-11-20-v1.7.1 (branch canary/ci-ul-eie). Central semgrep since l9-ci-sdk #134/#139/#143 (pinned by Core #324): tests/ is in required scope, nosemgrep is inert, and a shell=True site is reported once by the L9 rule (the registry duplicate is superseded). So the L9 rule is expected on every shell=True fixture, including the tests/ scope witness and the nosemgrep override attempt.",
-      "roots": ["contracts/feature_evidence/fixtures/ci_canary/", "tests/canary/"],
+      "note": "CI canary for campaign L9-CI-UNIFIED-LEVERAGE-2026-11-20-v1.7.1 (branch canary/ci-ul-eie). Central semgrep since l9-ci-sdk #134/#139/#143 (pinned by Core #324): tests/ is in required scope, nosemgrep is inert, and a shell=True site is reported once by the L9 rule (the registry duplicate is superseded). So the L9 rule is expected on every shell=True fixture, including the tests/ scope witness and the nosemgrep override attempt. Org-CI cutover canary (branch canary/ci-ul-eie-cutover, EIE cutover Phase 2/3): canary/eie_cutover/ holds the gitleaks word witness and one known-bad file per EIE consumer Semgrep rule; three of them also trip the SDK baseline, named below. The consumer rules are not a ci-parity lane.",
+      "roots": [
+        "contracts/feature_evidence/fixtures/ci_canary/",
+        "tests/canary/",
+        "canary/eie_cutover/"
+      ],
       "files": {
         "contracts/feature_evidence/fixtures/ci_canary/central_rule_bad.py": {
           "semgrep-l9": [
@@ -23,6 +27,37 @@
             "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true"
           ],
           "bandit": ["B602"]
+        },
+        "canary/eie_cutover/consumer_no_eval_bad.py": {
+          "semgrep-l9": [
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.exec-eval-use"
+          ]
+        },
+        "canary/eie_cutover/consumer_no_pickle_loads_bad.py": {
+          "semgrep-l9": [
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.unsafe-deserialization"
+          ]
+        },
+        "canary/eie_cutover/gitleaks_word_bad.py": {
+          "semgrep-l9": [
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.hardcoded-credential"
+          ]
+        }
+      }
+    },
+    "Quantum-L9/Cognitive.Engine.Graphs": {
+      "note": "CI canary for campaign L9-CI-UNIFIED-LEVERAGE-2026-11-20-v1.7.1 (branch canary/ci-ul-ceg, PR #517, never merged). tests/canary/central_rule_witness.py is the known-bad for the central SDK rule tls-verify-disabled; tests/canary/override_witness.py is a consumer nosemgrep attempt to waive it, which must still fire. tests/canary/ceg_rule_witness.py carries no central finding, so it expects nothing.",
+      "roots": ["tests/canary/"],
+      "files": {
+        "tests/canary/central_rule_witness.py": {
+          "semgrep-l9": [
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.tls-verify-disabled"
+          ]
+        },
+        "tests/canary/override_witness.py": {
+          "semgrep-l9": [
+            "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.tls-verify-disabled"
+          ]
         }
       }
     }
