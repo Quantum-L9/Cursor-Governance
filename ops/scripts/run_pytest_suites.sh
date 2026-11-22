@@ -60,7 +60,7 @@ if [[ "$scope_rc" -ne 0 ]]; then
     exit "$scope_rc"
   fi
 elif [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" && -z "$scope_paths" ]]; then
-  echo "PR_SCOPE_UNKNOWN: no changed path remains on HEAD; full suite refused" >&2
+  echo "PR_SCOPE_UNKNOWN: the pull-request scope is empty; full suite refused" >&2
   exit 2
 fi
 if [[ "$scope_rc" -eq 0 ]]; then
