@@ -698,7 +698,9 @@ class RenderedPlanCampaignTest(unittest.TestCase):
                             repo_root=root,
                             l9_root=l9,
                             hooks=runner.Hooks(
-                                validate_blueprint=lambda _blueprint: ["must not validate on resume"]
+                                validate_blueprint=lambda _blueprint: [
+                                    "must not validate on resume"
+                                ]
                             ),
                         )
             self.assertEqual(resumed["campaign_id"], "rendered-proof")
