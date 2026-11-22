@@ -1,5 +1,5 @@
 {
-  "generation_id": "4aa7d4876d50739954c2f267da41de2adf651a4023eb7b6655f6f801190b71f7",
+  "generation_id": "0eb0a616e7dc0f0b53a1443a098bb23aa0a82d726347c665588b4150d22aece1",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -913,16 +913,16 @@
     },
     {
       "composition_role": "general",
-      "description": "wire Claude Code in a consumer clone to DeepSeek (not Anthropic billing). use when opening Claude Code in a new Cursor tab, hydrating DEEPSEEK_API_KEY, or repeating the Website-Bot DeepSeek setup in another repo.",
+      "description": "bring Claude Code CLI up through the shared installer Web already uses, and confirm the DeepSeek route is present. use when a Claude Code CLI session should load the same bootstrap as Claude Code Web.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-claude-code-deepseek",
       "path": "skills/l9-claude-code-deepseek",
       "reason": "",
       "skill_md": "skills/l9-claude-code-deepseek/SKILL.md",
-      "skill_sha256": "f598e86b6ebe0fd21b2f977e041f211784d1ac65149dec5f1f0224a694c54483",
+      "skill_sha256": "4619d6b11cf533a319fb3f489934507f011e2c805f2a8c904ae07c5d426a2285",
       "user_invocable": true,
-      "when_to_use": "wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing"
+      "when_to_use": "a Claude Code CLI session should load through the shared installer Web already uses, and the DeepSeek route should be confirmed present without writing an env file or wrapper"
     },
     {
       "composition_role": "general",
@@ -1576,6 +1576,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "0cfc1ca9eca7517332b01ad272c4805734be5f748919dc1bf8cb67acce34a5c7",
-  "source_skill_corpus_sha256": "a9e0d5408fb465ce20d7132498fdfcfa0ef45e6a5880d4e0f9c869abc3781523"
+  "source_manifest_sha256": "d61d098feea088dd47db3d298b75f0d09e8f9ce473a831b2a6df6dac836ad9c1",
+  "source_skill_corpus_sha256": "572e038a1882a1ed1a122a5bbe6342766ce41758da1ac0cf1462576adc011d8a"
 }

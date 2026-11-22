@@ -66,7 +66,7 @@ tiers:
   - skill: l9-secrets
     use_when: a command must bind or check a named credential (api key, token, password) from Infisical, a new secret must be added, or a legacy openclaw-igorbot ref must be translated — never printing values
   - skill: l9-claude-code-deepseek
-    use_when: wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing
+    use_when: a Claude Code CLI session should load through the shared installer Web already uses, and the DeepSeek route should be confirmed present without writing an env file or wrapper
   - skill: l9-plan-simple
     use_when: an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on — rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it
   - skill: l9-pr-digest
