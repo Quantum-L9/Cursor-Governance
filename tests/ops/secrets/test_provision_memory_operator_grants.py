@@ -188,3 +188,11 @@ def test_empty_registry_refuses_to_derive(tmp_path: Path) -> None:
 )
 def test_parse_version(text: str | None, expected: tuple[int, int, int] | None) -> None:
     assert prov.parse_version(text) == expected
+
+
+def test_healthz_url_comes_from_the_resource_origin() -> None:
+    assert (
+        prov.healthz_url("https://memory.example.test/mcp") == "https://memory.example.test/healthz"
+    )
+    with pytest.raises(prov.Stop, match="not an https URL"):
+        prov.healthz_url("http://memory.example.test/mcp")

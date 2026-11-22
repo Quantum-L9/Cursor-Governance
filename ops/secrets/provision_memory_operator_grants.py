@@ -68,7 +68,6 @@ TOKEN = "@l9-repositories"
 DERIVED_FIELDS = ("read_namespaces", "write_namespaces")
 #: First release carrying ADR-107 (derived token) and ADR-108 (hook principal).
 MIN_DERIVED_RELEASE = (3, 1, 0)
-HEALTHZ = "https://memory.quantumaipartners.com/healthz"
 MEMORY_REPO = "Quantum-L9/l9-graphiti-memory"
 PROFILE_PATH = ".l9/deployment.yaml"
 REGISTRY = Path("semantics/repository_registry.yaml")
@@ -255,11 +254,25 @@ class Provisioner:
 # --- real probes ---------------------------------------------------------------
 
 
-def live_package_version() -> str | None:
+def healthz_url(resource: str) -> str:
+    """The service's public ``/healthz`` on the origin of the Memory resource URL.
+
+    The resource comes from ``ops/config/memory-auth0-onboarding.yaml`` (the
+    hook provisioner's audience), so no service host is written in code.
+    """
+
+    parsed = urllib.parse.urlparse(resource)
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise Stop(f"onboarding resource is not an https URL: {resource!r}", EXIT_FAILED)
+    return f"https://{parsed.netloc}/healthz"
+
+
+def live_package_version(resource: str) -> str | None:
     import safe_https  # noqa: PLC0415 - ops/lib is not a package
 
-    host = urllib.parse.urlparse(HEALTHZ).hostname or ""
-    request = urllib.request.Request(HEALTHZ, headers={"Accept": "application/json"})
+    url = healthz_url(resource)
+    host = urllib.parse.urlparse(url).hostname or ""
+    request = urllib.request.Request(url, headers={"Accept": "application/json"})
     try:
         response = safe_https.https_exchange(
             request, timeout=15.0, allowed_hosts=frozenset({host}), label="memory-healthz"
@@ -320,11 +333,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     try:
+        targets = load_targets()
         return Provisioner(
-            project=load_targets().memory_project,
+            project=targets.memory_project,
             infisical=infisical_as_this_identity(),
             covered=registry_namespaces(args.authority),
-            live_version=live_package_version,
+            live_version=lambda: live_package_version(targets.audience),
             profile_refs=profile_source_refs,
             apply=args.apply,
             ahead_of_release=args.ahead_of_release,
