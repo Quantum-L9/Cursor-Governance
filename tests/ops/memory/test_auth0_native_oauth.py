@@ -42,23 +42,26 @@ def _entry(**overrides: Any) -> dict[str, Any]:
     return entry
 
 
-def test_shipped_onboarding_is_structural_and_unbound() -> None:
+def test_shipped_onboarding_is_structural_and_bound() -> None:
     document = oauth.load_onboarding()
     verdict = oauth.validate_onboarding(document)
-    assert verdict["status"] == "unbound"
+    assert verdict["status"] == "bound"
     assert verdict["errors"] == []
-    # The issuer was read from the live protected-resource metadata, so it is
-    # bound even though the Cursor and Claude clients are not.
-    assert "issuer.domain" not in verdict["binding_gaps"]
-    assert "clients.cursor-native.client_id" in verdict["binding_gaps"]
-    assert "clients.claude-account-connector.client_id" in verdict["binding_gaps"]
-    assert "clients.manus-native.client_id" not in verdict["binding_gaps"]
-    assert "resource.identifier" not in verdict["binding_gaps"]
+    assert verdict["binding_gaps"] == []
     assert document["issuer"]["domain"] == "quantum-ai-partners.us.auth0.com"
     assert document["issuer"]["issuer_url"] == "https://quantum-ai-partners.us.auth0.com/"
     assert document["resource"]["identifier"] == PUBLISHED_RESOURCE
-    assert document["clients"]["cursor-native"]["client_id"] is None
+    assert document["clients"]["cursor-native"]["client_id"] == "nj06T2YsyZA1z7om0hoHc8DlmNjaZwz6"
+    assert document["clients"]["cursor-native"]["client_secret"] == "forbidden"
+    assert (
+        document["clients"]["claude-account-connector"]["client_id"]
+        == "vsSOWGaSeq5pYtYC82kTWmNV1AwCYqRJ"
+    )
+    assert document["clients"]["claude-account-connector"]["client_secret"] == "forbidden"
+    assert document["clients"]["l9-memory-hooks"]["client_id"] == "qehad9nMEsfOjaH9cBumGuj5RP27MrSN"
+    assert "client_secret" not in document["clients"]["l9-memory-hooks"]
     assert document["clients"]["manus-native"]["client_id"]
+    assert document["clients"]["manus-native"]["client_secret"] == "forbidden"
     assert document["clients"]["manus-native"]["redirect_uris"] == [oauth.MANUS_REDIRECT_URI]
     assert document["pkce"] == {"required": True, "method": "S256", "plain_forbidden": True}
     assert document["scopes"] == ["memory.read", "memory.write"]
@@ -73,7 +76,7 @@ def test_shipped_onboarding_is_structural_and_unbound() -> None:
     matching = oauth.authorize_cursor_package_entry(_entry(url=PUBLISHED_RESOURCE), document)
     assert host_only["status"] == "audience_mismatch"
     assert graphiti["status"] == "audience_mismatch"
-    assert matching["status"] == "unbound_client"
+    assert matching["status"] == "unauthorized_client"
     assert matching["install"] is False
 
 
@@ -165,7 +168,7 @@ def test_secret_material_is_rejected_and_not_stored_in_source() -> None:
     assert connector["project_mcp_entry"] is False
     assert connector["hosted_credential_injection"] is False
     assert connector["redirect_uris"] == [oauth.CLAUDE_ACCOUNT_REDIRECT_URI]
-    assert connector["client_id"] is None
+    assert connector["client_id"] == "vsSOWGaSeq5pYtYC82kTWmNV1AwCYqRJ"
     assert connector["resource_identifier"] == PUBLISHED_RESOURCE
     assert oauth.contains_secret(connector) is False
     onboarding_text = oauth.ONBOARDING_PATH.read_text(encoding="utf-8")
@@ -223,7 +226,7 @@ def test_network_allowlist_does_not_gain_an_unverified_memory_host() -> None:
     assert "Auth0" in text
 
 
-def test_unbound_native_package_is_not_installed(tmp_path: Path) -> None:
+def test_unapproved_native_package_is_not_installed(tmp_path: Path) -> None:
     venv = tmp_path / "venv" / "bin"
     venv.mkdir(parents=True)
     (venv / "python").write_text("", encoding="utf-8")
@@ -256,6 +259,6 @@ def test_unbound_native_package_is_not_installed(tmp_path: Path) -> None:
         verify=False,
         runner=runner,
     )
-    assert receipt["status"] == "unbound_client"
+    assert receipt["status"] == "unauthorized_client"
     assert all("cursor" not in " ".join(call) or "-c" in call for call in calls)
     assert inst.exit_code({"status": "written", "memory": receipt}) == 1

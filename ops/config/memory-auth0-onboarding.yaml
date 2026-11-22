@@ -37,7 +37,7 @@ clients:
       - refresh_token
     pkce: S256
     client_secret: forbidden
-    client_id: null
+    client_id: nj06T2YsyZA1z7om0hoHc8DlmNjaZwz6
     redirect_uris:
       - https://www.cursor.com/agents/mcp/oauth/callback
       - http://localhost:8787/callback
@@ -50,7 +50,7 @@ clients:
       - refresh_token
     pkce: S256
     client_secret: forbidden
-    client_id: null
+    client_id: vsSOWGaSeq5pYtYC82kTWmNV1AwCYqRJ
     project_mcp_entry: false
     hosted_credential_injection: false
     redirect_uris:
@@ -82,4 +82,4 @@ clients:
     grant_types:
       - client_credentials
     audience_grant_scopes: []
-    client_id: null
+    client_id: qehad9nMEsfOjaH9cBumGuj5RP27MrSN
