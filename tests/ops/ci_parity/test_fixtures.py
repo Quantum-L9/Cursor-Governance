@@ -221,6 +221,10 @@ def test_the_committed_manifest_parses() -> None:
     assert eie is not None
     assert eie.covers("contracts/feature_evidence/fixtures/ci_canary/central_rule_bad.py")
     assert not eie.covers("app/main.py")
+    ceg = registry.for_repo("quantum-l9/cognitive.engine.graphs")
+    assert ceg is not None
+    assert ceg.covers("tests/canary/central_rule_witness.py")
+    assert not ceg.covers("engine/handlers.py")
 
 
 def test_manifest_bytes_change_the_runner_digest(world: dict) -> None:

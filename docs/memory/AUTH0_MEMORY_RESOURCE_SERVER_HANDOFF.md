@@ -62,14 +62,37 @@ load-bearing: MCP clients send the RFC 8707 `resource` parameter rather than
 carries no Memory audience and every call is refused as `invalid_token` after a
 successful login.
 
-Two gates remain, and neither is a registration:
+Two tenant properties were not visible on the happy path and are recorded
+because each one refuses a correct-looking registration:
 
-1. **A subject grant.** Memory authorizes a verified subject through
-   `L9_MEMORY_OAUTH_GRANTS_JSON`, not through the token's `scope` claim. The
-   operator's Auth0 `sub` must hold the read and write namespaces there, or the
-   first authenticated call succeeds and resolves to no namespace.
-2. **A live PKCE receipt.** No client has one. The Manus carrier therefore stays
+- **The app type is `spa`, not `native`.** Auth0 answers a native client's
+  hosted `https` callback with `400 invalid OAuth callback` even when the URI is
+  in the allowlist, because a native callback is expected to be a custom scheme
+  or loopback. `spa` keeps every public-client property (`token_endpoint_auth_method:
+  none`, PKCE `S256`, `authorization_code` + `refresh_token`) and accepts the
+  hosted callback.
+- **The client grant carries `subject_type: "user"`.** A grant created without
+  that field lands in the machine-to-machine lane (`client`), and `/authorize`
+  then answers `Client "…" is not authorized to access resource server "…"` —
+  after the callback is already accepted, which makes it read as an audience
+  problem. `UpdateClientGrantRequestContent` has no `subject_type`, so the fix
+  is a second grant, not a patch. Both lanes coexist on this client; Memory
+  refuses user-less tokens, so the `client` grant confers nothing here.
+
+Verified against the live tenant on 2026-11-21, with `prompt=none` and no
+session: `/authorize` returns `302` to the callback with `error=login_required`
+for both `resource` and `audience`; a nonexistent resource returns
+`Service not found`; an unlisted callback returns `403 Callback URL mismatch`.
+
+One gate remains, and it is not a registration:
+
+1. **A live PKCE receipt.** No client has one. The Manus carrier therefore stays
    `UNBOUND` and non-installable in `memory-mcp-connector.json`.
+
+Memory-side authorization is a separate operator input, not a tenant change:
+Memory reads `L9_MEMORY_OAUTH_GRANTS_JSON`, never the token's `scope` claim, so
+a verified subject absent from that map authenticates and then resolves to no
+namespace. That entry is an Infisical `prod` change followed by a redeploy.
 
 ## Memory-owned work that unblocks installation
 
