@@ -5,8 +5,8 @@ path: environment/agents/adapters/manus/setup.md
 layer: adapter
 owner: governance-control-plane
 status: active
-version: 5.0.0
-updated: 2026-11-05
+version: 5.1.0
+updated: 2026-11-21
 /L9_META -->
 
 # Manus adapter setup
@@ -37,9 +37,15 @@ The shared owner makes `--check` observational. It performs no installation,
 secret login/profile mutation, receipt mutation or Git mutation. Exit `0` means
 satisfied source/environment checks, `6` means usable degraded, and `1` means
 blocked. A missing, wrong-version or import-failing locked interpreter is a
-blocker, never permission to use system Python. Explicit apply is a separate
-authorized action using the existing shared owner, not an adapter workaround.
-A cached/source readiness receipt is not live authentication proof.
+blocker, never permission to use system Python. Explicit apply is the
+session-start path and remains a separate authorized action using the existing
+shared owner, not an adapter workaround: it installs the canonical checker
+binaries, provisions `$HOME/.cursor-governance` through `governance_sync.sh`
+(the owner that already performs the guarded clone-if-missing), writes
+`~/.l9/cloud-session.env` from `environment.env.example`, and provisions the
+governance-managed authority checkout before the binding is verified. Check
+mode reports each of those without performing it. A cached/source readiness
+receipt is not live authentication proof.
 
 ## Governance MCP (separate authentication)
 
