@@ -346,6 +346,10 @@ operating_protocol:
   # and stack_safe_merge.py remain the enforcement. Using a tool grants nothing.
   # tests/ops/autonomy/test_cto_mode.py asserts every path named here exists.
   campaign_tooling:
+    runs_in: >-
+      The CTO session only. None of these tools runs at child bootstrap or in a child
+      session; a child still bootstraps only through launch-spec plus the shared Setup
+      and SessionStart, on the one bootstrap path above.
     interpreter: $HOME/.cursor-governance/.venv/bin/python
     tools:
       cto_campaign: ops/autonomy/cto_campaign.py

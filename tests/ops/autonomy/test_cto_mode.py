@@ -1039,3 +1039,81 @@ def test_lcto_links_campaign_tooling_instead_of_duplicating_it() -> None:
     text = (REPO / "commands" / "lcto.md").read_text(encoding="utf-8")
     assert "operating_protocol.campaign_tooling" in text
     assert "governance/cto-mode/MODE.yaml" in text
+
+
+# --- one bootstrap only (operator ruling restated 2026-11-23) ---
+
+# Concrete artifacts of a second bootstrap: a child-only setup script, a governance
+# materializer, a DEGRADED child start, or a child cloning/fetching governance itself.
+# The existing one-bootstrap sentences name some of these only to forbid them, so the
+# guard matches the artifacts and the affirmative forms, never the prohibitions.
+_SECOND_BOOTSTRAP = re.compile(
+    r"l9-materialize-governance|materialize_governance|setup\.bootstrap\.sh"
+    r"|child[-_ ]setup\.sh|start(?:s|ed)? (?:in )?DEGRADED|DEGRADED (?:child )?start(?!,)"
+    r"|--degraded|git clone [^\n]*(?:Cursor-Governance|cursor-governance)"
+    r"|git (?:-C \S+ )?fetch [^\n]*(?:Cursor-Governance|cursor-governance)"
+    r"|ff\.sh\"? --ssot",
+    re.IGNORECASE,
+)
+_ONE_BOOTSTRAP_MODE = (
+    "There is no child-only bootstrap, materializer or DEGRADED start",
+    "There is no child-only bootstrap; never add one, and never put a bootstrap step in a"
+    " child's brief.",
+)
+_ONE_BOOTSTRAP_LCTO = (
+    "SessionStart are its whole bootstrap, with no child-only bootstrap step",
+    "there is no child-only bootstrap",
+)
+
+
+def _flat(text: str) -> str:
+    return " ".join(text.split())
+
+
+def test_one_bootstrap_statements_survive_the_campaign_tooling_wiring() -> None:
+    mode = _flat(cto_mode.MODE_CONTRACT.read_text(encoding="utf-8"))
+    for sentence in _ONE_BOOTSTRAP_MODE:
+        assert sentence in mode, sentence
+    lcto = _flat((REPO / "commands" / "lcto.md").read_text(encoding="utf-8"))
+    for sentence in _ONE_BOOTSTRAP_LCTO:
+        assert sentence in lcto, sentence
+
+
+def test_protocol_and_lcto_name_no_second_bootstrap() -> None:
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    texts = {"operating_protocol": "\n".join(_protocol_text(protocol))}
+    texts["commands/lcto.md"] = (REPO / "commands" / "lcto.md").read_text(encoding="utf-8")
+    for where, text in texts.items():
+        hits = sorted({m.group(0) for m in _SECOND_BOOTSTRAP.finditer(text)})
+        assert not hits, f"{where} names a second bootstrap: {hits}"
+
+
+@pytest.mark.parametrize(
+    "smuggled",
+    [
+        'run bash "$HOME/.l9/bin/l9-materialize-governance" <clone>',
+        "children start DEGRADED until governance is materialized",
+        "git clone https://github.com/Quantum-L9/Cursor-Governance ~/.cursor-governance",
+        "run environment/agents/adapters/claude-code/setup.bootstrap.sh in the child",
+    ],
+)
+def test_second_bootstrap_guard_catches_a_smuggled_step(smuggled: str) -> None:
+    assert _SECOND_BOOTSTRAP.search(smuggled), smuggled
+
+
+def test_campaign_tooling_is_cto_side_and_adds_no_child_bootstrap_step() -> None:
+    tooling = cto_mode.load_contract()["operating_protocol"]["campaign_tooling"]
+    assert "The CTO session only" in tooling["runs_in"]
+    assert "None of these tools runs at child bootstrap" in tooling["runs_in"]
+    steps = " ".join(t for k, v in tooling.items() if k != "runs_in" for t in _protocol_text(v))
+    for word in ("bootstrap", "SessionStart", "setup.sh", "materializ", "DEGRADED"):
+        assert word not in steps, word
+
+
+def test_launch_spec_child_prompt_keeps_the_one_bootstrap_path() -> None:
+    spec = projection_mode.build_launch_spec(
+        cto_mode.load_contract(), "session_cto_b", ["acme/lane"], model=MODEL
+    )
+    prompt = spec["create_session"]["append_system_prompt"]
+    assert "one bootstrap path and no other" in prompt
+    assert not _SECOND_BOOTSTRAP.search(prompt)
