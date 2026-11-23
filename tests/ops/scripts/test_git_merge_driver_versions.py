@@ -12,7 +12,6 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / "ops" / "scripts"
 DRIVER = SCRIPTS / "git_merge_driver_versions.py"
-ENSURE = SCRIPTS / "ensure_git_merge_drivers.sh"
 sys.path.insert(0, str(SCRIPTS))
 
 import git_merge_driver_versions as gmv  # noqa: E402
@@ -293,12 +292,40 @@ def _git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProc
     )
 
 
-def _ensure(repo: Path) -> subprocess.CompletedProcess[str]:
+_SCRIPT_NAMES = (
+    "ensure_git_merge_drivers.sh",
+    "git_merge_driver_generated.sh",
+    "git_merge_driver_versions.py",
+)
+
+
+def _install(dest_root: Path) -> Path:
+    """Copy this tree's merge-driver scripts to dest_root/ops/scripts.
+
+    The registration writes the driver path into the clone's config, so it must
+    be a path that outlives the test; a copy under tmp_path proves this tree's
+    code wherever the checkout itself lives (an agent worktree is ephemeral).
+    """
+    scripts = dest_root / "ops" / "scripts"
+    scripts.mkdir(parents=True, exist_ok=True)
+    for name in _SCRIPT_NAMES:
+        (scripts / name).write_bytes((SCRIPTS / name).read_bytes())
+    return scripts
+
+
+def _ensure(
+    repo: Path, scripts: Path | None = None, canonical: Path | None = None
+) -> subprocess.CompletedProcess[str]:
+    if scripts is None:
+        scripts = _install(repo.parent / "gov")
     env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
-    # Use this checkout's driver, not the SSOT's, so the test proves this tree.
-    env["CURSOR_GOVERNANCE_DIR"] = str(ROOT)
+    env["CURSOR_GOVERNANCE_DIR"] = str(canonical if canonical is not None else scripts.parents[1])
     return subprocess.run(  # noqa: S603 - fixed argv
-        ["bash", str(ENSURE), str(repo)], capture_output=True, text=True, check=False, env=env
+        ["bash", str(scripts / "ensure_git_merge_drivers.sh"), str(repo)],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
     )
 
 
@@ -427,3 +454,40 @@ def test_identical_bump_on_both_sides_is_resolved_by_git_not_the_driver(odoo_rep
     assert '"version": "19.0.1.0.4"' in manifest
     init = (odoo_repo / "widget" / "tests" / "__init__.py").read_text(encoding="utf-8")
     assert "test_alpha" in init and "test_beta" in init
+
+
+def test_ephemeral_driver_without_canonical_is_not_registered(odoo_repo: Path) -> None:
+    worktree = odoo_repo.parent / ".l9" / "gov-worktrees" / "agent__task"
+    scripts = _install(worktree)
+    proc = _ensure(odoo_repo, scripts, canonical=odoo_repo.parent / "no-governance")
+    assert proc.returncode == 0, proc.stderr
+    assert "merge.l9-versions not registered" in proc.stdout
+    assert _git(odoo_repo, "config", "--get", "merge.l9-versions.driver", check=False).stdout == ""
+    info = odoo_repo / ".git" / "info" / "attributes"
+    assert not info.exists() or "l9-versions" not in info.read_text(encoding="utf-8")
+
+
+def test_ephemeral_driver_falls_back_to_canonical(odoo_repo: Path) -> None:
+    worktree = odoo_repo.parent / ".l9" / "gov-worktrees" / "agent__task"
+    scripts = _install(worktree)
+    canonical = odoo_repo.parent / "governance"
+    _install(canonical)
+    proc = _ensure(odoo_repo, scripts, canonical=canonical)
+    assert proc.returncode == 0, proc.stderr
+    driver = _git(odoo_repo, "config", "--get", "merge.l9-versions.driver").stdout
+    assert str(canonical / "ops" / "scripts" / "git_merge_driver_versions.py") in driver
+    assert ".l9/gov-worktrees" not in driver
+
+
+def test_stale_ephemeral_registration_is_removed(odoo_repo: Path) -> None:
+    assert _ensure(odoo_repo).returncode == 0
+    gone = odoo_repo.parent / ".l9" / "gov-worktrees" / "gone" / "git_merge_driver_versions.py"
+    _git(odoo_repo, "config", "merge.l9-versions.driver", f'python3 "{gone}" %O %A %B %P')
+    worktree = odoo_repo.parent / ".l9" / "gov-worktrees" / "agent__task"
+    proc = _ensure(odoo_repo, _install(worktree), canonical=odoo_repo.parent / "no-governance")
+    assert proc.returncode == 0, proc.stderr
+    assert "removed merge.l9-versions registration" in proc.stdout
+    assert _git(odoo_repo, "config", "--get", "merge.l9-versions.driver", check=False).stdout == ""
+    info = (odoo_repo / ".git" / "info" / "attributes").read_text(encoding="utf-8")
+    assert "l9-versions" not in info
+    assert _git(odoo_repo, "config", "--get", "merge.l9-generated.driver").stdout.strip()
