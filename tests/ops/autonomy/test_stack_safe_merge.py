@@ -620,3 +620,224 @@ def test_granted_promotion_run_merges_with_merge_commit_and_deletes_nothing(
     assert _deletes(runs) == []
     record = json.loads(capsys.readouterr().out)
     assert (record["status"], record["method"]) == ("MERGED", "merge")
+
+
+# --- Containment: a head merged INTO another open PR is a parent too ------------
+# Regression for the Odoo pre-go-live campaign: #597 contained #594 by merge (not
+# by base), so a squash of #594 forced #597 to re-apply it and conflict.
+
+
+def test_head_contained_in_another_open_pr_selects_merge(tmp_path, monkeypatch) -> None:
+    chosen = _select(
+        tmp_path, monkeypatch, {"head": "fix/594", "children": [], "containers": [597]}
+    )
+    assert chosen["method"] == "merge"
+    assert chosen["containers"] == [597]
+    assert "#597" in chosen["reason"]
+    # Containment does not make the head long-lived: it may still be deleted.
+    assert "--delete-branch" in merge_argv(SLUG, "53", delete_branch=True, selection=chosen)
+
+
+def _live_rest(monkeypatch, routes: dict) -> list[str]:
+    """Answer stack_safe_merge's REST reads from ``routes``; record every path asked."""
+    asked: list[str] = []
+
+    def _get(path: str):
+        asked.append(path)
+        for prefix, payload in routes.items():
+            if path.startswith(prefix):
+                if isinstance(payload, Exception):
+                    raise payload
+                return payload
+        raise RuntimeError(f"unexpected REST path {path}")
+
+    monkeypatch.delenv("L9_STACK_PROBE_FILE", raising=False)
+    monkeypatch.setattr(stack_safe_merge, "_gh_rest_json", _get)
+    return asked
+
+
+LEAF_SHA = "1" * 40
+CONTAINER_SHA = "2" * 40
+UNRELATED_SHA = "3" * 40
+
+
+def _open_listing() -> list[dict]:
+    return [
+        {"number": 53, "head": {"sha": LEAF_SHA}},
+        {"number": 60, "head": {"sha": CONTAINER_SHA}},
+        {"number": 61, "head": {"sha": UNRELATED_SHA}},
+    ]
+
+
+def test_live_containment_reads_the_compare_api(monkeypatch) -> None:
+    monkeypatch.setattr(stack_safe_merge, "_stacked_children", lambda repo, pr: ("fix/leaf", []))
+    monkeypatch.setattr(
+        stack_safe_merge,
+        "long_lived_head",
+        lambda repo, pr, head: {"long_lived": False, "reasons": []},
+    )
+    asked = _live_rest(
+        monkeypatch,
+        {
+            f"repos/{SLUG}/pulls/53": {"head": {"sha": LEAF_SHA}},
+            f"repos/{SLUG}/pulls?state=open": _open_listing(),
+            f"repos/{SLUG}/compare/{LEAF_SHA}...{CONTAINER_SHA}": {"status": "ahead"},
+            f"repos/{SLUG}/compare/{LEAF_SHA}...{UNRELATED_SHA}": {"status": "diverged"},
+        },
+    )
+    chosen = select_merge_method(SLUG, "53")
+    assert (chosen["method"], chosen["containers"]) == ("merge", [60])
+    assert not any(f"compare/{LEAF_SHA}...{LEAF_SHA}" in p for p in asked)
+
+
+def test_live_leaf_with_no_container_still_squashes(monkeypatch) -> None:
+    monkeypatch.setattr(stack_safe_merge, "_stacked_children", lambda repo, pr: ("fix/leaf", []))
+    monkeypatch.setattr(
+        stack_safe_merge,
+        "long_lived_head",
+        lambda repo, pr, head: {"long_lived": False, "reasons": []},
+    )
+    _live_rest(
+        monkeypatch,
+        {
+            f"repos/{SLUG}/pulls/53": {"head": {"sha": LEAF_SHA}},
+            f"repos/{SLUG}/pulls?state=open": _open_listing(),
+            f"repos/{SLUG}/compare/": {"status": "diverged"},
+        },
+    )
+    chosen = select_merge_method(SLUG, "53")
+    assert (chosen["method"], chosen["containers"]) == ("squash", [])
+
+
+def test_unreadable_containment_fails_safe_to_merge(monkeypatch) -> None:
+    monkeypatch.setattr(stack_safe_merge, "_stacked_children", lambda repo, pr: ("fix/leaf", []))
+    monkeypatch.setattr(
+        stack_safe_merge,
+        "long_lived_head",
+        lambda repo, pr, head: {"long_lived": False, "reasons": []},
+    )
+    _live_rest(
+        monkeypatch,
+        {
+            f"repos/{SLUG}/pulls/53": {"head": {"sha": LEAF_SHA}},
+            f"repos/{SLUG}/pulls?state=open": RuntimeError("HTTP 403 not enabled for this session"),
+        },
+    )
+    chosen = select_merge_method(SLUG, "53")
+    assert chosen["method"] == "merge"
+    assert "containment probe unavailable" in chosen["reason"]
+
+
+# --- Dead base: never merge into a branch the default already contains --------
+# Regression for the Odoo campaign: #633 merged into fix/l8-8-normalization-retry,
+# which Staging already contained, so #633 reached Staging only through #635.
+
+DEAD = {
+    f"{SLUG}#53": {
+        "head": "fix/child",
+        "children": [],
+        "sha": SHA,
+        "base": "fix/parent",
+        "default_branch": "Staging",
+        "base_compare": "behind",
+        "merged": True,
+        "merge_commit_sha": MERGE_COMMIT,
+    }
+}
+
+
+def test_dead_base_run_is_merge_pending_with_retarget_and_never_merges(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=DEAD, grant=_grant_file(tmp_path))
+    assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])
+    record = json.loads(capsys.readouterr().out)
+    assert record["status"] == "MERGE_PENDING"
+    assert record["base"] == "fix/parent" and record["base_compare"] == "behind"
+    assert record["retarget"] == [
+        "gh",
+        "api",
+        "--method",
+        "PATCH",
+        f"repos/{SLUG}/pulls/53",
+        "-f",
+        "base=Staging",
+    ]
+
+
+def test_identical_base_is_dead_too(tmp_path, monkeypatch) -> None:
+    probe = {f"{SLUG}#53": {**DEAD[f"{SLUG}#53"], "base_compare": "identical"}}
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=probe, grant=_grant_file(tmp_path))
+    assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])
+
+
+def test_live_base_not_yet_in_default_merges(tmp_path, monkeypatch) -> None:
+    probe = {f"{SLUG}#53": {**DEAD[f"{SLUG}#53"], "base_compare": "diverged"}}
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=probe, grant=_grant_file(tmp_path))
+    assert code == 0 and runs
+
+
+def test_declared_long_lived_base_is_never_dead(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("L9_STACK_PROBE_FILE", _probe(tmp_path, DEAD))
+    monkeypatch.setattr(stack_safe_merge, "_account_grant_path", lambda: _grant_file(tmp_path))
+    monkeypatch.setattr(stack_safe_merge, "_run", lambda argv: 0)
+    code = stack_safe_merge.main(
+        [
+            "--repo",
+            SLUG,
+            "--pr",
+            "53",
+            "--head-sha",
+            SHA,
+            "--run",
+            "--long-lived-base",
+            "fix/parent",
+        ]
+    )
+    assert code == 0
+
+
+def test_long_lived_base_name_is_never_dead(tmp_path, monkeypatch) -> None:
+    probe = {f"{SLUG}#53": {**DEAD[f"{SLUG}#53"], "base": "Production"}}
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=probe, grant=_grant_file(tmp_path))
+    assert code == 0 and runs
+
+
+def test_unreadable_base_compare_is_merge_pending(tmp_path, monkeypatch) -> None:
+    probe = {f"{SLUG}#53": {k: v for k, v in DEAD[f"{SLUG}#53"].items() if k != "base_compare"}}
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=probe, grant=_grant_file(tmp_path))
+    assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])
+
+
+def test_live_dead_base_reads_default_and_compare(monkeypatch) -> None:
+    asked = _live_rest(
+        monkeypatch,
+        {
+            f"repos/{SLUG}/pulls/53": {"base": {"ref": "fix/parent"}},
+            f"repos/{SLUG}/compare/Staging...fix/parent": {"status": "behind"},
+            f"repos/{SLUG}": {"default_branch": "Staging"},
+        },
+    )
+    record = stack_safe_merge.dead_base(SLUG, "53")
+    assert record is not None and record["default_branch"] == "Staging"
+    assert f"repos/{SLUG}/compare/Staging...fix/parent" in asked
+
+
+def test_live_base_equal_to_default_is_not_dead(monkeypatch) -> None:
+    asked = _live_rest(
+        monkeypatch,
+        {
+            f"repos/{SLUG}/pulls/53": {"base": {"ref": "Staging"}},
+            f"repos/{SLUG}": {"default_branch": "Staging"},
+        },
+    )
+    assert stack_safe_merge.dead_base(SLUG, "53") is None
+    assert not any("compare" in p for p in asked)
+
+
+def test_json_reports_dead_base(tmp_path, monkeypatch, capsys) -> None:
+    monkeypatch.setenv("L9_STACK_PROBE_FILE", _probe(tmp_path, DEAD))
+    monkeypatch.setattr(stack_safe_merge, "_account_grant_path", lambda: tmp_path / "none.json")
+    assert stack_safe_merge.main(["--repo", SLUG, "--pr", "53", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["dead_base"]["base"] == "fix/parent"

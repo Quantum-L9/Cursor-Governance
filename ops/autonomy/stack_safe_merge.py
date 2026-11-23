@@ -58,7 +58,26 @@ Widening how a merge can be *executed* does not widen who may execute one.
 merge_gate recognises both spellings, so a REST merge is gated exactly like the
 CLI one; that recognition shipped with this transport, not after it.
 
+Containment (not only stacking) makes a parent. A PR whose head is contained
+in another open PR's head -- that PR merged it in rather than basing on it -- is
+also merged with a merge commit: squashing it forces every container to
+re-apply the same commits and conflict. Containment is read from the REST
+compare API (``compare/{this head}...{that head}`` reports ``ahead`` or
+``identical``). An unreadable containment probe selects ``merge``, which is
+never wrong.
+
+Dead base. ``--run`` refuses, with a MERGE_PENDING record and the exact
+retarget call, a PR whose base is neither the repository default nor a
+declared long-lived base (``--long-lived-base`` or a long-lived name) when the
+compare API shows that base already contained in the default (``behind`` or
+``identical``). Merging there lands the change only on a branch nobody
+promotes. An unreadable base is MERGE_PENDING too.
+
 Probe: L9_STACK_PROBE_FILE (tests) or live REST / `gh pr view` / `gh pr list`.
+Probe entries may carry ``containers`` (open PRs containing this head),
+``base``, ``default_branch`` and ``base_compare`` (the compare status of the
+base against the default); an entry without ``base`` reads as based on the
+default.
 
 Merge queue (``--queue ITEM...``, ITEM = ``<pr>@<head-sha>``)
 --------------------------------------------------------------
@@ -140,6 +159,11 @@ LONG_LIVED_PREFIXES = ("release/",)
 #: those are deliberately not on this list: they would make every feature PR
 #: look long-lived and stop squash everywhere.
 LONG_LIVED_RULE_TYPES = frozenset({"deletion", "non_fast_forward", "update"})
+#: compare/{a}...{b} statuses meaning b already contains a.
+CONTAINS_STATUSES = frozenset({"ahead", "identical"})
+#: compare/{default}...{base} statuses meaning base is already contained in default.
+DEAD_BASE_STATUSES = frozenset({"behind", "identical"})
+COMPARE_STATUSES = frozenset({"ahead", "behind", "identical", "diverged"})
 #: Exit status for "remediated, not merged: a human grant is required".
 MERGE_PENDING_EXIT = 3
 #: Exit status for "the merge call returned success but GitHub does not show it merged".
@@ -221,7 +245,8 @@ def authorization_status(
     elif grant is not None and (revoked := _revocation(repo, pr, since=since)) is not None:
         reason = omi.revocation_reason(revoked)
     elif grant is not None:
-        provenance = grant.get("provenance") if isinstance(grant.get("provenance"), dict) else {}
+        raw_provenance = grant.get("provenance")
+        provenance: dict[str, Any] = raw_provenance if isinstance(raw_provenance, dict) else {}
         channel = str(provenance.get("channel") or "human_grant")
         return {
             **record,
@@ -322,12 +347,143 @@ def long_lived_head(repo: str, pr: str, head: str) -> dict[str, Any]:
     return {"long_lived": bool(reasons), "reasons": reasons}
 
 
+def compare_status(repo: str, base: str, head: str) -> str:
+    """GitHub's compare status of ``head`` against ``base``. Raises RuntimeError when unknown."""
+    a = urllib.parse.quote(base, safe="/")
+    b = urllib.parse.quote(head, safe="/")
+    view = _gh_rest_json(f"repos/{repo}/compare/{a}...{b}")
+    status = str((view or {}).get("status") or "") if isinstance(view, dict) else ""
+    if status not in COMPARE_STATUSES:
+        raise RuntimeError(f"compare {base}...{head} reported no status")
+    return status
+
+
+def default_branch(repo: str) -> str:
+    """The repository default branch. Raises RuntimeError when unknown."""
+    meta = _gh_rest_json(f"repos/{repo}")
+    name = str((meta or {}).get("default_branch") or "") if isinstance(meta, dict) else ""
+    if not name:
+        raise RuntimeError("REST did not report a default branch")
+    return name
+
+
+def open_pulls(repo: str) -> list[dict[str, Any]]:
+    """Every open pull request of ``repo`` (REST, paginated). Raises RuntimeError."""
+    pulls: list[dict[str, Any]] = []
+    page = 1
+    while True:
+        listing = _gh_rest_json(f"repos/{repo}/pulls?state=open&per_page=100&page={page}")
+        if not isinstance(listing, list):
+            raise RuntimeError("open pull request listing was not a list")
+        pulls.extend(item for item in listing if isinstance(item, dict))
+        if len(listing) < 100:
+            return pulls
+        page += 1
+
+
+def containing_prs(repo: str, pr: str) -> list[int]:
+    """Open PRs (other than ``pr``) whose head contains ``pr``'s head. Raises RuntimeError.
+
+    A PR merged *into* another open PR's branch -- rather than stacked as its
+    base -- is still that PR's ancestor: squashing it makes the container
+    re-apply the same change and conflict. The compare API answers it exactly.
+    """
+    entry = _probe_file_entry(repo, str(pr))
+    if entry is not None:
+        return [int(c) for c in entry.get("containers") or []]
+    head_sha = str((_pull(repo, str(pr)).get("head") or {}).get("sha") or "").lower()
+    if not _FULL_SHA.match(head_sha):
+        raise RuntimeError("REST did not report a head sha")
+    found: list[int] = []
+    for other in open_pulls(repo):
+        number = other.get("number")
+        sha = str((other.get("head") or {}).get("sha") or "").lower()
+        if not isinstance(number, int) or str(number) == str(pr) or not _FULL_SHA.match(sha):
+            continue
+        if compare_status(repo, head_sha, sha) in CONTAINS_STATUSES:
+            found.append(number)
+    return sorted(found)
+
+
+def retarget_argv(repo: str, pr: str, base: str) -> list[str]:
+    """The REST call that moves ``repo#pr`` onto ``base``."""
+    return ["gh", "api", "--method", "PATCH", f"repos/{repo}/pulls/{pr}", "-f", f"base={base}"]
+
+
+def dead_base(
+    repo: str, pr: str, *, long_lived_bases: tuple[str, ...] = ()
+) -> dict[str, Any] | None:
+    """MERGE_PENDING record when ``pr`` targets a base already contained in the default.
+
+    None when the base is the default, a declared long-lived base, or a branch
+    the default does not yet contain. Unreadable state is MERGE_PENDING, never
+    a merge: a PR landed on a dead base reaches nothing downstream.
+    """
+    record: dict[str, Any] = {
+        "status": "MERGE_PENDING",
+        "repo": repo,
+        "pr": int(pr) if str(pr).isdigit() else pr,
+    }
+    entry = _probe_file_entry(repo, str(pr))
+    try:
+        if entry is not None:
+            base = str(entry.get("base") or "")
+            default = str(entry.get("default_branch") or "") or base
+            if not base or base == default:
+                return None
+            status = str(entry.get("base_compare") or "")
+            if status not in COMPARE_STATUSES:
+                raise RuntimeError(f"probe names no compare status for base '{base}'")
+        else:
+            base = pr_base(repo, str(pr))
+            if not base:
+                raise RuntimeError("REST did not report a base branch")
+            default = default_branch(repo)
+            if base == default:
+                return None
+            if base in long_lived_bases or _long_lived_name(base):
+                return None
+            status = compare_status(repo, default, base)
+    except RuntimeError as exc:
+        return {
+            **record,
+            "reason": f"cannot establish whether the base is live ({exc}); not merged",
+        }
+    if base in long_lived_bases or _long_lived_name(base):
+        return None
+    if status not in DEAD_BASE_STATUSES:
+        return None
+    argv = retarget_argv(repo, str(pr), default)
+    return {
+        **record,
+        "base": base,
+        "default_branch": default,
+        "base_compare": status,
+        "reason": (
+            f"base '{base}' is already contained in the default branch '{default}' "
+            f"({status}); merging here lands #{pr} only on a branch nothing promotes"
+        ),
+        "retarget": argv,
+        "missing_prerequisite": "retarget the pull request, then re-run: " + " ".join(argv),
+    }
+
+
 def select_merge_method(repo: str, pr: str) -> dict[str, Any]:
     """Return method, head, children and head retention. Raises RuntimeError if the probe fails."""
     head, children = _stacked_children(repo, str(pr))
     lived = long_lived_head(repo, str(pr), head)
     long_lived = bool(lived["long_lived"])
-    method = ANCESTRY_SAFE if children or long_lived else UNSTACKED
+    containers: list[int] = []
+    containment_error = ""
+    if not (children or long_lived):
+        # Only a would-be squash needs the containment answer.
+        try:
+            containers = [c for c in containing_prs(repo, str(pr)) if c not in children]
+        except RuntimeError as exc:
+            containment_error = str(exc)
+    method = (
+        ANCESTRY_SAFE if children or long_lived or containers or containment_error else UNSTACKED
+    )
     if long_lived:
         reason = (
             f"head '{head}' is long-lived ({'; '.join(lived['reasons'])}); "
@@ -339,8 +495,21 @@ def select_merge_method(repo: str, pr: str) -> dict[str, Any]:
             + ", ".join(f"#{c}" for c in children)
             + "; --merge preserves ancestry"
         )
+    elif containers:
+        reason = (
+            f"head '{head}' is contained in open PR(s) "
+            + ", ".join(f"#{c}" for c in containers)
+            + "; --merge keeps their history joined (a squash makes each re-apply it)"
+        )
+    elif containment_error:
+        reason = (
+            f"containment probe unavailable ({containment_error}); "
+            "--merge is never wrong, --squash may be"
+        )
     else:
-        reason = "no open PR bases on this head and it is not long-lived; --squash is safe"
+        reason = (
+            "no open PR bases on or contains this head and it is not long-lived; --squash is safe"
+        )
     keep_head_reason = None
     if long_lived:
         keep_head_reason = "long-lived head: " + "; ".join(lived["reasons"])
@@ -351,6 +520,7 @@ def select_merge_method(repo: str, pr: str) -> dict[str, Any]:
         "pr": int(pr) if str(pr).isdigit() else pr,
         "head": head,
         "children": children,
+        "containers": containers,
         "head_long_lived": long_lived,
         "keep_head_reason": keep_head_reason,
         "method": method,
@@ -543,8 +713,10 @@ def _rest_only() -> bool:
     scripts = _HERE.parent.parent / "skills" / "l9-pr-remediation" / "scripts"
     if str(scripts) not in sys.path:
         sys.path.insert(0, str(scripts))
-    import protocol  # noqa: PLC0415
+    import importlib  # noqa: PLC0415
 
+    # Resolved from the skill's scripts directory at runtime, not from site-packages.
+    protocol = importlib.import_module("protocol")
     return bool(protocol.rest_only())
 
 
@@ -1012,6 +1184,13 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help="exact head the human grant covers; required by --run",
     )
+    parser.add_argument(
+        "--long-lived-base",
+        action="append",
+        default=[],
+        metavar="BRANCH",
+        help="a base that is meant to last besides the default (repeatable); never a dead base",
+    )
     args = parser.parse_args(argv)
 
     if args.queue:
@@ -1036,6 +1215,17 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.json or args.run:
+        selection["dead_base"] = dead_base(
+            args.repo, args.pr, long_lived_bases=tuple(args.long_lived_base)
+        )
+        if args.run and selection["dead_base"] is not None:
+            refusal = {**selection["dead_base"], "method": selection["method"]}
+            print(json.dumps(refusal, indent=2, sort_keys=True))
+            print(
+                f"MERGE_PENDING: {args.repo}#{args.pr} not merged — {refusal['reason']}",
+                file=sys.stderr,
+            )
+            return MERGE_PENDING_EXIT
         selection["authorization"] = authorization_status(args.repo, args.pr, args.head_sha)
     bound_sha = ""
     if args.run:
