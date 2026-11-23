@@ -245,7 +245,7 @@ def exclusive_lock(path: Path, wait_s: float) -> Iterator[bool]:
     the PR gates and pr_fleet overlap analysis remain that enforcement.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o644)
+    fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o600)
     acquired = False
     try:
         deadline = time.monotonic() + max(wait_s, 0.0)

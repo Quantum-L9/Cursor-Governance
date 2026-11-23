@@ -536,3 +536,10 @@ def test_outputs_never_grant_permission(h: Harness) -> None:
     rc, rep = h.run("g")
     assert rep["grants_permission"] is False
     assert h.receipt("g")["grants_permission"] is False
+
+
+def test_lock_file_is_private_to_its_owner(tmp_path: Path) -> None:
+    lock = tmp_path / "locks" / "fx.lock"
+    with cto_integrate.exclusive_lock(lock, 0) as got:
+        assert got
+    assert lock.stat().st_mode & 0o077 == 0
