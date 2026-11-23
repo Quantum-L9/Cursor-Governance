@@ -2653,3 +2653,33 @@ Campaign L9-CI-UNIFIED-LEVERAGE v1.7.1, lane CG-CUTOVER item 2.
   `contains` line), so `validate_manifest.py --remote` and the `make pr` drift
   check pass again. The tools.yaml pin rule is unchanged: it follows Core's
   lock, never leads it.
+
+<!-- REPO_EXECUTION_V2_FACADE_V2 -->
+## Root Makefile is the make-v2 facade; PR tests are the bounded `test-fast` (2026-11-23, issue #1162) — supersedes the facade, phases and `make test` lines of "Root Makefile is the make-v1 facade"
+
+Append-only. Core's required `Analyze (central Core)` check judges the test
+expense of every `pull_request`, `merge_group` and `push`. Under make-v1 those
+events ran `make test` → `repo-test` → the whole registry suite, which the
+judge cannot prove bounded, so the check failed on every pull request.
+
+- `.l9/repo-workflow.json` declares facade `make-v2`, phases `setup`,
+  `validate`, `check`, `test-fast`, `test`.
+- The root `Makefile` is Core's `tools/l9_repo/facades/make-v2.mk`, byte for
+  byte (last changed `2308c2c`, #358; sha256 `7ac0aec8e961d2b7…`). Still
+  **never edit it**. `tests/ops/scripts/test_makefile_capability_graph.py`
+  pins the bytes.
+- `Repo.mk` gains the `repo-test-fast` leaf: one `pytest` call over the literal
+  list `REPO_TEST_FAST_PATHS` (`tests/ops/autonomy`, `tests/ops/scripts`,
+  `ops/skill_routing/tests`, `environment/agents/adapters/cursor/tests`) with
+  its own measured `--cov-fail-under`. Keep that list literal: no `.`, no
+  `tests`, no `$VAR`, no registry runner.
+- `make test` is unchanged and remains the whole suite. Core runs
+  `setup validate check test-fast` on judged events and
+  `setup validate check test` on every other event.
+- `l9-lint-test.yml` "Test Suite" runs `make test-fast` on `pull_request`,
+  `merge_group` and `push`. The registry runner `--profile ci` (the whole
+  suite) runs on a nightly `schedule` and on `workflow_dispatch` only. The CI
+  changed-file selection retired from that workflow. Local `make pr` keeps its
+  changed-file gate (`run_pr_gate.sh`) unchanged.
+- Every target and verb is still reachable: before and after the move, make's
+  database lists the same targets plus `test-fast` and `repo-test-fast`.

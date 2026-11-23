@@ -33,21 +33,48 @@ SURFACE = ROOT / "ops" / "autonomy" / "surface_profile.yaml"
 REMEDIATOR_SKILL = ROOT / "skills" / "l9-pr-remediation" / "SKILL.md"
 
 
-def test_workflow_scope_exports_files_and_test_suite_does_not_recall_gh() -> None:
+BOUNDED_IF = "github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'"
+FULL_IF = "github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'"
+
+
+def _test_suite_steps() -> dict[str, dict]:
+    import yaml
+
+    workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    job = workflow["jobs"]["test"]
+    assert job["name"] == "Test Suite"
+    return {step.get("name", ""): step for step in job["steps"]}
+
+
+def test_test_suite_is_bounded_on_judged_events_and_full_only_nightly() -> None:
+    """Issue #1162: Core's required expense judge reads every pull_request,
+    merge_group and push step. Those run `make test-fast` (a literal, BOUNDED
+    selection); the runtime-selected registry suite runs only on schedule and
+    workflow_dispatch, so the whole suite still runs nightly."""
+    import yaml
+
     text = WORKFLOW.read_text(encoding="utf-8")
-    assert "files: ${{ steps.decide.outputs.files }}" in text
-    assert "files_unusable: ${{ steps.decide.outputs.files_unusable }}" in text
-    assert "fail open" not in text
-    assert "PR_SCOPE_UNKNOWN" in text
-    assert "POLICY_PR_DEEP_FORBIDDEN: --profile ci" in text
-    assert "POLICY_PR_DEEP_FORBIDDEN: L9_CI_FULL_SUITE=1" in text
-    assert "name: Test Suite" in text
+    triggers = yaml.safe_load(text)[True]
+    assert triggers["schedule"] and triggers["schedule"][0]["cron"].strip()
+    assert {"pull_request", "merge_group", "push", "workflow_dispatch"} <= set(triggers)
     assert "name: Lint and Type Check" in text
-    test_block = text.split("name: Test Suite", 1)[1]
-    assert 'gh api "repos/' not in test_block
-    assert "--changed-file" in test_block
-    assert "profile=local" in test_block
-    assert "profile=ci" in test_block
+
+    steps = _test_suite_steps()
+    bounded = steps["pytest bounded selection (make test-fast)"]
+    assert bounded["if"] == BOUNDED_IF
+    assert bounded["run"].strip() == "make --no-print-directory test-fast"
+    full = steps["pytest full suite with coverage (nightly and on demand)"]
+    assert full["if"] == FULL_IF
+    assert full["run"].strip() == (
+        ".venv/bin/python ops/scripts/run_python_test_suites.py --profile ci"
+    )
+    for name, step in steps.items():
+        run = str(step.get("run", ""))
+        assert 'gh api "repos/' not in run, name
+        assert "--changed-file" not in run, f"{name}: a runtime-selected PR scope"
+        invokes = ("run_python_test_suites.py", "-m pytest", "test-fast", "make test")
+        if any(token in run for token in invokes):
+            assert step.get("if") in (BOUNDED_IF, FULL_IF), f"{name}: unguarded test step"
     active = [line for line in text.splitlines() if not line.lstrip().startswith("#")]
     assert sum(line.count("run_python_test_suites.py") for line in active) == 1
 
@@ -68,9 +95,10 @@ def test_test_suite_environment_is_owned_by_ensure_gov_python() -> None:
     active_text = "\n".join(active)
     assert 'bash ops/scripts/ensure_gov_python.sh "$PWD"' in active_text
     assert "uv sync" not in active_text, "one environment owner: no raw uv sync in Test Suite"
-    assert active_text.index("ensure_gov_python.sh") < active_text.index(
-        "run_python_test_suites.py"
-    ), "the environment must be complete before pytest-xdist starts"
+    for pytest_entry in ("make --no-print-directory test-fast", "run_python_test_suites.py"):
+        assert active_text.index("ensure_gov_python.sh") < active_text.index(pytest_entry), (
+            "the environment must be complete before pytest-xdist starts"
+        )
     assert sum(line.count("run_python_test_suites.py") for line in active) == 1
     # `uv run --frozen` re-syncs the venv and reinstalls the pip-sealed memory
     # wheel from the lock's path source, erasing the PEP 610 seal the owner
@@ -79,10 +107,6 @@ def test_test_suite_environment_is_owned_by_ensure_gov_python() -> None:
     # exactly as run_pr_gate.sh does locally.
     assert "uv run" not in active_text, "no uv run in Test Suite: it undoes the memory seal"
     assert ".venv/bin/python ops/scripts/run_python_test_suites.py" in active_text
-    # Changed-file / local-vs-ci selection is untouched by the environment change.
-    assert "--changed-file" in active_text
-    assert "profile=local" in active_text
-    assert "profile=ci" in active_text
     assert 'gh api "repos/' not in active_text
 
 
