@@ -339,16 +339,19 @@ def test_unknown_when_log_read_fails() -> None:
 
 # --- evidence redaction -----------------------------------------------------
 
+# Made-up credential shapes, assembled at runtime: a key-shaped literal in
+# source is itself a secret-scanner finding (gitleaks, semgrep p/secrets).
+_FAKE_GHP = "ghp" + "_" + "abcdefghijklmnopqrstuvwxyz0123"
+_FAKE_GHS = "ghs" + "_" + "abcdefghijklmnopqrstuvwxyz012345"
+
 
 @pytest.mark.parametrize(
     ("text", "leak"),
     [
-        ("export GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123", "ghp_abcdef"),
+        ("export GITHUB_TOKEN=" + _FAKE_GHP, "ghp_abcdef"),
         ("Authorization: Bearer abc.def.ghijklmnop", "abc.def.ghijklmnop"),
         ('api_key = "s3cr3tvalue"', "s3cr3tvalue"),
         ("git clone https://user:pw123@github.com/acme/odoo", "pw123"),
-        # Assembled at runtime: a key-shaped literal in source is itself a
-        # secret-scanner finding, even when it is a made-up fixture.
         ("aws " + "AKIA" + "ABCDEFGHIJKLMNOP", "AKIA" + "ABCDEFGHIJKLMNOP"),
         ("db password=hunter22 rejected", "hunter22"),
     ],
@@ -366,7 +369,7 @@ def test_redact_leaves_ordinary_findings_alone() -> None:
 
 def test_evidence_from_a_log_is_redacted() -> None:
     log = (
-        "fatal: unable to access 'https://x-access-token:ghs_abcdefghijklmnopqrstuvwxyz012345"
+        f"fatal: unable to access 'https://x-access-token:{_FAKE_GHS}"
         "@github.com/acme/odoo/': Could not resolve host: github.com\n"
     )
     check = _only(_triage(_payloads([_run(24, "tests", "failure")], logs={24: log}))[0])
