@@ -17,13 +17,18 @@ on:
   # failing check to fix (PR #136 was stuck exactly this way).
   pull_request:
   # Merge queue: "Lint and Type Check" and "Test Suite" are required contexts and
-  # must report on the queued merge commit (github.sha). There both jobs check that
-  # commit in full: Test Suite runs --profile ci, exactly as on push to main.
+  # must report on the queued merge commit (github.sha). There Test Suite runs the
+  # same bounded selection as on pull_request and push (`make test-fast`).
   merge_group:
     types: [checks_requested]
   push:
     branches:
       - main
+  # The whole registry suite (--profile ci) runs nightly and on demand, never on
+  # pull_request, merge_group or push (issue #1162: Core's required expense judge
+  # must prove every test run on those events BOUNDED).
+  schedule:
+    - cron: "37 6 * * *"
   workflow_dispatch:
 
 # ── Consumer config ─────────────────────────────────────────────────────────
@@ -44,70 +49,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Resolves the PR file list once so the Test Suite can scope pytest to the
-  # changed files (--profile local) without re-calling the API. Consumer jobs
-  # below always run their steps and report their required contexts.
-  scope:
-    name: Scope
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      # Empty on merge_group (the step is skipped); Test Suite reads both only on
-      # pull_request.
-      files: ${{ steps.decide.outputs.files }}
-      files_unusable: ${{ steps.decide.outputs.files_unusable }}
-    steps:
-      # A PR API call: only meaningful on pull_request, so skipped by name on
-      # merge_group (the job still runs and succeeds with empty outputs).
-      - name: Resolve PR file list
-        id: decide
-        if: github.event_name != 'merge_group'
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPOSITORY: ${{ github.repository }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          # files = added + modified + renamed vs PR base (gh filename list).
-          # GitHub job-output size is 1MB. An unusable or oversized list is
-          # PR_SCOPE_UNKNOWN: Test Suite exits nonzero and does not run
-          # --profile ci. Test Suite must not re-call gh api.
-          if [ "${EVENT_NAME}" != "pull_request" ]; then
-            echo "files=" >> "${GITHUB_OUTPUT}"
-            echo "files_unusable=false" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-          # Fail closed: an unreadable file list is unknown scope, not a full suite.
-          if ! files="$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
-              --paginate --jq '.[].filename')"; then
-            echo "files=" >> "${GITHUB_OUTPUT}"
-            echo "files_unusable=true" >> "${GITHUB_OUTPUT}"
-            echo "::error::PR_SCOPE_UNKNOWN: could not list PR files; --profile ci is refused"
-            exit 0
-          fi
-          bytes="$(printf '%s\n' "${files}" | wc -c | tr -d ' ')"
-          if [ "${bytes}" -gt 800000 ]; then
-            echo "files=" >> "${GITHUB_OUTPUT}"
-            echo "files_unusable=true" >> "${GITHUB_OUTPUT}"
-            echo "::error::PR_SCOPE_UNKNOWN: scope.outputs.files exceeds GitHub output size; --profile ci is refused"
-            exit 0
-          fi
-          echo "files_unusable=false" >> "${GITHUB_OUTPUT}"
-          {
-            echo "files<<L9_FILES_EOF"
-            printf '%s\n' "${files}"
-            echo "L9_FILES_EOF"
-          } >> "${GITHUB_OUTPUT}"
-
   lint:
     name: Lint and Type Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: scope
     permissions:
       contents: read
     steps:
@@ -202,7 +147,6 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: scope
     permissions:
       contents: read
     steps:
@@ -246,66 +190,32 @@ jobs:
           # unrelated parallel tests failed together. In CI the wrapper keeps the
           # actions/setup-python interpreter (no --managed-python).
           bash ops/scripts/ensure_gov_python.sh "$PWD"
-      - name: pytest with coverage
+      # pull_request, merge_group and push run the bounded selection: `make
+      # test-fast` -> Repo.mk repo-test-fast, a literal list of test paths that
+      # Core's required expense judge proves BOUNDED (issue #1162). It is the same
+      # selection Core's repository verification runs on those events.
+      - name: pytest bounded selection (make test-fast)
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
         env:
           TESTING: "true"
-          EVENT_NAME: ${{ github.event_name }}
-          FILES_UNUSABLE: ${{ needs.scope.outputs.files_unusable }}
-          SCOPE_FILES: ${{ needs.scope.outputs.files }}
-        run: |
-          # Single canonical entrypoint: the registry-driven runner executes every
-          # active suite (root, Claude Code autonomy, subagent-generated-data Wave 3,
-          # Program Execution controller) with the correct per-suite PYTHONPATH,
-          # profiles, coverage, and exit-5 handling. Suite topology lives in
-          # ops/config/python-contract.json — never duplicated here. The runner also
-          # runs the fail-closed drift validator before any suite.
-          # pull_request: --profile local --changed-file from scope.outputs.files
-          # (does not re-list PR files). Unknown scope, an empty surviving list,
-          # L9_CI_FULL_SUITE=1, and --profile ci exit nonzero.
-          # push to main / merge_group / workflow_dispatch: --profile ci. That is not a
-          # pull-request fallback. Sonar's deep suite is dispatch-only.
-          #
-          # Invoked with the locked interpreter the install step verified, not
-          # `uv run`: `uv run --frozen` re-syncs the project environment first,
-          # and it treats the memory wheel the seal just pip-installed from its
-          # hashed URL as not matching the lock's path source, so it reinstalls
-          # that wheel and erases the PEP 610 seal (verified: "Uninstalled 1
-          # package / Installed 1 package", seal check flips to missing). The
-          # first repository test to reach run_pr_gate.sh -> ensure_gov_python.sh
-          # would then re-seal with `pip install --force-reinstall` under live
-          # xdist workers. The local gate (run_pr_gate.sh) already invokes the
-          # runner with .venv/bin/python; CI now does the same.
-          set -euo pipefail
-          if [ "${EVENT_NAME}" = "pull_request" ] && [ "${L9_CI_FULL_SUITE:-}" = "1" ]; then
-            echo "::error::POLICY_PR_DEEP_FORBIDDEN: L9_CI_FULL_SUITE=1"
-            exit 1
-          fi
-          if [ "${EVENT_NAME}" = "pull_request" ] && [ "${FILES_UNUSABLE}" = "true" ]; then
-            echo "::error::PR_SCOPE_UNKNOWN: changed-file list is unusable; --profile ci is refused"
-            exit 1
-          fi
-          profile=ci
-          changed_args=()
-          if [ "${EVENT_NAME}" = "pull_request" ]; then
-            keep="$(mktemp)"
-            printf '%s\n' "${SCOPE_FILES}" | while IFS= read -r path || [ -n "${path}" ]; do
-              [ -z "${path}" ] && continue
-              case "${path}" in
-                -*|/*|..|../*|*/..|*/../*)
-                  echo "::error::PR_SCOPE_UNKNOWN: unsafe path"
-                  exit 1
-                  ;;
-              esac
-              # Deleted paths stay in the list: they select the tests that still
-              # name or import them, and a deletion-only PR is not an empty scope.
-              # The selector drops any target that no longer exists.
-              printf '%s\n' "${path}" >> "${keep}"
-            done
-            profile=local
-            changed_args=(--changed-file "${keep}")
-          fi
-          if [ "${EVENT_NAME}" = "pull_request" ] && [ "${profile}" = "ci" ]; then
-            echo "::error::POLICY_PR_DEEP_FORBIDDEN: --profile ci"
-            exit 1
-          fi
-          .venv/bin/python ops/scripts/run_python_test_suites.py --profile "${profile}" "${changed_args[@]}"
+        run: make --no-print-directory test-fast
+      # The whole registry suite runs nightly (schedule) and on demand
+      # (workflow_dispatch) only. The registry-driven runner executes every active
+      # suite (root, Claude Code autonomy, subagent-generated-data Wave 3, Program
+      # Execution controller) with the per-suite PYTHONPATH, profiles, coverage and
+      # exit-5 handling declared in ops/config/python-contract.json, and runs the
+      # fail-closed drift validator first. The runner itself still refuses
+      # --profile ci on a pull_request.
+      #
+      # Invoked with the locked interpreter the install step verified, not
+      # `uv run`: `uv run --frozen` re-syncs the project environment first, and
+      # it treats the memory wheel the seal just pip-installed from its hashed URL
+      # as not matching the lock's path source, so it reinstalls that wheel and
+      # erases the PEP 610 seal. The first repository test to reach
+      # run_pr_gate.sh -> ensure_gov_python.sh would then re-seal with
+      # `pip install --force-reinstall` under live xdist workers.
+      - name: pytest full suite with coverage (nightly and on demand)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        env:
+          TESTING: "true"
+        run: .venv/bin/python ops/scripts/run_python_test_suites.py --profile ci
