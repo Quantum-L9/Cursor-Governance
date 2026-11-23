@@ -95,9 +95,9 @@ tools:
     # environment: l9-ci pins jsonschema==4.26.0 and semgrep 1.186.0 needs
     # <4.26, so the two cannot share one (Core installs them separately too).
     # The version is the SDK commit; uv installs exactly that revision. It
-    # tracks the revision org-ci.yml provisions (track: ci_ref), so Core's SDK
+    # tracks the revision Core provisions (track: ci_ref), so Core's SDK
     # bumps reach make pr without a re-pin; this hand pin is the fallback.
-    version: d09d3963cf8835446b9d1cfd5a03cc79ce16e2e2
+    version: 4a887396990a59ffb4a7108790b2fa1005c7865d
     track: ci_ref
     method: uv_tool
     package: git+https://github.com/Quantum-L9/l9-ci-sdk
@@ -107,13 +107,17 @@ tools:
     ci_ref:
       repo: Quantum-L9/l9-ci-core
       ref: main
-      path: .github/workflows/org-ci.yml
-      contains: "'d09d3963cf8835446b9d1cfd5a03cc79ce16e2e2'"
-      # The provision-sdk step's default: sdk-revision: ${{ ... || '<sha>' }}
-      extract: 'sdk-revision:[^\n]*\|\|\s*''(?P<version>[0-9a-f]{40})'''
+      # Core's SDK source of truth since org-ci.yml stopped carrying the
+      # revision; .github/actions/provision-sdk/action.yml mirrors it.
+      path: .l9/sdk-compatibility.yaml
+      contains: "revision: 4a887396990a59ffb4a7108790b2fa1005c7865d"
+      # `default.revision` only: the `supported:` list also names revisions
+      # (the default again plus a tested rollback), so the match is anchored
+      # to the top-level `default:` block.
+      extract: '(?m)^default:\n(?:[ \t]+[^\n]*\n)*?[ \t]+revision:[ \t]*(?P<version>[0-9a-f]{40})'
       observed: >-
-        org-ci.yml provisions the SDK at this default sdk-revision for
-        Analyze (central Core), read at l9-ci-core main 68ed9943, 2026-11-07.
+        .l9/sdk-compatibility.yaml default.revision provisions the SDK for
+        Analyze (central Core), read at l9-ci-core main 3d1288f, 2026-11-23.
   zizmor:
     version: 1.30.1
     method: uv_tool
