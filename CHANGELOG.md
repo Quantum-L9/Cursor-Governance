@@ -7,6 +7,23 @@ history instead of trusting a backfilled entry here.
 
 ## [Unreleased]
 
+### Fixed
+- **Manus session start now binds its machine prerequisites (adapter):** the
+  installer is the SessionStart path because Manus fires no hook, but it left
+  three things the later gates assume to the operator. `session_env.sh`
+  provisions `$HOME/.cursor-governance` through `governance_sync.sh`, the owner
+  that already performs the guarded clone-if-missing — `resolve_governance_paths.sh`
+  accepts nothing else — so the `pass_filenames: false` `symlinks-check` hook
+  no longer fails every `make pr` on a clean tree. It writes
+  `~/.l9/cloud-session.env` from
+  `environment.env.example` with `L9_GOVERNANCE_SURFACE=manus`, because an unset
+  surface fails closed to Cursor and demands desktop plugin links on a Manus
+  host. The installer also runs `ensure_authority_checkout.sh` before the
+  binding, the step Cursor's `session_start_bootstrap.sh` already owned for its
+  surface, so a fresh sandbox reaches BOUND instead of
+  `CANONICAL_AUTHORITY_CHECKOUT_NOT_AVAILABLE`. `--check` reports all three
+  without mutating them.
+
 ### Removed
 - **Direct Graphiti provider path (memory realignment C11, ADR-0030):**
   `ops/graphiti/graphiti_memory_client.py` is a tombstone (exit 2, names
