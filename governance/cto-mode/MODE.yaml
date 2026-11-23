@@ -5,8 +5,8 @@
 #   layer: governance
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.5.0
-#   updated: 2026-11-20
+#   version: 1.6.0
+#   updated: 2026-11-23
 # Consumer-local contract for the opt-in CTO mode. It selects meaning; it is not
 # authority to admit a profile and it grants no permission.
 schema: l9.cursor-governance.cto-mode/v1
@@ -135,7 +135,7 @@ runtime_ownership:
 # CTO never relaunches agents to add them. They are behavior, not authority: they grant no
 # permission, widen no scope and admit nothing. Emitted verbatim with `on` / `status`.
 operating_protocol:
-  version: 3
+  version: 4
   grants_permission: false
   invariants:
     minimal_operator_pings: >-
@@ -225,6 +225,9 @@ operating_protocol:
       lane may write or read) and put it in every child brief. Size the pool to the lanes that can run at once, never above five.
     - Assign disjoint path ownership per lane and a stacking chain for every lane that
       shares files; overlap is resolved by sequencing, never by concurrent edits.
+    - Record the campaign and every authority-reserved question in files, not prose,
+      with the campaign_tooling steps below (campaign_start, decisions) before the
+      first dispatch.
   child_brief_must_include:
     - 'ROLE: coding agent in a fixed pool; the CTO session id; no CTO, coordination, integration or merge authority.'
     - 'CODING-AGENT PROJECTIONS: every swarm agent is deployed with /coding-agent MODE enabled (projection l9.projection/coding-agent-execution@1 bound through coding_agent_mode.py; never the l9-coding-agent skill) as its first action, against a Quantum-L9/.github checkout with non-shallow history. No code change until the mode reports ACTIVE; BLOCKED is a CTO-BLOCKER, never a reason to proceed without the projection.'
@@ -321,6 +324,8 @@ operating_protocol:
     - Send GATE (exact base branch) when a parent lane pushes with its own tests green.
     - Integration-test the combined stack in a disposable worktree before any merge or
       completion claim.
+    - Start every check-in with campaign_tooling.check_in (`cto_campaign.py tick`) and
+      act on its delta; re-read nothing the delta did not change.
   handoff:
     - At convergence, write the session brief and the pool record (each agent's session
       id, repositories, current lane and state) for the next CTO.
@@ -330,6 +335,54 @@ operating_protocol:
       <new>). The new CTO adopts the pool as it stands; nothing is relaunched.
     - A TRANSFER is the only change of coordinator. REBIND keeps its meaning (re-bind the
       coding-agent mode) and never changes who the coordinator is.
+    - The campaign record the next CTO adopts is <workspace>/.l9/cto-mode/campaign.json
+      and decisions.json (campaign_tooling.handoff); a pool record or brief that
+      disagrees with them is corrected from them, never the reverse.
+  # Campaign tooling (cto-workflow-v1, 2026-11-23, from the Odoo pre-go-live campaign,
+  # where the CTO hand-wrote campaign state, merge drivers, equivalence checks and
+  # integration scripts in scratchpad). Each step names the governed tool by path and
+  # command. The tools are advisory: every JSON output carries grants_permission: false,
+  # none is a repository lock (rules/96 E7/E8/E10), and git, the PR gates, merge_gate
+  # and stack_safe_merge.py remain the enforcement. Using a tool grants nothing.
+  # tests/ops/autonomy/test_cto_mode.py asserts every path named here exists.
+  campaign_tooling:
+    interpreter: $HOME/.cursor-governance/.venv/bin/python
+    tools:
+      cto_campaign: ops/autonomy/cto_campaign.py
+      cto_claims: ops/autonomy/cto_claims.py
+      ci_triage: ops/autonomy/ci_triage.py
+      merge_drivers: ops/scripts/ensure_git_merge_drivers.sh
+      cto_integrate: ops/autonomy/cto_integrate.py
+      cto_train: ops/autonomy/cto_train.py
+      stack_safe_merge: ops/autonomy/stack_safe_merge.py
+    files:
+      campaign: <workspace>/.l9/cto-mode/campaign.json (l9.cto-campaign/v1, governance/cto-mode/schemas/campaign.schema.json)
+      decisions: <workspace>/.l9/cto-mode/decisions.json (l9.cto-decisions/v1, governance/cto-mode/schemas/decisions.schema.json)
+      train: <workspace>/.l9/cto-mode/train.json (l9.cto-train/v1, governance/cto-mode/schemas/train.schema.json)
+      integration_receipt: <workspace>/.l9/cto-mode/integration/<candidate>.json (l9.cto-integration-receipt/v1, governance/cto-mode/schemas/integration-receipt.schema.json)
+      ownership: governance/cto-mode/ownership.yaml
+    campaign_start:
+      - '`cto_campaign.py init --campaign <id> --cto-session <this session> --repo <owner/name>` once, then `cto_campaign.py pool set --agent <a> --session <s> --lane <lane>` for every launched pool agent, and `lane set` / `pool set --state` as lanes move.'
+      - 'Before assigning a lane, `cto_claims.py check --repo <owner/name> --paths <lane paths> --campaign <id> --role <role>`; on no conflict `cto_claims.py register` the lane, and `cto_claims.py label` each lane PR once published.'
+      - An overlap with another campaign or open PR is sequenced, never edited concurrently. A path whose governance/cto-mode/ownership.yaml owner differs from the role is a CTO-QUESTION to that owner, not a lane assignment.
+    decisions:
+      - 'Every authority-reserved question is recorded first with `cto_campaign.py decide ask --id <Dn> --question … --option KEY:text … --recommended KEY`, and the CTO sends the printed numbered options in chat. The ledger, not the chat or a host question tool, is the record: after a restart, `decide pending` re-prints every unanswered question.'
+      - The operator's reply is recorded with `cto_campaign.py decide answer --id <Dn> --answer KEY [--note …]`; a replaced decision is asked with `--supersedes <Dm>`.
+      - 'Every child brief embeds the output of `cto_campaign.py decide brief` verbatim; a brief never paraphrases or hand-copies a decision.'
+    check_in:
+      - 'The send_later check-in body is the fixed line printed by `cto_campaign.py tick --checkin-text`; it never carries campaign state, so a superseded check-in cannot act on stale state.'
+      - Each check-in runs `cto_campaign.py tick` and acts on its delta (new heads, merges, board and mergeability changes, new red required checks); an empty delta means no PR changed. Pool session status is merged from list_sessions, which tick cannot read.
+      - 'Every red required check is classified with `ci_triage.py classify --repo <owner/name> --pr <n> --json` before it is routed: billing, infra, gate_config, stale_baseline and scope_unknown go upstream or to the operator; code goes to the owning lane as CTO REMEDIATE; unknown stays unknown and is investigated, never routed by guess.'
+    integration:
+      - 'No merge before integration. In the candidate clone the merge drivers are registered by `ensure_git_merge_drivers.sh <clone>`, which `cto_integrate.py build` runs as its registrar.'
+      - 'Then `cto_integrate.py build --train <train.json>`, `cto_integrate.py run --candidate <name>`, and `cto_integrate.py check --receipt <receipt> --heads <pr=sha,…>`. A receipt with verdict pass that names exactly the proven heads is required; a fail receipt or a moved head is integration evidence for the owning lane, never a merge.'
+    merge:
+      - Write train.json (order, pairs, each PR's proven_head, the integration_receipt), then `cto_train.py plan` and `cto_train.py run` (`--dry-run` first). Every merge goes through stack_safe_merge.py --run --head-sha and therefore merge_gate and the merge-authority switch; the CTO never hand-merges a stack, and no tool uses --admin, force-push or a hard reset.
+      - 'stack_safe_merge.py refuses a dead base and keeps a containment parent unsquashed; a refusal or a DEFERRED PR is evidence to act on, never something to route around.'
+    cross_cto:
+      - 'A base, interface or gate change that another campaign on the same repository can see is recorded with `cto_claims.py notice --kind base-change|interface-change|gate-change`; the CTO sends the printed CTO NOTICE text itself.'
+    handoff:
+      - campaign.json and decisions.json are the campaign record at hand-off, alongside the pool record and session brief; the existing TRANSFER rules are unchanged.
 constraints:
   - Activation changes what this session reads, never what it may do. Publication,
     merge, push and deploy authority stay with CANONICAL_LAW.md and
