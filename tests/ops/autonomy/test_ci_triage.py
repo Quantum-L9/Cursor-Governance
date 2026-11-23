@@ -347,7 +347,9 @@ def test_unknown_when_log_read_fails() -> None:
         ("Authorization: Bearer abc.def.ghijklmnop", "abc.def.ghijklmnop"),
         ('api_key = "s3cr3tvalue"', "s3cr3tvalue"),
         ("git clone https://user:pw123@github.com/acme/odoo", "pw123"),
-        ("aws AKIAABCDEFGHIJKLMNOP", "AKIAABCDEFGHIJKLMNOP"),
+        # Assembled at runtime: a key-shaped literal in source is itself a
+        # secret-scanner finding, even when it is a made-up fixture.
+        ("aws " + "AKIA" + "ABCDEFGHIJKLMNOP", "AKIA" + "ABCDEFGHIJKLMNOP"),
         ("db password=hunter22 rejected", "hunter22"),
     ],
 )
