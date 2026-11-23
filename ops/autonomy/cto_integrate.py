@@ -329,11 +329,11 @@ def fetch_refs(clone: Path, base: str, numbers: list[int]) -> None:
     _git(clone, "fetch", "-q", "--no-tags", "origin", *specs)
 
 
-def register_drivers(clone: Path) -> dict[str, Any]:
+def register_drivers(clone: Path, registrar: Path = ENSURE_DRIVERS) -> dict[str, Any]:
     """Run the governance driver registrar; report whether lane B's version driver
     is present. Its absence is tolerated and recorded, never assumed away."""
     proc = subprocess.run(
-        ["bash", str(ENSURE_DRIVERS), str(clone)],
+        ["bash", str(registrar), str(clone)],
         capture_output=True,
         text=True,
         check=False,
@@ -341,12 +341,12 @@ def register_drivers(clone: Path) -> dict[str, Any]:
     )
     if proc.returncode != 0:
         raise IntegrateError(
-            f"ensure_git_merge_drivers.sh failed (exit {proc.returncode}): "
+            f"{registrar.name} failed (exit {proc.returncode}): "
             f"{(proc.stderr or proc.stdout).strip()}"
         )
     versions = _git(clone, "config", "--get", f"merge.{VERSION_DRIVER}.driver", check=False)
     return {
-        "registrar": str(ENSURE_DRIVERS),
+        "registrar": str(registrar),
         "registrar_output": proc.stdout.strip(),
         VERSION_DRIVER: "registered" if versions.returncode == 0 else "absent",
     }
@@ -503,7 +503,7 @@ def build(args: argparse.Namespace) -> int:
         if not got:
             raise IntegrateError(f"clone {clone} is busy (another build or run holds it)")
         fetch_refs(clone, train["base"], order)
-        drivers = register_drivers(clone)
+        drivers = register_drivers(clone, Path(args.driver_registrar).resolve())
         base_sha = _rev(clone, "refs/l9/base")
         heads = {str(n): _rev(clone, f"refs/l9/pr/{n}") for n in order}
         moved = {
@@ -982,6 +982,12 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--candidate", help="candidate name (default: campaign + digest of heads)")
     b.add_argument("--workdir", help="clone dir (default $HOME/.l9/cto-integrate/<owner__name>)")
     b.add_argument("--remote", help="clone source (default https://github.com/<repo>.git)")
+    b.add_argument(
+        "--driver-registrar",
+        default=str(ENSURE_DRIVERS),
+        help="merge-driver registrar run as `bash <registrar> <clone>` "
+        "(default ops/scripts/ensure_git_merge_drivers.sh)",
+    )
     b.add_argument(
         "--resolution",
         action="append",

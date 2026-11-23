@@ -71,6 +71,8 @@ class Harness:
         self.workspace.mkdir()
         self.workdir = root / "clones" / "repo"
         self.lock_dir = root / "locks"
+        # Hermetic by default: lane B's version driver is absent unless a test registers it.
+        self.registrar = _registrar(root, versions=False)
 
     def pr(self, number: int, files: dict[str, str]) -> str:
         _git(self.origin, "checkout", "-q", "-B", f"pr{number}", self.base)
@@ -108,6 +110,8 @@ class Harness:
             str(self.origin),
             "--workdir",
             str(workdir or self.workdir),
+            "--driver-registrar",
+            str(self.registrar),
             *extra,
         )
 
@@ -148,7 +152,7 @@ def test_clean_merge_builds_runs_and_passes(h: Harness) -> None:
     assert out["status"] == "built"
     assert out["grants_permission"] is False
     assert out["heads"] == {"1": s1, "2": s2}
-    assert out["drivers"]["l9-versions"] == "absent"  # lane B not landed: recorded, tolerated
+    assert out["drivers"]["l9-versions"] == "absent"  # hermetic stub registrar: no driver
     assert out["resolutions"] == []
     clone = Path(out["clone"])
     assert (clone / "one.txt").is_file() and (clone / "two.txt").is_file()
@@ -188,32 +192,104 @@ def test_foreign_directory_is_never_reused(h: Harness) -> None:
     assert (h.workdir / "precious.txt").read_text(encoding="utf-8") == "mine\n"
 
 
-def test_mechanical_resolution_is_recorded_with_its_kind(
-    h: Harness, _isolated_git: Path, tmp_path: Path
-) -> None:
-    # Stand-in for lane B's driver: take the higher-version side ("theirs" here).
-    driver = tmp_path / "fake_driver.py"
-    driver.write_text(
-        "import shutil, sys\nshutil.copyfile(sys.argv[3], sys.argv[2])\n", encoding="utf-8"
-    )
-    with _isolated_git.open("a", encoding="utf-8") as fh:
-        fh.write(f'[merge "l9-versions"]\n\tdriver = {PY} {driver} %O %A %B %P\n')
-    attrs = {".gitattributes": "__manifest__.py merge=l9-versions\n"}
-    _git(h.origin, "checkout", "-q", "main")
-    h.base = _commit(h.origin, attrs, "attributes")
+def _registrar(tmp_path: Path, *, versions: bool) -> Path:
+    """A hermetic stand-in for ops/scripts/ensure_git_merge_drivers.sh.
+
+    versions=False registers nothing (lane B's driver absent); versions=True
+    registers an `l9-versions` driver the way lane B's contract does: git config
+    in the clone plus attributes in <clone>/.git/info/attributes. The stand-in
+    driver keeps the "theirs" side, which is enough to prove that a resolution a
+    driver made is detected and recorded with its kind.
+    """
+    script = tmp_path / ("registrar-versions.sh" if versions else "registrar-none.sh")
+    if versions:
+        driver = tmp_path / "fake_versions_driver.py"
+        driver.write_text(
+            "import shutil, sys\nshutil.copyfile(sys.argv[3], sys.argv[2])\n", encoding="utf-8"
+        )
+        script.write_text(
+            "set -eu\n"
+            f'git -C "$1" config merge.l9-versions.driver "{PY} {driver} %O %A %B %P"\n'
+            'mkdir -p "$1/.git/info"\n'
+            "printf '%s\\n' '__manifest__.py merge=l9-versions' 'README* merge=l9-versions' "
+            "'**/tests/__init__.py merge=l9-versions' > \"$1/.git/info/attributes\"\n"
+            "echo OK: stub registrar\n",
+            encoding="utf-8",
+        )
+    else:
+        script.write_text("echo OK: stub registrar, no drivers\n", encoding="utf-8")
+    return script
+
+
+def test_absent_version_driver_is_tolerated_and_recorded(h: Harness, tmp_path: Path) -> None:
+    h.registrar = _registrar(tmp_path, versions=False)
     h.pr(1, {"mod/__manifest__.py": "{'name': 'mod', 'version': '19.0.1.1.0'}\n"})
     h.pr(2, {"mod/__manifest__.py": "{'name': 'mod', 'version': '19.0.1.2.0'}\n"})
+    h.train([1, 2])
+    rc, out = h.build("--candidate", "nodriver")
+    assert out["drivers"]["l9-versions"] == "absent"
+    assert out["drivers"]["registrar"] == str(h.registrar.resolve())
+    # Without the driver a version bump on both sides is a plain conflict: stop, never guess.
+    assert rc == 3 and out["reason"] == "conflict"
+    assert [c["path"] for c in out["conflicts"]] == ["mod/__manifest__.py"]
+
+
+def test_registered_version_driver_resolutions_are_recorded_with_their_kind(
+    h: Harness, tmp_path: Path
+) -> None:
+    h.registrar = _registrar(tmp_path, versions=True)
+    _git(h.origin, "checkout", "-q", "main")
+    h.base = _commit(
+        h.origin,
+        {
+            "mod/README.md": "---\nmodule_version: 19.0.1.0.0\n---\n",
+            "mod/tests/__init__.py": "from . import test_a\n",
+        },
+        "readme and tests",
+    )
+    h.pr(
+        1,
+        {
+            "mod/__manifest__.py": "{'name': 'mod', 'version': '19.0.1.1.0'}\n",
+            "mod/README.md": "---\nmodule_version: 19.0.1.1.0\n---\n",
+            "mod/tests/__init__.py": "from . import test_a\nfrom . import test_b\n",
+        },
+    )
+    h.pr(
+        2,
+        {
+            "mod/__manifest__.py": "{'name': 'mod', 'version': '19.0.1.2.0'}\n",
+            "mod/README.md": "---\nmodule_version: 19.0.1.2.0\n---\n",
+            "mod/tests/__init__.py": "from . import test_a\nfrom . import test_c\n",
+        },
+    )
     h.train([1, 2])
     rc, out = h.build("--candidate", "mech")
     assert rc == 0, out
     assert out["drivers"]["l9-versions"] == "registered"
-    assert [(r["pr"], r["path"], r["kind"]) for r in out["resolutions"]] == [
-        (2, "mod/__manifest__.py", "version")
+    assert sorted((r["pr"], r["path"], r["kind"]) for r in out["resolutions"]) == [
+        (2, "mod/README.md", "readme_version"),
+        (2, "mod/__manifest__.py", "version"),
+        (2, "mod/tests/__init__.py", "tests_init"),
     ]
-    assert "l9-versions" in out["resolutions"][0]["detail"]
+    assert all("l9-versions" in r["detail"] for r in out["resolutions"])
+    assert out["unclassified_driver_merges"] == []
     rc, _ = h.run("mech")
     assert rc == 0
-    assert h.receipt("mech")["resolutions"][0]["kind"] == "version"
+    kinds = sorted(r["kind"] for r in h.receipt("mech")["resolutions"])
+    assert kinds == ["readme_version", "tests_init", "version"]
+
+
+def test_governance_registrar_reports_driver_presence_truthfully(h: Harness) -> None:
+    """The real registrar: the recorded status follows whether lane B's driver ships
+    in the governance tree under test, so the test holds before and after B lands."""
+    h.registrar = cto_integrate.ENSURE_DRIVERS
+    shipped = (REPO / "ops" / "scripts" / "git_merge_driver_versions.py").is_file()
+    h.pr(1, {"one.txt": "1\n"})
+    h.train([1])
+    rc, out = h.build("--candidate", "real")
+    assert rc == 0, out
+    assert out["drivers"]["l9-versions"] == ("registered" if shipped else "absent")
 
 
 def test_manual_conflict_stops_then_reviewed_resolution_applies(h: Harness, tmp_path: Path) -> None:
