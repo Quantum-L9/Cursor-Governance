@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -26,12 +27,30 @@ def test_parses_bound_report(tmp_path: Path, binding_json: str, make_context) ->
     assert result["default_projection"]["status"] == "BOUND"
 
 
-def test_line_format_is_human_readable(tmp_path: Path, binding_json: str, make_context) -> None:
+def test_bound_line_states_the_fact(tmp_path: Path, binding_json: str, make_context) -> None:
     _root(tmp_path)
     context = make_context({"host_binding.py": {"stdout": binding_json}})
     result = binding.handle(context, {"format": "line"})
     assert "BOUND" in result["line"]
+    assert "every default projection verified" in result["line"]
+    assert "no reason reported" not in result["line"]
     assert result["report"]["status"] == "BOUND"
+
+
+def test_unbound_line_carries_the_reason(tmp_path: Path, make_context) -> None:
+    _root(tmp_path)
+    payload = {
+        "status": "NOT_BOUND",
+        "host": "manus",
+        "default": {
+            "status": "NOT_BOUND",
+            "reason": "UNVERIFIED: CANONICAL_AUTHORITY_CHECKOUT_NOT_AVAILABLE",
+        },
+    }
+    context = make_context({"host_binding.py": {"stdout": json.dumps(payload)}})
+    result = binding.handle(context, {"format": "line"})
+    assert "NOT_BOUND" in result["line"]
+    assert "CANONICAL_AUTHORITY_CHECKOUT_NOT_AVAILABLE" in result["line"]
 
 
 def test_missing_control_is_an_input_error(tmp_path: Path) -> None:

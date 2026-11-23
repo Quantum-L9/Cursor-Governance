@@ -95,10 +95,17 @@ def handle(context: RuntimeContext, arguments: dict[str, Any]) -> dict[str, Any]
     report = collect_binding(context)
     if requested == "line":
         default = report.get("default_projection") or {}
-        line = (
-            f"default projection binding (manus): {report['status']} — "
-            f"{default.get('reason') or 'no reason reported'}"
-        )
+        if report["status"] == "BOUND":
+            sha = (default.get("authority_main") or "")[:12]
+            line = (
+                "default projection binding (manus): BOUND — every default projection "
+                f"verified (authority {sha or 'unknown'})"
+            )
+        else:
+            line = (
+                f"default projection binding (manus): {report['status']} — "
+                f"{default.get('reason') or 'no reason reported'}"
+            )
         return {"status": report["status"], "line": line, "report": report}
     return report
 
