@@ -173,8 +173,20 @@
       "expires": "2099-01-01"
     },
     {
+      "path": "environment/agents/adapters/manus/session_env.sh",
+      "reason": "Session env writer unsets the retired memory provider variables and skips secret-shaped keys (negative check). It opens no provider connection.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
       "path": "environment/agents/adapters/claude-code/account/memory-oauth-connector.yaml",
       "reason": "Claude account connector `resource_identifier`. Memory 3.0 OAuth audience, not a provider route: the RFC 8707 resource identifier https://memory.quantumaipartners.com/mcp that Quantum-L9/l9-graphiti-memory publishes as MEMORY_RESOURCE_IDENTIFIER (ADR-100, src/l9_graphite_memory/version.py). CANONICAL_LAW \u00a78.10 authorizes the native authenticated Streamable HTTP MCP transport; this file declares its audience and grants no raw Graphiti HTTP. Added by #791 without a row.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/secrets/provision_memory_operator_grants.py",
+      "reason": "Release guard reads package_version from the Memory 3.0 /healthz on the same authorized host (CANONICAL_LAW \u00a78.10). The request is pinned through safe_https to that host. It is not a Graphiti provider client.",
       "retire_at_stage": "never",
       "expires": "2099-01-01"
     },

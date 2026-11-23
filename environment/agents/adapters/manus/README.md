@@ -5,8 +5,8 @@ path: environment/agents/adapters/manus/README.md
 layer: adapter
 owner: governance-control-plane
 status: active
-version: 6.0.0
-updated: 2026-11-05
+version: 6.1.0
+updated: 2026-11-21
 /L9_META -->
 
 # Manus adapter — thin governance and capability binding
@@ -41,6 +41,19 @@ installation or authentication attempt. Shared outcomes are `0` (satisfied),
 Python blocks before governance consumers. Use the checkout's `.venv/bin/python`,
 not system Python, for governance validation. The installer does not configure
 a Manus account, install a project instruction remotely or heal a check run.
+
+Because Manus exposes no SessionStart hook, the installer is the session start.
+Before the bootstrap it binds the two machine-level facts later gates assume,
+through `session_env.sh`: `$HOME/.cursor-governance` (the SSOT path
+`resolve_governance_paths.sh` accepts, provisioned through the existing
+`governance_sync.sh` clone-if-missing owner rather than a second implementation
+here) and `L9_GOVERNANCE_SURFACE=manus` (unset makes
+`is_cursor_host_surface()` fail closed to Cursor, and the
+`pass_filenames: false` `symlinks-check` hook then fails every `make pr` on a
+clean tree). It then provisions the governance-managed authority checkout the
+default projection binding verifies — the step Cursor's
+`session_start_bootstrap.sh` owns for its surface. `--check` reports all three
+without mutating them.
 
 Hosted Manus shared secret bootstrap consumes only sanctioned environment
 machine identity (`L9_INFISICAL_CLIENT_ID` / `L9_INFISICAL_CLIENT_SECRET`). It

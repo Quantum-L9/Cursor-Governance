@@ -60,6 +60,12 @@ clients:
     # registration: public PKCE client, no secret, no project entry.
     # The callback is Manus's own MCP OAuth endpoint, not a loopback URI.
     client_type: public
+    # Auth0's app type, not a repo concept. `native` refuses a hosted `https`
+    # callback with `400 invalid OAuth callback` even when the URI is in the
+    # allowlist, because a native callback is expected to be a custom scheme or
+    # loopback. `spa` keeps every public-client property below and accepts the
+    # hosted callback. Re-registering this client as `native` re-breaks login.
+    app_type: spa
     token_endpoint_auth_method: none
     grant_types:
       - authorization_code
@@ -67,6 +73,11 @@ clients:
     pkce: S256
     client_secret: forbidden
     client_id: lIY0hERvmh34BZK0veLKtEtZm4qf9Beb
+    # Auth0 client grants carry a subject lane. A grant created without
+    # `subject_type` lands in `client` (machine-to-machine), and /authorize then
+    # answers `not authorized to access resource server` for a user-delegated
+    # flow. This client holds both lanes; only the `user` lane authorizes login.
+    grant_subject_type: user
     project_mcp_entry: false
     hosted_credential_injection: false
     redirect_uris:

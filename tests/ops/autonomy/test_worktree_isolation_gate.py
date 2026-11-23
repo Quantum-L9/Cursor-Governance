@@ -61,6 +61,44 @@ def test_denies_broad_add(monkeypatch: pytest.MonkeyPatch) -> None:
         assert command_violates_worktree_isolation(cmd) is not None, cmd
 
 
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "git add -u -- a.py b/c.py",
+        "git add --update -- a.py",
+        "git -C /repo add -u -- a.py",
+        "git add -A -- docs/x.md",
+        "git add -u -- a.py && git commit -m x",
+        "bash -c 'git add -u -- a.py'",
+    ],
+)
+def test_allows_broad_flag_scoped_to_explicit_paths(
+    monkeypatch: pytest.MonkeyPatch, cmd: str
+) -> None:
+    """The denial asks for explicit pathspecs; an add that names them is scoped."""
+    _clear_iso(monkeypatch)
+    assert command_violates_worktree_isolation(cmd) is None, cmd
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "git add -u -- .",
+        "git add -A :/",
+        "git add -u -- a.py && git add -A",
+        "git add -u a.py; git add .",
+        "bash -c 'git add -u'",
+        "git add -uv",
+        "git add -vA",
+    ],
+)
+def test_broad_flag_with_wide_or_missing_pathspec_stays_denied(
+    monkeypatch: pytest.MonkeyPatch, cmd: str
+) -> None:
+    _clear_iso(monkeypatch)
+    assert command_violates_worktree_isolation(cmd) is not None, cmd
+
+
 def test_allows_explicit_path_add(monkeypatch: pytest.MonkeyPatch) -> None:
     _clear_iso(monkeypatch)
     monkeypatch.delenv("L9_GIT_BROAD_ADD_AUTHORIZED", raising=False)
