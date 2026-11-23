@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9.cto-integration-receipt/v1",
+  "title": "CTO integration receipt",
+  "description": "Evidence that one integration candidate (base plus every listed PR head, merged in train order) was built and checked. Written by ops/autonomy/cto_integrate.py run. A receipt attests only to the observations it records; it grants no merge, publication or execution permission (L9-EVIDENCE-001).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "campaign",
+    "repo",
+    "base_ref",
+    "base_sha",
+    "candidate",
+    "heads",
+    "tree_sha",
+    "resolutions",
+    "results",
+    "verdict",
+    "created_at"
+  ],
+  "properties": {
+    "schema": { "const": "l9.cto-integration-receipt/v1" },
+    "campaign": { "type": "string", "minLength": 1 },
+    "repo": { "type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$" },
+    "base_ref": { "type": "string", "minLength": 1 },
+    "base_sha": { "$ref": "#/$defs/sha" },
+    "candidate": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+    "heads": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[1-9][0-9]*$" },
+      "additionalProperties": { "$ref": "#/$defs/sha" }
+    },
+    "tree_sha": { "$ref": "#/$defs/sha" },
+    "resolutions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pr", "path", "kind", "detail"],
+        "properties": {
+          "pr": { "type": "integer", "minimum": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["version", "readme_version", "tests_init", "manual"] },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "results": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["static", "suite", "runtime"],
+      "properties": {
+        "static": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ok", "detail"],
+          "properties": {
+            "ok": { "type": "boolean" },
+            "detail": { "type": "string" }
+          }
+        },
+        "suite": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ok", "passed", "failed", "skipped"],
+          "properties": {
+            "ok": { "type": "boolean" },
+            "passed": { "$ref": "#/$defs/count" },
+            "failed": { "$ref": "#/$defs/count" },
+            "skipped": { "$ref": "#/$defs/count" }
+          }
+        },
+        "runtime": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["ok", "run", "failed", "errors"],
+              "properties": {
+                "ok": { "type": "boolean" },
+                "run": { "$ref": "#/$defs/count" },
+                "failed": { "$ref": "#/$defs/count" },
+                "errors": { "$ref": "#/$defs/count" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "verdict": { "enum": ["pass", "fail"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "grants_permission": {
+      "const": false,
+      "description": "Optional. Always written false by cto_integrate.py; a receipt never grants permission."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "verdict": { "const": "pass" } } },
+      "then": {
+        "properties": {
+          "results": {
+            "properties": {
+              "static": { "properties": { "ok": { "const": true } } },
+              "suite": { "properties": { "ok": { "const": true } } },
+              "runtime": {
+                "oneOf": [
+                  { "type": "null" },
+                  { "type": "object", "properties": { "ok": { "const": true } } }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$" },
+    "count": {
+      "description": "A parsed count, or null when the tool output carried no parseable summary (unknown, never coerced to 0).",
+      "type": ["integer", "null"],
+      "minimum": 0
+    }
+  }
+}
