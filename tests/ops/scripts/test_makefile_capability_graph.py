@@ -10,6 +10,8 @@ single registry.
 from __future__ import annotations
 
 import collections
+import hashlib
+import json
 import re
 import subprocess
 import sys
@@ -19,11 +21,17 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ops" / "scripts"))
 from make_database import make_database  # noqa: E402
 
-# The root Makefile is the generated l9-ci-core make-v1 facade (Repository
-# Execution V2); the capability graph it used to own lives in Repo.mk.
+# The root Makefile is the generated l9-ci-core make-v2 facade (Repository
+# Execution V2, issue #1162); the capability graph it used to own lives in Repo.mk.
 MAKEFILE = ROOT / "Makefile"
 REPO_MK = ROOT / "Repo.mk"
-FACADE_HEADER = "# GENERATED repository execution facade: make-v1. DO NOT EDIT.\n"
+CONTRACT = ROOT / ".l9" / "repo-workflow.json"
+FACADE_HEADER = "# GENERATED repository execution facade: make-v2. DO NOT EDIT.\n"
+# l9-ci-core tools/l9_repo/facades/make-v2.mk, last changed 2308c2c (#358) and
+# byte-identical at Core main 3d1288f. Core verifies the bytes on every PR; this
+# pin makes a local edit fail here first.
+FACADE_SHA256_PREFIX = "7ac0aec8e961d2b7"
+FACADE_PHASES = ("setup", "validate", "check", "test-fast", "test")
 MAKE_DIR = ROOT / "ops" / "make"
 
 ROOT_TARGETS = {
@@ -35,6 +43,7 @@ ROOT_TARGETS = {
     "repo-validate",
     "repo-check",
     "repo-test",
+    "repo-test-fast",
 }
 TARGET_RULE = re.compile(r"^(?P<targets>[A-Za-z0-9_. -]+):(?P<tail>.*)$")
 
@@ -167,14 +176,66 @@ def test_every_registered_capability_has_one_live_recipe_owner() -> None:
     assert not duplicate_owners, f"capabilities have competing fragment owners: {duplicate_owners}"
 
 
-def test_root_makefile_is_the_make_v1_facade_over_repo_mk() -> None:
-    facade = MAKEFILE.read_text(encoding="utf-8")
+def test_root_makefile_is_the_make_v2_facade_over_repo_mk() -> None:
+    raw = MAKEFILE.read_bytes()
+    assert hashlib.sha256(raw).hexdigest().startswith(FACADE_SHA256_PREFIX), (
+        "the root Makefile is Core's make-v2 facade byte for byte; never edit it"
+    )
+    facade = raw.decode("utf-8")
     assert facade.startswith(FACADE_HEADER)
     assert ".DEFAULT_GOAL := help" in facade
     assert "\ninclude Repo.mk\n" in facade
-    for phase in ("setup", "validate", "check", "test"):
+    for phase in FACADE_PHASES:
         assert re.search(rf"^{phase}: repo-{phase} ## ", facade, re.MULTILINE), phase
     assert "L9_TARGETS" not in facade, "the facade carries no repository registry"
+
+
+def test_contract_declares_make_v2_and_its_five_phases() -> None:
+    contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    assert contract == {
+        "schema": "l9.repo-execution/v2",
+        "facade": "make-v2",
+        "required_phases": list(FACADE_PHASES),
+    }
+
+
+def test_repo_mk_redefines_no_facade_verb() -> None:
+    owned = set(_rule_owners(REPO_MK))
+    for fragment in (ROOT / path for path in _make_fragments()):
+        owned.update(_rule_owners(fragment))
+    assert not owned & {"help", *FACADE_PHASES}, "Repo.mk implements leaves, never facade verbs"
+
+
+def _repo_test_fast_paths() -> list[str]:
+    text = REPO_MK.read_text(encoding="utf-8")
+    match = re.search(
+        r"^REPO_TEST_FAST_PATHS\s*:=\s*\\\n(?P<body>(?:\t.*\\\n)*\t.*)$", text, re.MULTILINE
+    )
+    assert match is not None, "Repo.mk must declare REPO_TEST_FAST_PATHS as a literal list"
+    return [line.strip().removesuffix("\\").strip() for line in match.group("body").splitlines()]
+
+
+def test_repo_test_fast_is_a_bounded_literal_selection() -> None:
+    """Core's expense judge must read test-fast as BOUNDED (issue #1162)."""
+    paths = _repo_test_fast_paths()
+    assert paths, "the bounded selection is empty"
+    for path in paths:
+        assert "$" not in path and not path.startswith("@"), f"{path}: selection is not literal"
+        assert path.strip("./") not in {"", "tests", "test"}, f"{path}: a full-suite root"
+        target = ROOT / path
+        assert target.exists(), f"{path}: selects nothing"
+        tests = [target] if target.is_file() else list(target.rglob("test_*.py"))
+        assert tests, f"{path}: contains no test file"
+    text = REPO_MK.read_text(encoding="utf-8")
+    recipe = text.split("\nrepo-test-fast:", 1)[1]
+    assert "-m pytest $(REPO_TEST_FAST_PATHS)" in recipe
+    assert "run_python_test_suites" not in recipe and "run_pytest_suites" not in recipe
+    assert "--collect-only" not in recipe
+    assert re.search(r"--cov-fail-under=\$\(REPO_TEST_FAST_COV_FAIL_UNDER\)", recipe)
+    assert re.search(r"(?m)^REPO_TEST_FAST_COV_FAIL_UNDER := [1-9][0-9]$", text)
+    assert text.index("REPO_TEST_FAST_PATHS :=") < text.index("\nrepo-test-fast:"), (
+        "the judge expands variables in file order: define the list above the rule"
+    )
 
 
 def test_root_stays_a_composition_and_introspection_surface() -> None:
