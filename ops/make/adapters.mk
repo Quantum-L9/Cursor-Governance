@@ -27,6 +27,7 @@ L9_TARGETS += \
 	manus-install \
 	manus-install-check \
 	manus-start \
+	manus-session-start \
 	cursor-projection-check \
 	skill-plane-test \
 	claude-preservation-check \
@@ -187,6 +188,14 @@ manus-start:
 			--host manus \
 			--workspace "$(if $(WS),$(WS),$(CURDIR))" \
 			--format line
+# Manus fires no session hook. This target is the substitute: refresh the
+# authority checkout, compute the projection binding, emit a receipt. Same code
+# path as the governance_session_start MCP tool.
+manus-session-start:
+	@$(PYTHON) "$(CURDIR)/environment/agents/adapters/manus/session/session_start.py" \
+		--workspace "$(if $(WS),$(WS),$(CURDIR))" \
+		--format line
+
 # ---------------------------------------------------------------------------
 # Virtual skill plane
 # ---------------------------------------------------------------------------

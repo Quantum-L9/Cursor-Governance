@@ -107,6 +107,7 @@ L9_CONSUMER_SAFE_TARGETS := \
 	claude-plugins \
 	claude-env \
 	manus-start \
+	manus-session-start \
 	ide-profile \
 	l4-status \
 	l4-begin \

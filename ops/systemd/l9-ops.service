@@ -1,0 +1,19 @@
+[Unit]
+Description=L9 Ops Manus MCP (stdio facade bridged to streamable HTTP :7010)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=l9
+Group=l9
+WorkingDirectory=/home/l9/L9-Ops-MCP
+Environment=L9_OPS_MCP_REPO_ROOT=/home/l9/L9-Ops-MCP
+ExecStart=/home/l9/.local/bin/mcp-proxy --transport streamablehttp --host 127.0.0.1 --port 7010 --allowed-host ops.167-233-222-27.sslip.io --allowed-host 127.0.0.1 -- /home/l9/L9-Ops-MCP/.venv/bin/python -m l9_ops_mcp.manus_kernel_server
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

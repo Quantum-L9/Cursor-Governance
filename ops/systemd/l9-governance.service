@@ -1,0 +1,23 @@
+[Unit]
+Description=L9 Governance MCP (streamable HTTP :8787)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=l9
+Group=l9
+WorkingDirectory=/home/l9/Cursor-Governance
+Environment=L9_MANUS_MCP_HOST=127.0.0.1
+Environment=L9_MANUS_MCP_PORT=8787
+ExecStart=/usr/bin/bash /home/l9/Cursor-Governance/environment/agents/adapters/manus/serve_mcp.sh --auth-token-file /etc/l9/governance.token
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/l9/Cursor-Governance
+
+[Install]
+WantedBy=multi-user.target
