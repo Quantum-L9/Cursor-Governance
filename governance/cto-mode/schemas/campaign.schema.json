@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9/cto-campaign/v1",
+  "title": "L9 CTO campaign state v1",
+  "description": "Campaign state a CTO session reads instead of re-sending it in every check-in prompt. Written only by ops/autonomy/cto_campaign.py. Advisory coordination state: it grants no permission and is no repository lock.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "grants_permission",
+    "campaign",
+    "cto_session",
+    "repos",
+    "pool",
+    "train",
+    "checkin",
+    "updated_at"
+  ],
+  "properties": {
+    "schema": { "const": "l9.cto-campaign/v1" },
+    "grants_permission": { "const": false },
+    "campaign": { "type": "string", "minLength": 1 },
+    "cto_session": { "type": "string", "minLength": 1 },
+    "repos": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/repo" }
+    },
+    "pool": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/pool_entry" }
+    },
+    "train": {
+      "description": "Path to the lane A train manifest (l9.cto-train/v1), or null.",
+      "type": ["string", "null"]
+    },
+    "checkin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cadence_min", "last_tick_at", "last_digest"],
+      "properties": {
+        "cadence_min": { "type": "integer", "minimum": 1 },
+        "last_tick_at": { "type": ["string", "null"] },
+        "last_digest": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "updated_at": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "repo": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "pool_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent", "session", "lane", "state", "prs"],
+      "properties": {
+        "agent": { "type": "string", "minLength": 1 },
+        "session": { "type": "string", "minLength": 1 },
+        "lane": { "type": ["string", "null"] },
+        "state": {
+          "enum": [
+            "unassigned",
+            "assigned",
+            "working",
+            "question",
+            "blocked",
+            "ready-to-merge",
+            "idle",
+            "stood-down",
+            "unknown"
+          ]
+        },
+        "prs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1 }
+        },
+        "repo": {
+          "description": "Repository of this entry's PRs. Optional when the campaign has exactly one repository.",
+          "$ref": "#/$defs/repo"
+        }
+      }
+    }
+  }
+}
