@@ -1,0 +1,24 @@
+[Unit]
+Description=L9 Cognitive Runtime MCP (streamable HTTP :8080)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=l9
+Group=l9
+WorkingDirectory=/home/l9/l9-cognitive-runtime
+Environment=L9_MCP_TRANSPORT=http
+Environment=L9_BIND_HOST=127.0.0.1
+Environment=PORT=8080
+Environment=L9_PACK_ROOT=/home/l9/l9-cog-manus-artifacts/packs/kernel-5062193
+Environment=L9_TRUST_PROXY=true
+Environment=L9_FORWARDED_ALLOW_IPS=127.0.0.1
+ExecStart=/home/l9/l9-cog-manus-artifacts/venvs/box/bin/l9-cognitive-runtime-http
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -345,6 +345,39 @@ class TestInvariants:
         context = ctx(probe=StaticProbe(dirty=agent_dirty("a.py")))
         assert outcome(command, context) is Outcome.DENY_REQUIRES_HUMAN
 
+    @pytest.mark.parametrize(
+        "command",
+        [
+            f"{GIT} stash list; {GIT} stash pop; {GIT} status --short",
+            f"{GIT} stash pop && {GIT} status",
+            f"{GIT} stash apply stash@{{0}} && {GIT} diff --stat",
+        ],
+    )
+    def test_i011_restore_alone_is_not_a_probe(self, command: str) -> None:
+        """Restoring parked work is the recovery move; it parks nothing to measure.
+
+        The worktree is clean because the work is in the stash. (A pop onto a
+        dirty tracked file stays denied as an overwrite, a separate rule.)
+        """
+        context = ctx(probe=StaticProbe(dirty=()))
+        assert outcome(command, context) is Outcome.GUARD_THEN_ALLOW
+
+    def test_i011_restore_onto_dirty_work_is_still_denied_as_overwrite(self) -> None:
+        context = ctx(probe=StaticProbe(dirty=agent_dirty("a.py")))
+        assert outcome(f"{GIT} stash pop", context) is Outcome.DENY_REQUIRES_HUMAN
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            f"{GIT} stash && {GIT} status && {GIT} stash pop",
+            f"{GIT} stash -q 2>/dev/null; {GIT} diff; {GIT} stash pop",
+            f"{GIT} stash save wip && {GIT} log -1 && {GIT} stash apply",
+        ],
+    )
+    def test_i011_park_then_restore_stays_a_probe(self, command: str) -> None:
+        context = ctx(probe=StaticProbe(dirty=agent_dirty("a.py")))
+        assert outcome(command, context) is Outcome.DENY_REQUIRES_HUMAN
+
     def test_i012_guard_capture_does_not_mutate_the_protected_state(
         self, stacked_repo: Path, tmp_path: Path
     ) -> None:

@@ -25,6 +25,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+ADAPTER_ROOT = Path(__file__).resolve().parent
+if str(ADAPTER_ROOT) not in sys.path:  # tools/ and session/ are local packages
+    sys.path.insert(0, str(ADAPTER_ROOT))
+
+from tools import RuntimeContext, build_registry  # noqa: E402
+
 SERVER_NAME = "l9-governance"
 SERVER_VERSION = "1.0.0"
 SUPPORTED_PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
@@ -120,6 +126,13 @@ class GovernanceMcpService:
         self.bootstrap_enabled = bootstrap_enabled
         self.bootstrap_apply_enabled = bootstrap_apply_enabled
         self.memory_lifecycle_enabled = memory_lifecycle_enabled
+        self._tool_context = RuntimeContext(
+            self.governance_root,
+            self.adapter_root,
+            runner=lambda command, *, cwd, timeout=120: _run(command, cwd=cwd, timeout=timeout),
+        )
+        self.tool_registry = build_registry(self._tool_context)
+        self.session_receipt: dict[str, Any] | None = None
 
     def tools(self) -> list[dict[str, Any]]:
         tools = [
@@ -356,6 +369,7 @@ class GovernanceMcpService:
                     },
                 ]
             )
+        tools.extend(spec.schema() for spec in self.tool_registry.values())
         return tools
 
     def _resolve_workspace(self, raw: Any) -> Path:
@@ -485,6 +499,13 @@ class GovernanceMcpService:
                 "bootstrap_apply_enabled": self.bootstrap_apply_enabled,
             },
         }
+        if self.session_receipt is not None:
+            result["session_receipt"] = {
+                "issued_at": self.session_receipt.get("issued_at"),
+                "binding_status": self.session_receipt.get("binding_status"),
+                "bound": self.session_receipt.get("bound"),
+                "authority_sha": self.session_receipt.get("authority_sha"),
+            }
         if "workspace" in arguments:
             if not self.bootstrap_enabled:
                 raise ToolInputError("workspace status requires a bearer-protected MCP deployment")
@@ -669,6 +690,12 @@ class GovernanceMcpService:
                 return _text_content(self.memory_lifecycle_start(arguments))
             if name == "memory_lifecycle_close":
                 return _text_content(self.memory_lifecycle_close(arguments))
+            spec = self.tool_registry.get(name)
+            if spec is not None:
+                result = spec.handler(self._tool_context, arguments)
+                if name == "governance_session_start":
+                    self.session_receipt = result
+                return _text_content(result)
             return _text_content({"error": f"unknown tool: {name}"}, is_error=True)
         except (ImportError, OSError, RuntimeError, ToolInputError, ValueError) as exc:
             return _text_content({"error": str(exc)}, is_error=True)

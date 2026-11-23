@@ -107,6 +107,7 @@ L9_CONSUMER_SAFE_TARGETS := \
 	claude-plugins \
 	claude-env \
 	manus-start \
+	manus-session-start \
 	ide-profile \
 	l4-status \
 	l4-begin \
@@ -184,3 +185,37 @@ include ops/make/campaign.mk
 # ---------------------------------------------------------------------------
 include ops/make/release.mk
 L9_CONSUMER_SAFE_TARGETS += release
+# ---------------------------------------------------------------------------
+# make-v2 test-fast leaf (2026-11-23, issue #1162). Appended because Repo.mk is
+# additive_only: the header above still says make-v1, and AGENTS.md
+# REPO_EXECUTION_V2_FACADE_V2 records the move. The root Makefile is now Core's
+# make-v2 facade: `make test-fast` -> repo-test-fast here, and `make test` ->
+# repo-test (the whole registry suite) is unchanged.
+#
+# Core's required check runs test-fast on pull_request, merge_group and push,
+# after its expense judge proves the selection BOUNDED: every pytest call takes
+# a literal list of existing test paths. Keep REPO_TEST_FAST_PATHS literal and
+# defined above the rule (the judge expands variables in file order). Never add
+# `.`, `tests`, a $VAR selection, an @argfile or the registry runner here.
+#
+# Selection: the autonomy core (merge, publication, L4, worktree and execution
+# gates), the ops/scripts publication and gate scripts, and the two suites
+# governance-self-check.yml already runs. Measured 2026-11-23 on 4 workers:
+# 3117 passed, 2 skipped in 150s; line coverage of `.` 57%. The threshold below
+# sits 2 points under that measurement so an environment-skipped test cannot
+# fail the gate, and is this run's own: no other threshold changes.
+# ---------------------------------------------------------------------------
+REPO_TEST_FAST_PATHS := \
+	tests/ops/autonomy \
+	tests/ops/scripts \
+	ops/skill_routing/tests \
+	environment/agents/adapters/cursor/tests
+REPO_TEST_FAST_COV_FAIL_UNDER := 55
+L9_TARGETS += \
+	repo-test-fast
+.PHONY: repo-test-fast
+repo-test-fast: venv ## Run the bounded pull-request test selection (literal paths)
+	TESTING=true PYTHONPATH="$(CURDIR)" $(PYTHON) -m pytest $(REPO_TEST_FAST_PATHS) \
+		-n auto --dist=loadgroup --timeout=300 --tb=short -q -p no:cacheprovider \
+		--cov=. --cov-report=xml --cov-report=term \
+		--cov-fail-under=$(REPO_TEST_FAST_COV_FAIL_UNDER)

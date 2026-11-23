@@ -1,0 +1,26 @@
+[Unit]
+Description=SplitWisely.ai (Express + tRPC + Drizzle/MySQL)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=l9
+Group=l9
+WorkingDirectory=/home/l9/apps/splitwisely
+EnvironmentFile=/home/l9/apps/splitwisely/.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryMax=768M
+
+[Install]
+WantedBy=multi-user.target

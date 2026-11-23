@@ -205,6 +205,7 @@ def _structural_errors(repo_root: Path) -> list[str]:
         "serve_mcp.sh",
         "serve_memory_mcp.sh",
         "session_bootstrap.md",
+        "session_env.sh",
         "setup.md",
     }
     for filename in sorted(required_files):
@@ -497,6 +498,8 @@ def _structural_errors(repo_root: Path) -> list[str]:
         "--workspace",
         "bootstrap_agent_environment.sh",
         "--surface manus",
+        "session_env.sh",
+        "ensure_authority_checkout.sh",
     ):
         if marker not in installer:
             errors.append(f"installer is missing native-connector validation marker: {marker}")

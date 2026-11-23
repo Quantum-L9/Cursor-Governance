@@ -56,6 +56,13 @@ class ManusMcpServerTests(unittest.TestCase):
                 "governance_search",
                 "governance_status",
                 "governance_validate",
+                "governance_binding",
+                "governance_capabilities",
+                "governance_commands",
+                "governance_diff",
+                "governance_resolve",
+                "governance_session_start",
+                "governance_validate_artifact",
             },
         )
 

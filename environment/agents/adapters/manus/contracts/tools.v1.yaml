@@ -1,0 +1,145 @@
+# Declared Manus governance tool surface.
+#
+# Every tool the adapter can expose is listed here with its safety posture and
+# the test that proves it. `tests/test_tools_contracts.py` fails the build when
+# a registered tool is missing from this file, when a declared tool has no test,
+# or when anything claims to be writable.
+schema: l9.manus.tool-surface.v1
+transport: streamable-http
+endpoint: /mcp
+read_only_default: true
+max_output_chars: 16000
+max_request_bytes: 1000000
+
+tools:
+  # --- registry tools (this package) -------------------------------------
+  - name: governance_binding
+    module: tools/binding.py
+    status: registry
+    read_only: true
+    max_output_chars: 16000
+    owner: ops/autonomy/host_binding.py
+    test: tests/test_tools_binding.py
+    purpose: Report the Manus projection binding and the authority commit it resolved against.
+
+  - name: governance_resolve
+    module: tools/resolve.py
+    status: registry
+    read_only: true
+    max_output_chars: 16000
+    owner: kernels/, rules/, contracts/, protocols/, commands/
+    test: tests/test_tools_resolve.py
+    purpose: Deterministically resolve a task to the law that governs it.
+
+  - name: governance_capabilities
+    module: tools/capabilities.py
+    status: registry
+    read_only: true
+    max_output_chars: 16000
+    owner: skills/AUTONOMY_MANIFEST.yaml, commands/COMMANDS_MANIFEST.yaml, protocols/, Makefile
+    test: tests/test_tools_capabilities.py
+    purpose: List the skills, slash commands, protocols and make targets the repository declares.
+
+  - name: governance_validate_artifact
+    module: tools/validate_artifact.py
+    status: registry
+    read_only: true
+    max_output_chars: 16000
+    owner: environment/agents/tools/validate_agents.py, environment/agents/adapters/manus/validate_manus_adapter.py
+    test: tests/test_tools_validate_artifact.py
+    purpose: Run the governing validator for one artifact path and filter findings to it.
+
+  - name: governance_commands
+    module: tools/commands.py
+    status: registry
+    read_only: true
+    max_output_chars: 16000
+    owner: commands/COMMANDS_MANIFEST.yaml
+    test: tests/test_tools_commands.py
+    purpose: List slash commands, or read one command's definition by name.
+
+  - name: governance_diff
+    module: tools/diff.py
+    status: registry
+    read_only: true
+    max_output_chars: 16000
+    owner: git working tree
+    test: tests/test_tools_diff.py
+    purpose: Report working-tree state, diff stat, distance from origin/main and a bounded patch.
+
+  - name: governance_session_start
+    module: session/session_start.py
+    status: registry
+    read_only: true
+    max_output_chars: 16000
+    owner: ops/autonomy/host_binding.py, ops/scripts/ensure_authority_checkout.sh
+    test: tests/test_session_start.py
+    purpose: Bind the session and emit a timestamped receipt; the hook substitute.
+
+  # --- legacy inline tools (migration tracked, still contract-covered) ----
+  - name: governance_status
+    module: mcp_server.py
+    status: legacy-inline
+    read_only: true
+    max_output_chars: 16000
+    owner: mcp_server.py
+    test: tests/test_mcp_server.py
+    purpose: Governance checkout status, adapter contract status, optional workspace summary.
+
+  - name: governance_validate
+    module: mcp_server.py
+    status: legacy-inline
+    read_only: true
+    max_output_chars: 16000
+    owner: mcp_server.py
+    test: tests/test_mcp_server.py
+    purpose: Run the structural validators (bearer-protected deployments only).
+
+  - name: governance_bootstrap
+    module: mcp_server.py
+    status: legacy-inline
+    read_only: true
+    max_output_chars: 16000
+    owner: mcp_server.py
+    test: tests/test_mcp_server.py
+    purpose: Delegate a workspace to the shared bootstrap in check mode.
+
+  - name: governance_read
+    module: mcp_server.py
+    status: legacy-inline
+    read_only: true
+    max_output_chars: 16000
+    owner: mcp_server.py
+    test: tests/test_mcp_server.py
+    purpose: Bounded text read from a governance document.
+
+  - name: governance_search
+    module: mcp_server.py
+    status: legacy-inline
+    read_only: true
+    max_output_chars: 16000
+    owner: mcp_server.py
+    test: tests/test_mcp_server.py
+    purpose: Bounded lexical search across readable governance prefixes.
+
+  - name: governance_list_skills
+    module: mcp_server.py
+    status: legacy-inline
+    read_only: true
+    max_output_chars: 16000
+    owner: mcp_server.py
+    test: tests/test_mcp_server.py
+    purpose: Enumerate skills with their declared descriptions.
+
+# Tools deliberately not exposed. Kept here so the omission is a decision, not
+# an oversight.
+excluded:
+  - name: governance_receipt_write
+    reason: >-
+      Writing validation evidence to a ledger is valuable but mutating. It must not
+      ship on a read-only surface; it requires a separate --allow-governance-write
+      flag and its own contract, mirroring --allow-bootstrap-apply.
+  - name: governance_shell
+    reason: The adapter never exposes a shell. Execution belongs to the host, not the control plane.
+  - name: governance_secret_read
+    reason: Secrets are not governance documents. Infisical owns that boundary.
