@@ -229,6 +229,22 @@ def test_gate_config_from_summary() -> None:
     assert "Audit class detectors" in check["evidence"]
 
 
+def test_gate_config_from_expense_guard_unknown_script() -> None:
+    # Recorded from Quantum-L9/Cursor-Governance#1159, "Analyze (central Core)".
+    log = (
+        "2026-11-23T16:43:45.5368902Z static judge is not a hosted test receipt\n"
+        "2026-11-23T16:43:45.5368902Z UNKNOWN_SCRIPT\n"
+        "2026-11-23T16:43:45.5373193Z UNKNOWN_SCRIPT missing makefile "
+        "/home/runner/work/Cursor-Governance/Cursor-Governance/$(MAKE_FRAGMENTS)\n"
+        "2026-11-23T16:43:45.5373738Z UNKNOWN_SCRIPT pytest selection is not literal\n"
+        "2026-11-23T16:43:45.5400000Z ##[error]Process completed with exit code 1.\n"
+    )
+    run = _run(23, "Analyze (central Core)", "failure")
+    check = _only(_triage(_payloads([run], logs={23: log}))[0])
+    assert check["verdict"] == "gate_config"
+    assert check["evidence"].startswith("UNKNOWN_SCRIPT missing makefile")
+
+
 def test_scope_unknown_named_in_log() -> None:
     log = "pr_fast: unknown path addons/new_mod/__init__.py\nProcess completed with exit code 1.\n"
     check = _only(_triage(_payloads([_run(13, "PR fast", "failure")], logs={13: log}))[0])

@@ -123,6 +123,10 @@ _SIGNATURES: tuple[tuple[str, tuple[re.Pattern[str], ...]], ...] = (
             re.compile(r"(?:❌|✗|✘).*\bbaseline\b"),
             re.compile(r"(?:❌|✗|✘)\s*audit class detectors"),
             re.compile(r"(?:❌|✗|✘).*\bgate config"),
+            # l9-ci-core expense guard: its static judge cannot classify the
+            # repository's own Makefile / pytest invocation (CI configuration,
+            # not the PR's code).
+            re.compile(r"^unknown_script\b.+"),
         ),
     ),
     (
