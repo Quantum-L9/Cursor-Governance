@@ -337,6 +337,42 @@ def test_unknown_when_log_read_fails() -> None:
     assert "job log unavailable" in check["evidence"]
 
 
+# --- evidence redaction -----------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "leak"),
+    [
+        ("export GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123", "ghp_abcdef"),
+        ("Authorization: Bearer abc.def.ghijklmnop", "abc.def.ghijklmnop"),
+        ('api_key = "s3cr3tvalue"', "s3cr3tvalue"),
+        ("git clone https://user:pw123@github.com/acme/odoo", "pw123"),
+        ("aws AKIAABCDEFGHIJKLMNOP", "AKIAABCDEFGHIJKLMNOP"),
+        ("db password=hunter22 rejected", "hunter22"),
+    ],
+)
+def test_redact_removes_credential_shapes(text: str, leak: str) -> None:
+    redacted = ci_triage.redact(text)
+    assert leak not in redacted
+    assert ci_triage.REDACTED in redacted
+
+
+def test_redact_leaves_ordinary_findings_alone() -> None:
+    line = "addons/sale_x/models/order.py:3:1: E401 Multiple imports on one line"
+    assert ci_triage.redact(line) == line
+
+
+def test_evidence_from_a_log_is_redacted() -> None:
+    log = (
+        "fatal: unable to access 'https://x-access-token:ghs_abcdefghijklmnopqrstuvwxyz012345"
+        "@github.com/acme/odoo/': Could not resolve host: github.com\n"
+    )
+    check = _only(_triage(_payloads([_run(24, "tests", "failure")], logs={24: log}))[0])
+    assert check["verdict"] == "infra"
+    assert "ghs_" not in check["evidence"]
+    assert ci_triage.REDACTED in check["evidence"]
+
+
 # --- owner_hint --------------------------------------------------------------
 
 

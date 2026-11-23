@@ -159,6 +159,25 @@ _TIMESTAMP = re.compile(r"^\d{4}-\d\d-\d\dT[\d:.]+Z\s?")
 _ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 _RUNNER_PREFIX = re.compile(r"^(?:/home/runner/work/[^/]+/[^/]+/|/github/workspace/|\./)")
 _JOB_ID = re.compile(r"/job/(\d+)")
+# Evidence is quoted from CI output, which can echo a credential GitHub did not
+# mask. These shapes are replaced before a quote leaves the tool.
+REDACTED = "[REDACTED]"
+_SECRET_SHAPES: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{20,}"), REDACTED),
+    (re.compile(r"\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}"), REDACTED),
+    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), REDACTED),
+    (re.compile(r"\beyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{10,}"), REDACTED),
+    (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"), REDACTED),
+    (re.compile(r"(?i)\b(bearer|basic)\s+[\w.~+/=-]{12,}"), rf"\1 {REDACTED}"),
+    (
+        re.compile(
+            r"(?i)\b([\w.-]*(?:token|secret|password|passwd|api[_-]?key|private[_-]?key)[\w.-]*)"
+            r"(\s*[:=]\s*)(['\"]?)[^\s'\"]{4,}\3"
+        ),
+        rf"\1\2{REDACTED}",
+    ),
+    (re.compile(r"(?i)\b(https?://)[^/\s:@]+:[^/\s@]+@"), rf"\1{REDACTED}@"),
+)
 
 
 class TriageError(RuntimeError):
@@ -211,8 +230,15 @@ def _clean_line(line: str) -> str:
     return line.strip()
 
 
+def redact(text: str) -> str:
+    """Replace credential-shaped substrings, keeping a key name for context."""
+    for pattern, replacement in _SECRET_SHAPES:
+        text = pattern.sub(replacement, text)
+    return text
+
+
 def _quote(line: str) -> str:
-    line = " ".join(line.split())
+    line = redact(" ".join(line.split()))
     return line if len(line) <= EVIDENCE_MAX else line[: EVIDENCE_MAX - 1] + "…"
 
 
