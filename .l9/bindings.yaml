@@ -1,0 +1,38 @@
+# --- L9_META ---
+# l9_schema: 1
+# origin: Cursor-Governance
+# layer: [governance, binding]
+# tags: [L9_CONTRACT, consumer-edge]
+# owner: governance
+# status: active
+# --- /L9_META ---
+#
+# The memory control plane Cursor depends on. The pin is the release identity:
+# the version, the peeled commit, and the wheel digest the cross-repo proof
+# reproduces. It is a contract binding, so Core's converge engine rewrites the
+# machine fields and stops — memory-cross-repo.yml is the merge gate, and the
+# prose in source.ref_note stays a human statement because it carries the
+# publish run id and the build recipe, which no release document can derive.
+schema: l9.bindings/v1
+consumer: Quantum-L9/Cursor-Governance
+bindings:
+  - id: memory
+    description: >-
+      l9-graphiti-memory, pinned by release identity and proved by the
+      cross-repo lifecycle job.
+    producer: Quantum-L9/l9-graphiti-memory
+    channel: v3
+    class: contract
+    file: ops/config/memory-binding.json
+    artifact: "*.whl"
+    fields:
+      version:
+        - expected_package_version
+        - release_evidence.package_version
+      revision: source.ref
+      digest: release_evidence.artifact_sha256
+    proof: .github/workflows/memory-cross-repo.yml
+    policy:
+      auto_pr: true
+      auto_merge: false
+      requires_proof: true
