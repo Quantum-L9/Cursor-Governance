@@ -54,7 +54,9 @@ while [ "$#" -gt 0 ]; do
     --dry-run) DRY_RUN=1 ;;
     --no-verify) VERIFY=0 ;;
     -h | --help)
-      sed -n '2,27p' "$0" | sed -e 's/^# //' -e 's/^#//'
+      # Print the header comment only: stop at the first line that is not a comment, so adding a
+      # line to the header can never leak code into --help.
+      awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
       exit 0
       ;;
     *) die "unknown argument: $1 (try --help)" ;;
@@ -232,27 +234,25 @@ if [ "$VERIFY" -eq 0 ]; then
   exit 0
 fi
 
-note "== verify: names present and values hash-equal (nothing is printed)"
-listed="$work/listed.json"
-infisical_ secrets --env "$INFISICAL_ENV" --path "$INFISICAL_PATH" \
-  --projectId "$INFISICAL_PROJECT_ID" --silent -o json >"$listed" ||
-  die "could not list secrets for verification"
-
+note "== verify: every name reads back with a hash-equal value (nothing is printed)"
+# Each name is read individually. The listing (`secrets -o json`) marshals the v3 model as
+# secretKey/secretValue, so matching a name inside it would test the JSON shape, not the secret;
+# a failed `secrets get` is the one unambiguous statement that the name is not there.
 failures=0
 i=0
 while [ "$i" -lt "$total" ]; do
   name=${NAMES[$i]}
-  if ! grep -q "\"$name\":" "$listed"; then
+  if ! stored=$(infisical_ secrets get "$name" \
+    --env "$INFISICAL_ENV" --path "$INFISICAL_PATH" \
+    --projectId "$INFISICAL_PROJECT_ID" --expand=false --plain --silent 2>/dev/null); then
     printf '  MISSING %s\n' "$name" >&2
     failures=$((failures + 1))
     i=$((i + 1))
     continue
   fi
-  # Trailing newlines are stripped identically on both sides, so a value that ends in one still matches.
+  # Command substitution strips trailing newlines on both sides, so a value that ends in one still matches.
   expected=$(printf '%s' "$(cat "$work/out/$name")" | sha)
-  actual=$(printf '%s' "$(infisical_ secrets get "$name" \
-    --env "$INFISICAL_ENV" --path "$INFISICAL_PATH" \
-    --projectId "$INFISICAL_PROJECT_ID" --expand=false --plain --silent)" | sha)
+  actual=$(printf '%s' "$stored" | sha)
   if [ "$expected" != "$actual" ]; then
     printf '  MISMATCH %s\n' "$name" >&2
     failures=$((failures + 1))
