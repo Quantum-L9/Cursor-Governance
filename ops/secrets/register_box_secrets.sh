@@ -30,8 +30,9 @@
 #
 # Requires: ssh, tar, and the Infisical CLI (brew install infisical/get-cli/infisical), already
 # authenticated (`infisical login`, or `infisical login --method=universal-auth --client-id=...
-# --client-secret=...`). Verified against CLI 0.43.84: that release has no `secrets-manager`
-# command, and `secrets set` is an upsert, so re-running this script is safe.
+# --client-secret=...`). Verified against CLI 0.43.84 and 0.45.14: neither has a working
+# `secrets-manager` create path for this, `secrets set` is an upsert in both, so re-running this
+# script is safe, and the flags used here exist in both releases.
 set -euo pipefail
 
 BOX_HOST=${L9_BOX_HOST:-root@167.233.222.27}
@@ -251,6 +252,9 @@ if [ "$DRY_RUN" -eq 1 ]; then
 fi
 
 note "== upload"
+# No --expand here on purpose. Expansion is a read-time concern, so the flag changes nothing about
+# what is stored, and CLI 0.45.14 removed it from `set` (it survives on `get`). Passing it would fail
+# on a current install with "unknown flag: --expand".
 i=0
 while [ "$i" -lt "$total" ]; do
   name=${NAMES[$i]}
@@ -258,7 +262,6 @@ while [ "$i" -lt "$total" ]; do
     --env "$INFISICAL_ENV" \
     --path "$INFISICAL_PATH" \
     --projectId "$(project_for "$name")" \
-    --expand=false \
     --silent >/dev/null; then
     die "failed to set $name in the $(dest_label "$name") project"
   fi
