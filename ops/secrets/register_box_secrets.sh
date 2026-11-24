@@ -8,7 +8,7 @@
 #
 #   register_box_secrets.sh              # collect, upload, verify
 #   register_box_secrets.sh --dry-run    # collect and print the plan; upload nothing
-#   register_box_secrets.sh --no-verify  # skip the read-back hash check
+#   register_box_secrets.sh --no-readback # skip the read-back hash check
 #
 # Environment:
 #   L9_BOX_HOST           default root@167.233.222.27
@@ -52,7 +52,7 @@ note() { printf '%s\n' "$*" >&2; }
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
-    --no-verify) VERIFY=0 ;;
+    --no-readback) VERIFY=0 ;;
     -h | --help)
       # Print the header comment only: stop at the first line that is not a comment, so adding a
       # line to the header can never leak code into --help.
