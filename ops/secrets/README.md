@@ -38,6 +38,7 @@ environment; Cursor / operator from the profile seeded by the AWS login seed. Se
 | `vault_mcp_bridge.py` + `vault-mcp-bridges.json` | stdio bridge for remote MCP servers whose key is bound from Infisical (Context7) |
 | `capability_exec.py` + `capability-exec.json` | Registered child-process runs needing one vault secret in their own env (Semgrep Pro dry-run); fixed argv, output scrubbed (AGENTS.md CI_PARITY_HOSTED_CLAUDE_V1) |
 | `infisical-cursor-governance.yaml` | Infisical project inventory (IDs + env key names, no values). `memory_prod_secret_refs` names the Memory project's prod secrets and is outside the bind gate |
+| `register_box_secrets.sh` | Operator-run (macOS Terminal, bash 3.2) upload of the L9 box's durable credentials into Infisical prod `/` under the names recorded in `box_credential_refs`; idempotent, read-back verified, writes nothing to the box or to git |
 | `port_aws_to_infisical.py` | Re-port AWS `openclaw-igorbot/*` → Infisical prod |
 | `registry.overlays.yaml` | Local stubs not yet in AWS (`ui-session-*`, `provisioned: false`) |
 | `registry.schema.yaml` | Shape contract |
@@ -55,6 +56,24 @@ environment; Cursor / operator from the profile seeded by the AWS login seed. Se
 | `validate_capability_contract.py` | Regression barrier: fails the build on reintroduced secrets |
 | `_archived/capability-broker/` | Never-shipped broker implementation (`git mv`, not a live server) |
 
+## Box credentials
+`register_box_secrets.sh` runs on the operator's machine, reads the durable
+credentials off the box over SSH, and upserts them into Infisical prod at `/`
+under the names listed in `infisical-cursor-governance.yaml` →
+`box_credential_refs`. Values never reach argv, disk outside a `umask 077` temp
+directory that is removed on exit, or this repo; the script prints names and
+verification results only. It is idempotent (`secrets set` is an upsert), and
+after each write it reads the value back and compares sha256, so a silent
+truncation or `$`-expansion failure fails the run instead of passing it.
+Keys that are empty placeholders on the box are skipped and reported rather
+than uploaded as empty strings — an empty vault entry would claim an
+integration that is not configured. They are listed under
+`box_credential_refs.unset_on_box`.
+```bash
+infisical login                       # browser session, or --method=universal-auth
+./ops/secrets/register_box_secrets.sh --dry-run
+./ops/secrets/register_box_secrets.sh
+```
 ## Architecture
 
 ```text
