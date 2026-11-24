@@ -1,27 +1,38 @@
 #!/usr/bin/env bash
-# Register the L9 box's durable credentials in Infisical (project Cursor-Governance).
+# Register the L9 box's durable credentials in Infisical.
+#
+# Two destinations, because they are two separate things:
+#   * the box itself - root login key, governance bearer token, deploy keys, tunnel key -
+#     belongs to Cursor-Governance;
+#   * SplitWisely is a standalone product, so its secrets belong to its own project, not to
+#     the governance project that happens to sit on the same host.
+# A name beginning SPLITWISELY_ goes to the SplitWisely project; every other name goes to
+# Cursor-Governance. One run covers both, so the box is read exactly once.
 #
 # Runs on the operator's machine. Reads the box over SSH (read-only: one tar stream of specific
 # files plus one `docker inspect`), copies each value into a mode-700 temporary directory, upserts it
 # by name, verifies it by hash, and deletes the directory on exit. A value never appears in argv, in
 # the terminal, or on disk outside that directory.
 #
-#   register_box_secrets.sh              # collect, upload, verify
-#   register_box_secrets.sh --dry-run    # collect and print the plan; upload nothing
+#   register_box_secrets.sh               # collect, upload, verify
+#   register_box_secrets.sh --dry-run     # collect and print the plan; upload nothing
 #   register_box_secrets.sh --no-readback # skip the read-back hash check
 #
 # Environment:
-#   L9_BOX_HOST           default root@167.233.222.27
-#   L9_BOX_KEY            default ~/.ssh/l9_box_ed25519   (also the key that gets registered)
-#   INFISICAL_ENV         default prod
-#   INFISICAL_PATH        default /
-#   INFISICAL_PROJECT_ID  default the Cursor-Governance project id from the inventory
-#   INFISICAL_TOKEN       optional machine-identity token; otherwise the CLI session is used
+#   L9_BOX_HOST            default root@167.233.222.27
+#   L9_BOX_KEY             default ~/.ssh/l9_box_ed25519   (also the key that gets registered)
+#   INFISICAL_ENV          default prod
+#   INFISICAL_PATH         default /
+#   INFISICAL_PROJECT_ID   Cursor-Governance project id (default from the inventory)
+#   SPLITWISELY_PROJECT_ID SplitWisely project id (default from the inventory; override only if
+#                          the product moves to another project)
+#   INFISICAL_TOKEN        optional machine-identity token; otherwise the CLI session is used
 #
 # Requires: ssh, tar, and the Infisical CLI (brew install infisical/get-cli/infisical), already
 # authenticated (`infisical login`, or `infisical login --method=universal-auth --client-id=...
-# --client-secret=...`). Verified against CLI 0.43.84: that release has no `secrets-manager`
-# command, and `secrets set` is an upsert, so re-running this script is safe.
+# --client-secret=...`). Verified against CLI 0.43.84 and 0.45.14: neither has a working
+# `secrets-manager` create path for this, `secrets set` is an upsert in both, so re-running this
+# script is safe, and the flags used here exist in both releases.
 set -euo pipefail
 
 BOX_HOST=${L9_BOX_HOST:-root@167.233.222.27}
@@ -29,6 +40,7 @@ BOX_KEY=${L9_BOX_KEY:-$HOME/.ssh/l9_box_ed25519}
 INFISICAL_ENV=${INFISICAL_ENV:-prod}
 INFISICAL_PATH=${INFISICAL_PATH:-/}
 INFISICAL_PROJECT_ID=${INFISICAL_PROJECT_ID:-9f92179d-3caa-4d7a-90a9-bb896499bfe6}
+SPLITWISELY_PROJECT_ID=${SPLITWISELY_PROJECT_ID:-c8562e46-0a71-453d-8f9f-5718ce22db39}
 DRY_RUN=0
 VERIFY=1
 
@@ -69,6 +81,24 @@ command -v tar >/dev/null 2>&1 || die "tar not found"
 command -v infisical >/dev/null 2>&1 ||
   die "infisical CLI not found: brew install infisical/get-cli/infisical"
 [ -f "$BOX_KEY" ] || die "box key not found: $BOX_KEY (set L9_BOX_KEY to the key that logs in as root)"
+[ -n "$SPLITWISELY_PROJECT_ID" ] ||
+  die "SPLITWISELY_PROJECT_ID is empty. SplitWisely secrets go to their own project, so an empty
+id would leave them nowhere to go. Unset it to use the default, or set it to the project id."
+
+# Destination is decided by name, never by argument order or directory: SPLITWISELY_* is product
+# data and belongs to the product's project.
+project_for() {
+  case "$1" in
+    SPLITWISELY_*) printf '%s' "$SPLITWISELY_PROJECT_ID" ;;
+    *) printf '%s' "$INFISICAL_PROJECT_ID" ;;
+  esac
+}
+dest_label() {
+  case "$1" in
+    SPLITWISELY_*) printf 'splitwisely' ;;
+    *) printf 'cursor-governance' ;;
+  esac
+}
 
 if command -v sha256sum >/dev/null 2>&1; then
   sha() { sha256sum | awk '{print $1}'; }
@@ -123,13 +153,20 @@ missing=$(ssh_box "cd / && for p in $REMOTE_LIST; do [ -e \"\$p\" ] || echo \"\$
 ssh_box 'docker inspect splitwisely-mysql >/dev/null 2>&1' ||
   die "container splitwisely-mysql not found; cannot read MYSQL_ROOT_PASSWORD"
 
-if [ "$DRY_RUN" -eq 0 ]; then
+# Both projects are probed before the box is read, so a bad id or an expired session fails before
+# any value is collected.
+probe_project() { # probe_project <project-id> <label>
   infisical_ secrets --env "$INFISICAL_ENV" --path "$INFISICAL_PATH" \
-    --projectId "$INFISICAL_PROJECT_ID" --silent -o json >/dev/null 2>"$work/auth.err" ||
-    die "infisical is not authenticated for project $INFISICAL_PROJECT_ID:
+    --projectId "$1" --silent -o json >/dev/null 2>"$work/auth.err" ||
+    die "infisical cannot read the $2 project ($1):
 $(cat "$work/auth.err")
 log in with: infisical login
-  or:        infisical login --method=universal-auth --client-id=... --client-secret=..."
+  or:        infisical login --method=universal-auth --client-id=... --client-secret=...
+if the id is wrong, fix it in $0's environment, not in the script."
+}
+if [ "$DRY_RUN" -eq 0 ]; then
+  probe_project "$INFISICAL_PROJECT_ID" cursor-governance
+  probe_project "$SPLITWISELY_PROJECT_ID" splitwisely
 fi
 
 note "== collect"
@@ -192,12 +229,13 @@ done <"$env_file"
 total=${#NAMES[@]}
 [ "$total" -gt 0 ] || die "nothing collected"
 
-note "== plan: $total secrets -> project $INFISICAL_PROJECT_ID, env $INFISICAL_ENV, path $INFISICAL_PATH"
-printf '%-46s %9s  %s\n' NAME BYTES SOURCE
+note "== plan: $total secrets, env $INFISICAL_ENV, path $INFISICAL_PATH"
+printf '%-44s %6s  %-17s %s\n' NAME BYTES DESTINATION SOURCE
 i=0
 while [ "$i" -lt "$total" ]; do
-  printf '%-46s %9s  %s\n' "${NAMES[$i]}" \
-    "$(wc -c <"$work/out/${NAMES[$i]}" | tr -d ' ')" "${SOURCES[$i]}"
+  printf '%-44s %6s  %-17s %s\n' "${NAMES[$i]}" \
+    "$(wc -c <"$work/out/${NAMES[$i]}" | tr -d ' ')" \
+    "$(dest_label "${NAMES[$i]}")" "${SOURCES[$i]}"
   i=$((i + 1))
 done
 
@@ -214,18 +252,20 @@ if [ "$DRY_RUN" -eq 1 ]; then
 fi
 
 note "== upload"
+# No --expand here on purpose. Expansion is a read-time concern, so the flag changes nothing about
+# what is stored, and CLI 0.45.14 removed it from `set` (it survives on `get`). Passing it would fail
+# on a current install with "unknown flag: --expand".
 i=0
 while [ "$i" -lt "$total" ]; do
   name=${NAMES[$i]}
   if ! infisical_ secrets set "$name=@$work/out/$name" \
     --env "$INFISICAL_ENV" \
     --path "$INFISICAL_PATH" \
-    --projectId "$INFISICAL_PROJECT_ID" \
-    --expand=false \
+    --projectId "$(project_for "$name")" \
     --silent >/dev/null; then
-    die "failed to set $name"
+    die "failed to set $name in the $(dest_label "$name") project"
   fi
-  printf '  set %s\n' "$name"
+  printf '  set %-44s -> %s\n' "$name" "$(dest_label "$name")"
   i=$((i + 1))
 done
 
@@ -235,17 +275,17 @@ if [ "$VERIFY" -eq 0 ]; then
 fi
 
 note "== verify: every name reads back with a hash-equal value (nothing is printed)"
-# Each name is read individually. The listing (`secrets -o json`) marshals the v3 model as
-# secretKey/secretValue, so matching a name inside it would test the JSON shape, not the secret;
-# a failed `secrets get` is the one unambiguous statement that the name is not there.
+# Each name is read individually, from the project it was written to. The listing (`secrets -o json`)
+# marshals the v3 model as secretKey/secretValue, so matching a name inside it would test the JSON
+# shape, not the secret; a failed `secrets get` is the one unambiguous statement that it is not there.
 failures=0
 i=0
 while [ "$i" -lt "$total" ]; do
   name=${NAMES[$i]}
   if ! stored=$(infisical_ secrets get "$name" \
     --env "$INFISICAL_ENV" --path "$INFISICAL_PATH" \
-    --projectId "$INFISICAL_PROJECT_ID" --expand=false --plain --silent 2>/dev/null); then
-    printf '  MISSING %s\n' "$name" >&2
+    --projectId "$(project_for "$name")" --expand=false --plain --silent 2>/dev/null); then
+    printf '  MISSING %s (%s)\n' "$name" "$(dest_label "$name")" >&2
     failures=$((failures + 1))
     i=$((i + 1))
     continue
@@ -254,10 +294,21 @@ while [ "$i" -lt "$total" ]; do
   expected=$(printf '%s' "$(cat "$work/out/$name")" | sha)
   actual=$(printf '%s' "$stored" | sha)
   if [ "$expected" != "$actual" ]; then
-    printf '  MISMATCH %s\n' "$name" >&2
+    printf '  MISMATCH %s (%s)\n' "$name" "$(dest_label "$name")" >&2
     failures=$((failures + 1))
   fi
   i=$((i + 1))
 done
 [ "$failures" -eq 0 ] || die "$failures of $total secrets failed verification"
-note "verified: $total secrets match their source values; $skipped_count empty keys skipped"
+
+gov=0
+prod=0
+i=0
+while [ "$i" -lt "$total" ]; do
+  case "${NAMES[$i]}" in
+    SPLITWISELY_*) prod=$((prod + 1)) ;;
+    *) gov=$((gov + 1)) ;;
+  esac
+  i=$((i + 1))
+done
+note "verified: $total secrets match their source values ($gov in cursor-governance, $prod in splitwisely); $skipped_count empty keys skipped"

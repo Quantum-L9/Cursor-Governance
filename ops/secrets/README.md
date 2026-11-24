@@ -38,7 +38,8 @@ environment; Cursor / operator from the profile seeded by the AWS login seed. Se
 | `vault_mcp_bridge.py` + `vault-mcp-bridges.json` | stdio bridge for remote MCP servers whose key is bound from Infisical (Context7) |
 | `capability_exec.py` + `capability-exec.json` | Registered child-process runs needing one vault secret in their own env (Semgrep Pro dry-run); fixed argv, output scrubbed (AGENTS.md CI_PARITY_HOSTED_CLAUDE_V1) |
 | `infisical-cursor-governance.yaml` | Infisical project inventory (IDs + env key names, no values). `memory_prod_secret_refs` names the Memory project's prod secrets and is outside the bind gate |
-| `register_box_secrets.sh` | Operator-run (macOS Terminal, bash 3.2) upload of the L9 box's durable credentials into Infisical prod `/` under the names recorded in `box_credential_refs`; idempotent, read-back verified, writes nothing to the box or to git |
+| `register_box_secrets.sh` | Operator-run (macOS Terminal, bash 3.2) upload of the L9 box's durable credentials: host keys/tokens to this project, `SPLITWISELY_*` to the SplitWisely project, decided by name; idempotent, read-back verified, writes nothing to the box or to git |
+| `l9-render-env` | Runs **on the box as root** from a oneshot unit: renders a project's prod secrets into a `0600` systemd `EnvironmentFile` on tmpfs. curl + jq only, no CLI, no interactive login, fail-closed |
 | `port_aws_to_infisical.py` | Re-port AWS `openclaw-igorbot/*` → Infisical prod |
 | `registry.overlays.yaml` | Local stubs not yet in AWS (`ui-session-*`, `provisioned: false`) |
 | `registry.schema.yaml` | Shape contract |
@@ -58,22 +59,115 @@ environment; Cursor / operator from the profile seeded by the AWS login seed. Se
 
 ## Box credentials
 `register_box_secrets.sh` runs on the operator's machine, reads the durable
-credentials off the box over SSH, and upserts them into Infisical prod at `/`
-under the names listed in `infisical-cursor-governance.yaml` →
-`box_credential_refs`. Values never reach argv, disk outside a `umask 077` temp
-directory that is removed on exit, or this repo; the script prints names and
-verification results only. It is idempotent (`secrets set` is an upsert), and
-after each write it reads the value back and compares sha256, so a silent
-truncation or `$`-expansion failure fails the run instead of passing it.
-Keys that are empty placeholders on the box are skipped and reported rather
-than uploaded as empty strings — an empty vault entry would claim an
-integration that is not configured. They are listed under
-`box_credential_refs.unset_on_box`.
+credentials off the box over SSH, and writes them to two projects in one pass.
+Destination is decided by name, never by argument order: a name beginning
+`SPLITWISELY_` goes to the SplitWisely project, everything else stays here.
+
+| Names | Project | Recorded in |
+|---|---|---|
+| `L9_BOX_*`, `L9_DEPLOY_KEY_*`, `L9_TUNNEL_*` | Cursor-Governance | `box_credential_refs` |
+| `SPLITWISELY_*` | SplitWisely | `splitwisely_prod_secret_refs` |
+
+SplitWisely is a standalone product with its own repo and its own Infisical
+project, so its secrets do not sit in the governance project that happens to
+share the host. The project id is the default in the script and in
+`splitwisely_prod_secret_refs`; `SPLITWISELY_PROJECT_ID` overrides it only if the
+product ever moves, so a routine run cannot write product secrets into the
+governance project by accident.
+
+Values never reach argv, disk outside a `umask 077` temp directory that is
+removed on exit, or this repo; the script prints names and verification results
+only. It is idempotent (`secrets set` is an upsert), and after each write it
+reads the value back and compares sha256, so a silent truncation or
+`$`-expansion failure fails the run instead of passing it. Keys that are empty
+placeholders on the box are skipped and reported rather than uploaded as empty
+strings — an empty vault entry would claim an integration that is not
+configured. They are listed under `splitwisely_prod_secret_refs.unset_on_box`.
 ```bash
-infisical login                       # browser session, or --method=universal-auth
-./ops/secrets/register_box_secrets.sh --dry-run
+infisical login                                  # browser session, or --method=universal-auth
+./ops/secrets/register_box_secrets.sh --dry-run  # plan only, nothing uploaded
 ./ops/secrets/register_box_secrets.sh
 ```
+
+## Runtime rendering — a rotation is a restart
+
+Uploading a secret to the vault changes nothing until the process that needs it
+reads the vault. SplitWisely previously ran from `/home/l9/apps/splitwisely/.env`,
+a hand-maintained copy: rotating in Infisical had no effect, and the copy drifted.
+Two units close that gap.
+
+| Unit | Role |
+|---|---|
+| `ops/systemd/l9-splitwisely-env.service` | `Type=oneshot`, **no `RemainAfterExit`**. Runs `/usr/local/sbin/l9-render-env` and exits, so every start of the application pulls it in again and re-renders |
+| `ops/systemd/l9-splitwisely.service` | `Requires=` + `After=` the env unit, `EnvironmentFile=/run/l9/splitwisely.env` |
+
+`l9-render-env` logs in as the SplitWisely machine identity over Universal Auth
+(the secret goes to curl on stdin, never argv), reads `GET /v3/secrets/raw` for
+the project's `prod` environment at `/`, keeps keys matching `--prefix`, and
+writes them quoted for `EnvironmentFile` syntax. Values are transported as base64
+and validated: a key that is not a bare shell identifier, or a value containing a
+newline, aborts the run. Inside double quotes systemd honours only `\` and `"`,
+so those two are escaped and `$`/backticks stay literal — systemd does not expand
+variables in these files. Output is written to `$OUT.tmp.$$` and `mv`-ed into
+place, `0600` inside a `0700` directory, and any failure removes it. Only key
+names and counts are printed.
+
+Because the file is root-owned and read by systemd as root, the `l9` user never
+reads plaintext from disk, and `ExecStartPre=/bin/rm -f /run/l9/splitwisely.env`
+means a failed render leaves nothing for the app to start on: the service fails
+closed instead of running on stale values. Do not add `RuntimeDirectory=` — that
+would make systemd delete `/run/l9` when the oneshot goes inactive; the script
+creates the directory itself.
+
+Rotation, end to end: edit the value in Infisical → `systemctl restart
+l9-splitwisely` → the oneshot re-renders → the app starts with the new value.
+Nothing is copied by hand, and the vault is the only place the value lives.
+
+### One-time identity setup
+
+The renderer needs a machine identity scoped to the SplitWisely project, not the
+operator's browser session. In Infisical: project **SplitWisely** → Access
+Control → Machine Identities → create one, enable **Universal Auth**, grant
+read-only access to `prod` `/`. Then place the two values on the box as root,
+typing them into stdin so they never appear in a shell history or an argv:
+
+```bash
+ssh root@167.233.222.27 'umask 077; cat > /etc/l9/infisical-splitwisely.env' <<'EOF'
+INFISICAL_CLIENT_ID=<client id>
+INFISICAL_CLIENT_SECRET=<client secret>
+EOF
+```
+
+### Install
+
+```bash
+install -m 755 ops/secrets/l9-render-env /usr/local/sbin/l9-render-env
+install -m 644 ops/systemd/l9-splitwisely-env.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl start l9-splitwisely-env        # renders, prints the key names and count
+```
+
+Install the application unit only once a render succeeds; it replaces the
+`.env`-based `EnvironmentFile` and takes the service down if the vault is
+unreadable, which is the intended behaviour but a poor first experience.
+
+### When it refuses to start
+
+A failed render also counts against systemd's start rate limit, so a few failed
+attempts in a row (wrong client secret, vault unreachable) leave the oneshot in
+`failed` with `start request repeated too quickly` even after the cause is fixed.
+Clear the counter before retrying:
+
+```bash
+systemctl reset-failed l9-splitwisely-env
+systemctl start l9-splitwisely-env
+journalctl -u l9-splitwisely-env -n 20 --no-pager
+```
+
+The journal carries key names and HTTP status codes only. If a value looks wrong
+after the switch, read it in Infisical rather than on the host: the rendered file
+is tmpfs and 0600, and printing it puts every product secret in your terminal
+scrollback.
 ## Architecture
 
 ```text

@@ -1,6 +1,9 @@
 [Unit]
 Description=SplitWisely.ai (Express + tRPC + Drizzle/MySQL)
-After=network-online.target docker.service
+# The environment is rendered from Infisical by a oneshot that runs first. Requires= makes this
+# service fail closed: if the vault cannot be read, the app does not start with stale values.
+Requires=l9-splitwisely-env.service
+After=network-online.target docker.service l9-splitwisely-env.service
 Wants=network-online.target
 
 [Service]
@@ -8,7 +11,9 @@ Type=simple
 User=l9
 Group=l9
 WorkingDirectory=/home/l9/apps/splitwisely
-EnvironmentFile=/home/l9/apps/splitwisely/.env
+# Rendered by l9-splitwisely-env.service into tmpfs, 0600 root:root. systemd reads it as root and
+# passes the values in, so the service user never reads the file.
+EnvironmentFile=/run/l9/splitwisely.env
 ExecStart=/usr/bin/node dist/index.js
 Restart=on-failure
 RestartSec=3
