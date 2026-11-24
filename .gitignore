@@ -126,6 +126,11 @@ reports/*
 # run-repository-verification from the commit under test. Tracked for the same
 # reason as ci.json: Core enrolls Cursor-Governance in required mode.
 !.l9/repo-workflow.json
+# The declared consumer edge, read by l9-ci-core's converge engine
+# (tools/l9_bindings, l9.bindings/v1). A binding is a governance statement, not
+# runtime state: it names what this repository pins, where the pin is written
+# and what must happen before it may move, so it must be reviewed like code.
+!.l9/bindings.yaml
 # .l9/scratch-hold/ — park vault (covered by .l9/* above)
 # L9 Subagent-Generated Data runtime
 .l9/subagent-generated-data/*.sqlite3
