@@ -150,6 +150,24 @@ systemctl start l9-splitwisely-env        # renders, prints the key names and co
 Install the application unit only once a render succeeds; it replaces the
 `.env`-based `EnvironmentFile` and takes the service down if the vault is
 unreadable, which is the intended behaviour but a poor first experience.
+
+### When it refuses to start
+
+A failed render also counts against systemd's start rate limit, so a few failed
+attempts in a row (wrong client secret, vault unreachable) leave the oneshot in
+`failed` with `start request repeated too quickly` even after the cause is fixed.
+Clear the counter before retrying:
+
+```bash
+systemctl reset-failed l9-splitwisely-env
+systemctl start l9-splitwisely-env
+journalctl -u l9-splitwisely-env -n 20 --no-pager
+```
+
+The journal carries key names and HTTP status codes only. If a value looks wrong
+after the switch, read it in Infisical rather than on the host: the rendered file
+is tmpfs and 0600, and printing it puts every product secret in your terminal
+scrollback.
 ## Architecture
 
 ```text
