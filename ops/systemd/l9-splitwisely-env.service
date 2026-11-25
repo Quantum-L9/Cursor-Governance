@@ -9,7 +9,7 @@ Type=oneshot
 # No RemainAfterExit: the unit goes inactive once it has run, so every start of the application pulls
 # it in again and re-renders. A rotation in the vault is therefore one `systemctl restart`.
 ExecStartPre=/bin/rm -f /run/l9/splitwisely.env
-ExecStart=/usr/local/sbin/l9-render-env --project c8562e46-0a71-453d-8f9f-5718ce22db39 --env prod --path / --prefix SPLITWISELY_ --out /run/l9/splitwisely.env
+ExecStart=/usr/local/sbin/l9-render-env --project c8562e46-0a71-453d-8f9f-5718ce22db39 --env prod --path / --prefix SPLITWISELY_ --strip-prefix SPLITWISELY_ --out /run/l9/splitwisely.env
 TimeoutStartSec=30
 
 [Install]
