@@ -1,6 +1,6 @@
 ---
 name: lcto
-version: "1.5.0"
+version: "1.6.0"
 description: "L CTO mode — strategic technical decisions"
 auto_chain: ynp
 ---
@@ -112,6 +112,28 @@ Bound projections (all required):
    stderr and appended to `.l9/cto-mode/launch-preflight-overrides.jsonl`. It
    grants no permission. `launch-spec` exists only in CTO mode.
 4. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.
+5. Run the campaign through its governed tools, not scratchpad state. The steps, tool
+   paths and commands are `operating_protocol.campaign_tooling` in
+   [`governance/cto-mode/MODE.yaml`](../governance/cto-mode/MODE.yaml); this list only
+   orders them. Every tool prints `grants_permission: false` and none is a lock.
+   - **Start:** `cto_campaign.py init`, then `pool set` per launched agent.
+     `cto_claims.py check` before assigning a lane, then `register`; `label` each lane PR.
+     An `ownership.yaml` mismatch is a question to that owner.
+   - **Decisions:** `cto_campaign.py decide ask` records each operator question and prints
+     numbered options to send in chat; `decide answer` records the reply; `decide pending`
+     re-prints unanswered ones after a restart. Child briefs embed `decide brief` verbatim.
+   - **Check-in:** the `send_later` body is the line from `cto_campaign.py tick --checkin-text`.
+     Run `tick`, act on its delta, and classify every red required check with
+     `ci_triage.py classify` before routing it (code to the lane owner, everything else
+     upstream or to the operator).
+   - **Integrate before merging:** `cto_integrate.py build` (registers the merge drivers via
+     `ensure_git_merge_drivers.sh`), `run`, then `check`; only a pass receipt naming the
+     proven heads counts.
+   - **Merge:** write `train.json`, then `cto_train.py plan` and `cto_train.py run`. Merges go
+     through `stack_safe_merge.py` and the merge gate; never hand-merge a stack.
+   - **Other CTOs:** `cto_claims.py notice` for a base, interface or gate change; send the
+     printed CTO NOTICE yourself.
+   - **Hand-off:** `campaign.json` and `decisions.json` are the record the next CTO adopts.
 
 The mode changes what the session reads, never what it may do. Publication,
 merge, push and deploy authority are unchanged. The role coordinates the

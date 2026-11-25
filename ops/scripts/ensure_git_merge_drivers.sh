@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
-# Idempotent local registration of the l9-generated merge driver. git config is
+# Idempotent local registration of the l9 merge drivers. git config is
 # per-clone and untracked, so check_governance_wiring.sh calls this every
-# session to self-heal registration. Exit 0 = driver registered (+ verified).
+# session to self-heal registration. Exit 0 = drivers registered (+ verified).
+#
+#   merge.l9-generated  keep ours + regenerate (attributes: tracked .gitattributes)
+#   merge.l9-versions   module version churn: __manifest__.py "version", README
+#                       front-matter module_version:, tests/__init__.py imports
+#                       (git_merge_driver_versions.py). Its attributes go to the
+#                       clone's own $GIT_DIR/info/attributes, never to a tracked
+#                       .gitattributes, so a consumer repository is not edited.
 #
 # Usage: ensure_git_merge_drivers.sh [repo-path] [--check-attributes]
 #   --check-attributes also reports whether .gitattributes declares
@@ -11,6 +18,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DRIVER="$SCRIPT_DIR/git_merge_driver_generated.sh"
+VERSIONS_DRIVER="$SCRIPT_DIR/git_merge_driver_versions.py"
 CHECK_ATTRIBUTES=0
 REPO="$(pwd)"
 
@@ -23,10 +31,15 @@ _is_ephemeral_path() {
 
 # Extracts share the clone gitdir. Registering an extract-absolute driver
 # poisons merge-tree for every worktree after that extract is removed.
-_canon="${CURSOR_GOVERNANCE_DIR:-$HOME/.cursor-governance}/ops/scripts/git_merge_driver_generated.sh"
+_canon_dir="${CURSOR_GOVERNANCE_DIR:-$HOME/.cursor-governance}/ops/scripts"
+_canon="$_canon_dir/git_merge_driver_generated.sh"
+_canon_versions="$_canon_dir/git_merge_driver_versions.py"
 if _is_ephemeral_path "$SCRIPT_DIR" || _is_ephemeral_path "$DRIVER"; then
   if [ -f "$_canon" ]; then
     DRIVER="$_canon"
+  fi
+  if [ -f "$_canon_versions" ]; then
+    VERSIONS_DRIVER="$_canon_versions"
   fi
 fi
 
@@ -66,5 +79,70 @@ if [ "$CHECK_ATTRIBUTES" -eq 1 ]; then
     echo "WARN: no merge=l9-generated entries in .gitattributes (text-merge fallback for generated paths)"
   fi
 fi
+
+# --- l9-versions -----------------------------------------------------------
+# The attribute lines live in one managed block, rewritten whole on every run
+# (idempotent; other lines in the file are kept). $GIT_DIR/info/attributes
+# outranks every .gitattributes, so the block re-asserts the tracked
+# merge=l9-generated lines after its own: a later line wins per attribute, and
+# without this a generated README.md would lose keep-ours to l9-versions.
+INFO_ATTR="$(git -C "$REPO" rev-parse --path-format=absolute --git-path info/attributes)"
+BEGIN_MARK="# BEGIN l9-versions (managed by ops/scripts/ensure_git_merge_drivers.sh)"
+END_MARK="# END l9-versions"
+
+_write_versions_block() { # $1 = block text, empty removes the block
+  mkdir -p "$(dirname "$INFO_ATTR")"
+  local tmp_attr
+  tmp_attr="$(mktemp "${INFO_ATTR}.XXXXXX")"
+  if [ -f "$INFO_ATTR" ]; then
+    awk -v b="$BEGIN_MARK" -v e="$END_MARK" '
+      $0 == b { skip = 1; next }
+      $0 == e { skip = 0; next }
+      !skip { print }
+    ' "$INFO_ATTR" >"$tmp_attr"
+  fi
+  if [ -n "$1" ]; then
+    printf '%s\n' "$1" >>"$tmp_attr"
+  fi
+  mv "$tmp_attr" "$INFO_ATTR"
+}
+
+# Same poisoning rule as l9-generated: the driver path is written into the
+# clone's shared config, so it must outlive this process. An extract or agent
+# worktree path does not. With no canonical driver to point at, register
+# nothing and clear any registration a previous run left on such a path.
+if _is_ephemeral_path "$VERSIONS_DRIVER" || [ ! -f "$VERSIONS_DRIVER" ]; then
+  stale="$(git -C "$REPO" config --get merge.l9-versions.driver || true)"
+  stale_path="$(printf '%s' "$stale" | sed -n 's/^python3 "\([^"]*\)".*/\1/p')"
+  if [ -n "$stale" ] && { [ -z "$stale_path" ] || [ ! -f "$stale_path" ] || _is_ephemeral_path "$stale_path"; }; then
+    git -C "$REPO" config --remove-section merge.l9-versions 2>/dev/null || true
+    _write_versions_block ""
+    echo "WARN: removed merge.l9-versions registration on an ephemeral or missing path: $stale_path"
+  fi
+  echo "WARN: merge.l9-versions not registered: no durable driver (have $VERSIONS_DRIVER; canonical $_canon_versions missing)"
+  exit 0
+fi
+
+git -C "$REPO" config merge.l9-versions.name "l9 module versions — bump above both sides, union test imports"
+git -C "$REPO" config merge.l9-versions.driver "python3 \"$VERSIONS_DRIVER\" %O %A %B %P"
+vdriver="$(git -C "$REPO" config --get merge.l9-versions.driver || true)"
+if [ -z "$vdriver" ]; then
+  echo "FAIL: merge.l9-versions.driver not registered in $REPO" >&2
+  exit 1
+fi
+echo "OK: merge.l9-versions.driver = $vdriver"
+
+block="$(
+  printf '%s\n' "$BEGIN_MARK"
+  printf '%s\n' "**/__manifest__.py merge=l9-versions"
+  printf '%s\n' "**/README.md merge=l9-versions"
+  printf '%s\n' "**/tests/__init__.py merge=l9-versions"
+  if [ -f "$REPO/.gitattributes" ]; then
+    grep -E '^[^#[:space:]][^[:space:]]*[[:space:]].*merge=l9-generated' "$REPO/.gitattributes" || true
+  fi
+  printf '%s\n' "$END_MARK"
+)"
+_write_versions_block "$block"
+echo "OK: l9-versions attributes in $INFO_ATTR"
 
 exit 0
