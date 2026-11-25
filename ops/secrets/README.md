@@ -39,7 +39,7 @@ environment; Cursor / operator from the profile seeded by the AWS login seed. Se
 | `capability_exec.py` + `capability-exec.json` | Registered child-process runs needing one vault secret in their own env (Semgrep Pro dry-run); fixed argv, output scrubbed (AGENTS.md CI_PARITY_HOSTED_CLAUDE_V1) |
 | `infisical-cursor-governance.yaml` | Infisical project inventory (IDs + env key names, no values). `memory_prod_secret_refs` names the Memory project's prod secrets and is outside the bind gate |
 | `register_box_secrets.sh` | Operator-run (macOS Terminal, bash 3.2) upload of the L9 box's durable credentials: host keys/tokens to this project, `SPLITWISELY_*` to the SplitWisely project, decided by name; idempotent, read-back verified, writes nothing to the box or to git |
-| `l9-render-env` | Runs **on the box as root** from a oneshot unit: renders a project's prod secrets into a `0600` systemd `EnvironmentFile` on tmpfs. curl + jq only, no CLI, no interactive login, fail-closed |
+| `l9-render-env` | Runs **on the box as root** from a oneshot unit: renders a project's prod secrets into a `0600` systemd `EnvironmentFile` on tmpfs, optionally stripping a namespace prefix. curl + jq only, no CLI, no interactive login, fail-closed |
 | `port_aws_to_infisical.py` | Re-port AWS `openclaw-igorbot/*` → Infisical prod |
 | `registry.overlays.yaml` | Local stubs not yet in AWS (`ui-session-*`, `provisioned: false`) |
 | `registry.schema.yaml` | Shape contract |
@@ -104,7 +104,18 @@ Two units close that gap.
 `l9-render-env` logs in as the SplitWisely machine identity over Universal Auth
 (the secret goes to curl on stdin, never argv), reads `GET /v3/secrets/raw` for
 the project's `prod` environment at `/`, keeps keys matching `--prefix`, and
-writes them quoted for `EnvironmentFile` syntax. Values are transported as base64
+writes them quoted for `EnvironmentFile` syntax.
+
+Vault names and process names differ on purpose. `register_box_secrets.sh` routes
+by name, so a SplitWisely key has to carry the `SPLITWISELY_` prefix to land in
+the SplitWisely project at all — but the application reads bare names
+(`server/_core/env.ts` asks for `DATABASE_URL`, `JWT_SECRET`,
+`SUPABASE_STORAGE_BUCKET`, never `SPLITWISELY_DATABASE_URL`). `--strip-prefix`
+removes the namespace on the way out, so `SPLITWISELY_DATABASE_URL` in the vault
+becomes `DATABASE_URL` in the file. A selected key that does not carry the prefix
+aborts the render rather than passing through under a name the process cannot
+see, and two keys that strip to the same name abort rather than one silently
+winning. Values are transported as base64
 and validated: a key that is not a bare shell identifier, or a value containing a
 newline, aborts the run. Inside double quotes systemd honours only `\` and `"`,
 so those two are escaped and `$`/backticks stay literal — systemd does not expand
