@@ -1,0 +1,39 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/cto-mode/ownership.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-11-23
+# Advisory path-ownership map read by ops/autonomy/cto_claims.py `check`. It
+# names which role is expected to change a path so a CTO sees, before code
+# exists, that a path it plans to touch belongs to someone else. It is not a
+# lock, not CODEOWNERS and grants no permission: git, the PR gates and CI stay
+# the enforcement (rule 96 E7).
+#
+# Rules are evaluated in order; the first rule whose `repos` pattern (fnmatch,
+# case-insensitive) matches the repository and whose `paths` glob covers the
+# path wins. Path grammar: `**` crosses `/`, `*` stays within one segment.
+schema: l9.cto-ownership/v1
+advisory: true
+grants_permission: false
+roles:
+  ci-core-architect: >-
+    Owns the shared CI platform upstream: Quantum-L9/l9-ci-core,
+    Quantum-L9/l9-ci-sdk and Quantum-L9/.github. Its scope stops at those
+    repositories.
+  consumer-repo-cto: >-
+    The consumer repository's CTO or owner. Owns that repository's own ci/
+    tree and workflow files, including baselines and gate configuration.
+rules:
+  # Decided by the operator during the 2026-11-22/23 IB-Odoo_19 campaign: the
+  # CI-Core architect's scope is upstream only.
+  - repos: [Quantum-L9/l9-ci-core, Quantum-L9/l9-ci-sdk, Quantum-L9/.github]
+    paths: ["**"]
+    owner: ci-core-architect
+  # ...so a consumer repository's ci/ and workflows belong to that repository.
+  - repos: ["*"]
+    paths: ["ci/**", ".github/workflows/**"]
+    owner: consumer-repo-cto
