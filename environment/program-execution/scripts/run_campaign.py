@@ -2209,6 +2209,22 @@ def set_top_scalar(lines: list[str], key: str, value: str) -> None:
     lines.insert(0, rendered)
 
 
+def campaign_list_indent(lines: list[str], opener: int) -> int:
+    """Indent of the first list item under ``lines[opener]``, else 0.
+
+    The committed status ledger uses column-0 items (``- id:``). Inserting a
+    two-space item into that file makes the next launch unable to parse it.
+    """
+    for line in lines[opener + 1 :]:
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        stripped = line.lstrip()
+        if stripped.startswith("- "):
+            return len(line) - len(stripped)
+        break
+    return 0
+
+
 def mark_host_campaign_active(
     worktree: Path,
     campaign_id: str,
@@ -2239,8 +2255,10 @@ def mark_host_campaign_active(
                 for position, line in enumerate(lines):
                     if line.startswith("campaigns:"):
                         _, end = block_bounds(lines, position)
-                        entry = [f"  - id: {campaign_id}"] + [
-                            f"    {key}: {yaml_scalar(value)}" for key, value in fields.items()
+                        indent = campaign_list_indent(lines, position)
+                        pad = " " * indent
+                        entry = [f"{pad}- id: {campaign_id}"] + [
+                            f"{pad}  {key}: {yaml_scalar(value)}" for key, value in fields.items()
                         ]
                         lines[end:end] = entry
                         break
@@ -7212,6 +7230,27 @@ def _run_rendered_plan(
     if not campaign_id:
         raise CampaignError(f"rendered campaign has no campaign_id: {source_path}")
     refuse_hash_campaign_id(campaign_id)
+    # A second `make campaign` on a plan whose runtime is already armed must
+    # execute that runtime. Bootstrap requires an empty workspace, so falling
+    # through here is the "workspace is not empty" failure that sends the
+    # operator into diagnosis instead of the task.
+    pec_workspace = l9_home / "programs" / campaign_id
+    if should_run(until, "execute") and resumable_workspace(pec_workspace):
+        log(f"rendered plan {intent_path}")
+        log(f"campaign id: {campaign_id}")
+        return resume_live_campaign(
+            campaign_id=campaign_id,
+            seed=seed,
+            submitted_source=source_path,
+            requested_until=requested_until,
+            until=until,
+            primary=primary,
+            repo_root=host_root,
+            l9_home=l9_home,
+            host_repo=host_repo,
+            hooks=hooks,
+            trace=trace,
+        )
     target = seed.get("target") or {}
     repository_id = str(target.get("repository_id") or "").strip()
     source_of_truth = str(target.get("source_of_truth") or "")

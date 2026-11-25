@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 import subprocess
 import sys
 import tempfile
@@ -649,6 +650,65 @@ class RenderedPlanCampaignTest(unittest.TestCase):
             self.assertEqual(called["runtime"], 1)
             self.assertEqual(report.mode, "rendered-plan")
             self.assertEqual(report.stages_completed[:2], ["validate_blueprint", "accept"])
+
+    def test_rendered_plan_resumes_a_live_runtime_instead_of_bootstrap(self) -> None:
+        runner = self.run_campaign
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            plan = self._plan(root)
+            l9 = root / "l9"
+            runtime = l9 / "programs" / "rendered-proof" / "runtime"
+            runtime.mkdir(parents=True)
+            (runtime / "program-lock.json").write_text("{}\n", encoding="utf-8")
+            (runtime / "LAUNCH.json").write_text(
+                json.dumps(
+                    {
+                        "runtime_status": "active",
+                        "host_lifecycle": "in_progress",
+                        "campaign_id": "rendered-proof",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            resumed: dict = {}
+
+            def resume(**kwargs):
+                resumed.update(kwargs)
+                return runner.CampaignReport(
+                    campaign_id="rendered-proof",
+                    until="execute",
+                    worktree=str(root),
+                    primary=str(root),
+                    mode="rendered-plan",
+                    stages_completed=["resume"],
+                )
+
+            def runtime_started(_run):
+                raise AssertionError("bootstrap runtime started")
+
+            env = {"L9_PE_OPERATOR_INVOCATION": f"make campaign {plan}"}
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with unittest.mock.patch.object(runner, "resume_live_campaign", side_effect=resume):
+                    with unittest.mock.patch.object(
+                        runner, "_stage_runtime", side_effect=runtime_started
+                    ):
+                        report = runner._run_campaign_stages(
+                            plan,
+                            until="execute",
+                            repo_root=root,
+                            l9_root=l9,
+                            hooks=runner.Hooks(
+                                validate_blueprint=lambda _blueprint: [
+                                    "must not validate on resume"
+                                ]
+                            ),
+                        )
+            self.assertEqual(resumed["campaign_id"], "rendered-proof")
+            self.assertEqual(resumed["submitted_source"], root / "CAMPAIGN_SOURCE.yaml")
+            self.assertEqual(report.stages_completed, ["resume"])
+            program = (root / "blueprint" / "PROGRAM.yaml").read_text(encoding="utf-8")
+            self.assertIn("draft", program)
+            self.assertNotIn("accepted", program)
 
     def test_a_plan_without_recorded_paths_names_l9_plan(self) -> None:
         runner = self.run_campaign

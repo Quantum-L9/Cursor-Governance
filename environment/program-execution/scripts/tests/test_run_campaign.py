@@ -3163,6 +3163,34 @@ class RunCampaignTests(unittest.TestCase):
             self.assertEqual(block["integration_branch"], "campaign/demo-activate-v1")
             self.assertEqual(profile_doc["authority_order"], ["CANONICAL_LAW"])
 
+    def test_new_status_row_matches_column_zero_ledger(self) -> None:
+        """A two-space insert into the committed column-0 ledger is not YAML."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            status = root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml"
+            status.parent.mkdir(parents=True)
+            status.write_text(
+                "schema: l9.program-execution.campaign-status-ledger.v1\n"
+                "updated: '2026-08-28T19:26:19Z'\n"
+                "campaigns:\n"
+                "- id: bounded-replanning-v1\n"
+                "  lifecycle: complete\n",
+                encoding="utf-8",
+            )
+            self.mod.mark_host_campaign_active(
+                root,
+                "rendered-proof",
+                pec_workspace="/l9/programs/rendered-proof",
+                blueprint="/l9/blueprints/rendered-proof",
+                target_worktree="/l9/program-worktrees/rendered-proof",
+            )
+            body = status.read_text(encoding="utf-8")
+            document = yaml.safe_load(body)
+            ids = [row["id"] for row in document["campaigns"]]
+            self.assertEqual(ids, ["rendered-proof", "bounded-replanning-v1"])
+            self.assertIn("\n- id: rendered-proof\n", body)
+            self.assertNotIn("\n  - id: rendered-proof\n", body)
+
     def test_already_satisfied_task_keeps_head_instead_of_failing(self) -> None:
         """A task whose declared files already hold the work has nothing to commit."""
         with tempfile.TemporaryDirectory() as raw:
