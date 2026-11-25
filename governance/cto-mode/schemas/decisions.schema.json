@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9/cto-decisions/v1",
+  "title": "L9 CTO operator decisions ledger v1",
+  "description": "Operator questions a CTO asked and the answers given, kept in a file so they survive worker restarts and can be folded verbatim into child briefs. Written only by ops/autonomy/cto_campaign.py. Records what the operator said; it grants no permission.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "grants_permission", "decisions"],
+  "properties": {
+    "schema": { "const": "l9.cto-decisions/v1" },
+    "grants_permission": { "const": false },
+    "decisions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/decision" }
+    }
+  },
+  "$defs": {
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "asked_at",
+        "question",
+        "options",
+        "recommended",
+        "state",
+        "answer",
+        "answered_at",
+        "supersedes"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$" },
+        "asked_at": { "type": "string", "minLength": 1 },
+        "question": { "type": "string", "minLength": 1 },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "text"],
+            "properties": {
+              "key": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+              "text": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "recommended": { "type": ["string", "null"] },
+        "state": { "enum": ["pending", "answered", "superseded"] },
+        "answer": { "type": ["string", "null"] },
+        "answered_at": { "type": ["string", "null"] },
+        "supersedes": { "type": ["string", "null"] },
+        "note": { "type": ["string", "null"] },
+        "superseded_by": { "type": ["string", "null"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "const": "pending" } } },
+          "then": {
+            "properties": {
+              "answer": { "type": "null" },
+              "answered_at": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "state": { "const": "answered" } } },
+          "then": {
+            "properties": {
+              "answer": { "type": "string", "minLength": 1 },
+              "answered_at": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
