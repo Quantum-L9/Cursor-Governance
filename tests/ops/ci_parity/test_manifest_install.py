@@ -180,6 +180,51 @@ def test_remote_ci_ref_fails_when_core_moved(
     assert validate_manifest.check(tmp_path, yml, remote=True) == []
 
 
+#: Shape of l9-ci-core's .l9/sdk-compatibility.yaml: `supported:` repeats the
+#: default and adds a rollback revision, so only `default.revision` may match.
+_SDK_COMPAT = (
+    "schema: l9.sdk-compatibility/v1\n"
+    "default:\n"
+    "  source: git\n"
+    "  repository: https://github.com/Quantum-L9/l9-ci-sdk.git\n"
+    "  revision: {default}\n"
+    "supported:\n"
+    "  # the default from PIN-ADVANCE-3\n"
+    "  - source: git\n"
+    "    revision: {default}\n"
+    "  - source: git\n"
+    "    revision: {rollback}\n"
+)
+
+
+def test_l9_ci_tracks_core_sdk_compatibility_default_revision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    loaded = manifest.load()
+    sdk = loaded.tools["l9-ci"]
+    assert sdk.track and sdk.ci_ref["path"] == ".l9/sdk-compatibility.yaml"
+    assert sdk.ci_ref["contains"] == f"revision: {sdk.version}"
+    default, rollback = "a" * 40, "b" * 40
+    text = _SDK_COMPAT.format(default=default, rollback=rollback)
+    assert manifest.tracked_version(sdk, text) == default
+    # The rollback in `supported:` never wins, even listed before the default.
+    assert (
+        manifest.tracked_version(sdk, text.replace("supported:", "x:\n  revision: c\nsupported:"))
+        == default
+    )
+    # No top-level default block is a changed shape, not a guess.
+    assert manifest.tracked_version(sdk, text.replace("default:", "defaults:")) is None
+    notes: list[str] = []
+    # Only l9-ci's ci_ref is served the sample; every other remote ref is served
+    # its own recorded evidence so this test isolates the l9-ci extract.
+    monkeypatch.setattr(
+        validate_manifest,
+        "_remote_text",
+        lambda ref: text if ref["path"] == ".l9/sdk-compatibility.yaml" else ref["contains"],
+    )
+    assert validate_manifest.check(remote=True, notes=notes) == []
+
+
 def test_unreadable_remote_ci_ref_is_a_problem(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -387,9 +432,9 @@ def test_drift_of_a_tracked_tool_is_a_note_not_a_failure(
 def test_repository_l9_ci_tracks_core_and_its_extract_agrees_with_its_fallback() -> None:
     sdk = manifest.load().tools["l9-ci"]
     assert sdk.track == "ci_ref"
-    pin = sdk.ci_ref["contains"].strip("'")
-    line = CORE_LINE.format(sha=pin)
-    assert manifest.tracked_version(sdk, line) == pin == sdk.fallback_version
+    pin = sdk.ci_ref["contains"].removeprefix("revision: ")
+    text = _SDK_COMPAT.format(default=pin, rollback="b" * 40)
+    assert manifest.tracked_version(sdk, text) == pin == sdk.fallback_version
 
 
 # --- uv tool installs: one environment per <tool>/<version> -----------------
